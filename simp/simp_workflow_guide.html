@@ -1,0 +1,1525 @@
+<!--
+  Title:    Hướng dẫn vận hành SIMP — Quy trình, Tham số & Lưu ý
+  Type:     Technical Guide / Interactive Workflow
+  Aesthetic: Modern developer docs with interactive flowchart, warm accent
+  Fonts:    Fraunces + Lora
+  Generated: 2026-05-22
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Hướng dẫn chi tiết quy trình vận hành thuật toán SIMP trong Python — từ khởi tạo, thay đổi tham số, đến phân tích kết quả.">
+<title>SIMP Workflow Guide — Hướng dẫn vận hành</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --color-bg: #fafaf8;
+    --color-surface: #ffffff;
+    --color-surface-2: #f3f1ed;
+    --color-border: #e2ddd6;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6b6560;
+    --color-accent: #c44536;
+    --color-accent-dim: #a8382b;
+    --color-accent-light: rgba(196, 69, 54, 0.08);
+    --color-success: #2b7a4b;
+    --color-warning: #b8860b;
+    --color-info: #2b6a8a;
+    --color-code-bg: #f0ede8;
+    --color-highlight: #fef3e2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { Cuộn-behavior: smooth; }
+
+  body {
+    font-family: 'Lora', serif;
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ===== HERO ===== */
+  .hero {
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 2rem;
+    position: relative;
+    background: linear-gradient(135deg, #fafaf8 0%, #f3f1ed 50%, #fafaf8 100%);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-success), var(--color-info));
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1.2rem;
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-accent);
+    border-radius: 100px;
+    font-family: 'Fraunces', serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.8rem, 6vw, 4.8rem);
+    font-weight: 800;
+    line-height: 1.08;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 .highlight {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 6px;
+  }
+
+  .hero p {
+    font-size: 1.15rem;
+    color: var(--color-text-secondary);
+    max-width: 640px;
+    margin: 0 auto 2rem;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.8rem;
+    border-radius: 8px;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: var(--color-accent);
+    color: white;
+    border: none;
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-dim);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(196, 69, 54, 0.25);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+  }
+  .btn-outline:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    transform: translateY(-2px);
+  }
+
+  .Cuộn-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-family: 'Fraunces', serif;
+    letter-spacing: 0.05em;
+    animation: bounce 2s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* ===== NAV ===== */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250,250,248,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0 2rem;
+  }
+
+  nav ul {
+    display: flex;
+    gap: 0;
+    list-style: none;
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-x: auto;
+  }
+
+  nav a {
+    display: block;
+    padding: 0.9rem 1.1rem;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-family: 'Fraunces', serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+  }
+
+  nav a:hover {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+  }
+
+  /* ===== SECTIONS ===== */
+  section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 5rem 2rem;
+  }
+
+  section h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  section .subtitle {
+    color: var(--color-text-secondary);
+    font-size: 1.05rem;
+    margin-bottom: 3rem;
+    max-width: 650px;
+    font-style: italic;
+  }
+
+  /* ===== INTERACTIVE FLOWCHART ===== */
+  .flowchart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin: 3rem 0;
+    position: relative;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: stretch;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 800px;
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .flow-step.visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .flow-step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: white;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  .flow-step-content {
+    flex: 1;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.2rem 1.5rem;
+    transition: all 0.3s ease;
+    cursor: default;
+  }
+
+  .flow-step-content:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 4px 20px rgba(196, 69, 54, 0.1);
+  }
+
+  .flow-step-content h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .flow-step-content h3 .tag {
+    font-size: 0.6rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tag-module { background: var(--color-accent-light); color: var(--color-accent); }
+  .tag-data { background: rgba(43, 122, 75, 0.1); color: var(--color-success); }
+  .tag-warn { background: rgba(184, 134, 11, 0.1); color: var(--color-warning); }
+
+  .flow-step-content p {
+    font-size: 0.92rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .flow-step-content .code-ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--color-accent);
+    background: var(--color-accent-light);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .flow-connector {
+    width: 2px;
+    height: 32px;
+    background: var(--color-border);
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .flow-connector.active {
+    background: var(--color-accent);
+  }
+
+  .flow-connector .arrow {
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--color-border);
+  }
+
+  .flow-connector.active .arrow {
+    border-top-color: var(--color-accent);
+  }
+
+  /* ===== CARD GRID ===== */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.8rem;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(196, 69, 54, 0.08);
+  }
+
+  .card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card p, .card ul, .card ol {
+    font-size: 0.92rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .card ul, .card ol {
+    padding-left: 1.2rem;
+  }
+
+  .card ul li, .card ol li {
+    padding: 0.2rem 0;
+  }
+
+  .card ul li::marker {
+    color: var(--color-accent);
+  }
+
+  /* ===== CODE BLOCKS ===== */
+  .code-block {
+    background: var(--color-code-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+
+  .code-block-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: var(--color-surface-2);
+    border-bottom: 1px solid var(--color-border);
+    font-family: 'Fraunces', serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+  }
+
+  .code-block pre {
+    padding: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.65;
+    overflow-x: auto;
+    color: var(--color-text-primary);
+  }
+
+  .code-block code .cm { color: #888; font-style: italic; }
+  .code-block code .kw { color: #7b2d8b; font-weight: 600; }
+  .code-block code .fn { color: var(--color-accent); }
+  .code-block code .str { color: var(--color-success); }
+  .code-block code .num { color: var(--color-info); }
+  .code-block code .op { color: var(--color-text-primary); }
+
+  /* ===== TIPS ===== */
+  .tip-box {
+    display: flex;
+    gap: 1rem;
+    padding: 1.2rem 1.5rem;
+    border-radius: 10px;
+    margin: 1.5rem 0;
+    border-left: 4px solid;
+  }
+
+  .tip-box.info {
+    background: rgba(43, 106, 138, 0.06);
+    border-left-color: var(--color-info);
+  }
+
+  .tip-box.warning {
+    background: rgba(184, 134, 11, 0.06);
+    border-left-color: var(--color-warning);
+  }
+
+  .tip-box.success {
+    background: rgba(43, 122, 75, 0.06);
+    border-left-color: var(--color-success);
+  }
+
+  .tip-box .tip-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .tip-box .tip-content {
+    font-size: 0.92rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .tip-box .tip-content strong {
+    color: var(--color-text-primary);
+  }
+
+  /* ===== TABLE ===== */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 2rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  thead th {
+    background: var(--color-surface-2);
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  tbody td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+  }
+
+  tbody tr:hover td {
+    background: var(--color-surface-2);
+  }
+
+  tbody td .file-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--color-text-primary);
+  }
+
+  tbody td .badge {
+    display: inline-block;
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .badge-safe { background: rgba(43, 122, 75, 0.1); color: var(--color-success); }
+  .badge-caution { background: rgba(184, 134, 11, 0.1); color: var(--color-warning); }
+  .badge-danger { background: rgba(196, 69, 54, 0.1); color: var(--color-accent); }
+
+  /* ===== TIMELINE ===== */
+  .timeline {
+    position: relative;
+    padding-left: 2rem;
+    margin: 2rem 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-border);
+  }
+
+  .timeline-item {
+    position: relative;
+    padding: 0 0 2rem 1.5rem;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.35rem;
+    top: 0.4rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    border: 2px solid var(--color-bg);
+  }
+
+  .timeline-item h4 {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .timeline-item p {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ===== PARAM TABLE ===== */
+  .param-Nhóm {
+    margin: 2rem 0;
+  }
+
+  .param-Nhóm h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  /* ===== RECOMMEND SECTION ===== */
+  .recommend-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.8rem;
+    margin: 1.5rem 0;
+    transition: all 0.3s ease;
+  }
+
+  .recommend-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 4px 20px rgba(196, 69, 54, 0.08);
+  }
+
+  .recommend-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .recommend-card .priority {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+
+  .priority-high { background: rgba(196, 69, 54, 0.1); color: var(--color-accent); }
+  .priority-med { background: rgba(184, 134, 11, 0.1); color: var(--color-warning); }
+  .priority-low { background: rgba(43, 122, 75, 0.1); color: var(--color-success); }
+
+  .recommend-card p, .recommend-card ul {
+    font-size: 0.92rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .recommend-card ul {
+    padding-left: 1.2rem;
+  }
+
+  .recommend-card ul li {
+    padding: 0.2rem 0;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: 3rem 2rem;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: 0.85rem;
+  }
+
+  footer a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    section { padding: 3rem 1.5rem; }
+    .hero h1 { font-size: 2rem; }
+    .flow-step { flex-direction: column; gap: 0.5rem; }
+    .flow-step-number { min-width: 36px; height: 36px; font-size: 0.9rem; }
+    .flow-connector { height: 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ===== ANIMATIONS ===== */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ===== PROGRESS BAR ===== */
+  .progress-track {
+    display: flex;
+    justify-content: space-between;
+    margin: 3rem 0;
+    position: relative;
+    padding: 0 1rem;
+  }
+
+  .progress-track::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 2rem;
+    right: 2rem;
+    height: 2px;
+    background: var(--color-border);
+    transform: translateY(-50%);
+    z-index: 0;
+  }
+
+  .progress-dot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+  }
+
+  .progress-dot .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--color-border);
+    border: 2px solid var(--color-bg);
+    transition: all 0.3s ease;
+  }
+
+  .progress-dot.active .dot {
+    background: var(--color-accent);
+    box-shadow: 0 0 0 4px var(--color-accent-light);
+  }
+
+  .progress-dot .dot-label {
+    font-family: 'Fraunces', serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-align: center;
+    max-width: 70px;
+  }
+
+  .progress-dot.active .dot-label {
+    color: var(--color-accent);
+  }
+
+  /* ===== COLLAPSIBLE ===== */
+  .collapsible {
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    margin: 1rem 0;
+    overflow: hidden;
+  }
+
+  .collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    background: var(--color-surface);
+    cursor: pointer;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background 0.2s ease;
+    user-select: none;
+  }
+
+  .collapsible-header:hover {
+    background: var(--color-surface-2);
+  }
+
+  .collapsible-header .toggle {
+    font-size: 1.2rem;
+    transition: transform 0.2s ease;
+    color: var(--color-text-secondary);
+  }
+
+  .collapsible.open .collapsible-header .toggle {
+    transform: rotate(45deg);
+  }
+
+  .collapsible-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .collapsible.open .collapsible-body {
+    max-height: 2000px;
+  }
+
+  .collapsible-body-inner {
+    padding: 1rem 1.2rem;
+  }
+
+  .collapsible-body-inner p,
+  .collapsible-body-inner ul,
+  .collapsible-body-inner ol {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .collapsible-body-inner ul,
+  .collapsible-body-inner ol {
+    padding-left: 1.2rem;
+  }
+
+  .collapsible-body-inner ul li,
+  .collapsible-body-inner ol li {
+    padding: 0.15rem 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-badge">📘 Hướng dẫn vận hành</div>
+  <h1>SIMP Workflow Guide<br><span class="highlight">Từ A → Z</span></h1>
+  <p>Quy trình chi tiết để vận hành thuật toán tối ưu hóa cấu trúc SIMP trong Python — từ khởi tạo, thay đổi tham số, debug, đến phân tích kết quả.</p>
+  <div class="hero-cta">
+    <a href="#workflow" class="btn btn-primary">▶ Bắt đầu</a>
+    <a href="#Tham Số" class="btn btn-outline">⚙ Tham số</a>
+    <a href="#notes" class="btn btn-outline">⚠ Lưu ý</a>
+  </div>
+  <div class="Cuộn-indicator">Cuộn xuống ↓</div>
+</section>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <ul>
+    <li><a href="#workflow">Quy trình</a></li>
+    <li><a href="#run-from-scratch">Chạy từ đầu</a></li>
+    <li><a href="#Tham Số">Tham số</a></li>
+    <li><a href="#modify">Tuỳ chỉnh</a></li>
+    <li><a href="#notes">Lưu ý</a></li>
+    <li><a href="#troubleshoot">Debug</a></li>
+    <li><a href="#recommend">Đề xuất</a></li>
+  </ul>
+</nav>
+
+<!-- ===== WORKFLOW ===== -->
+<section id="workflow" class="fade-in">
+  <h2>Quy trình vận hành SIMP</h2>
+  <p class="subtitle">Các bước hành động cụ thể khi làm việc với thuật toán — từ ý tưởng đến kết quả</p>
+
+  <div class="progress-track">
+    <div class="progress-dot active"><div class="dot"></div><div class="dot-label">Chuẩn bị</div></div>
+    <div class="progress-dot"><div class="dot"></div><div class="dot-label">Cấu hình</div></div>
+    <div class="progress-dot"><div class="dot"></div><div class="dot-label">Chạy</div></div>
+    <div class="progress-dot"><div class="dot"></div><div class="dot-label">Phân tích</div></div>
+    <div class="progress-dot"><div class="dot"></div><div class="dot-label">Điều chỉnh</div></div>
+  </div>
+
+  <div class="flowchart">
+    <!-- Step 1 -->
+    <div class="flow-step visible">
+      <div class="flow-step-number">1</div>
+      <div class="flow-step-content">
+        <h3>🔍 Xác định bài toán <span class="tag tag-module">Bước đầu</span></h3>
+        <p>Trước khi chạy, bạn cần xác định rõ:</p>
+        <ul style="color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 1.2rem; margin-top: 0.4rem;">
+          <li><strong>Mục tiêu:</strong> Bạn muốn tối ưu độ cứng cắt (E<sub>1122</sub>) hay kết hợp với ràng buộc độ cứng dọc?</li>
+          <li><strong>Hạt mầm:</strong> Dạng hình học ban đầu nào phù hợp? (tròn, vuông, đồng hồ cát, lục giác...)</li>
+          <li><strong>Kích thước lưới:</strong> Lưới càng mịn → kết quả chi tiết hơn nhưng chậm hơn.</li>
+          <li><strong>Tỉ lệ thể tích:</strong> Bao nhiêu phần trăm ô đơn vị được phép chứa vật liệu?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-connector active"><div class="arrow"></div></div>
+
+    <!-- Step 2 -->
+    <div class="flow-step">
+      <div class="flow-step-number">2</div>
+      <div class="flow-step-content">
+        <h3>📦 Cài đặt môi trường <span class="tag tag-module">setup</span></h3>
+        <p>Đảm bảo bạn đã cài đủ các thư viện cần thiết:</p>
+        <div class="code-block" style="margin: 0.5rem 0 0;">
+          <pre>{{CODE_BLOCK_0}}</pre>
+        </div>
+        <p style="margin-top: 0.5rem;">Kiểm tra Python version: <span class="code-ref">Python --version</span> (cần ≥ 3.9)</p>
+      </div>
+    </div>
+
+    <div class="flow-connector"><div class="arrow"></div></div>
+
+    <!-- Step 3 -->
+    <div class="flow-step">
+      <div class="flow-step-number">3</div>
+      <div class="flow-step-content">
+        <h3>⚙️ Cấu hình tham số <span class="tag tag-module">config.py</span></h3>
+        <p>Tất cả tham số tập trung trong <span class="code-ref">simp/config.py</span> — class <span class="code-ref">SimpConfig</span>. Bạn có thể:</p>
+        <ul style="color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 1.2rem; margin-top: 0.4rem;">
+          <li><strong>Qua CLI:</strong> <span class="code-ref">Python -m simp.main --nelx 60 --volfrac 0.35</span></li>
+          <li><strong>Qua code:</strong> Tạo <span class="code-ref">SimpConfig(nelx=60, volfrac=0.35)</span> trong script Python</li>
+          <li><strong>Qua notebook:</strong> Import config và chỉnh sửa trực tiếp</li>
+        </ul>
+        <div class="tip-box info" style="margin: 0.5rem 0 0;">
+          <div class="tip-icon">💡</div>
+          <div class="tip-content"><strong>Mẹo:</strong> Dùng <span class="code-ref">--list-Hạt Giống</span> để xem tất cả hạt mầm có sẵn trước khi chọn.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-connector"><div class="arrow"></div></div>
+
+    <!-- Step 4 -->
+    <div class="flow-step">
+      <div class="flow-step-number">4</div>
+      <div class="flow-step-content">
+        <h3>🏃 Chạy tối ưu hóa <span class="tag tag-module">runner.py</span></h3>
+        <p>Vòng lặp chính được điều phối bởi <span class="code-ref">run_simp()</span> trong <span class="code-ref">runner.py</span>. Quy trình mỗi vòng lặp:</p>
+        <ol style="color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 1.2rem; margin-top: 0.4rem;">
+          <li><strong>FEM</strong> → <span class="code-ref">solve_fe()</span>: Lắp ráp K, giải hệ PBC</li>
+          <li><strong>Đồng nhất hóa</strong> → <span class="code-ref">compute_homogenized_tensor()</span>: Tính Q (3×3)</li>
+          <li><strong>Mục tiêu</strong> → <span class="code-ref">compute_first/second_objective()</span>: Tính c và dc</li>
+          <li><strong>Lọc</strong> → <span class="code-ref">H @ dc</span>: Làm mượt gradient, tránh checkerboard</li>
+          <li><strong>OC</strong> → <span class="code-ref">optimize_oc()</span>: Cập nhật mật độ x theo OC</li>
+          <li><strong>Hội tụ</strong> → <span class="code-ref">check_convergence()</span>: Kiểm tra change < tol</li>
+        </ol>
+        <div class="tip-box warning" style="margin: 0.5rem 0 0;">
+          <div class="tip-icon">⚠️</div>
+          <div class="tip-content"><strong>Quan trọng:</strong> Lần chạy đầu tiên luôn dùng <span class="code-ref">--verbose</span> để theo dõi tiến trình. Nếu thấy NaN trong objective → dừng ngay và kiểm tra tham số.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-connector"><div class="arrow"></div></div>
+
+    <!-- Step 5 -->
+    <div class="flow-step">
+      <div class="flow-step-number">5</div>
+      <div class="flow-step-content">
+        <h3>📊 Phân tích kết quả <span class="tag tag-data">output</span></h3>
+        <p>Sau khi chạy xong, dữ liệu được lưu trong thư mục output (mặc định: <span class="code-ref">test_<seed_name>/</span>):</p>
+        <ul style="color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 1.2rem; margin-top: 0.4rem;">
+          <li><span class="code-ref">iteration_data.csv</span> — Lịch sử hội tụ (objective, thể tích, change)</li>
+          <li><span class="code-ref">iteration_*.png</span> — Ảnh chụp cấu trúc tại từng bước</li>
+          <li><strong>Phân tích hội tụ:</strong> Dùng <span class="code-ref">notebooks/01_convergent_analysis.ipynb</span></li>
+          <li><strong>Phân tích ảnh:</strong> Dùng <span class="code-ref">notebooks/02_image_quality_analysis.ipynb</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-connector"><div class="arrow"></div></div>
+
+    <!-- Step 6 -->
+    <div class="flow-step">
+      <div class="flow-step-number">6</div>
+      <div class="flow-step-content">
+        <h3>🔄 Điều chỉnh & lặp lại <span class="tag tag-warn">tuning</span></h3>
+        <p>Dựa trên kết quả phân tích, bạn có thể:</p>
+        <ul style="color: var(--color-text-secondary); font-size: 0.9rem; padding-left: 1.2rem; margin-top: 0.4rem;">
+          <li><strong>Tăng/giảm volfrac</strong> nếu kết quả quá đặc hoặc quá rỗng</li>
+          <li><strong>Thay đổi seed</strong> nếu cấu trúc hội tụ không như mong muốn</li>
+          <li><strong>Điều chỉnh rmin</strong> (bán kính lọc) để kiểm soát độ phức tạp</li>
+          <li><strong>Thử objective khác</strong> (first_obj ↔ second_obj) nếu cần ràng buộc thêm</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== RUN FROM SCRATCH ===== -->
+<section id="run-from-scratch" class="fade-in">
+  <h2>Chạy từ đầu — Step-by-Step</h2>
+  <p class="subtitle">Hướng dẫn chi tiết cho người mới bắt đầu: từ clone repo đến có kết quả</p>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <h4>1. Clone & cài đặt</h4>
+      <p><span class="code-ref">git clone <repo-url> && cd Input_SIMP_Analyst && pip install -r requirements.txt</span></p>
+    </div>
+    <div class="timeline-item">
+      <h4>2. Chạy thử nghiệm đầu tiên</h4>
+      <p><span class="code-ref">Python -m simp.main --seed circle --nelx 60 --nely 60 --volfrac 0.4 --verbose</span></p>
+    </div>
+    <div class="timeline-item">
+      <h4>3. Xem kết quả</h4>
+      <p>Mở thư mục <span class="code-ref">test_circle/</span> — xem file <span class="code-ref">iteration_data.csv</span> và các ảnh PNG.</p>
+    </div>
+    <div class="timeline-item">
+      <h4>4. Phân tích hội tụ</h4>
+      <p>Mở <span class="code-ref">notebooks/01_convergent_analysis.ipynb</span> trong Jupyter để vẽ biểu đồ hội tụ.</p>
+    </div>
+    <div class="timeline-item">
+      <h4>5. Thử với seed khác</h4>
+      <p><span class="code-ref">Python -m simp.main --seed hourglass --nelx 60 --nely 60 --volfrac 0.35</span></p>
+    </div>
+    <div class="timeline-item">
+      <h4>6. Thử objective thứ hai</h4>
+      <p><span class="code-ref">Python -m simp.main --seed circle --objective second --nelx 60 --nely 60</span></p>
+    </div>
+  </div>
+
+  <div class="tip-box success">
+    <div class="tip-icon">✅</div>
+    <div class="tip-content"><strong>Kết quả mong đợi:</strong> Sau 30–50 vòng lặp, objective sẽ hội tụ về một giá trị ổn định. Cấu trúc trong ảnh PNG sẽ hiện rõ hình dạng tối ưu với các thanh/vùng vật liệu phân bố hợp lý.</div>
+  </div>
+</section>
+
+<!-- ===== Tham Số ===== -->
+<section id="Tham Số" class="fade-in">
+  <h2>Bảng tham số chi tiết</h2>
+  <p class="subtitle">Tất cả các tham số bạn có thể thay đổi trong <span class="code-ref">SimpConfig</span> — và ảnh hưởng của chúng</p>
+
+  <div class="param-Nhóm">
+    <h3>📐 Lưới & Kích thước</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tham số</th><th>Mặc định</th><th>Mô tả</th><th>Mức độ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="file-path">nelx</span></td><td>60</td><td>Số ô lưới theo phương x (chiều ngang)</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">nely</span></td><td>60</td><td>Số ô lưới theo phương y (chiều dọc)</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">ndof</span></td><td>2 × (nelx+1) × (nely+1)</td><td>Tổng số bậc tự do (tự động tính)</td><td><span class="badge badge-safe">Chỉ đọc</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="param-Nhóm">
+    <h3>🧪 Vật liệu</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tham số</th><th>Mặc định</th><th>Mô tả</th><th>Mức độ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="file-path">E0</span></td><td>1.0</td><td>Modul đàn hồi của vật liệu đặc</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">Emin</span></td><td>1e-9</td><td>Modul đàn hồi của vật liệu rỗng (tránh singular)</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">nu</span></td><td>0.3</td><td>Hệ số Poisson</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+          <tr><td><span class="file-path">penal</span></td><td>3.0</td><td>Hệ số phạt SIMP (thường 3–5)</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="param-Nhóm">
+    <h3>🎯 Tối ưu hóa</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tham số</th><th>Mặc định</th><th>Mô tả</th><th>Mức độ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="file-path">volfrac</span></td><td>0.4</td><td>Tỉ lệ thể tích cho phép (0.0–1.0)</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+          <tr><td><span class="file-path">rmin</span></td><td>1.5</td><td>Bán kính lọc (pixel) — càng lớn càng mượt</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+          <tr><td><span class="file-path">max_iter</span></td><td>200</td><td>Số vòng lặp tối đa</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">tol</span></td><td>0.01</td><td>Ngưỡng hội tụ (change < tol → dừng)</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+          <tr><td><span class="file-path">move</span></td><td>0.2</td><td>Giới hạn thay đổi mật độ mỗi vòng (OC)</td><td><span class="badge badge-caution">Thận trọng</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="param-Nhóm">
+    <h3>🧬 Hạt mầm & Mục tiêu</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tham số</th><th>Mặc định</th><th>Mô tả</th><th>Mức độ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="file-path">seed_type</span></td><td>"circle"</td><td>Loại hạt mầm: circle, square, hourglass, four_circle, hexagonal, nine_circle, cross_rectangular, grid_circular_voids, small_square_cross, circle_half_quarter</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">objective</span></td><td>"first"</td><td>Hàm mục tiêu: "first" (E<sub>1122</sub>), "second" (E<sub>1122</sub> + ràng buộc E<sub>1111</sub>)</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="param-Nhóm">
+    <h3>📁 Đầu ra</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Tham số</th><th>Mặc định</th><th>Mô tả</th><th>Mức độ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="file-path">output_dir</span></td><td>"test_<seed>"</td><td>Thư mục lưu kết quả</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">save_every</span></td><td>1</td><td>Lưu ảnh mỗi N vòng lặp</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+          <tr><td><span class="file-path">verbose</span></td><td>False</td><td>In log chi tiết ra console</td><td><span class="badge badge-safe">An toàn</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MODIFY ===== -->
+<section id="modify" class="fade-in">
+  <h2>Cách thay đổi & tuỳ chỉnh</h2>
+  <p class="subtitle">Các kịch bản thường gặp khi bạn muốn can thiệp sâu vào thuật toán</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>🔄 Đổi hạt mầm</h3>
+      <p>Mỗi hạt mầm là một file trong <span class="code-ref">simp/Hạt Giống/</span>. Bạn có thể:</p>
+      <ul>
+        <li>Dùng CLI: <span class="code-ref">--seed four_circle</span></li>
+        <li>Thêm seed mới: tạo file <span class="code-ref">simp/Hạt Giống/my_seed.py</span> với hàm <span class="code-ref">generate(config) → x</span></li>
+        <li>Đăng ký seed mới trong <span class="code-ref">simp/Hạt Giống/__init__.py</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🎯 Đổi hàm mục tiêu</h3>
+      <p>Hai objective có sẵn trong <span class="code-ref">simp/Mục Tiêu/</span>:</p>
+      <ul>
+        <li><strong>first_obj:</strong> Chỉ tối ưu E<sub>1122</sub> (độ cứng cắt)</li>
+        <li><strong>second_obj:</strong> Tối ưu E<sub>1122</sub> với ràng buộc E<sub>1111</sub> ≥ threshold</li>
+        <li>Bạn có thể tự viết objective mới theo interface tương tự</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📐 Đổi kích thước lưới</h3>
+      <p>Thay đổi <span class="code-ref">nelx</span> và <span class="code-ref">nely</span>:</p>
+      <ul>
+        <li>Lưới 30×30: chạy nhanh (~5s), kết quả thô</li>
+        <li>Lưới 60×60: cân bằng (~30s)</li>
+        <li>Lưới 120×120: chi tiết (~3 phút)</li>
+        <li>Lưới 240×240: rất chậm (~20 phút), chỉ dùng khi cần độ chính xác cao</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>⚡ Đổi hệ số phạt (penal)</h3>
+      <p><span class="code-ref">penal</span> kiểm soát độ "sắc nét" của kết quả nhị phân:</p>
+      <ul>
+        <li><strong>penal = 1:</strong> Kết quả mờ, nhiều xám (density không về 0/1)</li>
+        <li><strong>penal = 3:</strong> Mặc định, cân bằng tốt</li>
+        <li><strong>penal = 5:</strong> Kết quả rất sắc, nhưng dễ bị local optima</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🔍 Đổi bán kính lọc (rmin)</h3>
+      <p><span class="code-ref">rmin</span> ảnh hưởng đến độ phức tạp hình học:</p>
+      <ul>
+        <li><strong>rmin = 1.0:</strong> Nhiều chi tiết nhỏ, có checkerboard</li>
+        <li><strong>rmin = 1.5:</strong> Mặc định, an toàn</li>
+        <li><strong>rmin = 3.0:</strong> Cấu trúc đơn giản, mượt</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📊 Đổi tỉ lệ thể tích (volfrac)</h3>
+      <p>Kiểm soát lượng vật liệu trong ô đơn vị:</p>
+      <ul>
+        <li><strong>volfrac = 0.3:</strong> Kết cấu nhẹ, nhiều lỗ rỗng</li>
+        <li><strong>volfrac = 0.5:</strong> Cân bằng</li>
+        <li><strong>volfrac = 0.7:</strong> Kết cấu đặc, ít lỗ rỗng</li>
+        <li>Lưu ý: volfrac quá thấp có thể gây mất ổn định số</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="collapsible">
+    <div class="collapsible-header">
+      <span>📝 Ví dụ: Script Python tự động chạy nhiều seed</span>
+      <span class="toggle">+</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <div class="code-block">
+          <div class="code-block-header">batch_run.py</div>
+          <pre>{{CODE_BLOCK_1}}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== NOTES ===== -->
+<section id="notes" class="fade-in">
+  <h2>Lưu ý quan trọng khi thao tác</h2>
+  <p class="subtitle">Những điều cần ghi nhớ để tránh mất thời gian debug</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <h3>⚠️ NaN trong objective</h3>
+      <p>Nguyên nhân thường gặp:</p>
+      <ul>
+        <li><strong>volfrac quá thấp</strong> (< 0.2) → ma trận K suy biến</li>
+        <li><strong>penal quá cao</strong> (> 6) → gradient không ổn định</li>
+        <li><strong>Lưới quá thô</strong> (< 20×20) → không đủ bậc tự do</li>
+        <li><strong>Emin quá nhỏ</strong> → ma trận K gần singular</li>
+      </ul>
+      <div class="tip-box warning" style="margin: 0.5rem 0 0;">
+        <div class="tip-icon">🔧</div>
+        <div class="tip-content"><strong>Fix:</strong> Tăng volfrac lên 0.3, giảm penal xuống 3, kiểm tra Emin (nên ≥ 1e-9).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔄 Không hội tụ</h3>
+      <p>Objective dao động liên tục, không ổn định:</p>
+      <ul>
+        <li><strong>move quá lớn</strong> (> 0.3) → giảm xuống 0.15</li>
+        <li><strong>tol quá nhỏ</strong> (< 0.001) → tăng lên 0.01</li>
+        <li><strong>rmin quá nhỏ</strong> (< 1.0) → tăng lên 1.5</li>
+        <li><strong>max_iter quá ít</strong> (< 50) → tăng lên 200</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🧩 Checkerboard pattern</h3>
+      <p>Hiện tượng các ô đen/trắng xen kẽ nhau:</p>
+      <ul>
+        <li><strong>Nguyên nhân:</strong> rmin quá nhỏ hoặc không dùng Lọc</li>
+        <li><strong>Fix:</strong> Tăng <span class="code-ref">rmin</span> lên ≥ 1.5</li>
+        <li>Kiểm tra Lọc có được áp dụng không trong <span class="code-ref">runner.py</span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🐌 Chạy quá chậm</h3>
+      <p>Thời gian chạy quá lâu:</p>
+      <ul>
+        <li><strong>Giảm nelx/nely</strong> — 60×60 là đủ cho hầu hết trường hợp</li>
+        <li><strong>Giảm max_iter</strong> — nếu hội tụ sớm, không cần chạy hết</li>
+        <li><strong>Tăng save_every</strong> — giảm số lần ghi ảnh</li>
+        <li><strong>Tắt verbose</strong> — I/O cũng tốn thời gian</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📁 Output bị ghi đè</h3>
+      <p>Chạy lại cùng seed → mất dữ liệu cũ:</p>
+      <ul>
+        <li>Luôn đặt <span class="code-ref">output_dir</span> khác nhau cho mỗi lần chạy</li>
+        <li>Hoặc dùng timestamp: <span class="code-ref">f"test_{seed}_{datetime.now():%Y%m%d_%H%M}"</span></li>
+        <li>Backup dữ liệu quan trọng trước khi chạy lại</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🔢 Kết quả không tái lập</h3>
+      <p>Chạy lại cho kết quả khác:</p>
+      <ul>
+        <li>Kiểm tra <strong>random seed</strong> trong code</li>
+        <li>Nếu có phần ngẫu nhiên, set <span class="code-ref">np.random.seed(42)</span></li>
+        <li>Đảm bảo cùng version thư viện (NumPy, Scipy)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TROUBLESHOOT ===== -->
+<section id="troubleshoot" class="fade-in">
+  <h2>Debug & Xử lý lỗi</h2>
+  <p class="subtitle">Các lỗi thường gặp và cách khắc phục nhanh</p>
+
+  <div class="collapsible open">
+    <div class="collapsible-header">
+      <span>❌ "Singular matrix" / "LinAlgError"</span>
+      <span class="toggle">+</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <p><strong>Nguyên nhân:</strong> Ma trận độ cứng K không khả nghịch — thường do quá nhiều ô rỗng (Emin quá nhỏ) hoặc volfrac quá thấp.</p>
+        <p><strong>Cách fix:</strong></p>
+        <ol>
+          <li>Tăng <span class="code-ref">Emin</span> lên 1e-6 hoặc 1e-5</li>
+          <li>Tăng <span class="code-ref">volfrac</span> lên ≥ 0.3</li>
+          <li>Kiểm tra điều kiện biên PBC trong <span class="code-ref">simp/core/pbc.py</span></li>
+          <li>Nếu vẫn lỗi, thử dùng lưới lớn hơn (nelx ≥ 40)</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible">
+    <div class="collapsible-header">
+      <span>❌ "ModuleNotFoundError: No module named 'simp'"</span>
+      <span class="toggle">+</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <p><strong>Nguyên nhân:</strong> Chưa cài đặt package dạng editable.</p>
+        <p><strong>Cách fix:</strong></p>
+        <div class="code-block" style="margin: 0.5rem 0;">
+          <pre>{{CODE_BLOCK_2}}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible">
+    <div class="collapsible-header">
+      <span>❌ "ValueError: operands could not be broadcast together"</span>
+      <span class="toggle">+</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <p><strong>Nguyên nhân:</strong> Kích thước mảng không khớp — thường do thay đổi nelx/nely mà không cập nhật seed tương ứng.</p>
+        <p><strong>Cách fix:</strong></p>
+        <ul>
+          <li>Kiểm tra seed function có dùng <span class="code-ref">config.nelx</span> và <span class="code-ref">config.nely</span> không</li>
+          <li>Một số seed cứng (hardcoded) kích thước — cần sửa lại</li>
+          <li>Dùng <span class="code-ref">--list-Hạt Giống</span> để xem seed nào linh hoạt</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="collapsible">
+    <div class="collapsible-header">
+      <span>❌ Kết quả toàn màu xám (không về 0/1)</span>
+      <span class="toggle">+</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="collapsible-body-inner">
+        <p><strong>Nguyên nhân:</strong> Hệ số phạt chưa đủ mạnh hoặc chưa đủ số vòng lặp.</p>
+        <p><strong>Cách fix:</strong></p>
+        <ul>
+          <li>Tăng <span class="code-ref">penal</span> lên 4 hoặc 5</li>
+          <li>Tăng <span class="code-ref">max_iter</span> lên 300</li>
+          <li>Kiểm tra OC update có hoạt động đúng không</li>
+          <li>Thử giảm <span class="code-ref">move</span> xuống 0.1 để thay đổi chậm hơn</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box info">
+    <div class="tip-icon">💡</div>
+    <div class="tip-content"><strong>Mẹo debug tổng quát:</strong> Luôn chạy với <span class="code-ref">--verbose</span> ở lần đầu. Log sẽ hiển thị objective, change, và thể tích sau mỗi vòng lặp — giúp bạn phát hiện sớm các bất thường.</div>
+  </div>
+</section>
+
+<!-- ===== RECOMMEND ===== -->
+<section id="recommend" class="fade-in">
+  <h2>Đề xuất cải tiến & Phát triển thêm</h2>
+  <p class="subtitle">Những phần có thể thêm vào để SIMP mạnh mẽ và linh hoạt hơn</p>
+
+  <div class="recommend-card">
+    <h3>📈 <span class="priority priority-high">CAO</span> Adaptive mesh refinement (AMR)</h3>
+    <p>Tự động làm mịn lưới ở những vùng có gradient mật độ cao (biên giữa vật liệu và lỗ rỗng). Giúp:</p>
+    <ul>
+      <li>Tăng độ chính xác mà không tăng tổng số ô lưới</li>
+      <li>Tập trung tài nguyên tính toán vào vùng quan trọng</li>
+      <li>Có thể dùng <span class="code-ref">Scipy.interpolate</span> để map kết quả giữa các lưới</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>🧠 <span class="priority priority-high">CAO</span> Multi-objective Tối Ưu Hóa (MOO)</h3>
+    <p>Thay vì chỉ tối ưu một mục tiêu, cho phép tối ưu đồng thời nhiều mục tiêu:</p>
+    <ul>
+      <li>Ví dụ: tối đa E<sub>1122</sub> + tối thiểu khối lượng + ràng buộc độ bền</li>
+      <li>Có thể dùng phương pháp weighted sum hoặc Pareto front</li>
+      <li>Thêm class <span class="code-ref">MultiObjective</span> trong <span class="code-ref">simp/Mục Tiêu/</span></li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>🔄 <span class="priority priority-high">CAO</span> Restart từ checkpoint</h3>
+    <p>Cho phép lưu trạng thái hiện tại và tiếp tục chạy sau:</p>
+    <ul>
+      <li>Lưu <span class="code-ref">x</span> (mật độ), <span class="code-ref">iteration</span>, <span class="code-ref">objective_history</span> vào file .npy hoặc .h5</li>
+      <li>Thêm flag <span class="code-ref">--restart checkpoint.npy</span></li>
+      <li>Rất hữu ích khi chạy lưới lớn (120×120+) bị gián đoạn</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>📊 <span class="priority priority-med">TRUNG BÌNH</span> Sensitivity analysis</h3>
+    <p>Phân tích độ nhạy của kết quả với từng tham số đầu vào:</p>
+    <ul>
+      <li>Dùng thư viện <span class="code-ref">SALib</span> để chạy Morris / Sobol analysis</li>
+      <li>Xác định tham số nào ảnh hưởng nhất đến objective</li>
+      <li>Giúp tập trung tuning vào đúng tham số quan trọng</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>🤖 <span class="priority priority-med">TRUNG BÌNH</span> GPU acceleration (CuPy / JAX)</h3>
+    <p>Tận dụng GPU để tăng tốc FEM solver:</p>
+    <ul>
+      <li>Thay NumPy bằng <span class="code-ref">cupy</span> hoặc <span class="code-ref">jax.NumPy</span></li>
+      <li>Giảm thời gian chạy từ phút xuống giây cho lưới lớn</li>
+      <li>Cần có NVIDIA GPU + CUDA toolkit</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>📝 <span class="priority priority-med">TRUNG BÌNH</span> Automatic hyperparameter tuning</h3>
+    <p>Tự động tìm tham số tối ưu:</p>
+    <ul>
+      <li>Dùng <span class="code-ref">Optuna</span> hoặc <span class="code-ref">Scipy.optimize</span></li>
+      <li>Tối ưu đồng thời volfrac, penal, rmin, move</li>
+      <li>Kết hợp với early stopping để tiết kiệm thời gian</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>📦 <span class="priority priority-low">THẤP</span> Export kết quả sang CAD/STL</h3>
+    <p>Chuyển kết quả tối ưu thành file CAD để in 3D hoặc mô phỏng:</p>
+    <ul>
+      <li>Dùng <span class="code-ref">Scipy.ndimage</span> để làm mượt biên</li>
+      <li>Export sang STL qua <span class="code-ref">NumPy-stl</span></li>
+      <li>Hoặc dùng <span class="code-ref">trimesh</span> để xử lý mesh</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>🌐 <span class="priority priority-low">THẤP</span> Web dashboard real-time</h3>
+    <p>Xem tiến trình tối ưu hóa trực tiếp trên web:</p>
+    <ul>
+      <li>Dùng <span class="code-ref">Flask</span> + <span class="code-ref">Socket.IO</span> để stream dữ liệu</li>
+      <li>Hiển thị biểu đồ hội tụ và ảnh cấu trúc real-time</li>
+      <li>Cho phép điều chỉnh tham số giữa chừng</li>
+    </ul>
+  </div>
+
+  <div class="recommend-card">
+    <h3>🧪 <span class="priority priority-low">THẤP</span> Unit test & CI/CD</h3>
+    <p>Đảm bảo code luôn chạy đúng sau mỗi lần sửa:</p>
+    <ul>
+      <li>Viết thêm test cho từng module (đã có <span class="code-ref">tests/</span>)</li>
+      <li>Thêm GitHub Actions để tự động chạy test</li>
+      <li>Kiểm tra coverage để biết phần nào chưa được test</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <p>SIMP Workflow Guide — Hướng dẫn vận hành thuật toán tối ưu hóa cấu trúc</p>
+  <p>Dự án <a href="#">Input_SIMP_Analyst</a> — Phát triển bởi nhóm nghiên cứu</p>
+  <p style="margin-top: 0.5rem; font-size: 0.75rem;">Generated 2026-05-22 · File: <span class="code-ref">simp/simp_workflow_guide.html</span></p>
+</footer>
+
+<script>
+  // ===== Cuộn-triggered animations =====
+  document.addEventListener('DOMContentLoaded', function() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    // Observe fade-in sections
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Observe flow steps
+    document.querySelectorAll('.flow-step').forEach(el => observer.observe(el));
+
+    // Observe progress dots
+    const progressDots = document.querySelectorAll('.progress-dot');
+    const sections = document.querySelectorAll('section[id]');
+
+    const progressObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          const sectionOrder = ['workflow', 'run-from-scratch', 'Tham Số', 'modify', 'notes'];
+          const idx = sectionOrder.indexOf(id);
+          if (idx >= 0) {
+            progressDots.forEach((dot, i) => {
+              dot.classList.toggle('active', i <= idx);
+            });
+          }
+        }
+      });
+    }, { threshold: 0.3 });
+
+    sections.forEach(s => progressObserver.observe(s));
+
+    // ===== Collapsible =====
+    document.querySelectorAll('.collapsible-header').forEach(header => {
+      header.addEventListener('click', function() {
+        this.parentElement.classList.toggle('open');
+      });
+    });
+
+    // ===== Flow connector animation =====
+    const connectorObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const prev = entry.target.previousElementSibling;
+          if (prev && prev.classList.contains('flow-connector')) {
+            prev.classList.add('active');
+          }
+        }
+      });
+    }, { threshold: 0.3 });
+
+    document.querySelectorAll('.flow-step').forEach(el => connectorObserver.observe(el));
+
+    // ===== Smooth Cuộn for nav links =====
+    document.querySelectorAll('nav a').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  });
+</script>
+
+</body>

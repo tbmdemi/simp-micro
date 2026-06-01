@@ -1,0 +1,479 @@
+<!--
+  Title:    SIMP — Hướng dẫn Quy trình & Lộ trình
+  Type:     Hướng dẫn Toàn diện + Lộ trình Chiến lược
+  Aesthetic: Bố cục biên tập sạch sẽ với visualization dạng timeline
+  Fonts:    Playfair Display + Inter
+  Generated: 2026-06-01
+-->
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SIMP — Hướng dẫn hoàn chỉnh và Lộ trình chiến lược cho topology optimization của microstructures.">
+<title>SIMP — Hướng dẫn Quy trình & Lộ trình</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --text: #1a1a1a;
+    --text-light: #555;
+    --muted: #888;
+    --surface: #fafaf8;
+    --surface-2: #f0ede8;
+    --border: #e0dcd6;
+    --accent: #2c5aa0;
+    --radius: 8px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    background: white;
+    line-height: 1.7;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* TYPOGRAPHY */
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    margin: 2rem 0 1.5rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    margin: 2.5rem 0 1rem;
+    color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  h3 { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin: 1.5rem 0 0.8rem; }
+  h4 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+  p { margin: 1rem 0; color: var(--text-light); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  pre {
+    background: var(--surface);
+    padding: 1rem;
+    border-radius: var(--radius);
+    overflow-x: auto;
+    margin: 1rem 0;
+    border-left: 4px solid var(--accent);
+  }
+
+  ul { margin: 1rem 0; }
+  li { margin: 0.5rem 0; }
+
+  /* NAVIGATION */
+  nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  nav ul {
+    display: flex;
+    list-style: none;
+    padding: 0 2rem;
+    overflow-x: auto;
+  }
+
+  nav li a {
+    color: var(--muted);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+
+  nav li a:hover, nav li a.active {
+    color: var(--accent);
+  }
+
+  /* SECTIONS */
+  section {
+    margin: 3rem 0;
+  }
+
+  .section-intro {
+    background: var(--surface-2);
+    padding: 2rem;
+    border-radius: var(--radius);
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--accent);
+  }
+
+  .timeline {
+    margin: 2rem 0;
+  }
+
+  .timeline-item {
+    display: flex;
+    margin-bottom: 2rem;
+    gap: 2rem;
+  }
+
+  .timeline-marker {
+    width: 30px;
+    height: 30px;
+    background: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    top: 8px;
+  }
+
+  .timeline-item:not(:last-child) .timeline-marker::after {
+    content: '';
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    width: 2px;
+    height: 60px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+
+  .timeline-content h4 {
+    margin: 0;
+    color: var(--text);
+  }
+
+  .timeline-content p {
+    margin: 0.5rem 0 0 0;
+    color: var(--muted);
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .card h4 {
+    color: var(--accent);
+    margin-top: 0;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .container { padding: 0 1rem; }
+    nav ul { flex-direction: column; gap: 1rem; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath: [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true
+    }
+  };
+</script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+
+<!-- NAVIGATION -->
+<nav>
+  <ul class="container">
+    <li><a href="#guide" class="nav-link active">Hướng dẫn</a></li>
+    <li><a href="#roadmap" class="nav-link">Lộ trình</a></li>
+  </ul>
+</nav>
+
+<div class="container">
+
+<!-- ===== SECTION 1: GUIDE ===== -->
+<section id="guide">
+  <h1>SIMP — Hướng dẫn Quy trình Hoàn chỉnh</h1>
+  
+  <div class="section-intro">
+    <p>
+      <strong>SIMP (Solid Isotropic Material with Penalization)</strong> là một khung công tác topology Tối Ưu Hóa 
+      để thiết kế các microstructures tuần hoàn (periodic) với các tính chất cơ học được xác định trước. Hướng dẫn này 
+      hướng dẫn qua toàn bộ quy trình Tối Ưu Hóa.
+    </p>
+  </div>
+
+  <h2>1. Công thức hóa vấn đề (Problem Formulation)</h2>
+  <p>
+    Thiết kế một ô unit cell 2D (microstructure) để tối ưu hóa mục tiêu cơ học trong khi tuân thủ ràng buộc khối lượng.
+  </p>
+  <div class="card">
+    <h4>Các hàm mục tiêu</h4>
+    <ul style="margin-left: 1.5rem;">
+      <li><strong>Auxetic:</strong> Giảm thiểu tỷ số Poisson (\(\nu_{12}\)) để có sự giãn nở âm theo hướng ngang</li>
+      <li><strong>First Objective:</strong> Tối đa hóa ghép nối cắt (\(Q_{12}\)) với phạt lên độ cứng trục</li>
+      <li><strong>Second Objective:</strong> Tối đa hóa trực tiếp \(Q_{12}\) với phạt lớn hơn ở cận dưới</li>
+    </ul>
+  </div>
+
+  <h2>2. Rời rạc hóa miền (Domain Discretization)</h2>
+  <p>
+    Microstructure được rời rạc hóa thành một lưới 2D của các phần tử tứ giác 4-node. Cấu hình tiêu chuẩn:
+  </p>
+  <ul style="margin-left: 1.5rem;">
+    <li>Lưới: 100 × 100 hoặc 120 × 120 phần tử (tùy chỉnh được)</li>
+    <li>Vật liệu: Đẳng hướng với mô đun Young \(E_0\) và tỷ số Poisson \(\nu_0\)</li>
+    <li>Điều kiện biên tuần hoàn (PBC) để đảm bảo tính tuần hoàn</li>
+  </ul>
+
+  <h2>3. Tham số hóa mật độ (Density Parametrization)</h2>
+  <p>
+    Mỗi phần tử có một biến thiết kế \(x_e \in [0, 1]\) đại diện cho mật độ. Tính chất vật liệu bị phạt:
+  </p>
+  <pre>\[E_e(x_e) = E_{min} + x_e^p (E_0 - E_{min})\]</pre>
+  <p>
+    trong đó \(p\) là số mũ phạt (thường là 3.0) và \(E_{min} \approx 10^{-9} E_0\) đại diện cho khoảng trống (void).
+  </p>
+
+  <h2>4. Phân tích Phần tử Hữu hạn (FEA)</h2>
+  <p>
+    Với mỗi thiết kế, tính ma trận độ cứng toàn cục \(K(\mathbf{x})\) và giải:
+  </p>
+  <pre>\[K(\mathbf{x}) \mathbf{u} = \mathbf{f}\]</pre>
+  <p>
+    Tuân thủ điều kiện biên tuần hoàn. Năng lượng biến dạng được sử dụng trong phân tích độ nhạy.
+  </p>
+
+  <h2>5. Đồng nhất hóa (Homogenization)</h2>
+  <p>
+    Rút trích tensor độ cứng hiệu dụng (homogenized) \(Q\) từ lời giải FE ở cấp vi mô. Đối với trạng thái ứng suất phẳng:
+  </p>
+  <pre>\[Q = \begin{bmatrix} Q_{11} & Q_{12} \\ Q_{12} & Q_{22} \end{bmatrix}\]</pre>
+  <p>
+    Tỷ số Poisson được tính toán là \(\nu_{12} = -Q_{12} / Q_{22}\).
+  </p>
+
+  <h2>6. Phân tích độ nhạy (Sensitivity Analysis)</h2>
+  <p>
+    Tính đạo hàm của mục tiêu đối với mỗi biến thiết kế:
+  </p>
+  <pre>\[\frac{\partial c}{\partial x_e} = \text{(công thức cụ thể cho từng mục tiêu)}\]</pre>
+  <p>
+    Với auxetic: \(\frac{\partial \nu_{12}}{\partial x_e}\) sử dụng quy tắc quotient trên các thành phần độ cứng đồng nhất.
+  </p>
+
+  <h2>7. Lọc mật độ (Density Filtering)</h2>
+  <p>
+    Áp dụng một bộ lọc hình nón có bán kính \(r_{min}\) để ngăn chặn các mẫu checkerboard và đảm bảo các lời giải độc lập với lưới.
+  </p>
+
+  <h2>8. Cập nhật Tiêu chí tối ưu (Optimality Criteria Update)</h2>
+  <p>
+    Sử dụng phương pháp moving asymptotes hoặc OC để cập nhật biến thiết kế trong khi tuân thủ ràng buộc khối lượng:
+  </p>
+  <pre>\[x_e^{new} = B(\Lambda)\]</pre>
+  <p>
+    trong đó \(\Lambda\) là nhân tử Lagrange được điều chỉnh qua bisection để thỏa \(\sum x_e = V_{target} \cdot n_{elem}\).
+  </p>
+
+  <h2>9. Kiểm tra hội tụ (Convergence Check)</h2>
+  <p>
+    Dừng khi bất kỳ một trong các tiêu chí sau được đáp ứng:
+  </p>
+  <ul style="margin-left: 1.5rem;">
+    <li>Thay đổi thiết kế < ngưỡng (ví dụ: 0.01)</li>
+    <li>Mục tiêu ổn định qua N vòng lặp</li>
+    <li>Đạt tối đa vòng lặp</li>
+  </ul>
+
+  <h2>10. Kết quả & Trực quan hóa</h2>
+  <p>
+    Lưu trường mật độ cuối cùng dưới dạng PNG grayscale và lịch sử hội tụ dưới dạng CSV.
+  </p>
+</section>
+
+<!-- ===== SECTION 2: ROADMAP ===== -->
+<section id="roadmap">
+  <h1 style="margin-top: 0;">Lộ trình Dự án SIMP</h1>
+
+  <div class="section-intro">
+    <p>
+      Các giai đoạn chiến lược để phát triển và xác thực khung công tác SIMP topology Tối Ưu Hóa cho thiết kế microstructure auxetic.
+    </p>
+  </div>
+
+  <h2>Giai Đoạn 1: Screening Tham Số</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Latin Hypercube Sampling (LHS)</h4>
+        <p>
+          Screening 8 Tham Số SIMP trên 30 tổ hợp seed × objective. Xác định các Tham Số có ảnh hưởng nhất 
+          sử dụng tương quan hạng Spearman. Ước tính 3.000 lần chạy Tối Ưu Hóa.
+        </p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Thành phẩm (Deliverables)</h4>
+        <p>
+          Ma trận tương quan, tập hợp Tham Số top-N, dashboard phân tích, khuyến nghị cho Giai Đoạn 2.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Giai Đoạn 2: Tối Ưu Hóa Tập trung</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Bayesian Tối Ưu Hóa</h4>
+        <p>
+          Sử dụng những hiểu biết từ Giai Đoạn 1 để áp dụng Bayesian Tối Ưu Hóa (Gaussian Process + Expected Improvement) 
+          trên không gian Tham Số giảm. Tập trung ngân sách trên top-3 Tham Số cho mỗi cặp (seed, objective).
+        </p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Kết quả kỳ vọng</h4>
+        <p>
+          Các tập hợp Tham Số tối ưu cho mỗi tổ hợp seed/objective, biên Pareto, biểu đồ độ nhạy.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Giai Đoạn 3: Xác Thực & Sản Xuất</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Xác thực Thực nghiệm</h4>
+        <p>
+          Chế tạo các microstructures được chọn và kiểm tra các tính chất cơ học (kéo, cắt, phản ứng auxetic). 
+          So sánh dữ liệu mô phỏng với thực nghiệm.
+        </p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Tính khả thi Chế tạo</h4>
+        <p>
+          Đánh giá các ràng buộc chế tạo (kích thước đặc trưng tối thiểu, sẵn có vật liệu), tinh chỉnh các thiết kế cho khả năng sản xuất.
+        </p>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-marker"></div>
+      <div class="timeline-content">
+        <h4>Thư viện Thiết kế</h4>
+        <p>
+          Xây dựng một thư viện được tuyển chọn các thiết kế đã xác thực với hiệu suất đã biết cho các ứng dụng khác nhau.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Các Mốc Quan Trọng Chính</h2>
+  <div class="card">
+    <h4>Q2 2026: Giai Đoạn 1 Hoàn thành</h4>
+    <p>Dashboard và phân tích Screening được phát hành. Các Tham Số hàng đầu được xác định cho tất cả 30 tổ hợp.</p>
+  </div>
+  <div class="card">
+    <h4>Q3 2026: Giữa Giai Đoạn 2</h4>
+    <p>Bayesian Tối Ưu Hóa đang chạy. 50% thiết kế cuối cùng được tối ưu hóa.</p>
+  </div>
+  <div class="card">
+    <h4>Q4 2026: Khởi động Giai Đoạn 3</h4>
+    <p>Các thiết kế được chọn được chế tạo. Xác thực thực nghiệm đang diễn ra.</p>
+  </div>
+  <div class="card">
+    <h4>Q1 2027: Sẵn sàng Sản xuất</h4>
+    <p>Thư viện thiết kế hoàn chỉnh. Sẵn sàng cho ứng dụng công nghiệp.</p>
+  </div>
+
+  <h2>Lộ trình Kỹ thuật</h2>
+  <ul style="margin-left: 1.5rem;">
+    <li><strong>Nghiên cứu Độc lập Lưới:</strong> Xác thực kết quả SIMP trên các độ mịn lưới khác nhau</li>
+    <li><strong>Phân tích Mở rộng:</strong> Kiểm tra hành vi khi kích thước lưới tăng (100 → 200 × 200)</li>
+    <li><strong>Mở rộng 3D:</strong> Điều chỉnh khung công tác SIMP cho thiết kế microstructure 3D</li>
+    <li><strong>Đa Mục tiêu:</strong> Triển khai Tối Ưu Hóa Pareto cho các mục tiêu cạnh tranh</li>
+    <li><strong>Định lượng Bất định:</strong> Phân tích độ bền vững dưới biến động vật liệu/chế tạo</li>
+  </ul>
+
+  <h2>Tài nguyên Tính toán</h2>
+  <div class="card">
+    <h4>Giai Đoạn 1: ~500 giờ CPU</h4>
+    <p>3.000 lần chạy Tối Ưu Hóa × 10 phút/lần (cụm phân tán)</p>
+  </div>
+  <div class="card">
+    <h4>Giai Đoạn 2: ~1.000 giờ CPU</h4>
+    <p>Bayesian Tối Ưu Hóa với mô hình thay thế (tăng tốc GPU tùy chọn)</p>
+  </div>
+  <div class="card">
+    <h4>Giai Đoạn 3: Tài nguyên Phòng thí nghiệm</h4>
+    <p>Thiết bị chế tạo, thiết bị kiểm tra vật liệu, kính hiển vi</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+// Navigation link highlighting
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('section');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const sectionTop = section.offsetTop;
+    if (pageYOffset >= sectionTop - 200) {
+      current = section.getAttribute('id');
+    }
+  });
+
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href').slice(1) === current) {
+      link.classList.add('active');
+    }
+  });
+});
+
+// Smooth scroll for nav links
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+</script>
+
+</body>
+</html>

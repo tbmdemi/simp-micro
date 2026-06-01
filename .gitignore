@@ -1,0 +1,108 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+.env/
+
+# --- IDE / Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.orig
+*.bak
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- Personal docs ---
+docs/
+
+# --- AI rules ---
+.clinerules/
+
+# --- SIMP results (auto-generated at root) ---
+simp_result_*/
+
+# --- Scientific data files (auto-generated) ---
+*.npy
+*.h5
+*.pkl
+*.mat
+*.vtk
+*.vtu
+*.xdmf
+*.mesh
+
+# --- LaTeX build artifacts ---
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.bcf
+*.run.xml
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.xdv
+*.nav
+*.snm
+_main.*
+*.ind
+*.idx
+*.ilg
+*.ist
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+.directory
+
+# --- Logs ---
+*.log
+
+# --- Coverage ---
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# --- Type checking ---
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# --- Testing ---
+.pytest_cache/
+
+# --- Conda ---
+conda_env.yaml
+environment.yaml
+
+# --- Docker ---
+.docker/
+
+# --- Misc ---
+*.zip
+*.tar.gz
+*.rar
+.tox/

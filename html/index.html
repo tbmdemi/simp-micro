@@ -1,0 +1,324 @@
+<!--
+  Title:    SIMP Analyst — Trung tâm Tài liệu & Báo cáo
+  Type:     Trang chủ / Index
+  Aesthetic: Chuyên nghiệp, sạch sẽ, hiện đại
+  Fonts:    Inter + Playfair Display
+  Generated: 2026-06-01
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SIMP Analyst — Trung tâm tập trung cho tài liệu, dashboard và báo cáo SIMP topology optimization.">
+<title>SIMP Analyst — Trung tâm Tài liệu</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  :root {
+    --color-bg: #f8f9fa;
+    --color-surface: #ffffff;
+    --color-border: #e9ecef;
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #6c757d;
+    --color-accent: #2c5aa0;
+    --color-accent-light: #e8f0ff;
+    --radius: 12px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ===== HEADER / HERO ===== */
+  header {
+    background: linear-gradient(135deg, var(--color-accent) 0%, #1a3d70 100%);
+    color: white;
+    padding: 6rem 2rem;
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+
+  .subtitle {
+    font-size: 1.3rem;
+    opacity: 0.95;
+    max-width: 600px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  /* ===== MAIN CONTENT ===== */
+  main {
+    margin-bottom: 6rem;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    color: var(--color-accent);
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  /* ===== CARD GRID ===== */
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+  }
+
+  .resource-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .resource-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-accent), #54a0ff);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+
+  .resource-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: 0 8px 24px rgba(44, 90, 160, 0.1);
+    transform: translateY(-4px);
+  }
+
+  .resource-card:hover::before {
+    transform: scaleX(1);
+  }
+
+  .card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+  }
+
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--color-text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .card-category {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .card-description {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+    flex-grow: 1;
+  }
+
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: gap 0.2s ease;
+  }
+
+  .card-link:hover {
+    gap: 1rem;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    background: var(--color-accent);
+    color: white;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  footer p {
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    h1 {
+      font-size: 2.2rem;
+    }
+
+    .section-title {
+      font-size: 1.6rem;
+    }
+
+    .resources-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    header {
+      padding: 3rem 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>SIMP Analyst</h1>
+    <p class="subtitle">
+      Trung tâm tập trung cho Tối Ưu Hóa topology SIMP — tài liệu, dashboard và báo cáo nghiên cứu
+    </p>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ===== DASHBOARDS ===== -->
+  <section>
+    <h2 class="section-title">📊 Dashboard & Theo dõi tiến độ</h2>
+    <div class="resources-grid">
+      <div class="resource-card">
+        <div class="card-icon">📈</div>
+        <div class="card-category">Dashboard</div>
+        <h3 class="card-title">Giai Đoạn 1 Screening</h3>
+        <p class="card-description">
+          Dashboard thống nhất kết hợp tổng quan Screening, phân tích thống kê và theo dõi tiến độ cho Giai Đoạn 1 
+          LHS Tham Số Screening. Bao gồm 30 seed × objective combinations với kết quả tương quan.
+        </p>
+        <a href="dashboards/phase1_screening_dashboard.html" class="card-link">
+          Xem Dashboard →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== GUIDES & REFERENCES ===== -->
+  <section>
+    <h2 class="section-title">📚 Hướng dẫn & Tài liệu tham khảo</h2>
+    <div class="resources-grid">
+      <div class="resource-card">
+        <div class="card-icon">🗺️</div>
+        <div class="card-category">Hướng dẫn & Lộ trình</div>
+        <h3 class="card-title">SIMP — Quy trình & Lộ trình</h3>
+        <p class="card-description">
+          Hướng dẫn tham khảo hoàn chỉnh cho quy trình Tối Ưu Hóa SIMP kết hợp với lộ trình chiến lược 
+          cho chương trình Tối Ưu Hóa ba giai đoạn. Từ công thức hóa đến sản xuất.
+        </p>
+        <a href="guides/simp_guide_and_roadmap.html" class="card-link">
+          Đọc Hướng dẫn →
+        </a>
+      </div>
+
+      <div class="resource-card">
+        <div class="card-icon">⚙️</div>
+        <div class="card-category">Tài liệu Kỹ thuật</div>
+        <h3 class="card-title">Tối Ưu Hóa Pipeline</h3>
+        <p class="card-description">
+          Tài liệu chi tiết về pipeline Tối Ưu Hóa Tham Số SIMP. Chi tiết hóa các giai đoạn Screening, Tối Ưu Hóa 
+          và Xác Thực với phương pháp và kết quả kỳ vọng.
+        </p>
+        <a href="guides/optimization_pipeline.html" class="card-link">
+          Xem Pipeline →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REPORTS ===== -->
+  <section>
+    <h2 class="section-title">📄 Báo cáo Nghiên cứu</h2>
+    <div class="resources-grid">
+      <div class="resource-card">
+        <div class="card-icon">🔬</div>
+        <div class="card-category">Báo cáo Kỹ thuật</div>
+        <h3 class="card-title">Phân tích Vật liệu Auxetic</h3>
+        <p class="card-description">
+          Báo cáo kỹ thuật toàn diện về các tính chất vật liệu auxetic, quy trình tính toán đồng nhất hóa 
+          và tính toán ten-xơ độ cứng vật liệu từ các cấu trúc tối ưu hóa topology.
+        </p>
+        <a href="reports/auxetic_report.html" class="card-link">
+          Đọc Báo cáo →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== QUICK START ===== -->
+  <section>
+    <h2 class="section-title">🚀 Bắt đầu nhanh</h2>
+    <div style="background: var(--color-accent-light); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 2rem;">
+      <h3 style="color: var(--color-accent); margin-bottom: 1rem;">Bắt đầu với SIMP</h3>
+      <p style="color: var(--color-text-secondary); margin-bottom: 1rem;">
+        Khám phá hệ sinh thái SIMP thông qua các dashboard tương tác, hướng dẫn chi tiết và báo cáo kỹ thuật. 
+        Bắt đầu bằng cách xem <strong>Giai Đoạn 1 Screening Dashboard</strong> để hiểu quá trình Screening ban đầu.
+      </p>
+      <p style="color: var(--color-text-secondary);">
+        Sau đó, đọc <strong>Quy trình SIMP & Lộ trình</strong> để nắm bắt toàn bộ quy trình Tối Ưu Hóa ba giai đoạn.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    <p><strong>SIMP Analyst</strong> — Trung tâm tài liệu và báo cáo</p>
+    <p style="font-size: 0.9rem; margin-top: 1rem;">Tối ưu hóa topology 3 giai đoạn | Phân tích vật liệu Auxetic | Pipeline Tham số</p>
+  </div>
+</footer>
+
+</body>
+</html>

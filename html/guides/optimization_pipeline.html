@@ -1,0 +1,1482 @@
+<!--
+  Title:    SIMP Tham Số Optimization Pipeline
+  Type:     Showcase / Report
+  Aesthetic: Dark premium technical dashboard with data-forward layout
+  Fonts:    Syne + DM Sans
+  Generated: 2026-01-06
+-->
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Strategic pipeline for finding optimal SIMP Tham Số per seed and objective — from screening to production validation.">
+<title>SIMP — Tham Số Tối Ưu Hóa Pipeline</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+
+:root {
+  --color-bg: #09090b;
+  --color-surface: #131316;
+  --color-surface-raised: #1a1a1f;
+  --color-border: #2a2a32;
+  --color-accent: #6c5ce7;
+  --color-accent-dim: #4a3f9e;
+  --color-accent-glow: rgba(108, 92, 231, 0.15);
+  --color-text-primary: #e8e8ed;
+  --color-text-secondary: #88889a;
+  --color-text-muted: #5c5c6e;
+  --color-success: #00d68f;
+  --color-warning: #ff9f43;
+  --color-danger: #ff6b6b;
+  --color-info: #54a0ff;
+  --phase1: #54a0ff;
+  --phase2: #ff9f43;
+  --phase3: #00d68f;
+  --gap-sm: 8px;
+  --gap-md: 16px;
+  --gap-lg: 24px;
+  --gap-xl: 40px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --max-width: 1200px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* ===== TYPOGRAPHY ===== */
+h1, h2, h3, h4, h5 {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(2.2rem, 5vw, 3.5rem); }
+h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: var(--gap-md); }
+h3 { font-size: 1.25rem; margin-bottom: var(--gap-sm); }
+h4 { font-size: 1rem; }
+
+p { margin-bottom: var(--gap-md); max-width: 65ch; color: var(--color-text-secondary); }
+p + p { margin-top: calc(-1 * var(--gap-sm)); }
+
+a { color: var(--color-accent); text-decoration: none; transition: color 0.2s ease; }
+a:hover { color: #a29bfe; }
+
+/* ===== LAYOUT ===== */
+.container { max-width: var(--max-width); margin: 0 auto; padding: 0 var(--gap-lg); }
+
+/* ===== HEADER / HERO ===== */
+.hero {
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: var(--gap-xl) var(--gap-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 20%, var(--color-accent-glow), transparent),
+    radial-gradient(ellipse 50% 40% at 30% 80%, rgba(0, 214, 143, 0.08), transparent),
+    radial-gradient(ellipse 50% 40% at 70% 80%, rgba(84, 160, 255, 0.08), transparent);
+  pointer-events: none;
+}
+
+.hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+.hero-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: var(--color-accent-glow);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--gap-lg);
+}
+
+.hero h1 { margin-bottom: var(--gap-md); }
+.hero h1 .highlight { color: var(--color-accent); }
+
+.hero-sub {
+  font-size: 1.15rem;
+  color: var(--color-text-secondary);
+  max-width: 600px;
+  margin: 0 auto var(--gap-lg);
+}
+
+.hero-metrics {
+  display: flex;
+  gap: var(--gap-xl);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--gap-xl);
+}
+
+.hero-metric { text-align: center; }
+
+.hero-metric-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.hero-metric-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+
+/* ===== SCROLL INDICATOR ===== */
+.scroll-indicator {
+  position: absolute;
+  bottom: var(--gap-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  animation: float 2s ease-in-out infinite;
+}
+
+.scroll-indicator .arrow {
+  width: 20px; height: 20px;
+  border-right: 2px solid var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text-muted);
+  transform: rotate(45deg);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(6px); }
+}
+
+/* ===== SECTION STYLES ===== */
+section { padding: var(--gap-xl) 0; }
+
+.section-header {
+  text-align: center;
+  margin-bottom: var(--gap-xl);
+}
+
+.section-header h2 { margin-bottom: var(--gap-sm); }
+.section-header p { margin: 0 auto; color: var(--color-text-secondary); }
+
+/* ===== PROBLEM Tổng Quan ===== */
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--gap-lg);
+  margin-top: var(--gap-lg);
+}
+
+.problem-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.problem-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.problem-card-icon {
+  font-size: 2rem;
+  margin-bottom: var(--gap-sm);
+  display: block;
+}
+
+.problem-card h3 { margin-bottom: var(--gap-sm); }
+
+.problem-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.problem-card ul li {
+  padding: 4px 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.problem-card ul li::before {
+  content: '→ ';
+  color: var(--color-accent);
+}
+
+.combination-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-lg);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  margin-top: var(--gap-lg);
+}
+
+.combination-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 550px;
+}
+
+.combination-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 80px;
+  gap: var(--gap-sm);
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.combination-label {
+  font-weight: 600;
+  text-align: right;
+  color: var(--color-text-secondary);
+}
+
+.combination-bar {
+  height: 20px;
+  border-radius: 4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+}
+
+.combination-bar.Hạt Giống {
+  background: linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%);
+  width: 100%;
+}
+
+.combination-bar.Mục Tiêu {
+  background: linear-gradient(90deg, #00d68f 0%, #00b894 100%);
+  width: 60%;
+}
+
+.combination-bar.combos {
+  background: linear-gradient(90deg, #ff9f43 0%, #fdcb6e 100%);
+  width: 100%;
+}
+
+.combination-count {
+  text-align: left;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+/* ===== Tham Số TABLE ===== */
+.param-table-wrapper {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.param-table thead {
+  background: var(--color-surface-raised);
+}
+
+.param-table th {
+  text-align: left;
+  padding: var(--gap-md);
+  font-family: 'Syne', sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.param-table td {
+  padding: var(--gap-md);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.param-table tr:last-child td { border-bottom: none; }
+
+.param-table tr:hover td { background: var(--color-surface-raised); }
+
+.param-name {
+  font-family: 'DM Sans', monospace;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.param-range {
+  font-family: 'DM Sans', monospace;
+  color: var(--color-accent);
+  font-size: 0.85rem;
+}
+
+.param-Nhóm-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.param-Nhóm-badge.geometry { background: rgba(84, 160, 255, 0.15); color: #54a0ff; }
+.param-Nhóm-badge.algorithm { background: rgba(255, 159, 67, 0.15); color: #ff9f43; }
+.param-Nhóm-badge.objective { background: rgba(108, 92, 231, 0.15); color: #6c5ce7; }
+.param-Nhóm-badge.convergence { background: rgba(0, 214, 143, 0.15); color: #00d68f; }
+
+/* ===== PHASE STYLES ===== */
+.phase-timeline { position: relative; }
+
+.phase-timeline::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--phase1), var(--phase2), var(--phase3));
+}
+
+.phase-step {
+  position: relative;
+  padding-left: 76px;
+  margin-bottom: var(--gap-xl);
+}
+
+.phase-step:last-child { margin-bottom: 0; }
+
+.phase-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: #fff;
+  z-index: 1;
+}
+
+.phase-marker.phase1 { background: linear-gradient(135deg, #54a0ff, #2e86de); }
+.phase-marker.phase2 { background: linear-gradient(135deg, #ff9f43, #e67e22); }
+.phase-marker.phase3 { background: linear-gradient(135deg, #00d68f, #00b894); }
+
+.phase-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.3s ease;
+}
+
+.phase-card:hover { border-color: var(--color-accent-dim); }
+
+.phase-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  margin-bottom: var(--gap-md);
+  flex-wrap: wrap;
+}
+
+.phase-number {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 100px;
+}
+
+.phase-number.p1 { color: #54a0ff; background: rgba(84, 160, 255, 0.1); }
+.phase-number.p2 { color: #ff9f43; background: rgba(255, 159, 67, 0.1); }
+.phase-number.p3 { color: #00d68f; background: rgba(0, 214, 143, 0.1); }
+
+.phase-card h3 { margin-bottom: var(--gap-sm); }
+
+.phase-Mục tiêu {
+  font-size: 0.9rem;
+  padding: var(--gap-sm) var(--gap-md);
+  border-left: 3px solid var(--color-accent);
+  margin-bottom: var(--gap-md);
+  color: var(--color-text-secondary);
+}
+
+.phase-details { display: grid; gap: var(--gap-sm); }
+
+.phase-detail-item {
+  display: flex;
+  gap: var(--gap-sm);
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.phase-detail-item strong {
+  color: var(--color-text-primary);
+  min-width: 100px;
+}
+
+/* ===== PHASE TECH DETAIL ===== */
+.tech-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--gap-md);
+  margin-top: var(--gap-md);
+  padding-top: var(--gap-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.tech-card {
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+}
+
+.tech-card h4 {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  margin-bottom: var(--gap-sm);
+  color: var(--color-text-primary);
+}
+
+.tech-card p, .tech-card ul {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.tech-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.tech-card ul li { padding: 3px 0; }
+.tech-card ul li::before { content: '• '; color: var(--color-accent); }
+
+.tech-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'DM Sans', monospace;
+  background: rgba(108, 92, 231, 0.1);
+  color: #a29bfe;
+  margin: 2px;
+}
+
+/* ===== Mục Tiêu COMPARISON ===== */
+.obj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--gap-lg);
+  margin-top: var(--gap-lg);
+}
+
+.obj-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.obj-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.obj-card.auxetic::before { background: linear-gradient(90deg, #ff6b6b, #ee5a24); }
+.obj-card.first::before { background: linear-gradient(90deg, #6c5ce7, #a29bfe); }
+.obj-card.second::before { background: linear-gradient(90deg, #00d68f, #00b894); }
+
+.obj-card h3 { margin-bottom: var(--gap-sm); }
+.obj-formula {
+  font-family: 'DM Sans', monospace;
+  font-size: 0.95rem;
+  padding: var(--gap-sm) var(--gap-md);
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--gap-sm);
+  color: var(--color-text-primary);
+  overflow-x: auto;
+}
+
+.obj-metric {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--gap-sm);
+}
+
+.obj-metric .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.obj-metric .dot.best { background: var(--color-success); }
+.obj-metric .dot.fast { background: var(--color-info); }
+.obj-metric .dot.agg { background: var(--color-warning); }
+
+/* ===== SEED GRID ===== */
+.seed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--gap-md);
+  margin-top: var(--gap-lg);
+}
+
+.seed-item {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  text-align: center;
+  border: 1px solid var(--color-border);
+  transition: border-color 0.3s ease;
+}
+
+.seed-item:hover { border-color: var(--color-accent); }
+
+.seed-item .seed-icon {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: var(--gap-sm);
+}
+
+.seed-item .seed-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.seed-item .seed-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ===== METRICS TABLE ===== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--gap-md);
+  margin-top: var(--gap-lg);
+}
+
+.metric-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.metric-card .value {
+  font-family: 'Syne', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.metric-card .label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ===== Công Cụ SECTION ===== */
+.Công Cụ-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--gap-md);
+  margin-top: var(--gap-lg);
+}
+
+.tool-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  border: 1px solid var(--color-border);
+  position: relative;
+}
+
+.tool-card .tool-icon { font-size: 1.5rem; display: block; margin-bottom: var(--gap-sm); }
+.tool-card h4 { font-size: 0.95rem; margin-bottom: 4px; }
+.tool-card p { font-size: 0.85rem; margin: 0; }
+
+/* ===== FILE STRUCTURE ===== */
+.file-structure {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--gap-lg);
+  border: 1px solid var(--color-border);
+  font-family: 'DM Sans', monospace;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  margin-top: var(--gap-lg);
+}
+
+.file-structure .folder { color: var(--color-accent); }
+.file-structure .file { color: var(--color-text-secondary); }
+.file-structure .comment { color: var(--color-text-muted); font-style: italic; }
+.file-structure .indent { padding-left: 24px; }
+.file-structure .indent-2 { padding-left: 48px; }
+
+/* ===== FLOW DIAGRAM ===== */
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+  padding: var(--gap-xl) 0;
+}
+
+.flow-node {
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  text-align: center;
+  min-width: 140px;
+  transition: border-color 0.3s ease;
+  position: relative;
+}
+
+.flow-node:hover { border-color: var(--color-accent); }
+
+.flow-node .node-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.flow-node .node-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.flow-arrow {
+  color: var(--color-text-muted);
+  font-size: 1.5rem;
+  padding: 0 var(--gap-sm);
+}
+
+/* ===== CTA / OUTRO ===== */
+.cta-section {
+  text-align: center;
+  padding: var(--gap-xl) 0;
+  position: relative;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 50%, var(--color-accent-glow), transparent);
+  pointer-events: none;
+}
+
+.cta-section > * { position: relative; z-index: 1; }
+
+.cta-section h2 { margin-bottom: var(--gap-md); }
+
+/* ===== NAV ===== */
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(9, 9, 11, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--gap-lg);
+}
+
+.nav-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-lg);
+  height: 52px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-inner::-webkit-scrollbar { display: none; }
+
+.nav-logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.nav-logo span { color: var(--color-accent); }
+
+.nav-link {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+  text-decoration: none;
+}
+
+.nav-link:hover { color: var(--color-text-primary); }
+
+/* ===== FOOTER ===== */
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  padding: var(--gap-lg) 0;
+  text-align: center;
+}
+
+.site-footer p {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ===== ANIMATION ===== */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .fade-in { opacity: 1; transform: none; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .hero-metrics { gap: var(--gap-lg); }
+  .hero-metric-value { font-size: 1.8rem; }
+  .phase-step { padding-left: 60px; }
+  .phase-marker { width: 44px; height: 44px; font-size: 0.9rem; }
+  .phase-timeline::before { left: 22px; }
+  .flow-diagram { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); }
+  .param-table { font-size: 0.8rem; }
+  .param-table th,
+  .param-table td { padding: var(--gap-sm); }
+}
+
+@media (max-width: 375px) {
+  .container { padding: 0 var(--gap-md); }
+  .problem-grid,
+  .obj-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-logo">SIMP <span>◆</span> Opt</span>
+    <a class="nav-link" href="#Tổng Quan">Tổng Quan</a>
+    <a class="nav-link" href="#params">Tham Số</a>
+    <a class="nav-link" href="#Chiến Lược">Chiến Lược</a>
+    <a class="nav-link" href="#Mục Tiêu">Mục Tiêu</a>
+    <a class="nav-link" href="#Hạt Giống">Hạt Giống</a>
+    <a class="nav-link" href="#Công Cụ">Công Cụ</a>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<header class="hero" id="Tổng Quan">
+  <div class="hero-content">
+    <span class="hero-badge">🔬 Pipeline Nghiên cứu v1.0</span>
+    <h1>Tối ưu hóa SIMP<br>cho <span class="highlight">Mọi Seed</span> × Mục tiêu</h1>
+    <p class="hero-sub">
+      Một cách tiếp cận 3 giai đoạn chiến lược để tìm tập hợp tham số tối ưu cho mỗi
+      một trong 10 Hạt Giống và 3 hàm Mục tiêu — hướng đến sản xuất sẵn sàng
+      các cấu trúc vi mô auxetic.
+    </p>
+    <div class="hero-metrics">
+      <div class="hero-metric">
+        <div class="hero-metric-value">10</div>
+        <div class="hero-metric-label">Hạt Giống</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value">3</div>
+        <div class="hero-metric-label">Mục Tiêu</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value">30</div>
+        <div class="hero-metric-label">Các Kết hợp</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value">~12</div>
+        <div class="hero-metric-label">Key Tham Số</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    <span>Scroll</span>
+    <div class="arrow"></div>
+  </div>
+</header>
+
+<!-- ===== PROBLEM Tổng Quan ===== -->
+<section>
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>🧩 Vấn Đề</h2>
+      <p>10 Hạt Giống × 3 Mục Tiêu = 30 bài toán Tối Ưu Hóa topology riêng biệt — mỗi bài cần một bộ Tham Số phù hợp để đạt kết quả sản xuất được, hiệu suất cao.</p>
+    </div>
+
+    <div class="problem-grid fade-in">
+      <div class="problem-card">
+        <span class="problem-card-icon">🎯</span>
+        <h3>Bùng nổ Tổ hợp</h3>
+        <ul>
+          <li>~12 Tham Số có thể điều chỉnh mỗi tổ hợp</li>
+          <li>Phạm vi liên tục (vd: penal 2.0–5.0)</li>
+          <li>Lựa chọn rời rạc (ft ∈ {1, 2})</li>
+          <li>Tìm kiếm lưới = không khả thi (10<sup>12</sup>+)</li>
+        </ul>
+      </div>
+      <div class="problem-card">
+        <span class="problem-card-icon">⏱️</span>
+        <h3>Đánh giá Tốn kém</h3>
+        <ul>
+          <li>Mỗi lần chạy SIMP: 30s–2min trên lưới 100×100</li>
+          <li>1000 lần chạy ngây thơ → 16+ giờ</li>
+          <li>Cần chiến lược lấy mẫu thông minh</li>
+          <li>Tinh chỉnh lưới tuần tự để tiết kiệm thời gian</li>
+        </ul>
+      </div>
+      <div class="problem-card">
+        <span class="problem-card-icon">🎭</span>
+        <h3>Tương tác Mục tiêu × Hạt Giống</h3>
+        <ul>
+          <li>Auxetic cần ν₁₂ << 0 (âm lớn)</li>
+          <li>First: cân bằng Q₁₂ với độ cứng trục</li>
+          <li>Second: shear thuần với penalty</li>
+          <li>Mỗi hạt giống phản ứng khác nhau với tham số</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="combination-visual fade-in">
+      <h4 style="margin-bottom: 0;">30 Tổ hợp được hình thành như thế nào</h4>
+      <div class="combination-rows">
+        <div class="combination-row">
+          <span class="combination-label">Hạt Giống</span>
+          <div class="combination-bar Hạt Giống"><span>circle · square · hourglass · four_circle · hexagonal · nine_circle · cross · grid · small_square · circle_half</span></div>
+          <span class="combination-count">10</span>
+        </div>
+        <div class="combination-row">
+          <span class="combination-label">Mục Tiêu</span>
+          <div class="combination-bar Mục Tiêu"><span>auxetic · first · second</span></div>
+          <span class="combination-count">3</span>
+        </div>
+        <div class="combination-row">
+          <span class="combination-label">Combos</span>
+          <div class="combination-bar combos"><span>30 tổng cộng các cặp (seed, objective)</span></div>
+          <span class="combination-count">10 × 3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tham Số ===== -->
+<section id="params">
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>⚙️ Không gian Tham Số</h2>
+      <p>Các tham số có thể điều chỉnh được nhóm theo vai trò trong Tối Ưu Hóa. Mỗi tham số ảnh hưởng khác nhau đến tốc độ hội tụ, chất lượng giải pháp và khả năng sản xuất.</p>
+    </div>
+
+    <div class="param-table-wrapper fade-in">
+      <table class="param-table">
+        <thead>
+          <tr>
+            <th>Nhóm</th>
+            <th>Tham Số</th>
+            <th>Phạm vi / Giá trị</th>
+            <th>Tác động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="param-Nhóm-badge geometry">Geometry</span></td>
+            <td><code class="param-name">void_size_frac</code></td>
+            <td><span class="param-range">0.20 – 0.60</span></td>
+            <td>Kích thước void ban đầu → điểm khởi đầu tìm kiếm</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge geometry">Geometry</span></td>
+            <td><code class="param-name">rotation_deg</code></td>
+            <td><span class="param-range">0° – 90°</span></td>
+            <td>Xoay seed → hướng bất đẳng hướng</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge geometry">Geometry</span></td>
+            <td><code class="param-name">volfrac</code></td>
+            <td><span class="param-range">0.20 – 0.50</span></td>
+            <td>Phần thể tích mục tiêu → đánh đổi độ cứng / trọng lượng</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge algorithm">Algorithm</span></td>
+            <td><code class="param-name">penal</code></td>
+            <td><span class="param-range">2.0 – 5.0</span></td>
+            <td>Phạt SIMP → triệt tiêu grayscale</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge algorithm">Algorithm</span></td>
+            <td><code class="param-name">rmin</code></td>
+            <td><span class="param-range">1.5 – 5.0</span></td>
+            <td>Bán kính lọc → kích thước đặc trưng tối thiểu</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge algorithm">Algorithm</span></td>
+            <td><code class="param-name">move</code></td>
+            <td><span class="param-range">0.05 – 0.30</span></td>
+            <td>Giới hạn OC move → tốc độ hội tụ vs ổn định</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge algorithm">Algorithm</span></td>
+            <td><code class="param-name">ft</code></td>
+            <td><span class="param-range">{1, 2}</span></td>
+            <td>Loại lọc (sensitivity/density) → kiểm soát checkerboard</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge objective">Objective</span></td>
+            <td><code class="param-name">beta</code></td>
+            <td><span class="param-range">0.70 – 0.99</span></td>
+            <td>β-decay cho mục tiêu 1 → lịch trình triệt tiêu trục</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge objective">Objective</span></td>
+            <td><code class="param-name">beta_second</code></td>
+            <td><span class="param-range">0.1 – 10.0</span></td>
+            <td>Trọng số phạt cho mục tiêu 2 → cưỡng chế độ cứng trục</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge convergence">Convergence</span></td>
+            <td><code class="param-name">max_iter</code></td>
+            <td><span class="param-range">100 – 500</span></td>
+            <td>Số vòng lặp tối đa → kiểm soát ngân sách</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge convergence">Convergence</span></td>
+            <td><code class="param-name">tol_change</code></td>
+            <td><span class="param-range">0.001 – 0.05</span></td>
+            <td>Ngưỡng thay đổi thiết kế → độ chặt hội tụ</td>
+          </tr>
+          <tr>
+            <td><span class="param-Nhóm-badge convergence">Convergence</span></td>
+            <td><code class="param-name">tol_obj</code></td>
+            <td><span class="param-range">0.01 – 0.10</span></td>
+            <td>Ngưỡng ổn định mục tiêu → mức độ dừng sớm</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Chiến Lược / PHASES ===== -->
+<section id="Chiến Lược">
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>🧠 3-Phase Tối Ưu Hóa Chiến Lược</h2>
+      <p>Pipeline tiến hóa cân bằng chi phí và độ chính xác — bắt đầu thô và rẻ, kết thúc mịn và đáng tin cậy.</p>
+    </div>
+
+    <!-- Flow Diagram -->
+    <div class="flow-diagram fade-in">
+      <div class="flow-node">
+        <div class="node-label">Giai đoạn 1</div>
+        <div class="node-value" style="color: var(--phase1);">Screening</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted);">LHS · 50×50 mesh</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="node-label">Giai đoạn 2</div>
+        <div class="node-value" style="color: var(--phase2);">Bayesian Opt</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted);">GP surrogate · 80×80</div>
+      </div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">
+        <div class="node-label">Giai đoạn 3</div>
+        <div class="node-value" style="color: var(--phase3);">Xác Thực</div>
+        <div style="font-size: 0.8rem; color: var(--color-text-muted);">100×100 · 3–5 runs</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="phase-timeline">
+      <!-- Giai đoạn 1 -->
+      <div class="phase-step fade-in">
+        <div class="phase-marker phase1">P1</div>
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-number p1">Giai đoạn 1 · Screening</span>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 50–80 runs per objective</span>
+          </div>
+          <h3>🟦 Xác định Tham Số Quan trọng</h3>
+          <div class="phase-Mục tiêu">
+            Với mỗi mục tiêu, xác định 2–3 Tham Số nào chi phối kết quả bằng Latin Hypercube Sampling trên lưới thô.
+          </div>
+          <div class="phase-details">
+            <div class="phase-detail-item"><strong>Lưới</strong> <span>nelx=50, nely=50 (≈10–15s/lần chạy)</span></div>
+            <div class="phase-detail-item"><strong>Phương pháp</strong> <span>Latin Hypercube Sampling (LHS) — khoảng cách maximin</span></div>
+            <div class="phase-detail-item"><strong>Đầu ra</strong> <span>Ma trận tương quan Spearman: Tham Số → (ν₁₂, Q₁₂, số lần lặp)</span></div>
+            <div class="phase-detail-item"><strong>Kết quả</strong> <span>Không gian tìm kiếm thu gọn: từ 12 tham số → ~3 tham số quan trọng mỗi mục tiêu</span></div>
+          </div>
+          <div class="tech-details">
+            <div class="tech-card">
+              <h4>📊 Tại sao LHS?</h4>
+              <p>Phủ không gian tốt hơn lấy mẫu ngẫu nhiên. Đảm bảo mỗi Phạm Vi Tham Số được khám phá đều với số mẫu tối thiểu — quan trọng cho các đánh giá tốn kém.</p>
+            </div>
+            <div class="tech-card">
+              <h4>🔍 Phân tích Tương quan</h4>
+              <p>Dùng <span class="tech-tag">Scipy.stats.spearmanr</span> để xếp hạng tầm quan trọng của Tham Số. Các mối quan hệ phi tuyến được nắm bắt tốt hơn Pearson.</p>
+            </div>
+            <div class="tech-card">
+              <h4>⚡ Lợi thế Lưới Thô</h4>
+              <p>Lưới 50×50 chạy nhanh gấp 4 lần 100×100. Xu hướng được bảo toàn ngay cả ở độ phân giải thấp — đủ tốt cho Screening.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Giai đoạn 2 -->
+      <div class="phase-step fade-in">
+        <div class="phase-marker phase2">P2</div>
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-number p2">Giai đoạn 2 · Bayesian Tối Ưu Hóa</span>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 40–60 evaluations per combo</span>
+          </div>
+          <h3>🟧 Tìm Tham Số Tối ưu</h3>
+          <div class="phase-Mục tiêu">
+            Sử dụng mô hình thay thế Gaussian Process, khám phá hiệu quả Không gian Tham Số thu gọn để định vị tối ưu toàn cục cho mỗi cặp (seed, objective).
+          </div>
+          <div class="phase-details">
+            <div class="phase-detail-item"><strong>Lưới</strong> <span>nelx=80, nely=80 (≈20–40s/lần chạy)</span></div>
+            <div class="phase-detail-item"><strong>Phương pháp</strong> <span>Bayesian Tối Ưu Hóa (GP + EI acquisition)</span></div>
+            <div class="phase-detail-item"><strong>Thư viện</strong> <span><span class="tech-tag">skopt.gp_minimize</span> hoặc <span class="tech-tag">optuna</span></span></div>
+            <div class="phase-detail-item"><strong>Đầu ra</strong> <span>Tham số tốt nhất mỗi (seed, objective) + khoảng tin cậy</span></div>
+            <div class="phase-detail-item"><strong>Kết quả</strong> <span>30× (bộ Tham Số tốt nhất + hiệu suất kỳ vọng)</span></div>
+          </div>
+          <div class="tech-details">
+            <div class="tech-card">
+              <h4>🎯 Hàm Acquisition</h4>
+              <p>Expected Improvement (EI) cân bằng khai thác và thăm dò. Tự động tập trung vào vùng hứa hẹn trong khi kiểm tra các khu vực chưa khám phá.</p>
+            </div>
+            <div class="tech-card">
+              <h4>🔄 Khởi tạo Nóng</h4>
+              <p>Khởi tạo GP surrogate với kết quả Screening Giai đoạn 1 — tiết kiệm ~20% số đánh giá bằng cách bắt đầu từ prior có thông tin.</p>
+            </div>
+            <div class="tech-card">
+              <h4>📈 Phát hiện Hội tụ</h4>
+              <p>Dừng khi mục tiêu tốt nhất không cải thiện sau 15 đánh giá liên tiếp. Tổng điển hình: 40–60 đánh giá mỗi tổ hợp.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Giai đoạn 3 -->
+      <div class="phase-step fade-in">
+        <div class="phase-marker phase3">P3</div>
+        <div class="phase-card">
+          <div class="phase-card-header">
+            <span class="phase-number p3">Giai đoạn 3 · Xác Thực</span>
+            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 5 runs per best combo</span>
+          </div>
+          <h3>🟩 Xác nhận cho Sản Xuất</h3>
+          <div class="phase-Mục tiêu">
+            Chạy bộ Tham Số tốt nhất trên lưới 100×100 đầy đủ nhiều lần để đo độ ổn định, khả năng tái lập và khả năng sản xuất cuối cùng.
+          </div>
+          <div class="phase-details">
+            <div class="phase-detail-item"><strong>Lưới</strong> <span>nelx=100, nely=100 (độ phân giải đầy đủ)</span></div>
+            <div class="phase-detail-item"><strong>Số lần lặp</strong> <span>3–5 lần chạy mỗi combo tốt nhất (cùng tham số, Hạt Giống ngẫu nhiên khác nhau)</span></div>
+            <div class="phase-detail-item"><strong>Chỉ số</strong> <span>ν₁₂ cuối · ν₂₁ · Q₁₂ · # lần lặp · độ lệch chuẩn · kích thước đặc trưng</span></div>
+            <div class="phase-detail-item"><strong>Kết quả</strong> <span>Bảng xếp hạng: (seed, objective) → khuyến nghị Sản Xuất</span></div>
+          </div>
+          <div class="tech-details">
+            <div class="tech-card">
+              <h4>📊 Chỉ số Chính</h4>
+              <ul>
+                <li>ν₁₂ (auxetic) — càng âm càng tốt</li>
+                <li>Q₁₂ (first/second) — càng cao càng tốt</li>
+                <li>Số lần lặp đến hội tụ — thấp hơn = rẻ hơn</li>
+                <li>Độ lệch chuẩn giữa các lần — thấp hơn = ổn định</li>
+              </ul>
+            </div>
+            <div class="tech-card">
+              <h4>🏭 Kiểm tra Sản xuất</h4>
+              <p>Đảm bảo kích thước đặc trưng tối thiểu ≥ ràng buộc sản xuất. Kiểm tra kết nối topology. Đánh dấu các thiết kế cần cấu trúc hỗ trợ.</p>
+            </div>
+            <div class="tech-card">
+              <h4>📋 Báo cáo Cuối cùng</h4>
+              <p>Tạo báo cáo HTML tương tác xếp hạng tất cả 30 Tổ hợp. Bao gồm hình ảnh topology, đồ thị hội tụ và mức độ sẵn sàng Sản Xuất.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Mục Tiêu ===== -->
+<section id="Mục Tiêu">
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>🎯 Ba Hàm Mục tiêu</h2>
+      <p>Mỗi mục tiêu dẫn dắt Tối Ưu Hóa đến một mục tiêu cơ học khác nhau — ảnh hưởng đến Tham Số Cài Đặt nào là tối ưu.</p>
+    </div>
+
+    <div class="obj-grid">
+      <div class="obj-card auxetic fade-in">
+        <h3>Auxetic</h3>
+        <div class="obj-formula">c = ν₁₂ = −Q₁₂ / Q₂₂</div>
+        <p style="font-size: 0.9rem; margin: var(--gap-sm) 0;">Trực tiếp tối thiểu hóa hệ số Poisson. Mục tiêu thuần khiết nhất cho vật liệu auxetic.</p>
+        <div class="obj-metric"><span class="dot best"></span> Tốt nhất: ν₁₂ âm nhất (vd: −0.95)</div>
+        <div class="obj-metric"><span class="dot agg"></span> Nhạy với: penal, rmin, void_size_frac</div>
+      </div>
+
+      <div class="obj-card first fade-in">
+        <h3>First Objective</h3>
+        <div class="obj-formula">c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)</div>
+        <p style="font-size: 0.9rem; margin: var(--gap-sm) 0;">Tối đa hóa ghép nối cắt trong khi triệt tiêu độ cứng trục bằng β-decay. Hội tụ mượt.</p>
+        <div class="obj-metric"><span class="dot fast"></span> Tốt nhất: ổn định, tốt cho khám phá</div>
+        <div class="obj-metric"><span class="dot agg"></span> Nhạy với: beta, penal, move</div>
+      </div>
+
+      <div class="obj-card second fade-in">
+        <h3>Second Objective</h3>
+        <div class="obj-formula">c = Q₁₂ + penalty · (δ − Q)²</div>
+        <p style="font-size: 0.9rem; margin: var(--gap-sm) 0;">Tối đa hóa Q₁₂ trực tiếp với phạt khi độ cứng trục thấp. Tích cực hơn.</p>
+        <div class="obj-metric"><span class="dot best"></span> Tốt nhất: khi Q₁₂ là ưu tiên</div>
+        <div class="obj-metric"><span class="dot agg"></span> Nhạy với: beta_second, volfrac, penal</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Hạt Giống ===== -->
+<section id="Hạt Giống">
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>🌱 Thư viện Hạt Giống</h2>
+      <p>10 mẫu void ban đầu — mỗi mẫu là một điểm khởi đầu topology khác nhau. Tham Số tối ưu phụ thuộc nhiều vào seed bạn bắt đầu.</p>
+    </div>
+
+    <div class="seed-grid fade-in">
+      <div class="seed-item">
+        <span class="seed-icon">⬤</span>
+        <div class="seed-name">circle</div>
+        <div class="seed-desc">Single circular void</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">◼</span>
+        <div class="seed-name">square</div>
+        <div class="seed-desc">Single square void</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">⌛</span>
+        <div class="seed-name">hourglass</div>
+        <div class="seed-desc">Hourglass shape</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">◉◉</span>
+        <div class="seed-name">four_circle</div>
+        <div class="seed-desc">4 circles symmetric</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">⬡</span>
+        <div class="seed-name">hexagonal</div>
+        <div class="seed-desc">Hexagonal void</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">9◯</span>
+        <div class="seed-name">nine_circle</div>
+        <div class="seed-desc">3×3 circle grid</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">✚</span>
+        <div class="seed-name">cross_rectangular</div>
+        <div class="seed-desc">Cross-shaped void</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">◯◯◯</span>
+        <div class="seed-name">grid_circular_voids</div>
+        <div class="seed-desc">Uniform circle grid</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">┼</span>
+        <div class="seed-name">small_square_cross</div>
+        <div class="seed-desc">Small square cross</div>
+      </div>
+      <div class="seed-item">
+        <span class="seed-icon">⊙</span>
+        <div class="seed-name">circle_half_quarter</div>
+        <div class="seed-desc">Circle + quarter circles</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== EXPECTED METRICS ===== -->
+<section>
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>📈 Kết quả Kỳ vọng</h2>
+      <p>Mục tiêu định lượng cho mỗi giai đoạn — thành công trông như thế nào.</p>
+    </div>
+
+    <div class="metrics-grid fade-in">
+      <div class="metric-card">
+        <div class="value">~80</div>
+        <div class="label">Số lần chạy Screening mỗi mục tiêu</div>
+      </div>
+      <div class="metric-card">
+        <div class="value">~1,200</div>
+        <div class="label">Tổng đánh giá Bayesian (30 tổ hợp × 40)</div>
+      </div>
+      <div class="metric-card">
+        <div class="value">3–5×</div>
+        <div class="label">Tăng tốc so với tìm kiếm lưới vét cạn</div>
+      </div>
+      <div class="metric-card">
+        <div class="value">< 0.90</div>
+        <div class="label">ν₁₂ mục tiêu cho thiết kế auxetic tốt nhất</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Công Cụ ===== -->
+<section id="Công Cụ">
+  <div class="container">
+    <div class="section-header fade-in">
+      <h2>🛠️ Stack Công nghệ</h2>
+      <p>Các gói Python được khuyến nghị để triển khai pipeline hiệu quả.</p>
+    </div>
+
+    <div class="Công Cụ-grid fade-in">
+      <div class="tool-card">
+        <span class="tool-icon">📐</span>
+        <h4>scikit-optimize</h4>
+        <p>Bayesian Tối Ưu Hóa với Gaussian Processes. <code>gp_minimize</code> là công cụ chính cho Giai đoạn 2.</p>
+      </div>
+      <div class="tool-card">
+        <span class="tool-icon">🌐</span>
+        <h4>Optuna</h4>
+        <p>Framework thay thế với pruning, đa mục tiêu và trực quan hóa. Tuyệt vời cho không gian tìm kiếm phức tạp.</p>
+      </div>
+      <div class="tool-card">
+        <span class="tool-icon">📊</span>
+        <h4>Scipy</h4>
+        <p><code>Scipy.stats.qmc.LatinHypercube</code> cho Giai đoạn 1 Screening. Tương quan Spearman để xếp hạng tầm quan trọng.</p>
+      </div>
+      <div class="tool-card">
+        <span class="tool-icon">📈</span>
+        <h4>Pandas + Plotly</h4>
+        <p>Xử lý dữ liệu và trực quan hóa tương tác cho báo cáo so sánh cuối cùng.</p>
+      </div>
+    </div>
+
+    <!-- File Structure -->
+    <div class="file-structure fade-in">
+      <span class="comment"># Proposed project layout for the Tối Ưu Hóa pipeline</span><br>
+      <span class="folder">Tối Ưu Hóa/</span><br>
+      <span class="indent"><span class="folder">├── __init__.py</span><br>
+      <span class="indent"><span class="file">├── config.py</span>           <span class="comment"># Không gian Tham Số definition, bounds, types</span><br>
+      <span class="indent"><span class="file">├── screen.py</span>            <span class="comment"># Giai đoạn 1: LHS sampling + correlation analysis</span><br>
+      <span class="indent"><span class="file">├── bayesian_opt.py</span>       <span class="comment"># Giai đoạn 2: Bayesian Tối Ưu Hóa loop</span><br>
+      <span class="indent"><span class="file">├── validate.py</span>           <span class="comment"># Giai đoạn 3: Multi-run Xác Thực on fine mesh</span><br>
+      <span class="indent"><span class="file">├── report.py</span>             <span class="comment"># HTML report generation from collected data</span><br>
+      <span class="indent"><span class="file">└── runner.py</span>             <span class="comment"># Wrapper that calls simp.runner.run_simp with logging</span><br>
+      <br>
+      <span class="folder">results/</span><br>
+      <span class="indent"><span class="file">├── screen_results.csv</span><br>
+      <span class="indent"><span class="file">├── bayesian_best_params.json</span><br>
+      <span class="indent"><span class="file">└── validation_report.html</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA / OUTRO ===== -->
+<section class="cta-section">
+  <div class="container">
+    <h2>✅ Sẵn sàng Thực thi</h2>
+    <p style="margin: 0 auto; max-width: 500px;">
+      Pipeline đã được định nghĩa. Sau khi triển khai, chúng ta có thể tự động duyệt qua tất cả 30 Tổ hợp (seed, objective) và xác định bộ Tham Số tốt nhất cho mỗi tổ hợp — cho phép sản xuất sẵn sàng các cấu trúc vi mô auxetic.
+    </p>
+    <div style="margin-top: var(--gap-lg); display: flex; gap: var(--gap-md); justify-content: center; flex-wrap: wrap;">
+      <span style="padding: 10px 20px; background: var(--color-accent); color: #fff; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem;">▶ Start with Giai đoạn 1: Screening</span>
+      <span style="padding: 10px 20px; background: var(--color-surface); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Then Giai đoạn 2: Bayesian Opt</span>
+      <span style="padding: 10px 20px; background: var(--color-surface); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Finally Giai đoạn 3: Xác Thực</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="site-footer">
+  <div class="container">
+    <p>SIMP Tham Số Tối Ưu Hóa Pipeline · Chiến Lược Document v1.0</p>
+  </div>
+</footer>
+
+<!-- ===== JS: Intersection Observer for fade-in ===== -->
+<script>
+(function() {
+  'use strict';
+
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.10,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Animated counting in hero metrics (simple version)
+  const animateCount = (el, target, suffix = '') => {
+    const duration = 1200;
+    const start = performance.now();
+    const startVal = 0;
+
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(startVal + (target - startVal) * eased);
+      el.textContent = current + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  };
+
+  // Trigger counting when hero is visible
+  const heroObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const metrics = document.querySelectorAll('.hero-metric-value');
+        if (metrics.length >= 4) {
+          animateCount(metrics[0], 10);
+          animateCount(metrics[1], 3);
+          animateCount(metrics[2], 30);
+          animateCount(metrics[3], 12);
+        }
+        heroObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const hero = document.querySelector('.hero');
+  if (hero) heroObserver.observe(hero);
+})();
+</script>
+
+</body>
+</html>
