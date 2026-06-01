@@ -168,8 +168,8 @@ Input_SIMP_Analyst/
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/Input_SIMP_Analyst.git
-cd Input_SIMP_Analyst
+git https://github.com/tbmdemi/simp-micro.git
+cd simp-micro
 
 # (Khuyên dùng) Tạo virtual environment
 python -m venv venv
