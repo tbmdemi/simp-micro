@@ -40,23 +40,24 @@ def oc_update(
             xPhys: Mảng (nely, nelx) mật độ vật lý (đã lọc).
     """
     nely, nelx = x.shape
-    l1 = 0
+    l1 = 0.0
     l2 = 1e9
 
     # Tìm kiếm nhị phân cho hệ số Lagrange
+    # Lặp tối đa 100 lần hoặc đến khi |mean(xPhys) - volfrac| < 1e-6
     for _ in range(100):
         lmid = (l1 + l2) / 2
 
         # Quy tắc cập nhật OC
         xnew = np.maximum(
-            0,
+            0.0,
             np.maximum(
                 x - move,
                 np.minimum(
-                    1,
+                    1.0,
                     np.minimum(
                         x + move,
-                        x * np.sqrt(np.maximum(0, -dc / (dv * lmid + 1e-15))),
+                        x * np.sqrt(np.maximum(0.0, -dc / (dv * lmid + 1e-15))),
                     ),
                 ),
             ),
@@ -70,9 +71,14 @@ def oc_update(
             xPhys = np.reshape(xPhys_flat, (nely, nelx), order='F')
 
         # Kiểm tra ràng buộc thể tích
-        if np.mean(xPhys) > volfrac:
+        vol = np.mean(xPhys)
+        if vol > volfrac:
             l1 = lmid
         else:
             l2 = lmid
+
+        # Dừng sớm nếu Lagrange multiplier đã đạt độ chính xác cao
+        if abs(vol - volfrac) < 1e-6 or (l2 - l1) < 1e-12:
+            break
 
     return xnew, xPhys

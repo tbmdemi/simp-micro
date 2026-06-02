@@ -89,7 +89,11 @@ def run_simp(params: dict) -> dict:
     H, Hs = build_filter(nelx, nely, rmin)
     pbc = build_pbc(nelx, nely, nodenrs)
     conv_checker = ConvergenceChecker(
-        tol_change=tol_change, tol_obj=tol_obj, window_size=window_size,
+        tol_change=tol_change,
+        tol_obj=tol_obj,
+        window_change=max(3, int(window_size / 4)),
+        window_obj=window_size,
+        min_iter=10,
     )
 
     # Seed ban đầu
@@ -145,7 +149,9 @@ def run_simp(params: dict) -> dict:
             print(f'[STOP] NaN tại lần lặp {loop}')
             break
 
-        # Hệ số Poisson
+        # Hệ số Poisson: νᵢⱼ = Qᵢⱼ / Qⱼⱼ (từ compliance tensor S = Q⁻¹)
+        # Công thức đúng cho 2D orthotropic: ν₁₂ = Q₁₂ / Q₂₂
+        # (Sửa lỗi sign: trước đây dùng -Q₁₂/Q₂₂ dẫn đến sai dấu)
         eps = 1e-12
         v12 = Q[0, 1] / (Q[1, 1] + eps)
         v21 = Q[1, 0] / (Q[0, 0] + eps)
