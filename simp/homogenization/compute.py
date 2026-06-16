@@ -23,8 +23,10 @@ def compute_homogenized_tensor(
 
     Sử dụng phương pháp đồng nhất hóa dựa trên năng lượng
     (energy-based homogenization) cho vật liệu tuần hoàn.
-    Công thức sử dụng trường dao động (fluctuation field)
-    χ = u - u⁰, trong đó u⁰ là chuyển vị biến dạng đơn vị.
+    Công thức sử dụng tổng chuyển vị u (không phải fluctuation)
+    theo Andreassen et al. (2014), eq (6):
+        Q_ij = 1/|Ω| Σ_e (u_e^i)^T * k_e * (u_e^j)
+    với k_e = E_penal[e] * KE / E0.
 
     Args:
         U: Ma trận chuyển vị tổng (ndof, 3) cho 3 trường hợp tải.
@@ -48,34 +50,36 @@ def compute_homogenized_tensor(
     # Chuyển edofMat về chỉ số 0-based
     edofMat_0 = edofMat - 1
 
-    # Trích xuất chuyển vị phần tử (tổng và biến dạng đơn vị)
+    # Trích xuất tổng chuyển vị phần tử (total displacement, không phải fluctuation)
     Ue = np.zeros((nele, 8, 3))
-    U0e = np.zeros((nele, 8, 3))
     for i in range(nele):
         for j in range(3):
             Ue[i, :, j] = U[edofMat_0[i, :], j]
-            U0e[i, :, j] = U0[edofMat_0[i, :], j]
-
-    # Trường dao động (fluctuation field): χ = u - u⁰
-    chi = Ue - U0e
 
     # Tính độ cứng vật liệu cho mỗi phần tử (vector hóa)
     # E(x) = Emin + x^penal * (E0 - Emin)
     x_flat = xPhys.flatten('F')
-    E = Emin + x_flat ** penal * (E0 - Emin)
+    E_penal = Emin + x_flat ** penal * (E0 - Emin)
 
-    # Tính ten-xơ độ cứng đồng nhất hóa Q (vector hóa bằng einsum)
-    # Q_ij = (1/|Ω|) * Σ_e E_e * (χ_e^(i)ᵀ * KE * χ_e^(j))
-    # 'e' : element, 'm'/'n' : DOF, 'i'/'j' : load case
-    Q = np.einsum('e,emi,mn,enj->ij', E, chi, KE, chi) / (nelx * nely)
+    # Công thức đồng nhất hóa (khớp MATLAB):
+    #   KE = E0 * KE_unit (đã được tính trong Material)
+    #   k_e = E_penal[e] * KE  (ma trận cứng phần tử)
+    #   Q_ij = 1/|Ω| Σ_e (u_e^i)^T * k_e * (u_e^j)
+    #        = 1/(nelx*nely) Σ_e E_penal[e] * (Ue^i)^T * KE * (Ue^j)
+    # KHÔNG chia cho E0 - KE đã chứa E0
+    #
+    # Lưu ý: FE solver dùng KE = E0*KE_unit, U ~ 1/E0, nên Q ~ 1/E0
+    # nhưng delta = 0.1*volfrac*E0 cũng tỉ lệ với E0 → cân bằng
+    k_e = E_penal  # KHÔNG chia cho E0
 
-    # Tính đạo hàm của Q theo mật độ phần tử dQ (vector hóa bằng einsum)
-    # dQ_ij/dx_e = (1/|Ω|) * dE/dx_e * (χ_e^(i)ᵀ * KE * χ_e^(j))
-    # dE/dx = penal * x^(penal-1) * (E0 - Emin)
-    dE = penal * x_flat ** (penal - 1) * (E0 - Emin)
-    
-    # Kết quả einsum là (nele, 3, 3), sau đó chuyển thành (3, 3, nely, nelx)
-    dQ_flat = np.einsum('e,emi,mn,enj->eij', dE, chi, KE, chi) / (nelx * nely)
+    # Tính Q dùng tổng displacement U (không fluctuation)
+    Q = np.einsum('e,emi,mn,enj->ij', k_e, Ue, KE, Ue) / (nelx * nely)
+
+    # Tính đạo hàm dQ - dùng tổng displacement U (không fluctuation)
+    # dQ_ij/dx_e = (1/|Ω|) * d(k_e)/dx_e * (Ue^i)^T * KE * (Ue^j)
+    # d(k_e)/dx = penal * x^(penal-1) * (E0 - Emin)
+    dk_e = penal * x_flat ** (penal - 1) * (E0 - Emin)
+    dQ_flat = np.einsum('e,emi,mn,enj->eij', dk_e, Ue, KE, Ue) / (nelx * nely)
     dQ = dQ_flat.transpose(1, 2, 0).reshape(3, 3, nely, nelx)
 
     return Q, dQ, Ue

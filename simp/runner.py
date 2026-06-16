@@ -22,7 +22,7 @@ from .core.convergence import ConvergenceChecker
 from .homogenization.compute import compute_homogenized_tensor
 from .objectives.first_obj import compute_first_objective
 from .objectives.second_obj import compute_second_objective
-from .objectives.auxetic import compute_auxetic_objective
+from .objectives.auxetic import compute_auxetic_q12_objective
 from .io.logger import save_csv
 
 # Ánh xạ tên seed → hàm
@@ -72,8 +72,8 @@ def run_simp(params: dict) -> dict:
     obj_type    = params.get('objective', 'auxetic')
     void_size_frac = params.get('void_size_frac', 0.4)
     rotation_deg   = params.get('rotation_deg', 0.0)
-    beta       = params.get('beta', 0.85)
-    beta_second = params.get('beta_second', 1.0)
+    beta       = params.get('beta', 0.8)          # Khớp MATLAB First_Obj
+    beta_second = params.get('beta_second', 100.0)  # Khớp MATLAB Second_Obj
     save_every = params.get('save_every', 1)
     scale_factor = params.get('scale_factor', 1)
 
@@ -97,9 +97,14 @@ def run_simp(params: dict) -> dict:
     )
 
     # Seed ban đầu
+    # Một số seed (hourglass, square) cần volfrac thay vì void_size_frac
     seed_fn = SEED_MAP.get(seed_name)
     if seed_fn is not None:
-        x = seed_fn(nelx, nely, void_size_frac, rotation_deg)
+        if seed_name == 'hourglass':
+            # Hourglass seed cần volfrac (khớp MATLAB)
+            x = seed_fn(nelx, nely, volfrac, rotation_deg)
+        else:
+            x = seed_fn(nelx, nely, void_size_frac, rotation_deg)
     else:
         from .seeds.circle import circle_seed
         x = circle_seed(nelx, nely, void_size_frac, rotation_deg)
@@ -113,6 +118,11 @@ def run_simp(params: dict) -> dict:
     loop = 0
     prev_obj = float('inf')
     converged = False
+    # Khởi tạo biến để tránh lỗi nếu break sớm do NaN
+    c = float('nan')
+    Q = np.zeros((3, 3))
+    v12 = float('nan')
+    v21 = float('nan')
 
     # Lưu lịch sử
     history = {
@@ -141,20 +151,27 @@ def run_simp(params: dict) -> dict:
             c, dc = compute_first_objective(Q, dQ, loop, beta)
         elif obj_type == 'second':
             c, dc = compute_second_objective(Q, dQ, loop, volfrac, E0, beta_second)
-        else:  # auxetic
-            c, dc = compute_auxetic_objective(Q, dQ)
+        else:  # auxetic - dùng beta=1.0 (không phải beta_second=100) để tránh over-penalty
+            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=1.0)
 
-        # Kiểm tra nan
-        if math.isnan(c) or np.isnan(np.mean(xPhys)):
+        # Chuyển đổi bài toán maximize thành minimize cho OC update
+        # OC update thực hiện: x * sqrt(max(0, -dc / (dv * lmid + eps))) -> cần dc âm khi objective tăng theo x
+        # Vì các hàm mục tiêu first và second được thiết kế để maximize, ta đổi dấu để biến thành minimize
+        if obj_type in ('first', 'second'):
+            c = -c
+            dc = -dc
+
+        # Kiểm tra nan (ưu tiên kiểm tra nhanh — np.any(np.isnan) thay vì np.isnan(np.mean))
+        if math.isnan(c) or np.isnan(np.sum(xPhys)):
             print(f'[STOP] NaN tại lần lặp {loop}')
             break
 
         # Hệ số Poisson: νᵢⱼ = Qᵢⱼ / Qⱼⱼ (từ compliance tensor S = Q⁻¹)
         # Công thức đúng cho 2D orthotropic: ν₁₂ = Q₁₂ / Q₂₂
         # (Sửa lỗi sign: trước đây dùng -Q₁₂/Q₂₂ dẫn đến sai dấu)
-        eps = 1e-12
-        v12 = Q[0, 1] / (Q[1, 1] + eps)
-        v21 = Q[1, 0] / (Q[0, 0] + eps)
+        _eps = 1e-12
+        v12 = Q[0, 1] / (Q[1, 1] + _eps)
+        v21 = Q[1, 0] / (Q[0, 0] + _eps)
 
         # Kiểm tra hội tụ
         if conv_checker.should_stop(change, c, prev_obj, loop, max_iter):
@@ -171,7 +188,15 @@ def run_simp(params: dict) -> dict:
             dv = apply_filter(dv, H, Hs)
 
         # OC
-        xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
+        # Với First_Obj, thêm ràng buộc stiffness Q>=delta (giống MATLAB)
+        if obj_type == 'first':
+            delta_first = 0.1 * volfrac * E0  # xi=0.1, Vmax=volfrac (MATLAB)
+            xnew, xPhys = oc_update(
+                x, dc, dv, volfrac, move, H, Hs, ft,
+                Q=Q, delta=delta_first,
+            )
+        else:
+            xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
         change = np.max(np.abs(xnew - x))
         x = xnew
 

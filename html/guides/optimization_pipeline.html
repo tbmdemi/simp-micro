@@ -11,8 +11,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Strategic pipeline for finding optimal SIMP Tham Số per seed and objective — from screening to production validation.">
-<title>SIMP — Tham Số Tối Ưu Hóa Pipeline</title>
+<meta name="description" content="Strategic pipeline for finding optimal SIMP Tham Số per seed and objective - from screening to production validation.">
+<title>SIMP - Tham Số Tối Ưu Hóa Pipeline</title>
 <style>
 /* ===== RESET & BASE ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -874,7 +874,7 @@ section { padding: var(--gap-xl) 0; }
     <h1>Tối ưu hóa SIMP<br>cho <span class="highlight">Mọi Seed</span> × Mục tiêu</h1>
     <p class="hero-sub">
       Một cách tiếp cận 3 giai đoạn chiến lược để tìm tập hợp tham số tối ưu cho mỗi
-      một trong 10 Hạt Giống và 3 hàm Mục tiêu — hướng đến sản xuất sẵn sàng
+      một trong 10 Hạt Giống và 3 hàm Mục tiêu - hướng đến sản xuất sẵn sàng
       các cấu trúc vi mô auxetic.
     </p>
     <div class="hero-metrics">
@@ -907,7 +907,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <div class="section-header fade-in">
       <h2>🧩 Vấn Đề</h2>
-      <p>10 Hạt Giống × 3 Mục Tiêu = 30 bài toán Tối Ưu Hóa topology riêng biệt — mỗi bài cần một bộ Tham Số phù hợp để đạt kết quả sản xuất được, hiệu suất cao.</p>
+      <p>10 Hạt Giống × 3 Mục Tiêu = 30 bài toán Tối Ưu Hóa topology riêng biệt - mỗi bài cần một bộ Tham Số phù hợp để đạt kết quả sản xuất được, hiệu suất cao.</p>
     </div>
 
     <div class="problem-grid fade-in">
@@ -1068,7 +1068,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <div class="section-header fade-in">
       <h2>🧠 3-Phase Tối Ưu Hóa Chiến Lược</h2>
-      <p>Pipeline tiến hóa cân bằng chi phí và độ chính xác — bắt đầu thô và rẻ, kết thúc mịn và đáng tin cậy.</p>
+      <p>Pipeline tiến hóa cân bằng chi phí và độ chính xác - bắt đầu thô và rẻ, kết thúc mịn và đáng tin cậy.</p>
     </div>
 
     <!-- Flow Diagram -->
@@ -1108,14 +1108,14 @@ section { padding: var(--gap-xl) 0; }
           </div>
           <div class="phase-details">
             <div class="phase-detail-item"><strong>Lưới</strong> <span>nelx=50, nely=50 (≈10–15s/lần chạy)</span></div>
-            <div class="phase-detail-item"><strong>Phương pháp</strong> <span>Latin Hypercube Sampling (LHS) — khoảng cách maximin</span></div>
+            <div class="phase-detail-item"><strong>Phương pháp</strong> <span>Latin Hypercube Sampling (LHS) - khoảng cách maximin</span></div>
             <div class="phase-detail-item"><strong>Đầu ra</strong> <span>Ma trận tương quan Spearman: Tham Số → (ν₁₂, Q₁₂, số lần lặp)</span></div>
             <div class="phase-detail-item"><strong>Kết quả</strong> <span>Không gian tìm kiếm thu gọn: từ 12 tham số → ~3 tham số quan trọng mỗi mục tiêu</span></div>
           </div>
           <div class="tech-details">
             <div class="tech-card">
               <h4>📊 Tại sao LHS?</h4>
-              <p>Phủ không gian tốt hơn lấy mẫu ngẫu nhiên. Đảm bảo mỗi Phạm Vi Tham Số được khám phá đều với số mẫu tối thiểu — quan trọng cho các đánh giá tốn kém.</p>
+              <p>Phủ không gian tốt hơn lấy mẫu ngẫu nhiên. Đảm bảo mỗi Phạm Vi Tham Số được khám phá đều với số mẫu tối thiểu - quan trọng cho các đánh giá tốn kém.</p>
             </div>
             <div class="tech-card">
               <h4>🔍 Phân tích Tương quan</h4>
@@ -1123,7 +1123,7 @@ section { padding: var(--gap-xl) 0; }
             </div>
             <div class="tech-card">
               <h4>⚡ Lợi thế Lưới Thô</h4>
-              <p>Lưới 50×50 chạy nhanh gấp 4 lần 100×100. Xu hướng được bảo toàn ngay cả ở độ phân giải thấp — đủ tốt cho Screening.</p>
+              <p>Lưới 50×50 chạy nhanh gấp 4 lần 100×100. Xu hướng được bảo toàn ngay cả ở độ phân giải thấp - đủ tốt cho Screening.</p>
             </div>
           </div>
         </div>
@@ -1155,7 +1155,7 @@ section { padding: var(--gap-xl) 0; }
             </div>
             <div class="tech-card">
               <h4>🔄 Khởi tạo Nóng</h4>
-              <p>Khởi tạo GP surrogate với kết quả Screening Giai đoạn 1 — tiết kiệm ~20% số đánh giá bằng cách bắt đầu từ prior có thông tin.</p>
+              <p>Khởi tạo GP surrogate với kết quả Screening Giai đoạn 1 - tiết kiệm ~20% số đánh giá bằng cách bắt đầu từ prior có thông tin.</p>
             </div>
             <div class="tech-card">
               <h4>📈 Phát hiện Hội tụ</h4>
@@ -1187,10 +1187,10 @@ section { padding: var(--gap-xl) 0; }
             <div class="tech-card">
               <h4>📊 Chỉ số Chính</h4>
               <ul>
-                <li>ν₁₂ (auxetic) — càng âm càng tốt</li>
-                <li>Q₁₂ (first/second) — càng cao càng tốt</li>
-                <li>Số lần lặp đến hội tụ — thấp hơn = rẻ hơn</li>
-                <li>Độ lệch chuẩn giữa các lần — thấp hơn = ổn định</li>
+                <li>ν₁₂ (auxetic) - càng âm càng tốt</li>
+                <li>Q₁₂ (first/second) - càng cao càng tốt</li>
+                <li>Số lần lặp đến hội tụ - thấp hơn = rẻ hơn</li>
+                <li>Độ lệch chuẩn giữa các lần - thấp hơn = ổn định</li>
               </ul>
             </div>
             <div class="tech-card">
@@ -1213,7 +1213,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <div class="section-header fade-in">
       <h2>🎯 Ba Hàm Mục tiêu</h2>
-      <p>Mỗi mục tiêu dẫn dắt Tối Ưu Hóa đến một mục tiêu cơ học khác nhau — ảnh hưởng đến Tham Số Cài Đặt nào là tối ưu.</p>
+      <p>Mỗi mục tiêu dẫn dắt Tối Ưu Hóa đến một mục tiêu cơ học khác nhau - ảnh hưởng đến Tham Số Cài Đặt nào là tối ưu.</p>
     </div>
 
     <div class="obj-grid">
@@ -1249,7 +1249,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <div class="section-header fade-in">
       <h2>🌱 Thư viện Hạt Giống</h2>
-      <p>10 mẫu void ban đầu — mỗi mẫu là một điểm khởi đầu topology khác nhau. Tham Số tối ưu phụ thuộc nhiều vào seed bạn bắt đầu.</p>
+      <p>10 mẫu void ban đầu - mỗi mẫu là một điểm khởi đầu topology khác nhau. Tham Số tối ưu phụ thuộc nhiều vào seed bạn bắt đầu.</p>
     </div>
 
     <div class="seed-grid fade-in">
@@ -1312,7 +1312,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <div class="section-header fade-in">
       <h2>📈 Kết quả Kỳ vọng</h2>
-      <p>Mục tiêu định lượng cho mỗi giai đoạn — thành công trông như thế nào.</p>
+      <p>Mục tiêu định lượng cho mỗi giai đoạn - thành công trông như thế nào.</p>
     </div>
 
     <div class="metrics-grid fade-in">
@@ -1392,7 +1392,7 @@ section { padding: var(--gap-xl) 0; }
   <div class="container">
     <h2>✅ Sẵn sàng Thực thi</h2>
     <p style="margin: 0 auto; max-width: 500px;">
-      Pipeline đã được định nghĩa. Sau khi triển khai, chúng ta có thể tự động duyệt qua tất cả 30 Tổ hợp (seed, objective) và xác định bộ Tham Số tốt nhất cho mỗi tổ hợp — cho phép sản xuất sẵn sàng các cấu trúc vi mô auxetic.
+      Pipeline đã được định nghĩa. Sau khi triển khai, chúng ta có thể tự động duyệt qua tất cả 30 Tổ hợp (seed, objective) và xác định bộ Tham Số tốt nhất cho mỗi tổ hợp - cho phép sản xuất sẵn sàng các cấu trúc vi mô auxetic.
     </p>
     <div style="margin-top: var(--gap-lg); display: flex; gap: var(--gap-md); justify-content: center; flex-wrap: wrap;">
       <span style="padding: 10px 20px; background: var(--color-accent); color: #fff; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem;">▶ Start with Giai đoạn 1: Screening</span>

@@ -12,6 +12,10 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
+    parser.add_argument('--version', action='store_true', help='Show version and exit')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    parser.add_argument('--list-seeds', action='store_true', help='List available seed patterns and exit')
+
     parser.add_argument('--nelx', type=int, help='Number of elements in the x direction')
     parser.add_argument('--nely', type=int, help='Number of elements in the y direction')
     parser.add_argument('--volfrac', type=float, help='Target volume fraction')
@@ -52,6 +56,10 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     params = build_params(args)
+
+    if args.verbose:
+        print(f'Running SIMP with seed={params.get("seed")}, objective={params.get("objective")}')
+        print(f'  mesh: {params.get("nelx")}x{params.get("nely")}, volfrac={params.get("volfrac")}')
 
     result = run_simp(params)
 

@@ -1,5 +1,5 @@
 """
-Gói seeds — các bộ sinh mẫu lỗ rỗng ban đầu cho tối ưu hóa SIMP.
+Gói seeds - các bộ sinh mẫu lỗ rỗng ban đầu cho tối ưu hóa SIMP.
 
 Mỗi module định nghĩa một hàm seed nhận (nelx, nely, volfrac)
 và trả về mảng mật độ (nely, nelx) với các lỗ rỗng được bố trí

@@ -176,7 +176,7 @@ def build_classification_table(
 
     Args:
         data_dir (str): Thư mục gốc chứa các thư mục kết quả SIMP.
-        objective_type (str): 'first' hoặc 'second' — dùng để lọc thư mục.
+        objective_type (str): 'first' hoặc 'second' - dùng để lọc thư mục.
 
     Returns:
         pd.DataFrame: DataFrame với các cột: Shape, Poisson_v12, Poisson_v21,

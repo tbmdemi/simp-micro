@@ -3,6 +3,17 @@ from dataclasses import dataclass
 
 @dataclass
 class SimpConfig:
+    """Cấu hình SIMP dạng dataclass.
+
+    Lưu ý: Đây là interface tham số phụ. Interface chính hiện tại là
+    dict params (xem simp/run.py, pipeline/params.py). Hai interface này
+    song song tồn tại và có thể bị lệch. Khi thêm tham số mới, cần cập nhật
+    cả hai.
+
+    Để thống nhất, khuyến nghị dùng dict params cho pipeline screening
+    và runner (vì dễ serialize/deserialize). SimpConfig phù hợp cho
+    single-run CLI nhập từ bàn phím.
+    """
     nelx: int = 100
     nely: int = 100
     volfrac: float = 0.4
@@ -14,8 +25,8 @@ class SimpConfig:
     move: float = 0.2
     save_every: int = 1
     scale_factor: int = 1
-    beta: float = 0.85
-    beta_second: float = 1.0
+    beta: float = 0.8        # Khớp MATLAB First_Obj (hardcoded 0.8)
+    beta_second: float = 100.0  # Khớp MATLAB Second_Obj (penalty=1e2)
     E0: float = 199.0
     Emin: float = 1e-9
     nu: float = 0.3

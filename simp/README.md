@@ -1,6 +1,6 @@
-# SIMP — Topology Optimization for Periodic Material Microstructure Design
+# SIMP - Topology Optimization for Periodic Material Microstructure Design
 
-**S**olid **I**sotropic **M**aterial with **P**enalization — a Python implementation of topology optimization for designing periodic unit cells (microstructures) with targeted mechanical properties, especially **auxetic** behavior (negative Poisson's ratio).
+**S**olid **I**sotropic **M**aterial with **P**enalization - a Python implementation of topology optimization for designing periodic unit cells (microstructures) with targeted mechanical properties, especially **auxetic** behavior (negative Poisson's ratio).
 
 This package is a Python port of the MATLAB reference code originally developed by the mechanics team. It provides a complete SIMP optimization loop: FE analysis → homogenization → objective computation → sensitivity filtering → OC update → convergence check.
 
@@ -49,8 +49,8 @@ simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
 | `--objective` | str | auxetic | Objective type; allowed: `first`, `second`, `auxetic` |
 | `--void_size_frac` | float | 0.4 | Void size fraction used by the seed generator |
 | `--rotation_deg` | float | 0.0 | Initial seed rotation angle in degrees |
-| `--beta` | float | 0.85 | Beta decay coefficient for first objective |
-| `--beta_second` | float | 1.0 | Penalty weight for second objective |
+| `--beta` | float | 0.8 | Beta decay coefficient for first objective |
+| `--beta_second` | float | 100.0 | Penalty weight for second objective |
 | `--save_every` | int | 1 | Save image every N iterations |
 | `--scale_factor` | int | 1 | Image upscale factor for saved PNGs |
 | `--output_dir` | str | outputs/simp_results_[seed] | Output directory for results |
@@ -84,8 +84,8 @@ Hoàn thành 134 loops (45.2s)
 ```
 
 Results are saved to `outputs/simp_results_[seed]/`:
-- `iteration_XXXXX.png` — density field images (grayscale, black = solid, white = void)
-- `iteration_data.csv` — convergence history (Poisson ratio, objective, volume fraction)
+- `iteration_XXXXX.png` - density field images (grayscale, black = solid, white = void)
+- `iteration_data.csv` - convergence history (Poisson ratio, objective, volume fraction)
 
 ---
 
@@ -94,7 +94,7 @@ Results are saved to `outputs/simp_results_[seed]/`:
 ```
 simp/
 ├── __init__.py               # Package metadata (version 1.1.0, MIT license)
-├── run.py                    # Entry point — run optimization with default params
+├── run.py                    # Entry point - run optimization with default params
 ├── runner.py                 # Main optimization loop orchestrator
 │
 ├── core/                     # Core SIMP algorithms
@@ -111,7 +111,7 @@ simp/
 ├── objectives/               # Objective functions
 │   ├── first_obj.py          # Type 1: c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
 │   ├── second_obj.py         # Type 2: c = Q₁₂ + penalty for low axial stiffness
-│   └── auxetic.py            # Auxetic: c = ν₁₂ = −Q₁₂ / Q₂₂
+│   └── auxetic.py            # Auxetic: c = Q₁₂  (+ penalty for low axial stiffness)
 │
 ├── homogenization/           # Homogenization
 │   └── compute.py            # Energy‑based homogenization: stiffness tensor Q + sensitivity dQ
@@ -179,11 +179,12 @@ c = Q₁₂  (+ penalty if Q₁₁ < δ or Q₂₂ < δ,  δ = 0.1 · volfrac ·
 ### 3. Auxetic Objective (`auxetic`)
 
 ```
-c = ν₁₂ = −Q₁₂ / Q₂₂
+c = Q₁₂  (+ penalty if Q₁₁ < δ or Q₂₂ < δ,  δ = 0.1 · volfrac · E₀)
 ```
 
-- Directly minimizes the Poisson ratio (makes it more negative)
-- Sensitivity computed via quotient rule
+- Directly minimizes `Q₁₂` (shear coupling). `Q₁₂ < 0` → auxetic
+- Gradient of `ν₁₂` is near-zero for topology optimization (`dQ₁₂/Q₁₂ ≈ dQ₂₂/Q₂₂`), so `Q₁₂` is used instead
+- Stiffness penalty prevents structural collapse
 - **Best for achieving auxetic designs** (ν₁₂ < 0)
 
 ---
@@ -244,8 +245,8 @@ All dependencies are listed in `pyproject.toml` and `requirements.txt` at the pr
 | Column | Description |
 |--------|-------------|
 | `Iteration` | Loop number |
-| `Poisson_v12` | Poisson ratio ν₁₂ (`= −Q₁₂/Q₂₂`) |
-| `Poisson_v21` | Poisson ratio ν₂₁ (`= −Q₁₂/Q₁₁`) |
+| `Poisson_v12` | Poisson ratio ν₁₂ (`= Q₁₂/Q₂₂`, từ compliance tensor) |
+| `Poisson_v21` | Poisson ratio ν₂₁ (`= Q₁₂/Q₁₁`) |
 | `Objective` | Objective function value |
 | `Volume_Fraction` | Actual volume fraction (mean of xPhys) |
 
@@ -259,7 +260,7 @@ The optimization stops when **any** of the following conditions is met:
 2. **Objective stability**: relative objective change < `tol_obj` for `window_size` consecutive iterations
 3. **Maximum iterations** `max_iter` reached
 
-A `ConvergenceChecker` class handles all three criteria — see `simp/core/convergence.py`.
+A `ConvergenceChecker` class handles all three criteria - see `simp/core/convergence.py`.
 
 ---
 
@@ -268,16 +269,16 @@ A `ConvergenceChecker` class handles all three criteria — see `simp/core/conve
 | Resource | Description |
 |----------|-------------|
 | [`../docs/PROJECT_ONBOARDING.md`](../docs/PROJECT_ONBOARDING.md) | Comprehensive project introduction for new collaborators |
-| [`../notebooks/`](../notebooks/) | Jupyter notebooks for convergence and image quality analysis |
 | [`../analysis/`](../analysis/) | CLI and library for analyzing SIMP outputs (dataset, image metrics, reports) |
-| [`simp_workflow_guide.html`](simp_workflow_guide.html) | Interactive HTML guide to the SIMP workflow (in Vietnamese) |
+| [`../html/guides/simp_guide_and_roadmap.html`](../html/guides/simp_guide_and_roadmap.html) | SIMP workflow guide (in Vietnamese) |
+| [`../html/dashboards/phase1_screening_dashboard.html`](../html/dashboards/phase1_screening_dashboard.html) | Phase 1 screening dashboard |
 | [`../html/simp_unified_guide.html`](../html/simp_unified_guide.html) | Unified SIMP reference guide |
 
 ---
 
 ## License
 
-MIT — see [`../LICENSE`](../LICENSE) (or refer to `simp/__init__.py`).
+MIT - see [`../LICENSE`](../LICENSE) (or refer to `simp/__init__.py`).
 
 ---
 

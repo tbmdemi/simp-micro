@@ -73,14 +73,26 @@ def solve_fe(
 
     # Xây dựng chuyển vị biến dạng đơn vị cho mỗi nút
     # U⁰(x,y) = ε⁰ · [x, y]ᵀ
+    # 
+    # FIX (2026-06-06): Dùng nodenrs-based DOF indexing thay vì idx-based
+    # để tương thích với edofMat (dùng node number).
+    # Lấy nodenrs từ tham số hoặc rebuild
+    try:
+        from .fem import build_dof_mesh
+        _dummy_nodenrs, _, _, _, _ = build_dof_mesh(nelx, nely)
+    except ImportError:
+        _dummy_nodenrs = np.reshape(
+            np.arange(1, (1 + nelx) * (1 + nely) + 1),
+            (1 + nely, 1 + nelx), order='F')
+    
     U0 = np.zeros((ndof, n_cases))
     for j in range(nny):
         for i in range(nnx):
-            node_idx = j * nnx + i
+            node = _dummy_nodenrs[j, i]  # 1-based node number
             x_coord = i / nelx  # chuẩn hóa [0, 1]
             y_coord = j / nely  # chuẩn hóa [0, 1]
-            dof_u = 2 * node_idx
-            dof_v = 2 * node_idx + 1
+            dof_u = 2 * (node - 1)
+            dof_v = 2 * (node - 1) + 1
             # ε_xx = 1
             U0[dof_u, 0] = x_coord
             # ε_yy = 1
@@ -89,8 +101,9 @@ def solve_fe(
             U0[dof_u, 2] = y_coord / 2
             U0[dof_v, 2] = x_coord / 2
 
-    # Tải trọng: F = PBC^T @ (K_global @ U0)
-    F = pbc.T @ (K_global @ U0)
+    # Tải trọng: F = -PBC^T @ (K_global @ U0)
+    # FIX (2026-06-06): Sửa sign - nghiệm là fluctuation χ thỏa K@χ = -K@U0
+    F = -pbc.T @ (K_global @ U0)
 
     # Cố định 2 bậc tự do đầu tiên (u, v của nút 0) để loại bỏ chuyển vị cứng
     fixed_dofs = [0, 1]

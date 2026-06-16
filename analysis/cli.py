@@ -5,9 +5,8 @@ Provides commands to analyze convergence data, compute image quality
 metrics, and generate HTML reports.
 
 Usage:
-    python -m analysis.cli report --data-dir data/Shape_Initial_shear
-    python -m analysis.cli report --data-dir data/Shape_Initial_stiff
-    python -m analysis.cli image-metrics --dir data/Shape_Initial_shear/circle_shear
+    python -m analysis.cli report --data-dir outputs/pipeline/phase1/circle/auxetic
+    python -m analysis.cli image-metrics --dir outputs/pipeline/phase1/circle/auxetic/sample_0000
 """
 
 import argparse
@@ -63,7 +62,7 @@ def build_parser() -> argparse.ArgumentParser:
         help='Output HTML file path',
     )
     report_parser.add_argument(
-        '--objective', type=str, choices=['first', 'second'], default='first',
+        '--objective', type=str, choices=['first', 'second', 'auxetic'], default='first',
         help='Objective function type',
     )
     report_parser.add_argument(

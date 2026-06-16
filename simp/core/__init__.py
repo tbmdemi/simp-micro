@@ -1,5 +1,5 @@
 """
-Gói core — các thành phần cốt lõi của thuật toán SIMP.
+Gói core - các thành phần cốt lõi của thuật toán SIMP.
 
 Bao gồm:
     - fem:       Xây dựng lưới phần tử hữu hạn và ánh xạ bậc tự do.

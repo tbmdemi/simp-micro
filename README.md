@@ -1,5 +1,5 @@
 <!--
-  Title:    SIMP Analyst — SIMP Topology Optimization for Periodic Material Microstructure Design
+  Title:    SIMP Analyst - SIMP Topology Optimization for Periodic Material Microstructure Design
   Type:     Project README
   Language: Tiếng Việt (with English technical terms)
 -->
@@ -8,7 +8,7 @@
 
 **Tối ưu hóa hình dạng (topology optimization) cho thiết kế micro-cấu trúc vật liệu tuần hoàn với hệ số Poisson âm (auxetic).**
 
-> **S**olid **I**sotropic **M**aterial with **P**enalization — implementation Python thuần của thuật toán SIMP,
+> **S**olid **I**sotropic **M**aterial with **P**enalization - implementation Python thuần của thuật toán SIMP,
 > kết hợp phân tích phần tử hữu hạn (FEA) + đồng nhất hóa (homogenization) + tối ưu hóa hình dạng,
 > nhắm đến mục tiêu thiết kế các ô cơ sở (unit cell) có tính chất cơ học đặc biệt, đặc biệt là **hành vi auxetic** (ν < 0).
 
@@ -29,10 +29,10 @@
   - [SIMP Core (`simp/`)](#simp-core)
   - [Pipeline (`pipeline/`)](#pipeline)
   - [Analysis (`analysis/`)](#analysis)
-- [Seeds — Mẫu khởi tạo](#seeds--mẫu-khởi-tạo)
-- [Objective Functions — Hàm mục tiêu](#objective-functions--hàm-mục-tiêu)
+- [Seeds - Mẫu khởi tạo](#seeds--mẫu-khởi-tạo)
+- [Objective Functions - Hàm mục tiêu](#objective-functions--hàm-mục-tiêu)
 - [Homogenization & Periodic Boundary Conditions](#homogenization--periodic-boundary-conditions)
-- [Convergence — Tiêu chí hội tụ](#convergence--tiêu-chí-hội-tụ)
+- [Convergence - Tiêu chí hội tụ](#convergence--tiêu-chí-hội-tụ)
 - [Kết quả đầu ra](#kết-quả-đầu-ra)
 - [HTML Reports & Dashboards](#html-reports--dashboards)
 - [Testing](#testing)
@@ -46,12 +46,12 @@
 
 **Input_SIMP_Analyst** (gọi tắt là **SIMPAnalyst**) là một dự án nghiên cứu và kỹ thuật nhằm **thiết kế ngược** micro-cấu trúc vật liệu
 thông qua tối ưu hóa hình dạng. Mục tiêu là tìm ra sự phân bố vật liệu trong một ô cơ sở (unit cell) tuần hoàn sao cho
-vật liệu tương đương (homogenized material) có các tính chất đàn hồi mong muốn — đặc biệt là **hệ số Poisson âm (auxetic)**.
+vật liệu tương đương (homogenized material) có các tính chất đàn hồi mong muốn - đặc biệt là **hệ số Poisson âm (auxetic)**.
 
 Dự án được xây dựng bằng **Python 3.10+**, kế thừa tinh thần của mã MATLAB 99-dòng kinh điển (Sigmund, 2001)
 và mở rộng với:
 - Điều kiện biên tuần hoàn (PBC) cho ô cơ sở
-- Đồng nhất hóa dựa trên năng lượng (energy-based homogenization) — Xia & Breitkopf (2015)
+- Đồng nhất hóa dựa trên năng lượng (energy-based homogenization) - Xia & Breitkopf (2015)
 - 3 hàm mục tiêu khác nhau cho các chiến lược tối ưu khác nhau
 - 10 mẫu seed khởi tạo khác nhau để khám phá không gian thiết kế
 - Pipeline screening tự động với LHS (Latin Hypercube Sampling) và phân tích tương quan Spearman
@@ -66,7 +66,7 @@ và mở rộng với:
 | **SIMP Loop** | Vòng lặp tối ưu hoàn chỉnh: FE → homogenization → objective → filter → OC update → convergence check |
 | **Periodic BC** | Áp điều kiện biên tuần hoàn (null-space projection) cho ô cơ sở, đảm bảo tính tuần hoàn của trường chuyển vị |
 | **Đồng nhất hóa (Homogenization)** | Tính tensor độ cứng tương đương `Q` (3×3) và độ nhạy `dQ/dx` bằng phương pháp năng lượng |
-| **3 Objective Functions** | `auxetic` (ν₁₂ = −Q₁₂/Q₂₂), `first` (Q₁₂ − β·(Q₁₁+Q₂₂)), `second` (Q₁₂ + penalty) |
+| **3 Objective Functions** | `auxetic` (Q₁₂, tối thiểu hóa trực tiếp shear coupling), `first` (Q₁₂ − β·(Q₁₁+Q₂₂)), `second` (Q₁₂ + penalty) |
 | **10 Seed Patterns** | Đa dạng mẫu khởi tạo: void tròn, vuông, lục giác, hình chữ thập, grid, v.v. |
 | **LHS Screening** | Sinh mẫu Latin Hypercube, chạy batch, phân tích Spearman → xác định top-3 tham số ảnh hưởng nhất |
 | **Image Metrics** | Phân tích chất lượng ảnh kết quả: binary rate, edge density, noise ratio, symmetry |
@@ -80,9 +80,9 @@ và mở rộng với:
 ```
 Input_SIMP_Analyst/
 ├── simp/                          # ★ Core SIMP optimization package
-│   ├── __init__.py                # Package metadata (version 1.1.0)
+│   ├── __init__.py                # Package metadata (version 1.2.1)
 │   ├── main.py                    # CLI entry point
-│   ├── run.py                     # Entry — run with default params
+│   ├── run.py                     # Entry - run with default params
 │   ├── runner.py                  # Main optimization loop orchestrator
 │   ├── config.py                  # SimpConfig dataclass với validation
 │   ├── core/                      # Các thuật toán SIMP core
@@ -95,7 +95,7 @@ Input_SIMP_Analyst/
 │   ├── materials/
 │   │   └── isotropic.py           # 4-node quad element stiffness matrix (plane stress)
 │   ├── objectives/
-│   │   ├── auxetic.py             # Auxetic: c = ν₁₂ = −Q₁₂/Q₂₂
+│   │   ├── auxetic.py             # Auxetic: c = Q₁₂  (+ penalty for low axial stiffness)
 │   │   ├── first_obj.py           # Type 1: c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
 │   │   └── second_obj.py          # Type 2: c = Q₁₂ + penalty for low axial stiffness
 │   ├── homogenization/
@@ -118,7 +118,8 @@ Input_SIMP_Analyst/
 ├── pipeline/                      # Screening pipeline
 │   ├── __init__.py
 │   ├── params.py                  # Parameter space definitions (PARAM_SPACE, FIXED_PARAMS)
-│   └── phase1_screening.py        # Phase 1: LHS screening, Spearman correlation, batch runner
+│   ├── phase1_screening_parallel.py # Phase 1: LHS screening, batch runner
+│   └── phase2_tuning.py           # Phase 2: Global optimization tuning (DE, SHGO, basinhopping)
 │
 ├── analysis/                      # Post-processing analysis
 │   ├── __init__.py
@@ -128,7 +129,7 @@ Input_SIMP_Analyst/
 │   └── report.py                  # Generate self-contained HTML report
 │
 ├── html/                          # Pre-built HTML resources
-│   ├── index.html                 # Main report
+│   ├── index.html                 # Documentation landing page
 │   ├── dashboards/
 │   │   └── phase1_screening_dashboard.html
 │   ├── guides/
@@ -136,6 +137,18 @@ Input_SIMP_Analyst/
 │   │   └── simp_guide_and_roadmap.html
 │   └── reports/
 │       └── auxetic_report.html
+│
+├── docs/                          # Documentation (canonical sources)
+│   ├── INDEX.md                   # Docs index / overview
+│   ├── comparison_matlab_python.md# So sánh MATLAB vs Python SIMP
+│   ├── phase1_screening_report.md # Báo cáo Phase 1 (gộp từ root + outputs/reports)
+│   ├── architecture_review.md     # Architecture review report
+│   ├── bug_reports.md             # Bug report tổng hợp (Phase 1 + Phase 2)
+│   ├── phase2_guide.md            # Hướng dẫn Phase 2 tuning
+│   ├── PROJECT_ONBOARDING.md      # Project introduction for new collaborators
+│   ├── SUMMARY.md                 # Docs summary
+│   ├── TASK_IMAGE_QUALITY_CHECK.md# Image quality check task
+│   └── WORKFLOW_SIMP_ANALYSIS.md  # Workflow documentation
 │
 ├── outputs/                       # Kết quả sinh ra từ quá trình chạy
 │   ├── report_simp_analysis.html  # Self-contained analysis report
@@ -216,7 +229,7 @@ make install-dev       # all dev dependencies
 python -m simp.run
 ```
 
-Chạy với mesh 100×100, seed `circle`, objective `auxetic` — kết quả lưu vào `outputs/simp_results_circle/`.
+Chạy với mesh 100×100, seed `circle`, objective `auxetic` - kết quả lưu vào `outputs/simp_results_circle/`.
 
 **Tùy chỉnh tham số qua CLI:**
 
@@ -269,9 +282,9 @@ print(f'ν₁₂ = {result["v12"]:.4f}, ν₂₁ = {result["v21"]:.4f}')
 print(f'Converged: {result["converged"]} after {result["n_iters"]} iterations')
 
 # Kết quả trả về
-xPhys   = result['xPhys']      # (nely, nelx) numpy array — density field
+xPhys   = result['xPhys']      # (nely, nelx) numpy array - density field
 Q       = result['Q']           # 3×3 homogenized stiffness tensor
-history = result['history']     # dict — convergence history
+history = result['history']     # dict - convergence history
 ```
 
 ### Screening Pipeline (Phase 1)
@@ -316,9 +329,9 @@ simp-analysis
 ```
 
 Module `analysis/` cung cấp:
-- `dataset.py` — Đọc và xử lý dữ liệu từ CSV/JSON kết quả SIMP
-- `image.py` — Tính các chỉ số chất lượng ảnh (binary rate, edge density, noise ratio, symmetry L/R)
-- `report.py` — Tạo báo cáo HTML tự chứa với bảng phân loại và chỉ số hình ảnh
+- `dataset.py` - Đọc và xử lý dữ liệu từ CSV/JSON kết quả SIMP
+- `image.py` - Tính các chỉ số chất lượng ảnh (binary rate, edge density, noise ratio, symmetry L/R)
+- `report.py` - Tạo báo cáo HTML tự chứa với bảng phân loại và chỉ số hình ảnh
 
 ### Makefile
 
@@ -414,7 +427,7 @@ Module phân tích hậu kỳ:
 
 ---
 
-## Seeds — Mẫu khởi tạo
+## Seeds - Mẫu khởi tạo
 
 10 seed patterns giúp khám phá đa dạng không gian thiết kế:
 
@@ -435,17 +448,18 @@ Các seed được parameter hóa bởi `void_size_frac` (kích thước void) v
 
 ---
 
-## Objective Functions — Hàm mục tiêu
+## Objective Functions - Hàm mục tiêu
 
 ### 1. Auxetic Objective (`auxetic`)
 
 $$
-c = \nu_{12} = -\frac{Q_{12}}{Q_{22}}
+c = Q_{12} + \text{penalty}(\text{nếu } Q_{11} < \delta \text{ hoặc } Q_{22} < \delta), \quad
+\delta = 0.1 \cdot \text{volfrac} \cdot E_0
 $$
 
-- **Mục tiêu**: Cực tiểu hóa hệ số Poisson (làm âm hơn)
-- **Cách hoạt động**: Trực tiếp tối ưu tỉ số `−Q₁₂/Q₂₂`
-- **Độ nhạy**: Tính theo quotient rule từ `dQ/dx`
+- **Mục tiêu**: Cực tiểu hóa `Q₁₂` (shear coupling). `Q₁₂ < 0` → auxetic
+- **Lý do**: Gradient `dν₁₂/dx ≈ 0` (do `dQ₁₂/Q₁₂ ≈ dQ₂₂/Q₂₂`), nên `ν₁₂` không thể dùng cho topology optimization
+- **Giải pháp**: Tối ưu trực tiếp `Q₁₂` với penalty stiffness để tránh collapse
 - **Phù hợp nhất** cho việc tìm kiếm thiết kế auxetic thuần túy
 
 ### 2. First Objective (`first`)
@@ -455,7 +469,7 @@ c = Q_{12} - \beta^{\text{loop}} \cdot (Q_{11} + Q_{22})
 $$
 
 - **Mục tiêu**: Cực đại hóa `Q₁₂` đồng thời triệt tiêu độ cứng dọc trục
-- **Điểm đặc biệt**: Hệ số `β^loop` giảm dần (decay) theo số vòng lặp — ban đầu penalty nặng lên `Q₁₁+Q₂₂`, sau đó nhẹ dần
+- **Điểm đặc biệt**: Hệ số `β^loop` giảm dần (decay) theo số vòng lặp - ban đầu penalty nặng lên `Q₁₁+Q₂₂`, sau đó nhẹ dần
 - **Hội tụ ổn định**, thích hợp để thăm dò không gian thiết kế
 
 ### 3. Second Objective (`second`)
@@ -480,7 +494,7 @@ Module `homogenization/compute.py` thực hiện:
   $$
   Q_{ij} = \frac{1}{|Y|} \int_Y (\boldsymbol{\varepsilon}^0_i - \boldsymbol{\varepsilon}(u_i))^T \cdot \mathbb{C} \cdot (\boldsymbol{\varepsilon}^0_j - \boldsymbol{\varepsilon}(u_j)) \, dY
   $$
-- **Tính độ nhạy** `dQ/dx` — cần thiết cho gradient-based optimization
+- **Tính độ nhạy** `dQ/dx` - cần thiết cho gradient-based optimization
 
 3 trường hợp tải (load case) được giải: epsilon_xx, epsilon_yy, epsilon_xy.
 
@@ -497,7 +511,7 @@ Phương pháp này hiệu quả vì giảm kích thước hệ phương trình 
 
 ---
 
-## Convergence — Tiêu chí hội tụ
+## Convergence - Tiêu chí hội tụ
 
 Vòng lặp tối ưu dừng khi **bất kỳ** điều kiện nào sau đây được thỏa mãn:
 
@@ -530,7 +544,7 @@ Sau khi chạy tối ưu, thư mục `output_dir` chứa:
 
 Dự án bao gồm các báo cáo HTML đã được xây dựng sẵn:
 
-| HTML | Mô tả |
+| Resource | Mô tả |
 |------|-------|
 | [`html/reports/auxetic_report.html`](html/reports/auxetic_report.html) | Báo cáo kết quả auxetic |
 | [`html/dashboards/phase1_screening_dashboard.html`](html/dashboards/phase1_screening_dashboard.html) | Dashboard Phase 1 screening |
@@ -599,8 +613,8 @@ Xem đầy đủ trong [`pyproject.toml`](pyproject.toml) và [`requirements.txt
 
 ## License
 
-MIT License — xem file [`LICENSE`](LICENSE) (hoặc tham khảo trong `simp/__init__.py`).
+MIT License - xem file [`LICENSE`](LICENSE) (hoặc tham khảo trong `simp/__init__.py`).
 
 ---
 
-> ⚡ **SIMPAnalyst** — từ tư duy thiết kế đến micro-cấu trúc auxetic.
+> ⚡ **SIMPAnalyst** - từ tư duy thiết kế đến micro-cấu trúc auxetic.

@@ -35,7 +35,8 @@ def build_filter(nelx: int, nely: int, rmin: float):
 
     for i in range(nelx):
         for j in range(nely):
-            row = j * nelx + i
+            # Chỉ số flatten('F') = i*nely + j (Fortran column-major)
+            row = i * nely + j
             kk1 = int(np.ceil(max(i - rmin, 0)))
             kk2 = int(np.ceil(min(i + rmin, nelx - 1)))
             ll1 = int(np.ceil(max(j - rmin, 0)))
@@ -43,7 +44,8 @@ def build_filter(nelx: int, nely: int, rmin: float):
 
             for k in range(kk1, kk2 + 1):
                 for l in range(ll1, ll2 + 1):
-                    col = l * nelx + k
+                    # Chỉ số flatten('F') cho cột = k*nely + l
+                    col = k * nely + l
                     fac = rmin - np.sqrt((i - k) ** 2 + (j - l) ** 2)
                     if fac > 0:
                         iH[cc] = row

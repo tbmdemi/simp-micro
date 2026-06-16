@@ -1,5 +1,5 @@
 """
-SIMP — Tối ưu hóa hình dạng (Topology Optimization) cho thiết kế vi cấu trúc vật liệu tuần hoàn.
+SIMP - Tối ưu hóa hình dạng (Topology Optimization) cho thiết kế vi cấu trúc vật liệu tuần hoàn.
 
 Bản Python của phương pháp SIMP (Solid Isotropic Material with Penalization)
 dùng để tối ưu hóa hình dạng các ô cơ sở tuần hoàn nhằm đạt tính chất auxetic.
@@ -13,6 +13,6 @@ Các gói con:
     io:             Công cụ ghi log và trực quan hóa.
 """
 
-__version__ = '1.1.0'
+__version__ = '1.2.1'
 __author__ = 'SIMP Analyst Team'
 __license__ = 'MIT'

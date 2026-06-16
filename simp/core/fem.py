@@ -30,19 +30,24 @@ def build_dof_mesh(nelx: int, nely: int):
         order='F'
     )
 
-    # Vector bậc tự do phần tử: bậc tự do đầu tiên của mỗi phần tử
+    # Ma trận bậc tự do phần tử: tất cả 8 bậc tự do cho mỗi phần tử
+    # Node ordering (CCW từ bottom-left): [BL, BR, TR, TL]
+    # BL: bottom-left, BR: bottom-right, TR: top-right, TL: top-left
+    # 
+    # BUG FIX (2026-06-06): edofVec và offset đều sai.
+    # - edofVec dùng 2*node+1 thay vì 2*node-1 → lệch 2 DOF
+    # - offset cho TR dùng 2*nely (sai) thay vì 2*(nely+1)+2 (đúng)
+    # - offset cho TL dùng -2,-1 (sai) thay vì +2,+3 (đúng)
     edofVec = np.reshape(
-        2 * nodenrs[:-1, :-1] + 1,
+        2 * nodenrs[:-1, :-1] - 1,  # FIX: u-DOF = 2*node-1
         nelx * nely,
         order='F'
     )
 
-    # Ma trận bậc tự do phần tử: tất cả 8 bậc tự do cho mỗi phần tử
-    # Ghép thủ công để tránh lỗi mảng không đồng nhất
     offset = np.concatenate([
-        [0], [1],
-        2 * nely + np.array([2, 3, 0, 1]),
-        [-2], [-1],
+        [0], [1],                                    # BL(u,v)
+        2 * nely + np.array([2, 3, 4, 5]),           # BR(u,v), TR(u,v)
+        [2], [3],                                    # TL(u,v)
     ])
     edofMat = np.tile(edofVec, (8, 1)).T + np.tile(
         offset,

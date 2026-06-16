@@ -1,52 +1,60 @@
 """
-Hàm mục tiêu auxetic cho tối ưu hóa hình dạng SIMP.
+Hàm mục tiêu auxetic dùng Q12 (shear coupling) thay vì ν12.
 
-Tối thiểu hóa hệ số Poisson ν₁₂ để tạo vật liệu auxetic
-(ν₁₂ < 0, giãn nở âm dưới tác dụng của tải trọng).
+Lý do: gradient dν12/dx ≈ 0 (identity toán học: dQ12/Q12 ≈ dQ22/Q22),
+nên ν12 không thể dùng cho topology optimization.
 
-Công thức:
-    ν₁₂ = Q₁₂ / Q₂₂               (từ compliance tensor S = Q⁻¹)
-    c   = ν₁₂                       → minimize để ν₁₂ càng âm càng tốt
-    dc  = (dQ₁₂ * Q₂₂ - Q₁₂ * dQ₂₂) / Q₂₂²
+Giải pháp: tối thiểu hóa trực tiếp Q12.
+  - Q12 < 0 → auxetic (hệ số Poisson âm)
+  - Q12 > 0 → conventional
+  - Q12 càng âm → càng auxetic
 
-Note (2026-02-06): Sửa lỗi công thức. Trước đây dùng ν₁₂ = -Q₁₂/Q₂₂
-dẫn đến tối ưu tìm ν₁₂ → +1 (vật liệu dương cực đại), sai mục tiêu auxetic.
+Cơ chế phạt stiffness: tránh collapse bằng cách phạt khi Q11 hoặc Q22
+xuống dưới ngưỡng δ = 0.1 * volfrac * E0.
 """
 
 import numpy as np
 
 
-def compute_auxetic_objective(
+def compute_auxetic_q12_objective(
     Q: np.ndarray,
     dQ: np.ndarray,
+    volfrac: float,
+    E0: float,
+    beta: float = 1.0,
 ) -> tuple:
-    """Tính hàm mục tiêu auxetic và đạo hàm của nó.
+    """Tối thiểu hóa Q12 (→ auxetic) với ràng buộc phạt stiffness.
 
-    Hàm mục tiêu là hệ số Poisson ν₁₂ = Q₁₂ / Q₂₂.
-    Tối ưu hóa nhằm tối thiểu hóa ν₁₂ (giá trị âm = auxetic).
-    Độ nhạy được tính bằng quy tắc đạo hàm thương số.
+    Hàm mục tiêu (dạng minimization cho OC):
+        c = Q12 + penalty_terms
+    Trong đó penalty kích hoạt khi Q11 < δ hoặc Q22 < δ.
 
     Args:
         Q: Ten-xơ độ cứng đồng nhất hóa (3×3).
-        dQ: Đạo hàm của Q theo mật độ phần tử (3×3×nely×nelx).
+        dQ: Đạo hàm Q theo mật độ (3×3×nely×nelx).
+        volfrac: Tỉ lệ thể tích.
+        E0: Modul đàn hồi Young.
+        beta: Hệ số phạt stiffness.
 
     Returns:
-        Bộ (c, dc) với:
-            c : Giá trị hàm mục tiêu (ν₁₂, vô hướng).
-            dc: Mảng (nely, nelx) đạo hàm của hàm mục tiêu.
+        (c, dc) với:
+            c : Giá trị hàm mục tiêu (vô hướng).
+            dc: Mảng (nely, nelx) đạo hàm.
     """
-    eps = 1e-12
+    delta = 0.1 * volfrac * E0
+    penalty = beta
 
-    # Trích xuất thành phần ten-xơ
-    Q12 = Q[0, 1]
-    Q22 = Q[1, 1]
+    # Mục tiêu chính: tối thiểu hóa Q12 (âm = auxetic)
+    c = Q[0, 1]
+    dc = dQ[0, 1, :, :].copy()
 
-    # Công thức đúng: ν₁₂ = Q₁₂ / Q₂₂ (xem derivation trong docstring)
-    nu12 = Q12 / (Q22 + eps)
-    c = nu12  # minimize → ν₁₂ càng âm (auxetic) càng tốt
+    # Phạt stiffness: tránh collapse
+    if Q[0, 0] < delta:
+        c += penalty * (delta - Q[0, 0]) ** 2
+        dc += -2 * penalty * (delta - Q[0, 0]) * dQ[0, 0, :, :]
 
-    # Độ nhạy: đạo hàm thương số d(Q₁₂/Q₂₂)/dx
-    d_nu12 = (dQ[0, 1] * Q22 - Q12 * dQ[1, 1]) / (Q22**2 + eps)
-    dc = d_nu12
+    if Q[1, 1] < delta:
+        c += penalty * (delta - Q[1, 1]) ** 2
+        dc += -2 * penalty * (delta - Q[1, 1]) * dQ[1, 1, :, :]
 
     return c, dc

@@ -7,44 +7,51 @@ tạo thành hình đồng hồ cát.
 
 import numpy as np
 
+def hourglass_seed(nelx: int, nely: int, volfrac: float, rotation_deg: float = 0.0) -> np.ndarray:
+    """Tạo mẫu hình đồng hồ cát (MATLAB-style).
 
-def hourglass_seed(nelx: int, nely: int, void_size_frac: float, rotation_deg: float) -> np.ndarray:
-    """Tạo mẫu hình đồng hồ cát.
+    Tạo trường mật độ với vùng lõm hình đồng hồ cát có góc nghiêng 50°.
+    Vùng lõm có mật độ volfrac/2, nền có mật độ volfrac.
+    Hỗ trợ rotation qua phép xoay tọa độ (như các seed khác).
 
     Args:
         nelx: Số phần tử theo phương x.
         nely: Số phần tử theo phương y.
-        void_size_frac: Tỉ lệ kích thước lỗ rỗng (so với chiều rộng).
-        rotation_deg: Góc xoay mẫu seed (độ).
+        volfrac: Tỉ lệ thể tích (dùng cho mật độ nền và vùng lõm).
+        rotation_deg: Góc xoay mẫu seed (độ, mặc định 0).
 
     Returns:
         Mảng (nely, nelx) mật độ ban đầu.
     """
-    x = np.ones((nely, nelx))
-    cx, cy = nelx / 2, nely / 2
-    
-    # Hệ số dốc dựa trên void_size_frac
-    # Chiều rộng đáy = void_size_frac * nelx
-    # Chiều cao tam giác = nely / 2
-    # Slope = (void_size_frac * nelx / 2) / (nely / 2) = void_size_frac * nelx / nely
-    slope = void_size_frac * nelx / nely
-    
-    # Góc xoay (radian)
+    # Mật độ nền = volfrac (giống MATLAB)
+    x = np.full((nely, nelx), volfrac)
+
+    # Tham số hình học cố định (giống MATLAB)
+    hourglass_width = nelx / 14     # Bề rộng tại eo
+    hourglass_height = nely / 5     # Chiều cao từ tâm đến đỉnh/đáy
+    center_x = nelx / 2
+    center_y = nely / 2
+    taper_angle_deg = 50            # Góc nghiêng từ eo ra ngoài
+    taper_slope = np.tan(np.radians(taper_angle_deg))
+
+    # Ma trận xoay
     theta = np.radians(rotation_deg)
-    cos_t, sin_t = np.cos(theta), np.sin(theta)
+    cos_t = np.cos(theta)
+    sin_t = np.sin(theta)
 
     for i in range(nelx):
         for j in range(nely):
-            # Chuyển đổi tọa độ xoay
-            dx, dy = i - cx, j - cy
-            nx = dx * cos_t - dy * sin_t
-            ny = dx * sin_t + dy * cos_t
-            
-            # Hai hình tam giác: trên và dưới (trong hệ tọa độ xoay)
-            in_upper = (ny > 0) and (abs(nx) < ny * slope)
-            in_lower = (ny < 0) and (abs(nx) < -ny * slope)
-            
-            if in_upper or in_lower:
-                x[j, i] = 0.0
+            # Chuyển về tọa độ tâm
+            dx, dy = i - center_x, j - center_y
+            # Xoay tọa độ (ngược chiều kim đồng hồ)
+            rx = dx * cos_t - dy * sin_t
+            ry = dx * sin_t + dy * cos_t
+
+            vertical_dist = abs(ry)
+            # Bề rộng tại độ cao vertical_dist (nở rộng từ eo ra)
+            taper_width = hourglass_width + taper_slope * vertical_dist
+            # Nếu nằm trong vùng đồng hồ cát
+            if abs(rx) < taper_width and vertical_dist < hourglass_height:
+                x[j, i] = volfrac / 2  # "soft void" (giống MATLAB)
 
     return x

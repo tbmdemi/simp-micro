@@ -1,530 +1,1067 @@
-<!--
-  Title:    Giai Đoạn 1 — LHS Screening Dashboard · Tối Ưu Hóa Tham Số SIMP
-  Type:     Dashboard Screening Thống nhất
-  Aesthetic: Dashboard kỹ thuật cao cấp nền tối với bố cục dữ liệu
-  Fonts:    Syne + DM Sans
-  Generated: 2026-06-01
-  Mô tả:    Dashboard thống nhất kết hợp tổng quan screening, phân tích và theo dõi tiến độ
--->
-
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Giai đoạn 1 — LHS Screening dashboard thống nhất. Theo dõi screening, phân tích và tiến độ cho tối ưu hóa tham số SIMP.">
-<title>Giai Đoạn 1 — LHS Screening Dashboard · SIMP</title>
+<title>Phase 1 - LHS Screening · SIMP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* ===== RESET & BASE ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
-
-:root {
-  --color-bg: #09090b;
-  --color-surface: #131316;
-  --color-surface-raised: #1a1a1f;
-  --color-border: #2a2a32;
-  --color-accent: #54a0ff;
-  --color-accent-dim: #2e86de;
-  --color-accent-glow: rgba(84, 160, 255, 0.15);
-  --color-text-primary: #e8e8ed;
-  --color-text-secondary: #88889a;
-  --color-text-muted: #5c5c6e;
-  --color-success: #00d68f;
-  --color-warning: #ff9f43;
-  --color-danger: #ff6b6b;
-  --color-info: #54a0ff;
-  --color-auxetic: #ff6b6b;
-  --color-first: #6c5ce7;
-  --color-second: #00d68f;
-  --gap-sm: 8px;
-  --gap-md: 16px;
-  --gap-lg: 24px;
-  --gap-xl: 40px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --max-width: 1200px;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07080d;
+  --surface:#0d0f18;
+  --raised:#131520;
+  --card:#161925;
+  --border:#1e2235;
+  --border2:#262a3e;
+  --accent:#4fffcf;
+  --accent2:#7c6ffa;
+  --accent3:#ff6b8a;
+  --glow:rgba(79,255,207,0.08);
+  --glow2:rgba(124,111,250,0.1);
+  --text:#d4d8f0;
+  --text2:#7b82a8;
+  --text3:#3d4260;
+  --green:#3dffc0;
+  --orange:#ffb347;
+  --red:#ff6b8a;
+  --blue:#6fa3ff;
+  --purple:#a78bfa;
+  --auxetic:#ff6b8a;
+  --first:#a78bfa;
+  --second:#3dffc0;
+  --r-sm:6px;--r-md:10px;--r-lg:16px;--r-xl:20px;
+  --sidebar-w:220px;
+  --font-mono:'JetBrains Mono',monospace;
 }
 
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  color: var(--color-text-primary);
-  background: var(--color-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "kern" 1, "liga" 1;
+html{scroll-behavior:smooth;height:100%}
+body{
+  font-family:'Space Grotesk',-apple-system,sans-serif;
+  font-size:15px;line-height:1.6;color:var(--text);
+  background:var(--bg);min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  display:flex;overflow-x:hidden;
 }
 
-/* ===== TYPOGRAPHY ===== */
-h1, h2, h3, h4, h5 {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+/* ====== MESH BACKGROUND ====== */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 40% at 10% 20%, rgba(79,255,207,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 80%, rgba(124,111,250,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(255,107,138,0.03) 0%, transparent 70%);
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(30,34,53,.4) 40px,rgba(30,34,53,.4) 41px),
+    repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(30,34,53,.4) 40px,rgba(30,34,53,.4) 41px);
 }
 
-h1 { font-size: clamp(2rem, 4.5vw, 3.2rem); }
-h2 { font-size: clamp(1.4rem, 2.8vw, 1.9rem); margin-bottom: var(--gap-md); }
-h3 { font-size: 1.2rem; margin-bottom: var(--gap-sm); }
-h4 { font-size: 1rem; }
+/* ====== SIDEBAR ====== */
+.sidebar{
+  position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;z-index:100;
+  background:rgba(13,15,24,.95);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;backdrop-filter:blur(20px);
+  transition:transform .3s ease;
+}
+.sidebar-brand{
+  padding:24px 20px 16px;border-bottom:1px solid var(--border);
+}
+.sidebar-brand .phase-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,rgba(79,255,207,.12),rgba(124,111,250,.12));
+  border:1px solid rgba(79,255,207,.2);
+  border-radius:99px;padding:3px 10px;
+  font-family:var(--font-mono);font-size:.7rem;font-weight:600;
+  color:var(--accent);letter-spacing:.06em;margin-bottom:10px;
+}
+.sidebar-brand .phase-badge::before{
+  content:'';width:6px;height:6px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 8px var(--accent);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sidebar-brand h2{font-size:.85rem;font-weight:700;color:var(--text);letter-spacing:-.01em;line-height:1.3}
+.sidebar-brand p{font-size:.72rem;color:var(--text3);margin-top:3px;font-family:var(--font-mono)}
 
-p { margin-bottom: var(--gap-md); max-width: 65ch; color: var(--color-text-secondary); }
-p + p { margin-top: calc(-1 * var(--gap-sm)); }
+.sidebar-nav{flex:1;padding:12px 12px;overflow-y:auto}
+.nav-section-label{
+  font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);padding:12px 8px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);
+  color:var(--text2);font-size:.85rem;font-weight:500;cursor:pointer;
+  transition:all .15s;border:1px solid transparent;margin-bottom:2px;
+  user-select:none;
+}
+.nav-item:hover{background:rgba(79,255,207,.05);color:var(--text);border-color:var(--border)}
+.nav-item.active{
+  background:linear-gradient(135deg,rgba(79,255,207,.1),rgba(124,111,250,.08));
+  color:var(--accent);border-color:rgba(79,255,207,.2);
+}
+.nav-item .icon{font-size:1rem;width:18px;text-align:center;flex-shrink:0}
+.nav-item .badge{
+  margin-left:auto;font-size:.65rem;font-family:var(--font-mono);
+  background:var(--border2);color:var(--text3);padding:1px 6px;border-radius:99px;
+}
+.nav-item.active .badge{background:rgba(79,255,207,.15);color:var(--accent)}
 
-a { color: var(--color-accent); text-decoration: none; transition: color 0.2s ease; }
-a:hover { color: #a29bfe; }
+.sidebar-footer{
+  padding:16px 20px;border-top:1px solid var(--border);
+  font-size:.72rem;color:var(--text3);font-family:var(--font-mono);
+}
+.sidebar-footer strong{color:var(--text2);display:block;margin-bottom:3px}
 
-/* ===== LAYOUT ===== */
-.container { max-width: var(--max-width); margin: 0 auto; padding: 0 var(--gap-lg); }
-.hero { min-height: 60vh; display: flex; flex-direction: column; justify-content: center; padding: var(--gap-xl) var(--gap-lg); }
-
-/* ===== TABS ===== */
-.tabs-nav {
-  display: flex;
-  gap: var(--gap-md);
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--gap-lg);
-  flex-wrap: wrap;
+/* ====== MAIN ====== */
+.main{
+  margin-left:var(--sidebar-w);flex:1;min-height:100vh;
+  position:relative;z-index:1;
 }
 
-.tab-btn {
-  padding: var(--gap-md) var(--gap-lg);
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  font-family: 'Syne', sans-serif;
-  font-weight: 600;
-  font-size: 1rem;
-  position: relative;
-  transition: color 0.2s ease;
+/* ====== TOP BAR ====== */
+.topbar{
+  position:sticky;top:0;z-index:90;
+  background:rgba(7,8,13,.85);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.topbar-title{font-size:.9rem;font-weight:600;color:var(--text)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:var(--r-sm);
+  font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;
+  border:1px solid var(--border2);background:var(--raised);color:var(--text2);
+  font-family:'Space Grotesk',sans-serif;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,255,207,.05)}
+.btn-accent{
+  background:linear-gradient(135deg,rgba(79,255,207,.15),rgba(124,111,250,.12));
+  border-color:rgba(79,255,207,.3);color:var(--accent);
+}
+.btn-accent:hover{background:linear-gradient(135deg,rgba(79,255,207,.25),rgba(124,111,250,.2));box-shadow:0 0 20px rgba(79,255,207,.15)}
+
+/* ====== PAGE ====== */
+.page{display:none;padding:32px;animation:fadeSlide .3s ease}
+.page.active{display:block}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ====== HERO ====== */
+.hero-section{
+  background:linear-gradient(135deg,rgba(79,255,207,.04) 0%,rgba(124,111,250,.06) 50%,transparent 100%);
+  border:1px solid var(--border);border-radius:var(--r-xl);
+  padding:32px;margin-bottom:28px;position:relative;overflow:hidden;
+}
+.hero-section::before{
+  content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;
+  background:radial-gradient(circle,rgba(79,255,207,.06) 0%,transparent 70%);pointer-events:none;
+}
+.hero-title{
+  font-size:clamp(1.4rem,2.5vw,2rem);font-weight:700;
+  background:linear-gradient(135deg,var(--text) 0%,var(--accent) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-.03em;margin-bottom:8px;
+}
+.hero-sub{font-size:.9rem;color:var(--text2);margin-bottom:0}
+.hero-sub strong{color:var(--accent)}
+
+/* ====== STATS GRID ====== */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin:24px 0}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:20px;position:relative;overflow:hidden;
+  transition:all .2s;cursor:default;
+}
+.stat-card::after{
+  content:'';position:absolute;inset:0;border-radius:var(--r-lg);
+  background:linear-gradient(135deg,var(--glow),transparent);
+  opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.stat-card:hover{border-color:rgba(79,255,207,.25);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.stat-card:hover::after{opacity:1}
+.stat-icon{font-size:1.3rem;margin-bottom:8px}
+.stat-label{font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;font-weight:600}
+.stat-value{font-size:1.8rem;font-weight:700;font-family:var(--font-mono);line-height:1}
+.stat-unit{font-size:.8rem;color:var(--text3);margin-left:4px;font-family:'Space Grotesk',sans-serif}
+.stat-delta{font-size:.75rem;margin-top:6px;color:var(--text3)}
+.stat-delta.pos{color:var(--green)}
+.stat-delta.neutral{color:var(--blue)}
+
+/* ====== SECTION HEADER ====== */
+.section-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.section-title{font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.section-sub{font-size:.82rem;color:var(--text3);font-weight:400;margin-left:8px}
+.section-title-block{display:flex;align-items:baseline;gap:4px}
+
+/* ====== CARDS ====== */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:24px;margin-bottom:20px;
+}
+.card h4{font-size:.85rem;color:var(--text2);font-weight:600;margin-bottom:16px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ====== CHART CONTAINERS ====== */
+.chart-wrap{position:relative;width:100%;height:0;padding-bottom:42%}
+.chart-wrap canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+.chart-wrap-tall{position:relative;width:100%;height:0;padding-bottom:65%}
+.chart-wrap-tall canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+
+/* ====== CHARTS GRID ====== */
+.charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:900px){.charts-2col{grid-template-columns:1fr}}
+
+/* ====== GRID CHART CARD ====== */
+.chart-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px;
+}
+.chart-card h4{font-size:.82rem;color:var(--text2);font-weight:600;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
+.chart-card h4 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ====== OBSERVATIONS ====== */
+.obs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:16px 0}
+.obs-item{
+  display:flex;gap:12px;align-items:flex-start;
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;
+}
+.obs-icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.obs-text{font-size:.84rem;color:var(--text2);line-height:1.5}
+.obs-text strong{color:var(--text);font-weight:600}
+
+/* ====== FREQUENCY GRID ====== */
+.freq-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.freq-item{
+  background:var(--raised);border:1px solid var(--border);border-radius:var(--r-md);
+  padding:12px;transition:all .2s;
+}
+.freq-item:hover{border-color:rgba(79,255,207,.2);background:var(--card)}
+.freq-item .name{font-size:.78rem;font-weight:700;color:var(--accent);font-family:var(--font-mono);margin-bottom:4px}
+.freq-item .count{font-size:1.5rem;font-weight:700;font-family:var(--font-mono);color:var(--text);line-height:1}
+.freq-item .count span{font-size:.75rem;color:var(--text3);font-weight:400}
+.freq-bar{height:3px;border-radius:2px;background:var(--border2);margin-top:8px;overflow:hidden}
+.freq-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+/* ====== TABLES ====== */
+.table-controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.search-input{
+  flex:1;min-width:200px;max-width:320px;
+  background:var(--raised);border:1px solid var(--border2);border-radius:var(--r-sm);
+  color:var(--text);padding:7px 12px;font-size:.84rem;font-family:'Space Grotesk',sans-serif;
+  outline:none;transition:border-color .15s;
+}
+.search-input::placeholder{color:var(--text3)}
+.search-input:focus{border-color:rgba(79,255,207,.3)}
+.filter-select{
+  background:var(--raised);border:1px solid var(--border2);border-radius:var(--r-sm);
+  color:var(--text2);padding:7px 10px;font-size:.84rem;font-family:'Space Grotesk',sans-serif;
+  outline:none;cursor:pointer;
+}
+.filter-select:focus{border-color:rgba(79,255,207,.3)}
+.filter-select option{background:var(--raised)}
+
+.table-wrap{overflow-x:auto;border-radius:var(--r-md);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead th{
+  text-align:left;padding:10px 14px;
+  background:var(--raised);
+  color:var(--text3);font-family:var(--font-mono);font-weight:600;font-size:.72rem;
+  text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;
+  border-bottom:1px solid var(--border2);position:sticky;top:0;z-index:5;
+  cursor:pointer;user-select:none;
+  transition:color .15s;
+}
+thead th:hover{color:var(--accent)}
+thead th.sorted{color:var(--accent)}
+thead th .sort-arrow{margin-left:4px;opacity:.5}
+thead th.sorted .sort-arrow{opacity:1}
+tbody td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text2);transition:background .1s}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(79,255,207,.03)}
+tbody td:first-child{color:var(--text3);font-family:var(--font-mono);font-size:.75rem}
+.td-bold{color:var(--text)!important;font-weight:600}
+.td-mono{font-family:var(--font-mono)!important;font-size:.8rem!important}
+.td-pos{color:var(--green)!important;font-family:var(--font-mono)}
+.td-neg{color:var(--red)!important;font-family:var(--font-mono)}
+
+/* ====== TAGS ====== */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:99px;font-size:.7rem;font-weight:700;
+  letter-spacing:.03em;white-space:nowrap;
+}
+.tag::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.tag-auxetic{background:rgba(255,107,138,.12);color:var(--auxetic);border:1px solid rgba(255,107,138,.2)}
+.tag-auxetic::before{background:var(--auxetic)}
+.tag-first{background:rgba(167,139,250,.12);color:var(--first);border:1px solid rgba(167,139,250,.2)}
+.tag-first::before{background:var(--first)}
+.tag-second{background:rgba(61,255,192,.12);color:var(--second);border:1px solid rgba(61,255,192,.2)}
+.tag-second::before{background:var(--second)}
+
+/* ====== CONV RINGS ====== */
+.conv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:20px}
+.conv-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.ring-wrapper{position:relative;width:80px;height:80px}
+.ring-svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--border2);stroke-width:6}
+.ring-fill{fill:none;stroke-width:6;stroke-linecap:round;stroke-dasharray:220;transition:stroke-dashoffset 1s ease}
+.ring-label{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.ring-pct{font-size:.95rem;font-weight:700;font-family:var(--font-mono);color:var(--text);line-height:1}
+.ring-sub{font-size:.6rem;color:var(--text3);font-family:var(--font-mono)}
+.conv-title{font-size:.82rem;font-weight:600;color:var(--text);text-align:center}
+.conv-detail{font-size:.73rem;color:var(--text3);font-family:var(--font-mono)}
+
+/* ====== HEATMAP ====== */
+.heatmap-container{overflow-x:auto}
+.heatmap-table{border-collapse:separate;border-spacing:2px;width:max-content;min-width:100%}
+.heatmap-table th{
+  font-size:.65rem;font-family:var(--font-mono);color:var(--text3);font-weight:600;
+  padding:4px 8px;text-align:center;background:none;cursor:default;
+  white-space:nowrap;letter-spacing:0;text-transform:none;border-bottom:none;
+  position:sticky;top:0;z-index:4;
+}
+.heatmap-table .row-label{
+  font-size:.65rem;font-family:var(--font-mono);color:var(--text3);
+  padding:3px 8px 3px 0;text-align:right;white-space:nowrap;
+  font-weight:600;background:none;cursor:default;letter-spacing:0;
+  text-transform:none;border:none;position:relative;
+}
+.hm-cell{
+  width:34px;height:24px;border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.65rem;font-family:var(--font-mono);font-weight:600;
+  transition:transform .1s;cursor:default;
+  border:1px solid transparent;
+}
+.hm-cell:hover{transform:scale(1.3);z-index:10;position:relative;box-shadow:0 4px 16px rgba(0,0,0,.6)}
+.hm-empty{background:rgba(30,34,53,.4);color:var(--text3)}
+.hm-group-header td{padding-top:10px}
+
+/* ====== LEGEND STRIP ====== */
+.legend-strip{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text3);margin:10px 0;flex-wrap:wrap}
+.legend-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+
+/* ====== EMPTY STATE ====== */
+.empty-state{text-align:center;padding:48px 24px;color:var(--text3);font-size:.9rem}
+
+/* ====== SCROLLBAR ====== */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+
+/* ====== FOOTER ====== */
+.page-footer{
+  margin-top:40px;padding-top:20px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;
+  font-size:.72rem;color:var(--text3);font-family:var(--font-mono);
 }
 
-.tab-btn:hover {
-  color: var(--color-accent);
+/* ====== MOBILE TOGGLE ====== */
+.mobile-toggle{
+  display:none;position:fixed;bottom:20px;right:20px;z-index:200;
+  width:44px;height:44px;border-radius:50%;
+  background:var(--accent);border:none;cursor:pointer;
+  box-shadow:0 4px 20px rgba(79,255,207,.3);
+  font-size:1.1rem;align-items:center;justify-content:center;
 }
 
-.tab-btn.active {
-  color: var(--color-accent);
-}
-
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--color-accent);
-}
-
-.tab-content {
-  display: none;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.tab-content.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ===== CARDS & GRIDS ===== */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--gap-lg);
-  margin-bottom: var(--gap-xl);
-}
-
-.stat-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--gap-lg);
-  position: relative;
-  overflow: hidden;
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 20px var(--color-accent-glow);
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, var(--color-accent-glow) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-
-.stat-card:hover::before {
-  opacity: 1;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--gap-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.stat-value {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: var(--color-accent);
-  font-family: 'Syne', sans-serif;
-}
-
-.stat-unit {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  margin-left: var(--gap-sm);
-}
-
-/* ===== CONTENT SECTIONS ===== */
-section {
-  margin-bottom: var(--gap-xl);
-}
-
-.subsection {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--gap-lg);
-  margin-bottom: var(--gap-lg);
-}
-
-.subsection h3 {
-  color: var(--color-accent);
-  margin-bottom: var(--gap-md);
-  padding-bottom: var(--gap-md);
-  border-bottom: 1px solid var(--color-border);
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 768px) {
-  .container { padding: 0 var(--gap-md); }
-  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--gap-md); }
-  .stat-value { font-size: 1.8rem; }
-  .tab-btn { padding: var(--gap-md) var(--gap-md); font-size: 0.9rem; }
-  h1 { font-size: 1.8rem; }
-  h2 { font-size: 1.3rem; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+/* ====== RESPONSIVE ====== */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .page{padding:20px 16px}
+  .topbar{padding:0 16px}
+  .charts-2col{grid-template-columns:1fr}
+  .mobile-toggle{display:flex}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  h1,.hero-title{font-size:1.3rem}
+  .chart-wrap{padding-bottom:60%}
 }
 </style>
 </head>
 <body>
 
-<div class="container">
-  <header class="hero">
-    <h1>Giai Đoạn 1 — LHS Screening</h1>
-    <p style="font-size: 1.1rem; margin-bottom: var(--gap-lg); color: var(--color-text-secondary);">
-      Dashboard toàn diện cho Latin Hypercube Sampling Screening của SIMP Tham Số
-    </p>
-  </header>
+<!-- DATA -->
+<script>
+const __RAW__ = [{"objective":"auxetic","seed":"circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9418967587034813,"p":2.1988329363948187e-24},{"name":"move","r":-0.2123889555822329,"p":0.13866403405411995},{"name":"rmin","r":0.13267707082833133,"p":0.35835235583913516}],"best_obj_value":4.544975158710692,"elapsed_time":115.59609031677246,"n_workers":11},{"objective":"auxetic","seed":"square","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9371908763505402,"p":1.3511942404935025e-23},{"name":"rmin","r":0.22679471788715486,"p":0.11323128882431466},{"name":"move","r":-0.1733973589435774,"p":0.22849664875533562}],"best_obj_value":2.9897941877478473,"elapsed_time":130.7883598804474,"n_workers":11},{"objective":"auxetic","seed":"hourglass","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9431452581032412,"p":1.3241392069319305e-24},{"name":"void_size_frac","r":0.20835534213685472,"p":0.14649579831228948},{"name":"rmin","r":0.16331332533013204,"p":0.2571220199431806}],"best_obj_value":3.76018138375679,"elapsed_time":154.50993990898132,"n_workers":11},{"objective":"auxetic","seed":"four_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.8666026410564226,"p":4.23819148687429e-16},{"name":"move","r":-0.30737094837935175,"p":0.029905963501806535},{"name":"penal","r":-0.11346938775510206,"p":0.4326911145065587}],"best_obj_value":4.786646511479022,"elapsed_time":163.45429110527039,"n_workers":11},{"objective":"auxetic","seed":"hexagonal","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9606242496998798,"p":2.391869168838488e-28},{"name":"rmin","r":0.22036014405762305,"p":0.1241117520551355},{"name":"move","r":-0.1824249699879952,"p":0.20480353968454704}],"best_obj_value":2.9101860984075314,"elapsed_time":138.4139633178711,"n_workers":11},{"objective":"auxetic","seed":"nine_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.8943577430972388,"p":2.1706541052291495e-18},{"name":"move","r":-0.21200480192076832,"p":0.13939617341420013},{"name":"rmin","r":0.20489795918367346,"p":0.15346556701536496}],"best_obj_value":5.871294339741924,"elapsed_time":200.1269474029541,"n_workers":11},{"objective":"auxetic","seed":"cross_rectangular","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9582232893157262,"p":9.636852307877712e-28},{"name":"move","r":-0.19193277310924367,"p":0.18177947806769923},{"name":"rmin","r":0.18876350540216086,"p":0.18923755321110566}],"best_obj_value":4.653673969767658,"elapsed_time":141.44625043869019,"n_workers":11},{"objective":"auxetic","seed":"grid_circular_voids","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.8943577430972388,"p":2.1706541052291495e-18},{"name":"move","r":-0.21200480192076832,"p":0.13939617341420013},{"name":"rmin","r":0.20489795918367346,"p":0.15346556701536496}],"best_obj_value":5.871294339741924,"elapsed_time":210.50732588768005,"n_workers":11},{"objective":"auxetic","seed":"small_square_cross","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9346938775510203,"p":3.3475601891262883e-23},{"name":"rmin","r":0.2138295318127251,"p":0.1359440441259177},{"name":"move","r":-0.1472749099639856,"p":0.30742981653126544}],"best_obj_value":2.9995005705740794,"elapsed_time":146.30220365524292,"n_workers":11},{"objective":"auxetic","seed":"circle_half_quarter","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":0.9327731092436975,"p":6.56700310819777e-23},{"name":"void_size_frac","r":0.22141656662665066,"p":0.12227319263418866},{"name":"move","r":-0.13171668667466988,"p":0.3618731157842492}],"best_obj_value":4.544975158710692,"elapsed_time":125.92218780517578,"n_workers":11},{"objective":"first","seed":"circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9327731092436975,"p":6.56700310819777e-23},{"name":"volfrac","r":0.19846338535414165,"p":0.16708193665449922},{"name":"rmin","r":-0.19356542617046818,"p":0.17802093073259193}],"best_obj_value":-2.3656867807610493,"elapsed_time":87.0057852268219,"n_workers":11},{"objective":"first","seed":"square","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9367106842737095,"p":1.6133565169407933e-23},{"name":"penal","r":0.1707082833133253,"p":0.23590548137435993},{"name":"volfrac","r":0.1696518607442977,"p":0.23886061889913707}],"best_obj_value":-2.9633941321262562,"elapsed_time":90.36375427246094,"n_workers":11},{"objective":"first","seed":"hourglass","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9612004801920767,"p":1.6900178358702786e-28},{"name":"volfrac","r":0.2227611044417767,"p":0.11996310790398229},{"name":"rmin","r":-0.2154621848739496,"p":0.13290983650859503}],"best_obj_value":-2.4124287160963673,"elapsed_time":56.02950477600098,"n_workers":11},{"objective":"first","seed":"four_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9188475390156061,"p":5.133788485248806e-21},{"name":"penal","r":0.24811524609843938,"p":0.08232608432738688},{"name":"volfrac","r":0.21162064825930374,"p":0.14013119034613541}],"best_obj_value":-2.177001322603345,"elapsed_time":116.73496270179749,"n_workers":11},{"objective":"first","seed":"hexagonal","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9316206482593037,"p":9.746076234570206e-23},{"name":"volfrac","r":0.21527010804321725,"p":0.1332641437158635},{"name":"penal","r":0.200672268907563,"p":0.16231202694319807}],"best_obj_value":-2.7769729145113446,"elapsed_time":82.03544640541077,"n_workers":11},{"objective":"first","seed":"nine_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9291236494597839,"p":2.2402298143051547e-22},{"name":"penal","r":0.18617046818727492,"p":0.19550008604518251},{"name":"volfrac","r":0.18319327731092436,"p":0.2028701822303716}],"best_obj_value":-1.8659718083405565,"elapsed_time":123.78334355354309,"n_workers":11},{"objective":"first","seed":"cross_rectangular","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9536134453781512,"p":1.1281370085493911e-26},{"name":"volfrac","r":0.2053781512605042,"p":0.15248320921458566},{"name":"penal","r":0.18530612244897962,"p":0.19761992297847897}],"best_obj_value":-2.440386066868344,"elapsed_time":87.4785897731781,"n_workers":11},{"objective":"first","seed":"grid_circular_voids","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9291236494597839,"p":2.2402298143051547e-22},{"name":"penal","r":0.18617046818727492,"p":0.19550008604518251},{"name":"volfrac","r":0.18319327731092436,"p":0.2028701822303716}],"best_obj_value":-1.8659718083405565,"elapsed_time":120.61957859992981,"n_workers":11},{"objective":"first","seed":"small_square_cross","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.9430492196878751,"p":1.3773757086425296e-24},{"name":"volfrac","r":0.2010564225690276,"p":0.16149273908744233},{"name":"penal","r":0.19183673469387755,"p":0.18200233075512187}],"best_obj_value":-2.5066158210033755,"elapsed_time":90.93896865844727,"n_workers":11},{"objective":"first","seed":"circle_half_quarter","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"beta","r":0.913469387755102,"p":2.251371906666933e-20},{"name":"penal","r":0.18876350540216086,"p":0.18923755321110566},{"name":"volfrac","r":0.17503001200480192,"p":0.22407754193573204}],"best_obj_value":-2.813553015363947,"elapsed_time":105.82436442375183,"n_workers":11},{"objective":"second","seed":"circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.809393882751465,"n_workers":11},{"objective":"second","seed":"square","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.250473260879517,"n_workers":11},{"objective":"second","seed":"hourglass","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":21.371234893798828,"n_workers":11},{"objective":"second","seed":"four_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.097463846206665,"n_workers":11},{"objective":"second","seed":"hexagonal","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":25.832459449768066,"n_workers":11},{"objective":"second","seed":"nine_circle","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.21861433982849,"n_workers":11},{"objective":"second","seed":"cross_rectangular","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":25.878209590911865,"n_workers":11},{"objective":"second","seed":"grid_circular_voids","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.722597122192383,"n_workers":11},{"objective":"second","seed":"small_square_cross","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":26.419816970825195,"n_workers":11},{"objective":"second","seed":"circle_half_quarter","n_samples":50,"n_success":50,"n_converged":50,"n_valid_analysis":50,"top_3_params":[{"name":"volfrac","r":-0.861128451380552,"p":1.0431870206364534e-15},{"name":"beta_second","r":-0.7111164465786314,"p":7.1622278695871014e-09},{"name":"penal","r":-0.17128451380552218,"p":0.234304188818314}],"best_obj_value":-636.1356587430366,"elapsed_time":27.29684281349182,"n_workers":11}];
 
-  <!-- TAB NAVIGATION -->
-  <nav class="tabs-nav">
-    <button class="tab-btn active" data-tab="overview">Tổng quan</button>
-    <button class="tab-btn" data-tab="analysis">Phân tích</button>
-    <button class="tab-btn" data-tab="tracker">Tiến độ</button>
-  </nav>
+const SEEDS = [...new Set(__RAW__.map(d=>d.seed))];
+const OBJS  = [...new Set(__RAW__.map(d=>d.objective))];
+const OBJ_COLORS = {auxetic:'#ff6b8a',first:'#a78bfa',second:'#3dffc0'};
+const OBJ_LABELS = {auxetic:'Auxetic ν₁₂',first:'1st Eigenfreq',second:'2nd Eigenfreq'};
+function get(seed,obj){return __RAW__.find(d=>d.seed===seed&&d.objective===obj)}
+</script>
 
-  <!-- TAB 1: OVERVIEW -->
-  <div id="overview" class="tab-content active">
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Tổng Combos</div>
-        <div class="stat-value">30<span class="stat-unit">sets</span></div>
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="phase-badge">PHASE 1 · LHS</div>
+    <h2>SIMP Parameter Screening</h2>
+    <p>2026-06-05 · 50 configs</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Analysis</div>
+    <div class="nav-item active" data-page="overview" onclick="switchPage(this)">
+      <span class="icon">◈</span> Overview <span class="badge">4</span>
+    </div>
+    <div class="nav-item" data-page="correlations" onclick="switchPage(this)">
+      <span class="icon">⬡</span> Parameter Importance <span class="badge">3</span>
+    </div>
+    <div class="nav-item" data-page="convergence" onclick="switchPage(this)">
+      <span class="icon">◎</span> Convergence <span class="badge">2</span>
+    </div>
+    <div class="nav-section-label">Data</div>
+    <div class="nav-item" data-page="data" onclick="switchPage(this)">
+      <span class="icon">▦</span> Full Data Table <span class="badge">30</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <strong>Phase 1 · LHS Screening</strong>
+    10 seeds × 3 objectives<br>50 samples per config
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-title">Overview</span>
+    <div class="topbar-right">
+      <button class="btn" onclick="exportCSV()" title="Export all data as CSV">⬇ Export CSV</button>
+      <button class="btn btn-accent" id="topbar-phase">Phase 1 Complete</button>
+    </div>
+  </div>
+
+  <!-- PAGE: OVERVIEW -->
+  <div class="page active" id="page-overview">
+    <div class="hero-section">
+      <div class="hero-title">Phase 1 - LHS Screening Report</div>
+      <p class="hero-sub">
+        Full-metric analysis across
+        <strong>10</strong> seed geometries ×
+        <strong>3</strong> objectives ×
+        <strong>50</strong> LHS samples per config
+        · <strong>1500</strong> total SIMP runs
+      </p>
+    </div>
+
+    <div class="stats-grid" id="hero-stats"></div>
+
+    <div class="charts-2col">
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#4fffcf"></span>Best Objective by Seed Geometry</h4>
+        <div class="chart-wrap"><canvas id="chart-best-obj"></canvas></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Biến thể Seed</div>
-        <div class="stat-value">10<span class="stat-unit">types</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Mục tiêu</div>
-        <div class="stat-value">3<span class="stat-unit">types</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Mẫu LHS</div>
-        <div class="stat-value">100<span class="stat-unit">/ combo</span></div>
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#7c6ffa"></span>Parameter Importance Frequency</h4>
+        <div class="chart-wrap"><canvas id="chart-freq"></canvas></div>
       </div>
     </div>
 
-    <section>
-      <h2>Giai Đoạn 1 Screening là gì?</h2>
-      <div class="subsection">
-        <h3>Mục đích</h3>
-        <p>
-          Giai Đoạn 1 LHS (Latin Hypercube Sampling) Screening xác định các SIMP Tham Số có ảnh hưởng lớn nhất 
-          cho mỗi seed × objective combination. Phương pháp Screening thống kê này giảm không gian Tham Số rộng lớn 
-          thành một miền Tối Ưu Hóa tập trung.
-        </p>
-      </div>
+    <div class="card">
+      <h4>Parameter Appearance in Top-3 (across all configs)</h4>
+      <div id="freq-grid-container" class="freq-grid"></div>
+    </div>
 
-      <div class="subsection">
-        <h3>Phương pháp</h3>
-        <p>
-          Với mỗi 30 seed × objective pairs:
-        </p>
-        <ul style="margin-left: var(--gap-lg); color: var(--color-text-secondary);">
-          <li>Tạo 100 mẫu Tham Số sử dụng Latin Hypercube Sampling (LHS)</li>
-          <li>Chạy SIMP Tối Ưu Hóa với mỗi mẫu</li>
-          <li>Tính Spearman rank correlation giữa Tham Số và final Mục Tiêu</li>
-          <li>Xác định top N Tham Số với ảnh hưởng mạnh nhất</li>
-        </ul>
-      </div>
-
-      <div class="subsection">
-        <h3>Tại sao LHS?</h3>
-        <p>
-          LHS đảm bảo phủ đều không gian Tham Số với ít mẫu hơn so với random sampling. 
-          Điều này cho phép khám phá hiệu quả các không gian chiều cao với ngân sách tính toán hạn chế.
-        </p>
-      </div>
-    </section>
-
-    <section>
-      <h2>Số liệu chính</h2>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Tham Số Được Screening</div>
-          <div class="stat-value">8<span class="stat-unit">main</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Phương pháp Phân tích</div>
-          <div class="stat-value" style="font-size: 1rem;">Spearman Correlation</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Top Tham Số</div>
-          <div class="stat-value">3–5<span class="stat-unit">per combo</span></div>
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title-block">
+          <span class="section-title">Key Observations</span>
         </div>
       </div>
-    </section>
-  </div>
+      <div class="obs-grid" id="key-obs-grid"></div>
+    </div>
 
-  <!-- TAB 2: ANALYSIS -->
-  <div id="analysis" class="tab-content">
-    <section>
-      <h2>Phân tích Chi tiết</h2>
-      
-      <div class="subsection">
-        <h3>Kết quả Phân tích Tương quan</h3>
-        <p>
-          Spearman rank correlation lượng hóa mối quan hệ đơn điệu giữa mỗi Tham Số 
-          và Tối Ưu Hóa objective. Tương quan mạnh (|ρ| > 0.5) cho thấy Tham Số có ảnh hưởng lớn.
-        </p>
-      </div>
-
-      <div class="subsection">
-        <h3>Mức ảnh hưởng của Tham Số theo Seed</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: var(--gap-md);">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--color-border);">
-              <th style="text-align: left; padding: var(--gap-md); color: var(--color-accent);">Seed</th>
-              <th style="text-align: left; padding: var(--gap-md); color: var(--color-accent);">Tham Số Ảnh Hưởng Nhất</th>
-              <th style="text-align: left; padding: var(--gap-md); color: var(--color-accent);">Tương quan (ρ)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Circle</td>
-              <td style="padding: var(--gap-md);">penal (penalization)</td>
-              <td style="padding: var(--gap-md); color: var(--color-success);">+0.82</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Square</td>
-              <td style="padding: var(--gap-md);">rmin (Lọc radius)</td>
-              <td style="padding: var(--gap-md); color: var(--color-success);">+0.76</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Hexagonal</td>
-              <td style="padding: var(--gap-md);">volfrac (volume fraction)</td>
-              <td style="padding: var(--gap-md); color: var(--color-success);">+0.71</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Hourglass</td>
-              <td style="padding: var(--gap-md);">penal</td>
-              <td style="padding: var(--gap-md); color: var(--color-success);">+0.79</td>
-            </tr>
-          </tbody>
+    <div class="card" style="overflow-x:auto">
+      <h4>Top-3 Parameter Matrix - All Seeds × Objectives</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Seed Geometry</th>
+            <th>Auxetic ν₁₂</th>
+            <th>1st Eigenfreq</th>
+            <th>2nd Eigenfreq</th>
+          </tr></thead>
+          <tbody id="matrix-body"></tbody>
         </table>
       </div>
+    </div>
 
-      <div class="subsection">
-        <h3>Phát hiện Chính</h3>
-        <ul style="margin-left: var(--gap-lg); color: var(--color-text-secondary); line-height: 1.8;">
-          <li><strong style="color: var(--color-accent);">Penalization (penal):</strong> Ảnh hưởng liên tục trên auxetic và first objective</li>
-          <li><strong style="color: var(--color-accent);">Lọc Radius (rmin):</strong> Quan trọng trong việc ngăn chặn các bất ổn định số</li>
-          <li><strong style="color: var(--color-accent);">Volume Fraction (volfrac):</strong> Dominant cho second objective</li>
-          <li><strong style="color: var(--color-accent);">Void Size (void_size_frac):</strong> Ảnh hưởng thứ yếu, thay đổi tùy theo hình dạng seed geometry</li>
-        </ul>
-      </div>
-
-      <div class="subsection">
-        <h3>Khuyến nghị cho Giai Đoạn 2</h3>
-        <p>
-          Dựa trên kết quả Giai Đoạn 1, Giai Đoạn 2 nên tập trung Tối Ưu Hóa Tham Số trên top 3–5 influencers 
-          cho mỗi seed/objective combo. Điều này giảm chi phí tính toán trong khi nắm bắt 85–95% design space variance.
-        </p>
-      </div>
-    </section>
+    <div class="page-footer">
+      <span>Phase 1 · LHS Screening · SIMP Parameter Optimization</span>
+      <span>Generated: 2026-06-05</span>
+    </div>
   </div>
 
-  <!-- TAB 3: PROGRESS TRACKER -->
-  <div id="tracker" class="tab-content">
-    <section>
-      <h2>Theo dõi Tiến độ Giai Đoạn 1</h2>
-      
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Hoàn thành</div>
-          <div class="stat-value">27<span class="stat-unit">/ 30</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Đang xử lý</div>
-          <div class="stat-value">2<span class="stat-unit">running</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Còn lại</div>
-          <div class="stat-value">1<span class="stat-unit">pending</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Tiến độ</div>
-          <div class="stat-value">90%<span class="stat-unit">hoàn thành</span></div>
-        </div>
-      </div>
+  <!-- PAGE: CORRELATIONS -->
+  <div class="page" id="page-correlations">
+    <div class="card">
+      <h4>Spearman Correlation Heatmap</h4>
+      <p style="font-size:.82rem;color:var(--text3);margin-bottom:16px">
+        ρ between each parameter and objective value per config. Blank = not in top-3.
+        Color: <span style="color:#ff6b8a">■</span> negative ρ (red) &nbsp;
+        <span style="color:#3dffc0">■</span> positive ρ (green) · saturation = |ρ| magnitude.
+      </p>
+      <div class="heatmap-container" id="heatmap-container"></div>
+    </div>
 
-      <div class="subsection">
-        <h3>Trạng thái Seed × Mục tiêu</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: var(--gap-md);">
-          <thead>
-            <tr style="border-bottom: 2px solid var(--color-border);">
-              <th style="text-align: left; padding: var(--gap-md); color: var(--color-accent);">Seed</th>
-              <th style="text-align: center; padding: var(--gap-md); color: var(--color-accent);">Auxetic</th>
-              <th style="text-align: center; padding: var(--gap-md); color: var(--color-accent);">First</th>
-              <th style="text-align: center; padding: var(--gap-md); color: var(--color-accent);">Second</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Circle</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Square</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-warning);">⏳ Đang</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Hexagonal</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Hourglass</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-warning);">⏳ Đang</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Four Circle</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Nine Circle</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Cross Rectangular</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Grid Circular Voids</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr style="border-bottom: 1px solid var(--color-border);">
-              <td style="padding: var(--gap-md);">Small Square Cross</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-            </tr>
-            <tr>
-              <td style="padding: var(--gap-md);">Circle Half Quarter</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-success);">✓ Hoàn</td>
-              <td style="padding: var(--gap-md); text-align: center; color: var(--color-danger);">✗ Chờ</td>
-            </tr>
-          </tbody>
+    <div class="charts-2col">
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#ff9f43"></span>Avg |ρ| per Parameter × Objective</h4>
+        <div class="chart-wrap"><canvas id="chart-param-by-obj"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#6fa3ff"></span>Objective Value Distribution by Seed</h4>
+        <div class="chart-wrap"><canvas id="chart-obj-dist"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Top-3 Ranking Details - All 30 Configurations</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Seed</th><th>Obj</th>
+            <th>Rank 1</th><th>ρ₁</th><th>p₁</th>
+            <th>Rank 2</th><th>ρ₂</th><th>p₂</th>
+            <th>Rank 3</th><th>ρ₃</th><th>p₃</th>
+          </tr></thead>
+          <tbody id="param-detail-body"></tbody>
         </table>
       </div>
-
-      <div class="subsection">
-        <h3>Lịch trình</h3>
-        <ul style="margin-left: var(--gap-lg); color: var(--color-text-secondary); line-height: 1.8;">
-          <li><strong style="color: var(--color-accent);">Bắt đầu:</strong> 2026-05-15</li>
-          <li><strong style="color: var(--color-accent);">Dự kiến Hoàn thành:</strong> 2026-06-05</li>
-          <li><strong style="color: var(--color-accent);">Tổng Runs:</strong> 3,000 SIMP optimizations (100 samples × 30 combos)</li>
-          <li><strong style="color: var(--color-accent);">Dự kiến CPU Time:</strong> 450–550 hours (distributed)</li>
-        </ul>
-      </div>
-    </section>
+    </div>
   </div>
-</div>
 
+  <!-- PAGE: CONVERGENCE -->
+  <div class="page" id="page-convergence">
+    <div class="conv-grid" id="conv-rings"></div>
+
+    <div class="charts-2col">
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#4fffcf"></span>Converged Samples per Config</h4>
+        <div class="chart-wrap-tall"><canvas id="chart-convergence"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4><span class="dot" style="background:#a78bfa"></span>Best Objective Value Distribution</h4>
+        <div class="chart-wrap-tall"><canvas id="chart-obj-dist2"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>Convergence Summary by Objective</h4>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Objective</th><th>Seeds</th>
+            <th>Avg Converged</th><th>Min</th><th>Max</th>
+            <th>100% Rate</th><th>∑ Converged / ∑ Total</th>
+          </tr></thead>
+          <tbody id="conv-summary-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE: FULL DATA -->
+  <div class="page" id="page-data">
+    <div class="card">
+      <div class="table-controls">
+        <input type="text" class="search-input" id="data-search" placeholder="🔍 Search seed, param, objective…" oninput="filterTable()">
+        <select class="filter-select" id="filter-obj" onchange="filterTable()">
+          <option value="">All Objectives</option>
+          <option value="auxetic">Auxetic</option>
+          <option value="first">1st Eigenfreq</option>
+          <option value="second">2nd Eigenfreq</option>
+        </select>
+        <select class="filter-select" id="filter-conv" onchange="filterTable()">
+          <option value="">All Convergence</option>
+          <option value="100">100% (50/50)</option>
+          <option value="partial">Partial</option>
+        </select>
+        <span style="font-size:.75rem;color:var(--text3);font-family:'JetBrains Mono',monospace" id="row-count">30 rows</span>
+      </div>
+      <div class="table-wrap">
+        <table id="data-table">
+          <thead><tr>
+            <th onclick="sortTable('idx')"># <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('seed')">Seed <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('objective')">Objective <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('n_converged')">Converged <span class="sort-arrow">↕</span></th>
+            <th onclick="sortTable('best_obj_value')">Best Obj Value <span class="sort-arrow">↕</span></th>
+            <th>Top-1 Param</th>
+            <th>ρ₁</th>
+            <th>Top-2 Param</th>
+            <th>ρ₂</th>
+            <th>Top-3 Param</th>
+            <th>ρ₃</th>
+          </tr></thead>
+          <tbody id="data-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<button class="mobile-toggle" id="mob-toggle" onclick="toggleSidebar()">☰</button>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Chuyển tab
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabName = btn.getAttribute('data-tab');
-    
-    // Remove active from all tabs and contents
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    
-    // Add active to clicked tab
-    btn.classList.add('active');
-    document.getElementById(tabName).classList.add('active');
-  });
-});
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+const PAGE_TITLES = {
+  overview:'Overview', correlations:'Parameter Importance',
+  convergence:'Convergence & Quality', data:'Full Data Table'
+};
+let chartsInit = {};
 
-// Hiệu ứng làm mờ khi tải trang
-document.addEventListener('DOMContentLoaded', () => {
-  document.body.style.opacity = '0';
-  document.body.style.transition = 'opacity 0.5s ease-in-out';
-  setTimeout(() => { document.body.style.opacity = '1'; }, 100);
+function switchPage(el){
+  const pg = el.getAttribute('data-page');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-'+pg).classList.add('active');
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[pg];
+  if(!chartsInit[pg]){
+    chartsInit[pg]=true;
+    setTimeout(()=>initChartsForPage(pg), 80);
+  }
+  // close sidebar on mobile
+  if(window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+function initChartsForPage(pg){
+  try{
+    if(pg==='overview'){makeBestObjChart();makeFreqChart();}
+    if(pg==='correlations'){makeHeatmap();makeParamByObjChart();makeObjDistChart('chart-obj-dist');}
+    if(pg==='convergence'){makeConvergenceChart();makeObjDistChart('chart-obj-dist2');}
+  }catch(e){console.warn(e)}
+}
+
+/* ================================================================
+   HERO STATS
+   ================================================================ */
+function buildHeroStats(){
+  const total = __RAW__.reduce((s,d)=>s+d.n_samples,0);
+  const conv  = __RAW__.reduce((s,d)=>s+d.n_converged,0);
+  const succ  = __RAW__.reduce((s,d)=>s+d.n_success,0);
+  const auxBest = Math.max(...__RAW__.filter(d=>d.objective==='auxetic').map(d=>d.best_obj_value));
+  const cards=[
+    {icon:'⬡',label:'Configurations',value:__RAW__.length,unit:'',color:'var(--accent)',delta:'10 seeds × 3 obj'},
+    {icon:'◈',label:'Total SIMP Runs',value:total,unit:'',color:'var(--blue)',delta:'50 samples/config'},
+    {icon:'✓',label:'Converged',value:conv,unit:'',color:'var(--green)',delta:(conv/total*100).toFixed(1)+'% rate',cls:'pos'},
+    {icon:'◎',label:'Success Rate',value:(succ/total*100).toFixed(1),unit:'%',color:'var(--second)',delta:succ+'/'+total+' runs',cls:'pos'},
+    {icon:'⟡',label:'Best Auxetic ν₁₂',value:auxBest.toFixed(4),unit:'',color:'var(--auxetic)',delta:'nine_circle seed',cls:'pos'},
+    {icon:'▦',label:'Params Screened',value:8,unit:'',color:'var(--purple)',delta:'volfrac, penal, …'},
+  ];
+  document.getElementById('hero-stats').innerHTML = cards.map(c=>
+    `<div class="stat-card">
+      <div class="stat-icon">${c.icon}</div>
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value" style="color:${c.color}">${c.value}<span class="stat-unit">${c.unit}</span></div>
+      <div class="stat-delta ${c.cls||'neutral'}">${c.delta}</div>
+    </div>`
+  ).join('');
+}
+
+/* ================================================================
+   FREQ GRID
+   ================================================================ */
+function buildFreqGrid(){
+  const freq={};
+  __RAW__.forEach(d=>d.top_3_params.forEach(p=>{freq[p.name]=(freq[p.name]||0)+1}));
+  const entries=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  const maxC=entries[0][1];
+  document.getElementById('freq-grid-container').innerHTML=entries.map(([n,c])=>
+    `<div class="freq-item">
+      <div class="name">${n}</div>
+      <div class="count">${c}<span>/30</span></div>
+      <div class="freq-bar"><div class="freq-bar-fill" style="width:${c/maxC*100}%"></div></div>
+    </div>`
+  ).join('');
+}
+
+/* ================================================================
+   KEY OBSERVATIONS
+   ================================================================ */
+function buildKeyObs(){
+  const auxData=__RAW__.filter(d=>d.objective==='auxetic').sort((a,b)=>b.best_obj_value-a.best_obj_value);
+  const elapseds=__RAW__.map(d=>d.elapsed_time);
+  const totalTime=elapseds.reduce((a,b)=>a+b,0);
+  const avgTime=(totalTime/__RAW__.length/60).toFixed(1);
+  const secondData=__RAW__.filter(d=>d.objective==='second');
+  const allIdentical=secondData.every(d=>d.best_obj_value===secondData[0].best_obj_value);
+  const obs=[
+    {icon:'🏆',text:`<strong>Best auxetic ν₁₂:</strong> ${auxData[0].seed} (${auxData[0].best_obj_value.toFixed(4)}) - worst: ${auxData[auxData.length-1].seed} (${auxData[auxData.length-1].best_obj_value.toFixed(4)})`},
+    {icon:'✅',text:`<strong>100% convergence</strong> across all 30 configs - every objective × seed × 50/50 samples converged successfully.`},
+    {icon:'📊',text:`<strong>Most influential parameter:</strong> <code style="color:var(--accent)">volfrac</code> - top-3 in all 30/30 configs (ρ ≈ +0.93 auxetic, −0.86 second-eigenfreq)`},
+    {icon:'⚠️',text:`<strong>volfrac</strong> dominates auxetic (strong positive ρ) · <strong>beta</strong> dominates 1st-eigenfreq (positive ρ) · <strong>beta_second</strong> dominates 2nd-eigenfreq (negative ρ)`},
+    {icon:'🔬',text:`<strong>Second objective identical</strong> across all 10 seeds: ${secondData[0].best_obj_value.toFixed(2)} - same top-3 params (volfrac, beta_second, penal) with identical ρ values. Suggests a flat landscape.`},
+    {icon:'⏱️',text:`Average elapsed time: <strong>${avgTime} min</strong> per config · Fastest: second/eigenfreq (~${Math.min(...secondData.map(d=>d.elapsed_time)).toFixed(0)}s) - Slowest: auxetic/nine_circle (${Math.max(...auxData.map(d=>d.elapsed_time)).toFixed(0)}s)`},
+  ];
+  document.getElementById('key-obs-grid').innerHTML=obs.map(o=>
+    `<div class="obs-item"><div class="obs-icon">${o.icon}</div><div class="obs-text">${o.text}</div></div>`
+  ).join('');
+}
+
+/* ================================================================
+   MATRIX TABLE
+   ================================================================ */
+function buildMatrix(){
+  const sorted=SEEDS.slice().sort();
+  document.getElementById('matrix-body').innerHTML=sorted.map(seed=>{
+    const cells=OBJS.map(obj=>{
+      const d=get(seed,obj);
+      if(!d) return '<td>-</td>';
+      const params=d.top_3_params.map(p=>`<span class="tag tag-${obj}" style="margin-right:3px">${p.name}</span>`).join(' ');
+      return `<td>${params}</td>`;
+    });
+    return `<tr><td class="td-bold">${seed}</td>${cells.join('')}</tr>`;
+  }).join('');
+}
+
+/* ================================================================
+   PARAM DETAIL TABLE
+   ================================================================ */
+function buildParamDetail(){
+  document.getElementById('param-detail-body').innerHTML=__RAW__.map(d=>{
+    const r=d.top_3_params;
+    const fmt=v=>typeof v==='number'?v.toFixed(4):v;
+    const pFmt=p=>`<span class="tag tag-${d.objective}">${p.name}</span>`;
+    const rClass=v=>v<0?'td-neg':'td-pos';
+    const pFmt2=p=>p.p<0.001?'<span style="color:var(--green);font-family:var(--font-mono)">***</span>':fmt(p.p);
+    return `<tr>
+      <td class="td-bold">${d.seed}</td>
+      <td><span class="tag tag-${d.objective}">${d.objective}</span></td>
+      <td>${pFmt(r[0])}</td><td class="${rClass(r[0].r)} td-mono">${fmt(r[0].r)}</td><td class="td-mono" style="font-size:.75rem;color:var(--text3)">${pFmt2(r[0])}</td>
+      <td>${pFmt(r[1])}</td><td class="${rClass(r[1].r)} td-mono">${fmt(r[1].r)}</td><td class="td-mono" style="font-size:.75rem;color:var(--text3)">${pFmt2(r[1])}</td>
+      <td>${pFmt(r[2])}</td><td class="${rClass(r[2].r)} td-mono">${fmt(r[2].r)}</td><td class="td-mono" style="font-size:.75rem;color:var(--text3)">${pFmt2(r[2])}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ================================================================
+   CONVERGENCE RINGS
+   ================================================================ */
+function buildConvRings(){
+  const byObj={};
+  __RAW__.forEach(d=>{if(!byObj[d.objective])byObj[d.objective]=[];byObj[d.objective].push(d)});
+  const total=__RAW__.reduce((s,d)=>s+d.n_converged,0);
+  const totalMax=__RAW__.reduce((s,d)=>s+d.n_samples,0);
+  const overallPct=total/totalMax*100;
+  const items=[
+    {label:'Overall',pct:overallPct,color:'#4fffcf',detail:`${total}/${totalMax}`},
+    ...Object.entries(byObj).map(([obj,arr])=>{
+      const c=arr.reduce((s,d)=>s+d.n_converged,0);
+      const m=arr.reduce((s,d)=>s+d.n_samples,0);
+      return {label:OBJ_LABELS[obj],pct:c/m*100,color:OBJ_COLORS[obj],detail:`${c}/${m}`};
+    })
+  ];
+  const CIRC=220;
+  document.getElementById('conv-rings').innerHTML=items.map(item=>{
+    const offset=CIRC*(1-item.pct/100);
+    return `<div class="conv-card">
+      <div class="ring-wrapper">
+        <svg class="ring-svg" viewBox="0 0 80 80" width="80" height="80">
+          <circle class="ring-bg" cx="40" cy="40" r="35"/>
+          <circle class="ring-fill" cx="40" cy="40" r="35"
+            stroke="${item.color}" stroke-dashoffset="${offset.toFixed(1)}"
+            style="filter:drop-shadow(0 0 6px ${item.color}55)"/>
+        </svg>
+        <div class="ring-label">
+          <div class="ring-pct">${item.pct.toFixed(0)}<span style="font-size:.6rem">%</span></div>
+          <div class="ring-sub">conv.</div>
+        </div>
+      </div>
+      <div class="conv-title">${item.label}</div>
+      <div class="conv-detail">${item.detail} runs</div>
+    </div>`;
+  }).join('');
+}
+
+/* ================================================================
+   CONVERGENCE SUMMARY TABLE
+   ================================================================ */
+function buildConvSummary(){
+  const byObj={};
+  __RAW__.forEach(d=>{if(!byObj[d.objective])byObj[d.objective]=[];byObj[d.objective].push(d)});
+  document.getElementById('conv-summary-body').innerHTML=Object.entries(byObj).map(([obj,arr])=>{
+    const convs=arr.map(d=>d.n_converged);
+    const avg=(convs.reduce((a,b)=>a+b,0)/convs.length).toFixed(1);
+    const min=Math.min(...convs);const max=Math.max(...convs);
+    const full=convs.filter(c=>c===50).length;
+    const tc=convs.reduce((a,b)=>a+b,0);const tm=arr.reduce((s,d)=>s+d.n_samples,0);
+    return `<tr>
+      <td><span class="tag tag-${obj}">${obj}</span></td>
+      <td class="td-mono">${arr.length}</td>
+      <td class="td-mono" style="color:var(--text)">${avg}/50</td>
+      <td class="td-mono ${min===50?'td-pos':'td-neg'}">${min}</td>
+      <td class="td-mono td-pos">${max}</td>
+      <td class="td-mono" style="color:${full===arr.length?'var(--green)':'var(--orange)'}">${full}/${arr.length}</td>
+      <td class="td-mono">${tc}/${tm} <span style="color:var(--text3)">(${(tc/tm*100).toFixed(1)}%)</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ================================================================
+   FULL DATA TABLE + SORT + FILTER
+   ================================================================ */
+let _sortKey='idx';let _sortDir=1;
+let _filteredData=__RAW__.map((d,i)=>({...d,idx:i+1}));
+
+function buildDataTable(){
+  renderDataRows(_filteredData);
+}
+
+function renderDataRows(data){
+  document.getElementById('row-count').textContent=`${data.length} rows`;
+  document.getElementById('data-body').innerHTML=data.map(d=>{
+    const r=d.top_3_params;
+    const rClass=v=>v<0?'td-neg':'td-pos';
+    const vfmt=v=>Math.abs(v)>1e10?v.toExponential(2):v.toFixed(4);
+    const convClass=d.n_converged===50?'td-pos':(d.n_converged>=40?'':'td-neg');
+    return `<tr>
+      <td>${d.idx}</td>
+      <td class="td-bold">${d.seed}</td>
+      <td><span class="tag tag-${d.objective}">${d.objective}</span></td>
+      <td class="td-mono ${convClass}">${d.n_converged}/50</td>
+      <td class="td-mono td-bold">${vfmt(d.best_obj_value)}</td>
+      <td><span class="tag tag-${d.objective}">${r[0].name}</span></td>
+      <td class="${rClass(r[0].r)} td-mono">${r[0].r.toFixed(3)}</td>
+      <td><span class="tag tag-${d.objective}">${r[1].name}</span></td>
+      <td class="${rClass(r[1].r)} td-mono">${r[1].r.toFixed(3)}</td>
+      <td><span class="tag tag-${d.objective}">${r[2].name}</span></td>
+      <td class="${rClass(r[2].r)} td-mono">${r[2].r.toFixed(3)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterTable(){
+  const q=document.getElementById('data-search').value.toLowerCase();
+  const oFilter=document.getElementById('filter-obj').value;
+  const cFilter=document.getElementById('filter-conv').value;
+  _filteredData=__RAW__.map((d,i)=>({...d,idx:i+1})).filter(d=>{
+    const text=[d.seed,d.objective,...d.top_3_params.map(p=>p.name)].join(' ').toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(oFilter && d.objective!==oFilter) return false;
+    if(cFilter==='100' && d.n_converged!==50) return false;
+    if(cFilter==='partial' && d.n_converged===50) return false;
+    return true;
+  });
+  sortAndRender();
+}
+
+function sortTable(key){
+  if(_sortKey===key) _sortDir*=-1;
+  else{_sortKey=key;_sortDir=1;}
+  document.querySelectorAll('#data-table th').forEach(th=>th.classList.remove('sorted'));
+  const headers={idx:0,seed:1,objective:2,n_converged:3,best_obj_value:4};
+  const idx=headers[key];
+  if(idx!==undefined){
+    const th=document.querySelectorAll('#data-table th')[idx];
+    if(th) th.classList.add('sorted');
+  }
+  sortAndRender();
+}
+
+function sortAndRender(){
+  const sorted=[..._filteredData].sort((a,b)=>{
+    let va=a[_sortKey],vb=b[_sortKey];
+    if(typeof va==='string') return _sortDir*(va.localeCompare(vb));
+    return _sortDir*(va-vb);
+  });
+  renderDataRows(sorted);
+}
+
+/* ================================================================
+   HEATMAP (HTML table, responsive)
+   ================================================================ */
+function makeHeatmap(){
+  const paramNames=['volfrac','penal','rmin','move','void_size_frac','rotation_deg','beta','beta_second'];
+  const sortedSeeds=SEEDS.slice().sort();
+  let html='<table class="heatmap-table"><thead><tr><th></th>';
+  sortedSeeds.forEach(s=>{html+=`<th>${s.replace('_',' ')}</th>`});
+  html+='</tr></thead><tbody>';
+  paramNames.forEach(param=>{
+    OBJS.forEach((obj,oi)=>{
+      html+=`<tr>`;
+      if(oi===0) html+=`<td class="row-label" rowspan="3" style="color:var(--text2);font-size:.7rem">${param}</td>`;
+      if(oi>0) html+=`<td class="row-label" style="color:${OBJ_COLORS[obj]};font-size:.6rem;padding-left:8px">[${obj.slice(0,3)}]</td>`;
+      sortedSeeds.forEach(s=>{
+        const d=get(s,obj);
+        const t=d?d.top_3_params.find(p=>p.name===param):null;
+        if(t && t.r!==0){
+          const intensity=Math.abs(t.r);
+          const base=t.r<0?'255,107,138':'61,255,192';
+          const a=(0.15+intensity*0.75).toFixed(2);
+          html+=`<td><div class="hm-cell" style="background:rgba(${base},${a});color:${intensity>0.4?'#fff':'rgba(255,255,255,.7)'}" title="${param} / ${s} / ${obj}: ρ=${t.r.toFixed(3)} p=${t.p.toFixed(4)}">${t.r.toFixed(2)}</div></td>`;
+        }else{
+          html+=`<td><div class="hm-cell hm-empty">·</div></td>`;
+        }
+      });
+      html+='</tr>';
+    });
+  });
+  html+='</tbody></table>';
+  document.getElementById('heatmap-container').innerHTML=html;
+}
+
+/* ================================================================
+   CHART.JS CHARTS
+   ================================================================ */
+const chartDefaults={
+  responsive:true,maintainAspectRatio:true,
+  plugins:{legend:{labels:{color:'#7b82a8',font:{family:'Space Grotesk',size:11}}}},
+  scales:{
+    x:{ticks:{color:'#7b82a8',font:{family:'Space Grotesk',size:10}},grid:{color:'rgba(30,34,53,.8)'}},
+    y:{ticks:{color:'#7b82a8',font:{family:'Space Grotesk',size:10}},grid:{color:'rgba(30,34,53,.8)'}}
+  }
+};
+
+function makeBestObjChart(){
+  const ctx=document.getElementById('chart-best-obj').getContext('2d');
+  const labels=SEEDS.slice().sort();
+  const datasets=OBJS.map(obj=>({
+    label:OBJ_LABELS[obj],
+    data:labels.map(s=>{const d=get(s,obj);return d?d.best_obj_value:null}),
+    backgroundColor:OBJ_COLORS[obj]+'88',
+    borderColor:OBJ_COLORS[obj],
+    borderWidth:1.5,borderRadius:4,
+  }));
+  new Chart(ctx,{type:'bar',data:{labels,datasets},options:{...chartDefaults,
+    plugins:{...chartDefaults.plugins,
+      tooltip:{callbacks:{label:c=>{const v=c.parsed.y;return `${c.dataset.label}: ${Math.abs(v)>1e10?v.toExponential(3):v.toFixed(4)}`}}}
+    },
+    scales:{...chartDefaults.scales,
+      y:{...chartDefaults.scales.y,ticks:{...chartDefaults.scales.y.ticks,callback:v=>Math.abs(v)>1e10?v.toExponential(1):v.toFixed(2)}}
+    }
+  }});
+}
+
+function makeFreqChart(){
+  const ctx=document.getElementById('chart-freq').getContext('2d');
+  const freq={};
+  __RAW__.forEach(d=>d.top_3_params.forEach(p=>{freq[p.name]=(freq[p.name]||0)+1}));
+  const entries=Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  const clrs=['#4fffcf','#a78bfa','#ff6b8a','#6fa3ff','#ffb347','#7c6ffa','#3dffc0','#ff9fa3'];
+  new Chart(ctx,{type:'bar',data:{
+    labels:entries.map(e=>e[0]),
+    datasets:[{label:'Top-3 appearances',data:entries.map(e=>e[1]),
+      backgroundColor:entries.map((_,i)=>clrs[i%clrs.length]+'99'),
+      borderColor:entries.map((_,i)=>clrs[i%clrs.length]),
+      borderWidth:1.5,borderRadius:4}]
+  },options:{...chartDefaults,indexAxis:'y',
+    plugins:{...chartDefaults.plugins,legend:{display:false},
+      tooltip:{callbacks:{label:c=>`${c.parsed.x}/30 configs`}}},
+    scales:{
+      x:{...chartDefaults.scales.x,max:30},
+      y:{...chartDefaults.scales.y,grid:{display:false}}
+    }
+  }});
+}
+
+function makeParamByObjChart(){
+  const ctx=document.getElementById('chart-param-by-obj').getContext('2d');
+  const paramNames=['volfrac','penal','rmin','move','void_size_frac','rotation_deg','beta','beta_second'];
+  const datasets=OBJS.map(obj=>{
+    const data=paramNames.map(param=>{
+      const configs=__RAW__.filter(d=>d.objective===obj);
+      const rel=configs.filter(d=>d.top_3_params.some(p=>p.name===param));
+      if(!rel.length) return 0;
+      return rel.reduce((s,d)=>{const t=d.top_3_params.find(p=>p.name===param);return s+Math.abs(t.r)},0)/rel.length;
+    });
+    return {label:OBJ_LABELS[obj],data,backgroundColor:OBJ_COLORS[obj]+'88',borderColor:OBJ_COLORS[obj],borderWidth:1.5,borderRadius:3};
+  });
+  new Chart(ctx,{type:'bar',data:{labels:paramNames.map(p=>p.replace('_size_frac','\n_frac').replace('_deg','\n_deg')),datasets},options:{...chartDefaults,
+    plugins:{...chartDefaults.plugins,tooltip:{callbacks:{label:c=>`Avg |ρ|: ${c.parsed.y.toFixed(3)}`}}},
+    scales:{...chartDefaults.scales,y:{...chartDefaults.scales.y,title:{display:true,text:'Mean |ρ|',color:'#7b82a8',font:{size:10}}}}
+  }});
+}
+
+function makeObjDistChart(canvasId){
+  const ctx=document.getElementById(canvasId).getContext('2d');
+  const sortedSeeds=SEEDS.slice().sort();
+  const datasets=OBJS.map(obj=>({
+    label:OBJ_LABELS[obj],
+    data:sortedSeeds.map(s=>{const d=get(s,obj);return d?d.best_obj_value:null}),
+    borderColor:OBJ_COLORS[obj],
+    backgroundColor:OBJ_COLORS[obj]+'22',
+    pointBackgroundColor:OBJ_COLORS[obj],
+    pointRadius:4,tension:.3,fill:true,
+  }));
+  new Chart(ctx,{type:'line',data:{labels:sortedSeeds,datasets},options:{...chartDefaults,
+    plugins:{...chartDefaults.plugins,tooltip:{callbacks:{label:c=>{const v=c.parsed.y;return `${c.dataset.label}: ${Math.abs(v)>1e10?v.toExponential(3):v.toFixed(4)}`}}}},
+    scales:{...chartDefaults.scales,y:{...chartDefaults.scales.y,ticks:{...chartDefaults.scales.y.ticks,callback:v=>Math.abs(v)>1e10?v.toExponential(1):v.toFixed(2)}}}
+  }});
+}
+
+function makeConvergenceChart(){
+  const ctx=document.getElementById('chart-convergence').getContext('2d');
+  const colors=__RAW__.map(d=>d.n_converged===50?'#3dffc0':d.n_converged>=40?'#ffb347':'#ff6b8a');
+  new Chart(ctx,{type:'bar',data:{
+    labels:__RAW__.map((_,i)=>i+1),
+    datasets:[{label:'Converged/50',data:__RAW__.map(d=>d.n_converged),
+      backgroundColor:colors,borderRadius:3,borderSkipped:false}]
+  },options:{...chartDefaults,
+    plugins:{...chartDefaults.plugins,legend:{display:false},annotation:{
+      annotations:{line50:{type:'line',yMin:50,yMax:50,borderColor:'rgba(61,255,192,.25)',borderWidth:1,borderDash:[4,4]}}
+    },tooltip:{callbacks:{afterLabel:c=>{const d=__RAW__[c.dataIndex];return `${d.seed} · ${d.objective} · ${d.n_converged}/50`}}}},
+    scales:{...chartDefaults.scales,
+      x:{...chartDefaults.scales.x,title:{display:true,text:'Config #',color:'#7b82a8'}},
+      y:{...chartDefaults.scales.y,min:0,max:50,ticks:{...chartDefaults.scales.y.ticks,stepSize:10}}
+    }
+  }});
+}
+
+/* ================================================================
+   EXPORT CSV
+   ================================================================ */
+function exportCSV(){
+  const cols=['idx','seed','objective','n_samples','n_success','n_converged','best_obj_value','top1_param','top1_r','top1_p','top2_param','top2_r','top2_p','top3_param','top3_r','top3_p'];
+  const rows=__RAW__.map((d,i)=>{
+    const r=d.top_3_params;
+    return [i+1,d.seed,d.objective,d.n_samples,d.n_success,d.n_converged,d.best_obj_value,
+      r[0].name,r[0].r,r[0].p,r[1].name,r[1].r,r[1].p,r[2].name,r[2].r,r[2].p].join(',');
+  });
+  const csv=[cols.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='phase1_screening_data.csv';
+  a.click();
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+document.addEventListener('DOMContentLoaded',()=>{
+  buildHeroStats();
+  buildFreqGrid();
+  buildKeyObs();
+  buildMatrix();
+  buildParamDetail();
+  buildConvRings();
+  buildConvSummary();
+  buildDataTable();
+  setTimeout(()=>{
+    try{makeBestObjChart();makeFreqChart();}catch(e){}
+    chartsInit.overview=true;
+  },300);
 });
 </script>
-
 </body>
 </html>

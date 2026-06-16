@@ -1,5 +1,5 @@
 """
-Gói io — các công cụ nhập/xuất cho tối ưu hóa hình dạng SIMP.
+Gói io - các công cụ nhập/xuất cho tối ưu hóa hình dạng SIMP.
 
 Bao gồm:
     - save_csv:     Ghi dữ liệu vòng lặp ra file CSV.
