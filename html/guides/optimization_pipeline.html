@@ -1,60 +1,45 @@
-<!--
-  Title:    SIMP Tham Số Optimization Pipeline
-  Type:     Showcase / Report
-  Aesthetic: Dark premium technical dashboard with data-forward layout
-  Fonts:    Syne + DM Sans
-  Generated: 2026-01-06
--->
-
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Strategic pipeline for finding optimal SIMP Tham Số per seed and objective - from screening to production validation.">
-<title>SIMP - Tham Số Tối Ưu Hóa Pipeline</title>
+<title>SIMP - Tham Số Tối Ưu Hóa Pipeline</title><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-/* ===== RESET & BASE ===== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --color-bg: #09090b;
-  --color-surface: #131316;
-  --color-surface-raised: #1a1a1f;
-  --color-border: #2a2a32;
-  --color-accent: #6c5ce7;
-  --color-accent-dim: #4a3f9e;
-  --color-accent-glow: rgba(108, 92, 231, 0.15);
-  --color-text-primary: #e8e8ed;
-  --color-text-secondary: #88889a;
-  --color-text-muted: #5c5c6e;
-  --color-success: #00d68f;
-  --color-warning: #ff9f43;
-  --color-danger: #ff6b6b;
-  --color-info: #54a0ff;
-  --phase1: #54a0ff;
-  --phase2: #ff9f43;
-  --phase3: #00d68f;
-  --gap-sm: 8px;
-  --gap-md: 16px;
-  --gap-lg: 24px;
-  --gap-xl: 40px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --max-width: 1200px;
-}
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --raised: #f0f1f3;
+    --border: #e2e6ef;
+    --accent: #2c5aa0;
+    --accent2: #6fa3ff;
+    --accent-glow: rgba(44,90,160,0.06);
+    --text: #1a1a2e;
+    --text2: #5a6072;
+    --text3: #8e94a8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+    --phase1: #54a0ff;
+    --phase2: #ff9f43;
+    --phase3: #00d68f;
+    --gap-sm: 8px;
+    --gap-md: 16px;
+    --gap-lg: 24px;
+    --gap-xl: 40px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --max-width: 1200px;
+  }
 
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px;
   line-height: 1.6;
-  color: var(--color-text-primary);
-  background: var(--color-bg);
+  color: var(--text);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "kern" 1, "liga" 1;
@@ -62,7 +47,7 @@ body {
 
 /* ===== TYPOGRAPHY ===== */
 h1, h2, h3, h4, h5 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Playfair Display', serif;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -73,11 +58,11 @@ h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: var(--gap-md); }
 h3 { font-size: 1.25rem; margin-bottom: var(--gap-sm); }
 h4 { font-size: 1rem; }
 
-p { margin-bottom: var(--gap-md); max-width: 65ch; color: var(--color-text-secondary); }
+p { margin-bottom: var(--gap-md); max-width: 65ch; color: var(--text2); }
 p + p { margin-top: calc(-1 * var(--gap-sm)); }
 
-a { color: var(--color-accent); text-decoration: none; transition: color 0.2s ease; }
-a:hover { color: #a29bfe; }
+a { color: var(--accent); text-decoration: none; transition: color 0.2s ease; }
+a:hover { color: var(--accent2); }
 
 /* ===== LAYOUT ===== */
 .container { max-width: var(--max-width); margin: 0 auto; padding: 0 var(--gap-lg); }
@@ -100,7 +85,7 @@ a:hover { color: #a29bfe; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% 20%, var(--color-accent-glow), transparent),
+    radial-gradient(ellipse 80% 50% at 50% 20%, var(--accent-glow), transparent),
     radial-gradient(ellipse 50% 40% at 30% 80%, rgba(0, 214, 143, 0.08), transparent),
     radial-gradient(ellipse 50% 40% at 70% 80%, rgba(84, 160, 255, 0.08), transparent);
   pointer-events: none;
@@ -112,9 +97,9 @@ a:hover { color: #a29bfe; }
   display: inline-block;
   padding: 6px 16px;
   border-radius: 100px;
-  background: var(--color-accent-glow);
-  border: 1px solid var(--color-accent);
-  color: var(--color-accent);
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  color: var(--accent);
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -123,11 +108,11 @@ a:hover { color: #a29bfe; }
 }
 
 .hero h1 { margin-bottom: var(--gap-md); }
-.hero h1 .highlight { color: var(--color-accent); }
+.hero h1 .highlight { color: var(--accent); }
 
 .hero-sub {
   font-size: 1.15rem;
-  color: var(--color-text-secondary);
+  color: var(--text2);
   max-width: 600px;
   margin: 0 auto var(--gap-lg);
 }
@@ -143,15 +128,15 @@ a:hover { color: #a29bfe; }
 .hero-metric { text-align: center; }
 
 .hero-metric-value {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .hero-metric-label {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 4px;
@@ -167,7 +152,7 @@ a:hover { color: #a29bfe; }
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: var(--color-text-muted);
+  color: var(--text3);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -176,8 +161,8 @@ a:hover { color: #a29bfe; }
 
 .scroll-indicator .arrow {
   width: 20px; height: 20px;
-  border-right: 2px solid var(--color-text-muted);
-  border-bottom: 2px solid var(--color-text-muted);
+  border-right: 2px solid var(--text3);
+  border-bottom: 2px solid var(--text3);
   transform: rotate(45deg);
 }
 
@@ -195,7 +180,7 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .section-header h2 { margin-bottom: var(--gap-sm); }
-.section-header p { margin: 0 auto; color: var(--color-text-secondary); }
+.section-header p { margin: 0 auto; color: var(--text2); }
 
 /* ===== PROBLEM Tổng Quan ===== */
 .problem-grid {
@@ -206,15 +191,15 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .problem-card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   padding: var(--gap-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   transition: border-color 0.3s ease, transform 0.3s ease;
 }
 
 .problem-card:hover {
-  border-color: var(--color-accent);
+  border-color: var(--accent);
   transform: translateY(-2px);
 }
 
@@ -233,13 +218,13 @@ section { padding: var(--gap-xl) 0; }
 
 .problem-card ul li {
   padding: 4px 0;
-  color: var(--color-text-secondary);
+  color: var(--text2);
   font-size: 0.9rem;
 }
 
 .problem-card ul li::before {
   content: '→ ';
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 .combination-visual {
@@ -248,9 +233,9 @@ section { padding: var(--gap-xl) 0; }
   align-items: center;
   gap: var(--gap-md);
   padding: var(--gap-lg);
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   margin-top: var(--gap-lg);
 }
 
@@ -273,7 +258,7 @@ section { padding: var(--gap-xl) 0; }
 .combination-label {
   font-weight: 600;
   text-align: right;
-  color: var(--color-text-secondary);
+  color: var(--text2);
 }
 
 .combination-bar {
@@ -290,7 +275,7 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .combination-bar.Hạt Giống {
-  background: linear-gradient(90deg, #6c5ce7 0%, #a29bfe 100%);
+  background: linear-gradient(90deg, var(--accent) 0%, #54a0ff 100%);
   width: 100%;
 }
 
@@ -307,15 +292,15 @@ section { padding: var(--gap-xl) 0; }
 .combination-count {
   text-align: left;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 /* ===== Tham Số TABLE ===== */
 .param-table-wrapper {
   overflow-x: auto;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .param-table {
@@ -325,40 +310,40 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .param-table thead {
-  background: var(--color-surface-raised);
+  background: var(--raised);
 }
 
 .param-table th {
   text-align: left;
   padding: var(--gap-md);
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  border-bottom: 1px solid var(--color-border);
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
 }
 
 .param-table td {
   padding: var(--gap-md);
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
 }
 
 .param-table tr:last-child td { border-bottom: none; }
 
-.param-table tr:hover td { background: var(--color-surface-raised); }
+.param-table tr:hover td { background: var(--raised); }
 
 .param-name {
-  font-family: 'DM Sans', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .param-range {
-  font-family: 'DM Sans', monospace;
-  color: var(--color-accent);
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent);
   font-size: 0.85rem;
 }
 
@@ -408,7 +393,7 @@ section { padding: var(--gap-xl) 0; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
   color: #fff;
@@ -420,14 +405,14 @@ section { padding: var(--gap-xl) 0; }
 .phase-marker.phase3 { background: linear-gradient(135deg, #00d68f, #00b894); }
 
 .phase-card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   padding: var(--gap-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   transition: border-color 0.3s ease;
 }
 
-.phase-card:hover { border-color: var(--color-accent-dim); }
+.phase-card:hover { border-color: var(--accent2); }
 
 .phase-card-header {
   display: flex;
@@ -438,7 +423,7 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .phase-number {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -456,9 +441,9 @@ section { padding: var(--gap-xl) 0; }
 .phase-Mục tiêu {
   font-size: 0.9rem;
   padding: var(--gap-sm) var(--gap-md);
-  border-left: 3px solid var(--color-accent);
+  border-left: 3px solid var(--accent);
   margin-bottom: var(--gap-md);
-  color: var(--color-text-secondary);
+  color: var(--text2);
 }
 
 .phase-details { display: grid; gap: var(--gap-sm); }
@@ -467,11 +452,11 @@ section { padding: var(--gap-xl) 0; }
   display: flex;
   gap: var(--gap-sm);
   font-size: 0.9rem;
-  color: var(--color-text-secondary);
+  color: var(--text2);
 }
 
 .phase-detail-item strong {
-  color: var(--color-text-primary);
+  color: var(--text);
   min-width: 100px;
 }
 
@@ -482,25 +467,25 @@ section { padding: var(--gap-xl) 0; }
   gap: var(--gap-md);
   margin-top: var(--gap-md);
   padding-top: var(--gap-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
 }
 
 .tech-card {
-  background: var(--color-surface-raised);
+  background: var(--raised);
   border-radius: var(--radius-md);
   padding: var(--gap-md);
 }
 
 .tech-card h4 {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
   margin-bottom: var(--gap-sm);
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .tech-card p, .tech-card ul {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--text2);
 }
 
 .tech-card ul {
@@ -509,7 +494,7 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .tech-card ul li { padding: 3px 0; }
-.tech-card ul li::before { content: '• '; color: var(--color-accent); }
+.tech-card ul li::before { content: '• '; color: var(--accent); }
 
 .tech-tag {
   display: inline-block;
@@ -517,9 +502,9 @@ section { padding: var(--gap-xl) 0; }
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  font-family: 'DM Sans', monospace;
-  background: rgba(108, 92, 231, 0.1);
-  color: #a29bfe;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(44, 90, 160, 0.1);
+  color: var(--accent);
   margin: 2px;
 }
 
@@ -532,10 +517,10 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .obj-card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   padding: var(--gap-lg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   position: relative;
   overflow: hidden;
 }
@@ -553,13 +538,13 @@ section { padding: var(--gap-xl) 0; }
 
 .obj-card h3 { margin-bottom: var(--gap-sm); }
 .obj-formula {
-  font-family: 'DM Sans', monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.95rem;
   padding: var(--gap-sm) var(--gap-md);
-  background: var(--color-surface-raised);
+  background: var(--raised);
   border-radius: var(--radius-sm);
   margin-bottom: var(--gap-sm);
-  color: var(--color-text-primary);
+  color: var(--text);
   overflow-x: auto;
 }
 
@@ -568,7 +553,7 @@ section { padding: var(--gap-xl) 0; }
   align-items: center;
   gap: var(--gap-sm);
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--text2);
   margin-top: var(--gap-sm);
 }
 
@@ -578,9 +563,9 @@ section { padding: var(--gap-xl) 0; }
   display: inline-block;
 }
 
-.obj-metric .dot.best { background: var(--color-success); }
-.obj-metric .dot.fast { background: var(--color-info); }
-.obj-metric .dot.agg { background: var(--color-warning); }
+.obj-metric .dot.best { background: var(--success); }
+.obj-metric .dot.fast { background: var(--info); }
+.obj-metric .dot.agg { background: var(--warning); }
 
 /* ===== SEED GRID ===== */
 .seed-grid {
@@ -591,15 +576,15 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .seed-item {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--gap-md);
   text-align: center;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   transition: border-color 0.3s ease;
 }
 
-.seed-item:hover { border-color: var(--color-accent); }
+.seed-item:hover { border-color: var(--accent); }
 
 .seed-item .seed-icon {
   font-size: 2rem;
@@ -610,12 +595,12 @@ section { padding: var(--gap-xl) 0; }
 .seed-item .seed-name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
 .seed-item .seed-desc {
   font-size: 0.75rem;
-  color: var(--color-text-muted);
+  color: var(--text3);
   margin-top: 4px;
 }
 
@@ -628,23 +613,23 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .metric-card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   padding: var(--gap-lg);
   text-align: center;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .metric-card .value {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 2rem;
   font-weight: 800;
-  color: var(--color-accent);
+  color: var(--accent);
 }
 
 .metric-card .label {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: var(--text3);
   margin-top: 4px;
 }
 
@@ -657,10 +642,10 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .tool-card {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-md);
   padding: var(--gap-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
   position: relative;
 }
 
@@ -670,20 +655,20 @@ section { padding: var(--gap-xl) 0; }
 
 /* ===== FILE STRUCTURE ===== */
 .file-structure {
-  background: var(--color-surface);
+  background: var(--surface);
   border-radius: var(--radius-lg);
   padding: var(--gap-lg);
-  border: 1px solid var(--color-border);
-  font-family: 'DM Sans', monospace;
+  border: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
   font-size: 0.85rem;
   line-height: 1.8;
   overflow-x: auto;
   margin-top: var(--gap-lg);
 }
 
-.file-structure .folder { color: var(--color-accent); }
-.file-structure .file { color: var(--color-text-secondary); }
-.file-structure .comment { color: var(--color-text-muted); font-style: italic; }
+.file-structure .folder { color: var(--accent); }
+.file-structure .file { color: var(--text2); }
+.file-structure .comment { color: var(--text3); font-style: italic; }
 .file-structure .indent { padding-left: 24px; }
 .file-structure .indent-2 { padding-left: 48px; }
 
@@ -698,8 +683,8 @@ section { padding: var(--gap-xl) 0; }
 }
 
 .flow-node {
-  background: var(--color-surface);
-  border: 2px solid var(--color-border);
+  background: var(--surface);
+  border: 2px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--gap-md);
   text-align: center;
@@ -708,25 +693,25 @@ section { padding: var(--gap-xl) 0; }
   position: relative;
 }
 
-.flow-node:hover { border-color: var(--color-accent); }
+.flow-node:hover { border-color: var(--accent); }
 
 .flow-node .node-label {
   font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-text-muted);
+  color: var(--text3);
 }
 
 .flow-node .node-value {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 1.4rem;
   font-weight: 700;
   margin-top: 4px;
 }
 
 .flow-arrow {
-  color: var(--color-text-muted);
+  color: var(--text3);
   font-size: 1.5rem;
   padding: 0 var(--gap-sm);
 }
@@ -742,7 +727,7 @@ section { padding: var(--gap-xl) 0; }
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 40% at 50% 50%, var(--color-accent-glow), transparent);
+  background: radial-gradient(ellipse 60% 40% at 50% 50%, var(--accent-glow), transparent);
   pointer-events: none;
 }
 
@@ -755,10 +740,10 @@ section { padding: var(--gap-xl) 0; }
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(9, 9, 11, 0.85);
+  background: rgba(248, 249, 250, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--border);
   padding: 0 var(--gap-lg);
 }
 
@@ -776,19 +761,19 @@ section { padding: var(--gap-xl) 0; }
 .nav-inner::-webkit-scrollbar { display: none; }
 
 .nav-logo {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-weight: 800;
   font-size: 0.95rem;
   white-space: nowrap;
-  color: var(--color-text-primary);
+  color: var(--text);
 }
 
-.nav-logo span { color: var(--color-accent); }
+.nav-logo span { color: var(--accent); }
 
 .nav-link {
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--color-text-secondary);
+  color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -796,18 +781,18 @@ section { padding: var(--gap-xl) 0; }
   text-decoration: none;
 }
 
-.nav-link:hover { color: var(--color-text-primary); }
+.nav-link:hover { color: var(--text); }
 
 /* ===== FOOTER ===== */
 .site-footer {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--border);
   padding: var(--gap-lg) 0;
   text-align: center;
 }
 
 .site-footer p {
   font-size: 0.85rem;
-  color: var(--color-text-muted);
+  color: var(--text3);
   margin: 0;
 }
 
@@ -1076,19 +1061,19 @@ section { padding: var(--gap-xl) 0; }
       <div class="flow-node">
         <div class="node-label">Giai đoạn 1</div>
         <div class="node-value" style="color: var(--phase1);">Screening</div>
-        <div style="font-size: 0.8rem; color: var(--color-text-muted);">LHS · 50×50 mesh</div>
+        <div style="font-size: 0.8rem; color: var(--text3);">LHS · 50×50 mesh</div>
       </div>
       <span class="flow-arrow">→</span>
       <div class="flow-node">
         <div class="node-label">Giai đoạn 2</div>
         <div class="node-value" style="color: var(--phase2);">Bayesian Opt</div>
-        <div style="font-size: 0.8rem; color: var(--color-text-muted);">GP surrogate · 80×80</div>
+        <div style="font-size: 0.8rem; color: var(--text3);">GP surrogate · 80×80</div>
       </div>
       <span class="flow-arrow">→</span>
       <div class="flow-node">
         <div class="node-label">Giai đoạn 3</div>
         <div class="node-value" style="color: var(--phase3);">Xác Thực</div>
-        <div style="font-size: 0.8rem; color: var(--color-text-muted);">100×100 · 3–5 runs</div>
+        <div style="font-size: 0.8rem; color: var(--text3);">100×100 · 3–5 runs</div>
       </div>
     </div>
 
@@ -1100,7 +1085,7 @@ section { padding: var(--gap-xl) 0; }
         <div class="phase-card">
           <div class="phase-card-header">
             <span class="phase-number p1">Giai đoạn 1 · Screening</span>
-            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 50–80 runs per objective</span>
+            <span style="font-size: 0.8rem; color: var(--text3);">≡ 50–80 runs per objective</span>
           </div>
           <h3>🟦 Xác định Tham Số Quan trọng</h3>
           <div class="phase-Mục tiêu">
@@ -1135,7 +1120,7 @@ section { padding: var(--gap-xl) 0; }
         <div class="phase-card">
           <div class="phase-card-header">
             <span class="phase-number p2">Giai đoạn 2 · Bayesian Tối Ưu Hóa</span>
-            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 40–60 evaluations per combo</span>
+            <span style="font-size: 0.8rem; color: var(--text3);">≡ 40–60 evaluations per combo</span>
           </div>
           <h3>🟧 Tìm Tham Số Tối ưu</h3>
           <div class="phase-Mục tiêu">
@@ -1171,7 +1156,7 @@ section { padding: var(--gap-xl) 0; }
         <div class="phase-card">
           <div class="phase-card-header">
             <span class="phase-number p3">Giai đoạn 3 · Xác Thực</span>
-            <span style="font-size: 0.8rem; color: var(--color-text-muted);">≡ 5 runs per best combo</span>
+            <span style="font-size: 0.8rem; color: var(--text3);">≡ 5 runs per best combo</span>
           </div>
           <h3>🟩 Xác nhận cho Sản Xuất</h3>
           <div class="phase-Mục tiêu">
@@ -1395,9 +1380,9 @@ section { padding: var(--gap-xl) 0; }
       Pipeline đã được định nghĩa. Sau khi triển khai, chúng ta có thể tự động duyệt qua tất cả 30 Tổ hợp (seed, objective) và xác định bộ Tham Số tốt nhất cho mỗi tổ hợp - cho phép sản xuất sẵn sàng các cấu trúc vi mô auxetic.
     </p>
     <div style="margin-top: var(--gap-lg); display: flex; gap: var(--gap-md); justify-content: center; flex-wrap: wrap;">
-      <span style="padding: 10px 20px; background: var(--color-accent); color: #fff; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem;">▶ Start with Giai đoạn 1: Screening</span>
-      <span style="padding: 10px 20px; background: var(--color-surface); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Then Giai đoạn 2: Bayesian Opt</span>
-      <span style="padding: 10px 20px; background: var(--color-surface); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Finally Giai đoạn 3: Xác Thực</span>
+      <span style="padding: 10px 20px; background: var(--accent); color: #fff; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem;">▶ Start with Giai đoạn 1: Screening</span>
+      <span style="padding: 10px 20px; background: var(--surface); color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Then Giai đoạn 2: Bayesian Opt</span>
+      <span style="padding: 10px 20px; background: var(--surface); color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-weight: 500; font-size: 0.9rem;">→ Finally Giai đoạn 3: Xác Thực</span>
     </div>
   </div>
 </section>

@@ -1,10 +1,3 @@
-<!--
-  Title:    Quy trình tính chỉ số vật liệu từ Đồng nhất hóa – SIMP
-  Type:     Báo cáo
-  Aesthetic: Chuyên nghiệp, kỹ thuật, sạch sẽ, nền sáng
-  Fonts:    IBM Plex Sans (body), IBM Plex Mono (code/math)
-  Generated: 2026-05-27
--->
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -13,28 +6,31 @@
     <title>Quy trình tính chỉ số vật liệu từ Đồng nhất hóa – SIMP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --color-bg: #f8f9fa;
-            --color-surface: #ffffff;
-            --color-border: #e9ecef;
-            --color-text-primary: #212529;
-            --color-text-secondary: #6c757d;
-            --color-accent: #007bff;
-            --color-accent-dim: #0056b3;
-            --color-code-bg: #f1f3f5;
-            --color-code-text: #d63384;
-            --color-shadow: rgba(0, 0, 0, 0.05);
+            --bg: #f8f9fa;
+            --surface: #ffffff;
+            --border: #e9ecef;
+            --text: #1a1a2e;
+            --text2: #5a6072;
+            --text3: #8e94a8;
+            --accent: #2c5aa0;
+            --accent2: #6fa3ff;
+            --accent-light: #e8f0ff;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
         }
 
         body {
-            font-family: 'IBM Plex Sans', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6;
-            color: var(--color-text-primary);
-            background-color: var(--color-bg);
+            color: var(--text);
+            background: var(--bg);
             margin: 0;
             padding: 0;
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
@@ -51,42 +47,44 @@
         }
 
         header h1 {
+            font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
-            color: var(--color-accent);
+            color: var(--accent);
             margin-bottom: 10px;
-            font-weight: 600;
         }
 
         header p {
             font-size: 1.2rem;
-            color: var(--color-text-secondary);
+            color: var(--text2);
         }
 
         section {
-            background-color: var(--color-surface);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px var(--color-shadow);
+            background: var(--surface);
+            border-radius: var(--radius-lg);
             margin-bottom: 30px;
             padding: 30px;
-            border: 1px solid var(--color-border);
+            border: 1px solid var(--border);
         }
 
         h2 {
-            color: var(--color-accent);
+            font-family: 'Playfair Display', serif;
+            color: var(--accent);
             font-size: 1.75rem;
-            border-bottom: 2px solid var(--color-border);
+            border-bottom: 2px solid var(--border);
             padding-bottom: 10px;
             margin-top: 0;
         }
 
         h3 {
+            font-family: 'Playfair Display', serif;
             font-size: 1.3rem;
             margin-top: 25px;
-            color: var(--color-text-primary);
+            color: var(--text);
         }
 
         p {
             margin-bottom: 1rem;
+            color: var(--text2);
         }
 
         .flowchart {
@@ -98,34 +96,32 @@
         }
 
         .flow-node {
-            background: var(--color-surface);
-            border: 2px solid var(--color-accent);
-            border-radius: 8px;
+            background: var(--surface);
+            border: 2px solid var(--accent);
+            border-radius: var(--radius-md);
             padding: 15px 25px;
             width: 80%;
             max-width: 600px;
             text-align: center;
             font-weight: 600;
-            box-shadow: 0 2px 4px var(--color-shadow);
-            position: relative;
         }
 
         .flow-arrow {
             font-size: 1.5rem;
-            color: var(--color-accent);
+            color: var(--accent);
         }
 
         .formula-box {
-            background-color: #fdfdfd;
-            border-left: 4px solid var(--color-accent);
+            background: #fdfdfd;
+            border-left: 4px solid var(--accent);
             padding: 15px;
             margin: 20px 0;
             overflow-x: auto;
         }
 
         .collapsible {
-            background-color: var(--color-code-bg);
-            color: var(--color-text-primary);
+            background: var(--border);
+            color: var(--text);
             cursor: pointer;
             padding: 15px;
             width: 100%;
@@ -134,7 +130,7 @@
             outline: none;
             font-size: 1rem;
             font-weight: 600;
-            border-radius: 8px;
+            border-radius: var(--radius-sm);
             margin-top: 10px;
             display: flex;
             justify-content: space-between;
@@ -155,21 +151,21 @@
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
-            background-color: white;
-            border: 1px solid var(--color-border);
+            background: white;
+            border: 1px solid var(--border);
             border-top: none;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0 0 var(--radius-sm) var(--radius-sm);
         }
 
         pre {
-            background-color: #2d3436;
+            background: #1a1a2e;
             color: #dfe6e9;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             overflow-x: auto;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.9rem;
-            line-height: 1.5;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
         }
 
         .example-grid {
@@ -180,9 +176,9 @@
         }
 
         .example-card {
-            border: 1px solid var(--color-border);
+            border: 1px solid var(--border);
             padding: 20px;
-            border-radius: 8px;
+            border-radius: var(--radius-md);
             background: #fafafa;
         }
 
@@ -209,15 +205,15 @@
             width: 200px;
             height: 15px;
             background: linear-gradient(to right, #f7fbff, #007bff);
-            border: 1px solid var(--color-border);
+            border: 1px solid var(--border);
         }
 
         footer {
             text-align: center;
             padding: 40px 0;
-            color: var(--color-text-secondary);
+            color: var(--text3);
             font-size: 0.9rem;
-            border-top: 1px solid var(--color-border);
+            border-top: 1px solid var(--border);
             margin-top: 50px;
         }
 
@@ -401,7 +397,35 @@
         <section>
             <h2>6. Minh họa Logic Python</h2>
             <p>Hàm tính toán ten-xơ đồng nhất hóa dựa trên kết quả giải FE:</p>
-            <pre>{{CODE_BLOCK_0}}</pre>
+            <pre>def compute_homogenized_tensor(x, E0, nu0, nelx, nely, penal, Emin=1e-9):
+    """Tính toán ma trận độ cứng đồng nhất Q từ trường mật độ x."""
+    KE = lk(E0, nu0)                          # ma trận cứng phần tử
+    n_dof = 2 * (nelx + 1) * (nely + 1)
+    U = np.zeros((n_dof, 3))                  # 3 trường hợp tải
+    K = np.zeros((n_dof, n_dof))
+
+    for ey in range(nely):
+        for ex in range(nelx):
+            n1 = (nely+1)*ex + ey
+            n2 = (nely+1)*(ex+1) + ey
+            edof = [2*n1, 2*n1+1, 2*n2, 2*n2+1,
+                    2*n2+2, 2*n2+3, 2*n1+2, 2*n1+3]
+            E = Emin + x[ey,ex]**penal * (E0 - Emin)
+            K[np.ix_(edof, edof)] += E * KE
+
+    for i in range(3):
+        F = compute_force(i, nelx, nely)
+        U[:, i] = spsolve(K, F)
+
+    Q = np.zeros((3, 3))
+    for i in range(3):
+        for j in range(3):
+            Q[i, j] = avg_stress(U[:, i], j, nelx, nely) / (nelx*nely)
+
+    nu12 = -Q[0, 1] / Q[1, 1]
+    E1   =  Q[0, 0] - Q[0, 1]**2 / Q[1, 1]
+    G    =  Q[2, 2]
+    return Q, nu12, E1, G</pre>
         </section>
 
         <section>
@@ -414,7 +438,7 @@
         </section>
 
         <footer>
-            &copy; 2026 - Báo cáo SIMP Analyst - Quy trình Đồng nhất hóa
+            &copy; 2026 &middot; SIMP Analyst &middot; Đồng nhất hóa
         </footer>
     </div>
 

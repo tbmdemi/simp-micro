@@ -1,75 +1,67 @@
-<!--
-  Title:    SIMP Phase 1 - Correlation & Parameter Screening Analysis
-  Type:     Report / Dashboard
-  Aesthetic: Scientific dashboard, dark header with light content, tech-forward
-  Fonts:    Syne + DM Sans
-  Generated: 2026-06-08
--->
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="SIMP Phase 1 - Parameter Screening Analysis: Spearman correlation analysis for auxetic microstructure optimization.">
 <title>SIMP Phase 1 - Parameter Screening Analysis</title>
 <style>
-  /* ===== RESET & BASE ===== */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
 
   :root {
-    --color-bg: #f5f4f0;
-    --color-surface: #ffffff;
-    --color-border: #e0ddd8;
-    --color-text-primary: #1a1a2e;
-    --color-text-secondary: #5a5a72;
-    --color-accent: #1a5fb4;
-    --color-accent-dim: #3584e4;
-    --color-success: #26a269;
-    --color-warning: #e66100;
-    --color-heat-negative: #c01c28;
-    --color-heat-positive: #1a5fb4;
-    --color-heat-neutral: #f5f4f0;
-    --header-bg: #0a0a1a;
-    --header-text: #e8e8f0;
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #e9ecef;
+    --text: #1a1a2e;
+    --text2: #6c757d;
+    --accent: #2c5aa0;
+    --accent-light: #e8f0ff;
+    --accent2: #6fa3ff;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --heat-negative: #c01c28;
+    --heat-positive: #1a5fb4;
+    --heat-neutral: #f5f4f0;
+    --radius-lg: 12px;
   }
 
   body {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-    background: var(--color-bg);
-    color: var(--color-text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
 
   /* ===== TYPOGRAPHY ===== */
-  h1, h2, h3, h4 { font-family: 'Syne', sans-serif; font-weight: 700; line-height: 1.2; }
+  h1, h2, h3, h4 { font-family: 'Playfair Display', serif; font-weight: 700; line-height: 1.2; }
   h1 { font-size: 2.75rem; letter-spacing: -0.02em; }
-  h2 { font-size: 1.75rem; margin-bottom: 1rem; color: var(--color-text-primary); }
-  h3 { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--color-accent); }
-  p { max-width: 75ch; color: var(--color-text-secondary); margin-bottom: 1rem; }
-  a { color: var(--color-accent); text-decoration: none; }
+  h2 { font-size: 1.75rem; margin-bottom: 1rem; color: var(--text); }
+  h3 { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--accent); }
+  p { max-width: 75ch; color: var(--text2); margin-bottom: 1rem; }
+  a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
   /* ===== HEADER ===== */
   .site-header {
-    background: var(--header-bg);
-    color: var(--header-text);
+    background: linear-gradient(135deg, var(--accent) 0%, #1a3d70 100%);
+    color: white;
     padding: 3rem 2rem 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
     position: relative;
     overflow: hidden;
   }
-  .site-header::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 40%; height: 100%;
-    background: linear-gradient(135deg, transparent 0%, rgba(26,95,180,0.15) 100%);
-    pointer-events: none;
+  .site-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    margin-bottom: 0.25rem;
   }
-  .site-header h1 { font-size: 2.5rem; margin-bottom: 0.25rem; }
-  .site-header .subtitle { font-size: 1rem; opacity: 0.7; font-weight: 400; }
-  .site-header .meta { margin-top: 0.75rem; font-size: 0.85rem; opacity: 0.5; }
+  .site-header .subtitle { font-size: 1rem; opacity: 0.95; font-weight: 300; }
+  .site-header .meta { margin-top: 0.75rem; font-size: 0.85rem; opacity: 0.7; }
 
   /* ===== HERO METRICS ===== */
   .hero-metrics {
@@ -83,32 +75,31 @@
     z-index: 2;
   }
   .metric-card {
-    background: var(--color-surface);
-    border-radius: 12px;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
     padding: 1.25rem 1.5rem;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    border: 1px solid var(--color-border);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid var(--border);
   }
-  .metric-card .value { font-size: 2rem; font-weight: 700; font-family: 'Syne', sans-serif; color: var(--color-accent); }
-  .metric-card .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-top: 0.15rem; }
+  .metric-card .value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .metric-card .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text2);
+    margin-top: 0.15rem;
+  }
 
   /* ===== LAYOUT ===== */
   .container { max-width: 1280px; margin: 0 auto; padding: 0 2rem; }
   section { padding: 2.5rem 0; }
-  section + section { border-top: 1px solid var(--color-border); }
+  section + section { border-top: 1px solid var(--border); }
   .section-intro { max-width: 700px; margin-bottom: 2rem; }
-
-  .card-grid { display: grid; gap: 1.5rem; }
-  .card {
-    background: var(--color-surface);
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid var(--color-border);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  }
-
-  .flex-row { display: flex; gap: 2rem; flex-wrap: wrap; }
-  .flex-row > * { flex: 1; min-width: 300px; }
 
   /* ===== HEATMAP TABLE ===== */
   .heatmap-wrapper { overflow-x: auto; margin-top: 1rem; }
@@ -125,15 +116,15 @@
     letter-spacing: 0.05em;
     padding: 0.6rem 0.5rem;
     text-align: center;
-    border-bottom: 2px solid var(--color-border);
-    color: var(--color-text-secondary);
+    border-bottom: 2px solid var(--border);
+    color: var(--text2);
     white-space: nowrap;
   }
   .heatmap-table th:first-child { text-align: left; padding-left: 0.5rem; }
   .heatmap-table td {
     padding: 0.5rem 0.4rem;
     text-align: center;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--border);
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     white-space: nowrap;
@@ -141,18 +132,10 @@
   .heatmap-table td:first-child {
     text-align: left;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--text);
     padding-left: 0.5rem;
   }
   .heatmap-table tr:hover td { filter: brightness(0.95); }
-  .heatmap-table .seed-label { font-size: 0.8rem; }
-  .heatmap-table .param-label {
-    font-size: 0.65rem;
-    color: var(--color-text-secondary);
-    display: block;
-    font-weight: 400;
-    margin-top: 2px;
-  }
   .heatmap-cell {
     display: inline-block;
     min-width: 60px;
@@ -163,12 +146,6 @@
     transition: transform 0.15s ease;
   }
   .heatmap-cell:hover { transform: scale(1.05); }
-  .heatmap-cell.highlight { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-accent); }
-  .heatmap-cell.na {
-    background: transparent;
-    color: var(--color-border);
-    font-weight: 300;
-  }
 
   /* ===== COLOR SCALE ===== */
   .r-very-neg { background: #67001f; color: #fff; }
@@ -195,12 +172,12 @@
     font-weight: 500;
     text-align: right;
     flex-shrink: 0;
-    color: var(--color-text-primary);
+    color: var(--text);
   }
   .bar-track {
     flex: 1;
     height: 32px;
-    background: var(--color-bg);
+    background: var(--bg);
     border-radius: 6px;
     position: relative;
     overflow: hidden;
@@ -221,17 +198,17 @@
   }
   .bar-fill.high-bar { background: linear-gradient(135deg, #1a5fb4, #3584e4); }
   .bar-fill.mid-bar { background: linear-gradient(135deg, #5a9bd4, #8bc4f0); }
-  .bar-fill.low-bar { background: linear-gradient(135deg, #a5c5e8, #cde0f5); color: var(--color-text-primary); }
+  .bar-fill.low-bar { background: linear-gradient(135deg, #a5c5e8, #cde0f5); color: var(--text); }
 
   /* ===== SCATTER PLOTS ===== */
   .scatter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
-  .chart-card { background: var(--color-surface); border-radius: 12px; padding: 1.25rem; border: 1px solid var(--color-border); }
+  .chart-card { background: var(--surface); border-radius: var(--radius-lg); padding: 1.25rem; border: 1px solid var(--border); }
   .chart-card h4 { font-size: 0.95rem; margin-bottom: 0.75rem; }
   .chart-card canvas { width: 100% !important; height: auto !important; max-height: 320px; }
 
   /* ===== LEGEND ===== */
   .legend { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
-  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--color-text-secondary); }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text2); }
   .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
 
   /* ===== COLOR SCALE BAR ===== */
@@ -241,16 +218,50 @@
     border-radius: 6px;
     background: linear-gradient(to right, #67001f, #c01c28, #e6616b, #f5a5a5, #e8e8e8, #a5c5e8, #5a9bd4, #1a5fb4, #0d3b7a);
   }
-  .scale-label { font-size: 0.75rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+  .scale-label { font-size: 0.75rem; color: var(--text2); font-variant-numeric: tabular-nums; }
 
   /* ===== FOOTER ===== */
   .site-footer {
     text-align: center;
     padding: 3rem 2rem;
-    color: var(--color-text-secondary);
+    color: var(--text2);
     font-size: 0.85rem;
-    border-top: 1px solid var(--color-border);
+    border-top: 1px solid var(--border);
+    background: var(--accent);
+    color: white;
   }
+  .site-footer p { color: rgba(255,255,255,0.9); margin-bottom: 0.5rem; }
+
+  /* ===== TABS ===== */
+  .tab-bar { display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid var(--border); }
+  .tab-btn {
+    padding: 0.6rem 1.25rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+  }
+  .tab-btn:hover { color: var(--accent); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-content { display: none; padding-top: 1.5rem; }
+  .tab-content.active { display: block; }
+
+  .annotation-box {
+    background: var(--accent-light);
+    border-left: 4px solid var(--accent);
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  .annotation-box strong { color: var(--accent); }
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 768px) {
@@ -264,7 +275,6 @@
 
   @media (max-width: 480px) {
     .scatter-grid { grid-template-columns: 1fr; }
-    .flex-row { flex-direction: column; }
   }
 
   /* ===== SCROLL ANIMATIONS ===== */
@@ -279,43 +289,10 @@
 
   /* Print */
   @media print {
-    .site-header { background: #0a0a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .site-header { background: var(--accent) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .heatmap-cell, .bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
-
-  /* Tab system */
-  .tab-bar { display: flex; gap: 0; margin-bottom: 0; border-bottom: 2px solid var(--color-border); }
-  .tab-btn {
-    padding: 0.6rem 1.25rem;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    border: none;
-    background: transparent;
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.2s ease;
-  }
-  .tab-btn:hover { color: var(--color-accent); }
-  .tab-btn.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
-  .tab-content { display: none; padding-top: 1.5rem; }
-  .tab-content.active { display: block; }
-
-  .annotation-box {
-    background: #e8f0fa;
-    border-left: 4px solid var(--color-accent);
-    padding: 1rem 1.25rem;
-    border-radius: 0 8px 8px 0;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-    color: var(--color-text-primary);
-  }
-  .annotation-box strong { color: var(--color-accent); }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -565,9 +542,9 @@
 </div> <!-- /container -->
 
 <footer class="site-footer">
-  <p>SIMP Analyst - Phase 1 Parameter Screening Report · Generated from <code>_all_summaries_parallel.json</code></p>
-  <p style="margin-top:0.5rem;opacity:0.6;">Fonts: Syne + DM Sans via Google Fonts · Chart rendering: Canvas API</p>
+  <p><strong>SIMP Analyst</strong> &middot; Phase 1 &middot; Parameter Screening</p>
 </footer>
+
 
 <script>
 (function() {
@@ -639,9 +616,7 @@
   ];
 
   // --- Scatter data (raw samples from circle auxetic, hourglass auxetic, square auxetic) ---
-  // Combined from actual CSV data
   const scatterData = [
-    // circle auxetic samples
     { seed: 'circle', volfrac: 0.594, penal: 4.805, rmin: 2.814, obj: 102.831 },
     { seed: 'circle', volfrac: 0.490, penal: 3.177, rmin: 5.087, obj: 65.439 },
     { seed: 'circle', volfrac: 0.299, penal: 1.334, rmin: 1.656, obj: 10.397 },
@@ -692,7 +667,6 @@
     { seed: 'circle', volfrac: 0.502, penal: 3.140, rmin: 1.943, obj: 52.352 },
     { seed: 'circle', volfrac: 0.412, penal: 2.752, rmin: 5.917, obj: 42.774 },
     { seed: 'circle', volfrac: 0.385, penal: 2.608, rmin: 3.802, obj: 31.350 },
-    // hourglass auxetic samples
     { seed: 'hourglass', volfrac: 0.594, penal: 4.805, rmin: 2.814, obj: 102.258 },
     { seed: 'hourglass', volfrac: 0.490, penal: 3.177, rmin: 5.087, obj: 66.103 },
     { seed: 'hourglass', volfrac: 0.299, penal: 1.334, rmin: 1.656, obj: 10.783 },
@@ -742,51 +716,103 @@
     { seed: 'hourglass', volfrac: 0.581, penal: 3.280, rmin: 2.613, obj: 113.727 },
     { seed: 'hourglass', volfrac: 0.502, penal: 3.140, rmin: 1.943, obj: 68.861 },
     { seed: 'hourglass', volfrac: 0.412, penal: 2.752, rmin: 5.917, obj: 45.257 },
-    { seed: 'hourglass', volfrac: 0.385, penal: 2.608, rmin: 3.802, obj: 33.667 }
+    { seed: 'hourglass', volfrac: 0.385, penal: 2.608, rmin: 3.802, obj: 33.667 },
+    { seed: 'square', volfrac: 0.594, penal: 4.805, rmin: 2.814, obj: 92.723 },
+    { seed: 'square', volfrac: 0.490, penal: 3.177, rmin: 5.087, obj: 51.004 },
+    { seed: 'square', volfrac: 0.299, penal: 1.334, rmin: 1.656, obj: 14.145 },
+    { seed: 'square', volfrac: 0.377, penal: 4.629, rmin: 3.924, obj: 30.555 },
+    { seed: 'square', volfrac: 0.306, penal: 4.024, rmin: 2.953, obj: 16.991 },
+    { seed: 'square', volfrac: 0.274, penal: 1.563, rmin: 4.967, obj: 8.511 },
+    { seed: 'square', volfrac: 0.535, penal: 2.002, rmin: 2.177, obj: 53.709 },
+    { seed: 'square', volfrac: 0.418, penal: 4.975, rmin: 3.017, obj: 34.812 },
+    { seed: 'square', volfrac: 0.235, penal: 3.629, rmin: 5.580, obj: 9.647 },
+    { seed: 'square', volfrac: 0.266, penal: 2.858, rmin: 2.754, obj: 11.511 },
+    { seed: 'square', volfrac: 0.251, penal: 1.682, rmin: 5.643, obj: 7.899 },
+    { seed: 'square', volfrac: 0.452, penal: 2.976, rmin: 2.297, obj: 39.632 },
+    { seed: 'square', volfrac: 0.353, penal: 2.501, rmin: 1.794, obj: 21.717 },
+    { seed: 'square', volfrac: 0.332, penal: 3.337, rmin: 1.534, obj: 15.970 },
+    { seed: 'square', volfrac: 0.448, penal: 1.793, rmin: 4.228, obj: 38.749 },
+    { seed: 'square', volfrac: 0.559, penal: 2.144, rmin: 3.355, obj: 62.840 },
+    { seed: 'square', volfrac: 0.565, penal: 4.753, rmin: 5.888, obj: 83.400 },
+    { seed: 'square', volfrac: 0.430, penal: 2.042, rmin: 1.022, obj: 24.898 },
+    { seed: 'square', volfrac: 0.327, penal: 4.368, rmin: 3.754, obj: 20.512 },
+    { seed: 'square', volfrac: 0.215, penal: 2.211, rmin: 5.224, obj: 6.555 },
+    { seed: 'square', volfrac: 0.219, penal: 3.748, rmin: 3.292, obj: 6.237 },
+    { seed: 'square', volfrac: 0.549, penal: 1.148, rmin: 5.790, obj: 63.188 },
+    { seed: 'square', volfrac: 0.203, penal: 3.692, rmin: 1.441, obj: 4.791 },
+    { seed: 'square', volfrac: 0.226, penal: 4.353, rmin: 4.851, obj: 7.256 },
+    { seed: 'square', volfrac: 0.340, penal: 4.899, rmin: 2.067, obj: 17.510 },
+    { seed: 'square', volfrac: 0.257, penal: 4.128, rmin: 3.586, obj: 9.452 },
+    { seed: 'square', volfrac: 0.438, penal: 1.827, rmin: 2.427, obj: 34.042 },
+    { seed: 'square', volfrac: 0.510, penal: 1.317, rmin: 4.445, obj: 47.351 },
+    { seed: 'square', volfrac: 0.365, penal: 1.884, rmin: 3.471, obj: 21.761 },
+    { seed: 'square', volfrac: 0.591, penal: 1.556, rmin: 5.456, obj: 72.609 },
+    { seed: 'square', volfrac: 0.521, penal: 4.049, rmin: 4.648, obj: 56.973 },
+    { seed: 'square', volfrac: 0.285, penal: 4.592, rmin: 1.125, obj: 9.274 },
+    { seed: 'square', volfrac: 0.471, penal: 1.174, rmin: 1.385, obj: 30.722 },
+    { seed: 'square', volfrac: 0.246, penal: 3.935, rmin: 3.122, obj: 8.793 },
+    { seed: 'square', volfrac: 0.320, penal: 3.542, rmin: 3.687, obj: 17.317 },
+    { seed: 'square', volfrac: 0.458, penal: 3.834, rmin: 4.180, obj: 38.942 },
+    { seed: 'square', volfrac: 0.295, penal: 2.350, rmin: 4.307, obj: 8.706 },
+    { seed: 'square', volfrac: 0.347, penal: 4.444, rmin: 4.071, obj: 20.646 },
+    { seed: 'square', volfrac: 0.475, penal: 1.072, rmin: 5.186, obj: 27.341 },
+    { seed: 'square', volfrac: 0.369, penal: 3.416, rmin: 5.353, obj: 27.704 },
+    { seed: 'square', volfrac: 0.569, penal: 1.416, rmin: 2.577, obj: 57.487 },
+    { seed: 'square', volfrac: 0.515, penal: 2.567, rmin: 1.863, obj: 49.000 },
+    { seed: 'square', volfrac: 0.396, penal: 2.420, rmin: 2.376, obj: 27.317 },
+    { seed: 'square', volfrac: 0.407, penal: 3.032, rmin: 1.285, obj: 25.638 },
+    { seed: 'square', volfrac: 0.537, penal: 2.827, rmin: 4.772, obj: 58.406 },
+    { seed: 'square', volfrac: 0.488, penal: 4.266, rmin: 4.595, obj: 52.797 },
+    { seed: 'square', volfrac: 0.581, penal: 3.280, rmin: 2.613, obj: 70.325 },
+    { seed: 'square', volfrac: 0.502, penal: 3.140, rmin: 1.943, obj: 40.561 },
+    { seed: 'square', volfrac: 0.412, penal: 2.752, rmin: 5.917, obj: 30.728 },
+    { seed: 'square', volfrac: 0.385, penal: 2.608, rmin: 3.802, obj: 24.065 }
   ];
 
   // ===== UTILITY: Color mapping =====
   function rColor(r) {
     if (r === null || r === undefined || isNaN(r)) return 'na';
-    if (r <= -0.5) return 'r-very-neg';
-    if (r <= -0.25) return 'r-neg';
+    if (r <= -0.50) return 'r-very-neg';
+    if (r <= -0.20) return 'r-neg';
     if (r <= -0.10) return 'r-mid-neg';
-    if (r <= -0.02) return 'r-low-neg';
-    if (r < 0.02) return 'r-none';
-    if (r < 0.10) return 'r-low-pos';
-    if (r < 0.25) return 'r-mid-pos';
-    if (r < 0.50) return 'r-pos';
+    if (r <= -0.01) return 'r-low-neg';
+    if (r < 0.01)  return 'r-none';
+    if (r < 0.10)  return 'r-low-pos';
+    if (r < 0.20)  return 'r-mid-pos';
+    if (r < 0.50)  return 'r-pos';
     return 'r-very-pos';
   }
 
-  function fmtR(r) {
-    if (r === null || r === undefined || isNaN(r)) return '-';
-    return r >= 0 ? '+' + r.toFixed(3) : r.toFixed(3);
+  function rDisplay(val) {
+    if (val === null || val === undefined || isNaN(val)) return '—';
+    return val.toFixed(3);
   }
 
   // ===== RENDER: Heatmap =====
-  function renderHeatmap(tableId, bodyId, dataObj, params) {
-    const tbody = document.getElementById(bodyId);
+  function renderHeatmap(containerId, data, params) {
+    const tbody = document.getElementById(containerId);
     if (!tbody) return;
     tbody.innerHTML = '';
-    const seedOrder = Object.keys(dataObj);
-    seedOrder.forEach(seed => {
-      const row = dataObj[seed];
-      const tr = document.createElement('tr');
-      // Seed name
-      const tdSeed = document.createElement('td');
-      tdSeed.textContent = seed.replace(/_/g, ' ');
-      tr.appendChild(tdSeed);
+    const seeds = Object.keys(data);
+    // Determine min/max for scaling (if needed)
+    const allVals = [];
+    seeds.forEach(s => { params.forEach(p => { const v = data[s][p]; if (v !== null && !isNaN(v)) allVals.push(v); }); });
+    const absMax = Math.max(...allVals.map(Math.abs), 0.01);
 
-      params.forEach(param => {
+    seeds.forEach(seed => {
+      const tr = document.createElement('tr');
+      // Seed name cell
+      const tdSeed = document.createElement('td');
+      tdSeed.textContent = seed;
+      tr.appendChild(tdSeed);
+      // Parameter cells
+      params.forEach(p => {
         const td = document.createElement('td');
-        const val = row[param];
+        const val = data[seed][p];
+        const cls = rColor(val);
         const span = document.createElement('span');
-        span.className = 'heatmap-cell ' + rColor(val);
-        span.textContent = fmtR(val);
-        if (val !== null && val !== undefined && !isNaN(val) && Math.abs(val) > 0.9) {
-          span.classList.add('highlight');
-        }
+        span.className = 'heatmap-cell ' + cls;
+        span.textContent = rDisplay(val);
         td.appendChild(span);
         tr.appendChild(td);
       });
@@ -794,300 +820,200 @@
     });
   }
 
+  // Auxetic params
   const auxParams = ['volfrac', 'move', 'rmin', 'penal', 'void_size_frac', 'rotation_deg'];
+  renderHeatmap('auxetic-heatmap-body', auxeticData, auxParams);
   const firstParams = ['beta', 'volfrac', 'rmin', 'penal', 'void_size_frac', 'rotation_deg'];
+  renderHeatmap('first-heatmap-body', firstData, firstParams);
   const secondParams = ['volfrac', 'beta_second', 'penal', 'move', 'rmin', 'void_size_frac'];
+  renderHeatmap('second-heatmap-body', secondData, secondParams);
 
-  renderHeatmap('auxetic-heatmap-table', 'auxetic-heatmap-body', auxeticData, auxParams);
-  renderHeatmap('first-heatmap-table', 'first-heatmap-body', firstData, firstParams);
-  renderHeatmap('second-heatmap-table', 'second-heatmap-body', secondData, secondParams);
-
-  // ===== RENDER: Top-3 detail table =====
-  function renderTop3() {
+  // ===== RENDER: Top-3 Detail Table =====
+  (function renderTop3() {
     const tbody = document.getElementById('top3-detail-body');
     if (!tbody) return;
     tbody.innerHTML = '';
-    top3Detail.forEach(d => {
+    top3Detail.forEach(row => {
       const tr = document.createElement('tr');
-      const tdSeed = document.createElement('td');
-      tdSeed.textContent = d.seed.replace(/_/g, ' ');
-      tr.appendChild(tdSeed);
-
-      const items = [
-        { name: d.p1, r: d.r1 },
-        { name: d.p2, r: d.r2 },
-        { name: d.p3, r: d.r3 }
-      ];
-      items.forEach(item => {
-        const tdName = document.createElement('td');
-        tdName.textContent = item.name.replace(/_/g, ' ');
-        tdName.style.fontSize = '0.8rem';
-        tdName.style.fontWeight = '500';
-        const tdR = document.createElement('td');
-        const span = document.createElement('span');
-        span.className = 'heatmap-cell ' + rColor(item.r);
-        span.textContent = fmtR(item.r);
-        if (Math.abs(item.r) > 0.9) span.classList.add('highlight');
-        tdR.appendChild(span);
-        tr.appendChild(tdName);
-        tr.appendChild(tdR);
+      const cells = [row.seed, row.p1, row.r1.toFixed(3), row.p2, row.r2.toFixed(3), row.p3, row.r3.toFixed(3)];
+      cells.forEach((val, idx) => {
+        const td = document.createElement('td');
+        if (idx === 0) {
+          td.textContent = val;
+          td.style.textAlign = 'left';
+          td.style.fontWeight = '600';
+        } else if (idx % 2 === 1) {
+          // param name (odd indices: 1,3,5)
+          const span = document.createElement('span');
+          span.textContent = val;
+          span.style.fontWeight = '500';
+          span.style.color = 'var(--accent)';
+          td.appendChild(span);
+        } else {
+          // r-value (even indices: 2,4,6)
+          const span = document.createElement('span');
+          span.textContent = val;
+          const numVal = parseFloat(val);
+          span.className = 'heatmap-cell ' + rColor(numVal);
+          td.appendChild(span);
+        }
+        tr.appendChild(td);
       });
       tbody.appendChild(tr);
     });
-  }
-  renderTop3();
+  })();
 
-  // ===== RENDER: Bar Chart (volfrac r-values) =====
-  function renderBars() {
+  // ===== RENDER: Volfrac Bar Chart =====
+  (function renderBars() {
     const container = document.getElementById('volfrac-bar-chart');
     if (!container) return;
-    container.innerHTML = '';
-    volfracValues.forEach(d => {
-      const pct = Math.max((d.r / 1.0) * 100, 5);
-      const barClass = d.r > 0.90 ? 'high-bar' : (d.r > 0.87 ? 'mid-bar' : 'low-bar');
-
+    const maxR = 1.0;
+    volfracValues.forEach(item => {
       const row = document.createElement('div');
       row.className = 'bar-row';
-
-      const label = document.createElement('div');
-      label.className = 'bar-label';
-      label.textContent = d.seed.replace(/_/g, ' ');
-      row.appendChild(label);
-
+      const lbl = document.createElement('div');
+      lbl.className = 'bar-label';
+      lbl.textContent = item.seed;
+      row.appendChild(lbl);
       const track = document.createElement('div');
       track.className = 'bar-track';
-
       const fill = document.createElement('div');
-      fill.className = 'bar-fill ' + barClass;
+      const pct = (item.r / maxR) * 100;
       fill.style.width = pct + '%';
-      fill.textContent = d.r.toFixed(3);
-
+      if (item.r > 0.90) fill.className = 'bar-fill high-bar';
+      else if (item.r > 0.87) fill.className = 'bar-fill mid-bar';
+      else fill.className = 'bar-fill low-bar';
+      fill.textContent = item.r.toFixed(3);
       track.appendChild(fill);
       row.appendChild(track);
       container.appendChild(row);
     });
-  }
-  renderBars();
+  })();
 
-  // ===== RENDER: Scatter Plots (Canvas API) =====
-  function drawScatter(canvasId, xParam, xLabel, highlightZone) {
+  // ===== SCATTER PLOTS (Canvas API) =====
+  function drawScatter(canvasId, paramKey, paramLabel) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth || 400;
-    const h = canvas.clientHeight || 280;
-
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
-    ctx.scale(dpr, dpr);
-
-    const pad = { top: 25, bottom: 35, left: 55, right: 20 };
+    const w = canvas.width, h = canvas.height;
+    const pad = { top: 20, right: 20, bottom: 40, left: 50 };
     const plotW = w - pad.left - pad.right;
     const plotH = h - pad.top - pad.bottom;
 
-    // Extract values
-    const vals = scatterData.map(d => ({ x: d[xParam], y: d.obj, seed: d.seed }));
-    const xMin = Math.min(...vals.map(d => d.x));
-    const xMax = Math.max(...vals.map(d => d.x));
-    const yMin = Math.min(...vals.map(d => d.y));
-    const yMax = Math.max(...vals.map(d => d.y));
-    const xRange = xMax - xMin || 1;
-    const yRange = yMax - yMin || 1;
+    // Determine groups and ranges
+    const groups = {};
+    scatterData.forEach(d => {
+      if (!groups[d.seed]) groups[d.seed] = [];
+      groups[d.seed].push(d);
+    });
+    const seeds = Object.keys(groups);
+    const colors = { circle: '#2c5aa0', hourglass: '#e66100', square: '#22c55e' };
 
-    function toX(v) { return pad.left + ((v - xMin) / xRange) * plotW; }
-    function toY(v) { return pad.top + plotH - ((v - yMin) / yRange) * plotH; }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    scatterData.forEach(d => {
+      const x = d[paramKey];
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (d.obj < minY) minY = d.obj; if (d.obj > maxY) maxY = d.obj;
+    });
+    const xPad = (maxX - minX) * 0.1 || 0.5;
+    const yPad = (maxY - minY) * 0.1 || 10;
+    minX -= xPad; maxX += xPad; minY -= yPad; maxY += yPad;
 
-    // Clear
-    ctx.clearRect(0, 0, w, h);
+    function toCanvas(x, y) {
+      return { x: pad.left + ((x - minX) / (maxX - minX)) * plotW, y: pad.top + plotH - ((y - minY) / (maxY - minY)) * plotH };
+    }
 
     // Background
-    ctx.fillStyle = '#fafaf8';
-    ctx.fillRect(pad.left, pad.top, plotW, plotH);
-
-    // Highlight zone
-    if (highlightZone) {
-      const x1 = toX(highlightZone[0]);
-      const x2 = toX(highlightZone[1]);
-      ctx.fillStyle = 'rgba(26,95,180,0.08)';
-      ctx.fillRect(x1, pad.top, x2 - x1, plotH);
-      ctx.strokeStyle = 'rgba(26,95,180,0.35)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.strokeRect(x1, pad.top, x2 - x1, plotH);
-      ctx.setLineDash([]);
-      // Label
-      ctx.fillStyle = '#1a5fb4';
-      ctx.font = '9px DM Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Optimal range', (x1 + x2) / 2, pad.top - 6);
-    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
 
     // Grid lines
-    ctx.strokeStyle = '#e8e8e8';
+    ctx.strokeStyle = '#e9ecef';
     ctx.lineWidth = 0.5;
-    for (let i = 0; i <= 4; i++) {
-      const y = pad.top + (i / 4) * plotH;
-      ctx.beginPath();
-      ctx.moveTo(pad.left, y);
-      ctx.lineTo(pad.left + plotW, y);
-      ctx.stroke();
+    for (let i = 0; i <= 5; i++) {
+      const y = pad.top + (i / 5) * plotH;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+      const x = pad.left + (i / 5) * plotW;
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
     }
 
-    // Axes
-    ctx.strokeStyle = '#ccc';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, pad.top);
-    ctx.lineTo(pad.left, pad.top + plotH);
-    ctx.lineTo(pad.left + plotW, pad.top + plotH);
-    ctx.stroke();
-
-    // Y-axis labels
-    ctx.fillStyle = '#666';
-    ctx.font = '9px DM Sans, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i <= 4; i++) {
-      const y = pad.top + (i / 4) * plotH;
-      const val = yMax - (i / 4) * yRange;
-      ctx.fillText(val.toFixed(0), pad.left - 6, y);
-    }
-    // Y-axis title
-    ctx.save();
-    ctx.translate(14, pad.top + plotH / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#444';
-    ctx.font = '10px DM Sans, sans-serif';
-    ctx.fillText('Best Objective Value', 0, 0);
-    ctx.restore();
-
-    // X-axis labels
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    const nxTicks = 5;
-    for (let i = 0; i <= nxTicks; i++) {
-      const x = pad.left + (i / nxTicks) * plotW;
-      const val = xMin + (i / nxTicks) * xRange;
-      ctx.fillStyle = '#666';
-      ctx.font = '9px DM Sans, sans-serif';
-      ctx.fillText(val.toFixed(2), x, pad.top + plotH + 6);
-    }
-    // X-axis title
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#444';
-    ctx.font = '10px DM Sans, sans-serif';
-    ctx.fillText(xLabel, pad.left + plotW / 2, pad.top + plotH + 22);
-
-    // Plot points
-    const colors = { circle: '#1a5fb4', hourglass: '#c01c28', square: '#26a269' };
-    vals.forEach(d => {
-      const x = toX(d.x);
-      const y = toY(d.y);
-      ctx.beginPath();
-      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = colors[d.seed] || '#888';
-      ctx.globalAlpha = 0.7;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    });
-
-    // Legend for points
-    let lx = pad.left + 8;
-    const ly = pad.top + 8;
-    Object.entries(colors).forEach(([key, color]) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(lx + 5, ly + 5, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#444';
-      ctx.font = '9px DM Sans, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(key.charAt(0).toUpperCase() + key.slice(1), lx + 12, ly + 5);
-      lx += 70;
-    });
-  }
-
-  function drawScatters() {
-    drawScatter('scatter-volfrac', 'volfrac', 'Volfrac', [0.50, 0.65]);
-    drawScatter('scatter-penal', 'penal', 'Penal', [3.0, 5.0]);
-    drawScatter('scatter-rmin', 'rmin', 'Rmin', [1.0, 1.8]);
-  }
-
-  // ===== TABS =====
-  function initTabs() {
-    const buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(btn => {
-      btn.addEventListener('click', function() {
-        const tabName = this.dataset.tab;
-        const parent = this.closest('section') || this.parentElement.parentElement;
-        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        parent.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        this.classList.add('active');
-        const target = document.getElementById(tabName);
-        if (target) target.classList.add('active');
+    // Draw points
+    seeds.forEach(seed => {
+      const pts = groups[seed];
+      ctx.fillStyle = colors[seed] || '#666';
+      pts.forEach(d => {
+        const pos = toCanvas(d[paramKey], d.obj);
+        ctx.beginPath(); ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2); ctx.fill();
       });
     });
-  }
 
-  // ===== REVEAL ON SCROLL =====
-  function initReveal() {
-    const els = document.querySelectorAll('.reveal');
-    if ('IntersectionObserver' in window) {
-      const obs = new IntersectionObserver(entries => {
-        entries.forEach(e => {
-          if (e.isIntersecting) {
-            e.target.classList.add('visible');
-            obs.unobserve(e.target);
-          }
-        });
-      }, { threshold: 0.1 });
-      els.forEach(el => obs.observe(el));
-    } else {
-      els.forEach(el => el.classList.add('visible'));
+    // Axes
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+    // X-axis labels
+    ctx.fillStyle = '#6c757d';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i <= 5; i++) {
+      const xVal = minX + (i / 5) * (maxX - minX);
+      const xPos = pad.left + (i / 5) * plotW;
+      ctx.fillText(xVal.toFixed(1), xPos, pad.top + plotH + 16);
     }
+
+    // Y-axis labels
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) {
+      const yVal = minY + (i / 5) * (maxY - minY);
+      const yPos = pad.top + plotH - (i / 5) * plotH;
+      ctx.fillText(yVal.toFixed(0), pad.left - 6, yPos + 4);
+    }
+
+    // Axis titles
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = '12px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(paramLabel, pad.left + plotW / 2, h - 4);
+    ctx.save(); ctx.translate(12, pad.top + plotH / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Best Objective Value', 0, 0); ctx.restore();
+
+    // Legend
+    const legendX = pad.left + plotW - 120;
+    const legendY = pad.top + 8;
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    seeds.forEach((seed, i) => {
+      const lx = legendX, ly = legendY + i * 16;
+      ctx.fillStyle = colors[seed] || '#666';
+      ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#6c757d';
+      ctx.textAlign = 'left';
+      ctx.fillText(seed, lx + 8, ly + 4);
+    });
   }
 
-  // ===== RESPONSIVE CANVAS =====
-  function handleResize() {
-    drawScatters();
-  }
+  drawScatter('scatter-volfrac', 'volfrac', 'Volfrac');
+  drawScatter('scatter-penal', 'penal', 'Penal');
+  drawScatter('scatter-rmin', 'rmin', 'Rmin');
 
-  // ===== INIT =====
-  initTabs();
-  initReveal();
-
-  // Delay scatter drawing slightly to ensure layout is stable
-  setTimeout(() => {
-    drawScatters();
-  }, 150);
-
-  let resizeTimer;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(handleResize, 250);
-  });
-
-  // Re-draw when tabs are switched (scatter canvases may have been hidden)
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  tabBtns.forEach(btn => {
+  // ===== TABS =====
+  document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', function() {
-      setTimeout(drawScatters, 100);
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById(this.dataset.tab).classList.add('active');
     });
   });
 
+  // ===== SCROLL REVEAL =====
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add('visible'); revealObserver.unobserve(entry.target); }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
 })();
 </script>
-<noscript>
-  <div style="padding:2rem;text-align:center;color:#666;">
-    JavaScript is required for interactive charts and heatmap rendering.
-    Please enable JavaScript or view the static summary below.
-  </div>
-</noscript>
+
 </body>
 </html>
