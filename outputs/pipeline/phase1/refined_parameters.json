@@ -1,0 +1,15 @@
+{
+  "fixed_parameters": {
+    "rmin": 1.5,
+    "move": 0.2,
+    "penal": 3.0
+  },
+  "active_parameters": {
+    "volfrac": {
+      "range": [0.3, 0.7]
+    },
+    "void_size_frac": {
+      "range": [0.1, 0.4]
+    }
+  }
+}

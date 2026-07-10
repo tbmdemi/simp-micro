@@ -1,0 +1,41 @@
+{
+  "batch_id": 2,
+  "action": "refine",
+  "reason": "Coverage adequate, objective still improving. Refining.",
+  "decision_detail": {
+    "n_batches_completed": 1,
+    "n_valid_results": 40,
+    "best_objective_progress": {
+      "values": [
+        0.01109739280514302
+      ],
+      "n_batches_no_improvement": 0
+    },
+    "coverage": {
+      "n_sparse_regions": 0,
+      "total_bins": 27,
+      "sparsity_fraction": 0.0
+    },
+    "action": "refine",
+    "reason": "Coverage adequate, objective still improving. Refining.",
+    "next_config": {
+      "batch_id": 2,
+      "n_samples": 80,
+      "strategy": "optimized_lhs",
+      "mode": "refine",
+      "seed": null,
+      "objectives": [
+        "auxetic"
+      ],
+      "seeds": [
+        "circle",
+        "cross_rectangular",
+        "hexagonal",
+        "hourglass",
+        "square"
+      ],
+      "param_ranges": {},
+      "output_dir": ""
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "batch_id": 2,
+  "n_samples": 400,
+  "n_success": 365,
+  "status": "completed_mock",
+  "output_dir": "outputs/multi_batch/batch_2",
+  "best_per_combo": {
+    "circle_auxetic": {
+      "obj_value": 0.012086206412625115
+    }
+  },
+  "parameters": {}
+}

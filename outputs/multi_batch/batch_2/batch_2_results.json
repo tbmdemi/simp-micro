@@ -1,0 +1,4004 @@
+{
+  "results": [
+    {
+      "sample_id": 0,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.28529479326534424,
+      "v21": -0.6637650643191694,
+      "obj_value": 0.3748738360229637
+    },
+    {
+      "sample_id": 1,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.33289591084950654,
+      "v21": -0.007990105196402753,
+      "obj_value": 0.20295198003324316
+    },
+    {
+      "sample_id": 2,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.13712686753351166,
+      "v21": 0.12319239132519544,
+      "obj_value": 0.480657850350777
+    },
+    {
+      "sample_id": 3,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.24405302261990836,
+      "v21": -0.6524971885440385,
+      "obj_value": 0.11677044597979683
+    },
+    {
+      "sample_id": 4,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.42635593652571346,
+      "v21": 0.34637156550344694,
+      "obj_value": 0.3267411755776628
+    },
+    {
+      "sample_id": 5,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.02788161794889088,
+      "v21": -0.6191098724196256,
+      "obj_value": 0.23476499444962765
+    },
+    {
+      "sample_id": 6,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.46401460237280434,
+      "v21": 0.06430642709129109,
+      "obj_value": 0.43271042465811005
+    },
+    {
+      "sample_id": 7,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.06816505439333487,
+      "v21": -0.593098157042908,
+      "obj_value": 0.09471851402532655
+    },
+    {
+      "sample_id": 8,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5361811290997828,
+      "v21": -0.20825391426024575,
+      "obj_value": 0.3993417089518263
+    },
+    {
+      "sample_id": 9,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2465223607545879,
+      "v21": -0.3093599725686509,
+      "obj_value": 0.26271133855470136
+    },
+    {
+      "sample_id": 10,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.12442439206393718,
+      "v21": -0.7057398425830731,
+      "obj_value": 0.44247967514564107
+    },
+    {
+      "sample_id": 11,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.28337607617428273,
+      "v21": 0.12329988897850264,
+      "obj_value": 0.351740659920054
+    },
+    {
+      "sample_id": 12,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3461745735144679,
+      "v21": -0.6765364217146046,
+      "obj_value": 0.23368324444632718
+    },
+    {
+      "sample_id": 13,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6583344448834182,
+      "v21": -0.6001452008797254,
+      "obj_value": 0.49229917632019055
+    },
+    {
+      "sample_id": 14,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3662974526116829,
+      "v21": -0.5864949608186899,
+      "obj_value": 0.07485556442187992
+    },
+    {
+      "sample_id": 15,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4003506735266909,
+      "v21": -0.2513282572192791,
+      "obj_value": 0.17218823149237547
+    },
+    {
+      "sample_id": 16,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6761299399705071,
+      "v21": 0.23737073030654487,
+      "obj_value": 0.14164162153418478
+    },
+    {
+      "sample_id": 17,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3722671735656151,
+      "v21": -0.779384859543357,
+      "obj_value": 0.42830430053130725
+    },
+    {
+      "sample_id": 18,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7510156199722895,
+      "v21": -0.3983678173305898,
+      "obj_value": 0.28648225108596437
+    },
+    {
+      "sample_id": 19,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.08505743013196931,
+      "v21": 0.02216137250282557,
+      "obj_value": 0.46996421987561304
+    },
+    {
+      "sample_id": 20,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.16831216308419117,
+      "v21": -0.658448726122427,
+      "obj_value": 0.25188128357386247
+    },
+    {
+      "sample_id": 21,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7762683600121627,
+      "v21": -0.562225163037264,
+      "obj_value": 0.06521314026176653
+    },
+    {
+      "sample_id": 22,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7370096065571075,
+      "v21": -0.15074243629164763,
+      "obj_value": 0.2565140358060137
+    },
+    {
+      "sample_id": 23,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.34827740804419277,
+      "v21": 0.41084461147833284,
+      "obj_value": 0.15661089875279186
+    },
+    {
+      "sample_id": 24,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7251781625232225,
+      "v21": -0.0261011568793168,
+      "obj_value": 0.32509163399015195
+    },
+    {
+      "sample_id": 25,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6714135544658706,
+      "v21": -0.351791728829035,
+      "obj_value": 0.3477344741826407
+    },
+    {
+      "sample_id": 26,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7966963844635284,
+      "v21": -0.4521795865221558,
+      "obj_value": 0.3525725458854445
+    },
+    {
+      "sample_id": 27,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.38520255668735265,
+      "v21": -0.524146960852178,
+      "obj_value": 0.16338235937485976
+    },
+    {
+      "sample_id": 28,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.628292517074496,
+      "v21": 0.08048932502807382,
+      "obj_value": 0.2598052934232662
+    },
+    {
+      "sample_id": 29,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7995270922783891,
+      "v21": 0.21288849850430158,
+      "obj_value": 0.39822463716925427
+    },
+    {
+      "sample_id": 30,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2409752745855216,
+      "v21": -0.3495183347203717,
+      "obj_value": 0.42242086875953894
+    },
+    {
+      "sample_id": 31,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.46358569648385106,
+      "v21": -0.6479967128909797,
+      "obj_value": 0.3119104414274814
+    },
+    {
+      "sample_id": 32,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.13250491153623245,
+      "v21": -0.3287080190181975,
+      "obj_value": 0.4905310761554038
+    },
+    {
+      "sample_id": 33,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.24441215877026456,
+      "v21": 0.07986665570576112,
+      "obj_value": 0.14139647081362985
+    },
+    {
+      "sample_id": 34,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.27360921398484805,
+      "v21": 0.1467245545652862,
+      "obj_value": 0.18797292705587101
+    },
+    {
+      "sample_id": 35,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2010836281536017,
+      "v21": 0.4165619219538108,
+      "obj_value": 0.42659292852958997
+    },
+    {
+      "sample_id": 36,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.16895237147723507,
+      "v21": -0.27402383945860853,
+      "obj_value": 0.49339575466916324
+    },
+    {
+      "sample_id": 37,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.36056925716604754,
+      "v21": -0.2169904695151137,
+      "obj_value": 0.0949493209901045
+    },
+    {
+      "sample_id": 38,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.1334608034339202,
+      "v21": 0.3602831541536171,
+      "obj_value": 0.39656602229703547
+    },
+    {
+      "sample_id": 39,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.394220658322508,
+      "v21": 0.10399654172817796,
+      "obj_value": 0.2939821937987921
+    },
+    {
+      "sample_id": 40,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2024167238235981,
+      "v21": 1.3904588211932634e-06,
+      "obj_value": 0.07316087259314512
+    },
+    {
+      "sample_id": 41,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.08232061286321013,
+      "v21": -0.1667436042423025,
+      "obj_value": 0.27921645297653386
+    },
+    {
+      "sample_id": 42,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5775556263998632,
+      "v21": -0.11421523256930077,
+      "obj_value": 0.3560895292768801
+    },
+    {
+      "sample_id": 43,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.27275864078852663,
+      "v21": 0.1868908049946736,
+      "obj_value": 0.35917639495766956
+    },
+    {
+      "sample_id": 44,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4775128223966525,
+      "v21": 0.22278979147367228,
+      "obj_value": 0.012882702514041621
+    },
+    {
+      "sample_id": 45,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.19121360554431754,
+      "v21": -0.48300253485813954,
+      "obj_value": 0.37892390108106627
+    },
+    {
+      "sample_id": 46,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6973300294806727,
+      "v21": 0.199082907418483,
+      "obj_value": 0.49104911888658404
+    },
+    {
+      "sample_id": 47,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.42040668134968207,
+      "v21": -0.4070897292299386,
+      "obj_value": 0.1122130756418078
+    },
+    {
+      "sample_id": 48,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4607330248560906,
+      "v21": -0.7044605508565802,
+      "obj_value": 0.2603646523217807
+    },
+    {
+      "sample_id": 49,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.052975878167501045,
+      "v21": 0.03068008525131327,
+      "obj_value": 0.07995012491458978
+    },
+    {
+      "sample_id": 50,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6310854194135096,
+      "v21": -0.4340377240617185,
+      "obj_value": 0.09640162140905946
+    },
+    {
+      "sample_id": 51,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.587668832150326,
+      "v21": 0.25084907417698665,
+      "obj_value": 0.3126062686545153
+    },
+    {
+      "sample_id": 52,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.07868383334800821,
+      "v21": -0.7710001515632094,
+      "obj_value": 0.18628346197877946
+    },
+    {
+      "sample_id": 53,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.46097815080727206,
+      "v21": -0.5567968392670513,
+      "obj_value": 0.34362391528490366
+    },
+    {
+      "sample_id": 54,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.25138610166949626,
+      "v21": -0.5658614123097281,
+      "obj_value": 0.2665394598631832
+    },
+    {
+      "sample_id": 55,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.39268462356241507,
+      "v21": 0.014964590094639352,
+      "obj_value": 0.4670542962439774
+    },
+    {
+      "sample_id": 56,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.078526014883471,
+      "v21": -0.17311074758972922,
+      "obj_value": 0.2102179386802185
+    },
+    {
+      "sample_id": 57,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3431145668324508,
+      "v21": -0.09854394407057043,
+      "obj_value": 0.2565325843109897
+    },
+    {
+      "sample_id": 58,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6358980288517029,
+      "v21": 0.13529062855289742,
+      "obj_value": 0.15923959992257575
+    },
+    {
+      "sample_id": 59,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.29284808243150706,
+      "v21": 0.2612795367086873,
+      "obj_value": 0.22969887910514872
+    },
+    {
+      "sample_id": 60,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2512640492797994,
+      "v21": -0.039558180223803974,
+      "obj_value": 0.3056958045979035
+    },
+    {
+      "sample_id": 61,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3490126573124426,
+      "v21": -0.5869277372637794,
+      "obj_value": 0.37084659450733687
+    },
+    {
+      "sample_id": 62,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2864943305591441,
+      "v21": -0.2447945705675174,
+      "obj_value": 0.30441634280155583
+    },
+    {
+      "sample_id": 63,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.028034504429897744,
+      "v21": 0.3930767734807925,
+      "obj_value": 0.07803905616109023
+    },
+    {
+      "sample_id": 64,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.06477436656154056,
+      "v21": -0.2724318795166254,
+      "obj_value": 0.4858385751125056
+    },
+    {
+      "sample_id": 65,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6000391905190093,
+      "v21": -0.20387856006798255,
+      "obj_value": 0.35881573286553453
+    },
+    {
+      "sample_id": 66,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.29594276550691356,
+      "v21": 0.4434725242990114,
+      "obj_value": 0.15087817029548928
+    },
+    {
+      "sample_id": 67,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4456466062589476,
+      "v21": -0.3927894960297645,
+      "obj_value": 0.33862578168696156
+    },
+    {
+      "sample_id": 68,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.30030214783387715,
+      "v21": 0.49607303620332743,
+      "obj_value": 0.4273769305581673
+    },
+    {
+      "sample_id": 69,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5990806661523647,
+      "v21": 0.20827582536691613,
+      "obj_value": 0.2497667414332933
+    },
+    {
+      "sample_id": 70,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.04443527218282861,
+      "v21": -0.3785591095076784,
+      "obj_value": 0.11669611295453462
+    },
+    {
+      "sample_id": 71,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.35140608558995523,
+      "v21": -0.519983350999514,
+      "obj_value": 0.19794834138739945
+    },
+    {
+      "sample_id": 72,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2771851804039518,
+      "v21": -0.15094761284180436,
+      "obj_value": 0.14884139362180743
+    },
+    {
+      "sample_id": 73,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.04105429034002617,
+      "v21": 0.22729405811890402,
+      "obj_value": 0.4226287686238709
+    },
+    {
+      "sample_id": 74,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6991128001646556,
+      "v21": -0.03203769273359103,
+      "obj_value": 0.07498763632247464
+    },
+    {
+      "sample_id": 75,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.17061918584923474,
+      "v21": 0.3452948414510364,
+      "obj_value": 0.40874454446287706
+    },
+    {
+      "sample_id": 76,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4415672380959943,
+      "v21": 0.394773763196846,
+      "obj_value": 0.434742307662128
+    },
+    {
+      "sample_id": 77,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6314977478545089,
+      "v21": -0.6094866400660562,
+      "obj_value": 0.4594853844115894
+    },
+    {
+      "sample_id": 78,
+      "success": false,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.31117736376796423,
+      "v21": -0.17131811698752897,
+      "obj_value": 0.2128123870235642
+    },
+    {
+      "sample_id": 79,
+      "success": true,
+      "seed": "circle",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7134586328142329,
+      "v21": -0.06978586294008904,
+      "obj_value": 0.3061114590816414
+    },
+    {
+      "sample_id": 80,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.40533690529575894,
+      "v21": -0.03798298319743365,
+      "obj_value": 0.4476493114297381
+    },
+    {
+      "sample_id": 81,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.65272525609484,
+      "v21": -0.3489664193568455,
+      "obj_value": 0.067770668692285
+    },
+    {
+      "sample_id": 82,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.007256923435601359,
+      "v21": -0.3599792592768312,
+      "obj_value": 0.031986779655442305
+    },
+    {
+      "sample_id": 83,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7902278240527799,
+      "v21": 0.3559567573884661,
+      "obj_value": 0.09243999822706252
+    },
+    {
+      "sample_id": 84,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.41144781988627027,
+      "v21": -0.377410580592482,
+      "obj_value": 0.16089942790142348
+    },
+    {
+      "sample_id": 85,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.25684904033694644,
+      "v21": 0.10471975308173953,
+      "obj_value": 0.024226807523596128
+    },
+    {
+      "sample_id": 86,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7816723766243402,
+      "v21": 0.46574587109832444,
+      "obj_value": 0.44792586204308044
+    },
+    {
+      "sample_id": 87,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.12516975999141322,
+      "v21": -0.24505846595903025,
+      "obj_value": 0.4358673152350945
+    },
+    {
+      "sample_id": 88,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.47980835857859266,
+      "v21": -0.06528814645121361,
+      "obj_value": 0.336749595195713
+    },
+    {
+      "sample_id": 89,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3242592345582629,
+      "v21": 0.36025681672226884,
+      "obj_value": 0.43030306161409954
+    },
+    {
+      "sample_id": 90,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5123401296110895,
+      "v21": 0.237807358153876,
+      "obj_value": 0.20320622857164755
+    },
+    {
+      "sample_id": 91,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.48181553688810874,
+      "v21": -0.44985201145613013,
+      "obj_value": 0.29800537672411936
+    },
+    {
+      "sample_id": 92,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.389517666306352,
+      "v21": -0.4160171956679177,
+      "obj_value": 0.20305979950795836
+    },
+    {
+      "sample_id": 93,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.11183221869823112,
+      "v21": -0.04862427621543297,
+      "obj_value": 0.37580201492115145
+    },
+    {
+      "sample_id": 94,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.0653701690902232,
+      "v21": -0.3140229594308463,
+      "obj_value": 0.43695092381511763
+    },
+    {
+      "sample_id": 95,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.12903661233505248,
+      "v21": 0.17185085129253308,
+      "obj_value": 0.37673027558946165
+    },
+    {
+      "sample_id": 96,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.10267585545233127,
+      "v21": 0.07100617500909778,
+      "obj_value": 0.17028183801692431
+    },
+    {
+      "sample_id": 97,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5197923262838433,
+      "v21": -0.3342745249900354,
+      "obj_value": 0.4850767678025992
+    },
+    {
+      "sample_id": 98,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.571700296102388,
+      "v21": -0.702704845939177,
+      "obj_value": 0.448061805922768
+    },
+    {
+      "sample_id": 99,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7634337854853407,
+      "v21": 0.27788049823836514,
+      "obj_value": 0.06286229079482447
+    },
+    {
+      "sample_id": 100,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5001252470696274,
+      "v21": -0.004086971524147609,
+      "obj_value": 0.025896130404286788
+    },
+    {
+      "sample_id": 101,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.03037193782636649,
+      "v21": 0.21049864219925896,
+      "obj_value": 0.07782685107044231
+    },
+    {
+      "sample_id": 102,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7574727282286602,
+      "v21": -0.7947401462879097,
+      "obj_value": 0.476826350644253
+    },
+    {
+      "sample_id": 103,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.38499441496879244,
+      "v21": 0.18343600991007236,
+      "obj_value": 0.07071499812833294
+    },
+    {
+      "sample_id": 104,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3792513651341855,
+      "v21": 0.4345339865253941,
+      "obj_value": 0.03406610995492253
+    },
+    {
+      "sample_id": 105,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.15747418515430223,
+      "v21": 0.1341016226879871,
+      "obj_value": 0.1554530448188838
+    },
+    {
+      "sample_id": 106,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3436791389315239,
+      "v21": 0.1112697737974685,
+      "obj_value": 0.48522113835575725
+    },
+    {
+      "sample_id": 107,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.06039990759681346,
+      "v21": 0.2007983442536363,
+      "obj_value": 0.32495038207098786
+    },
+    {
+      "sample_id": 108,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.01666295704649534,
+      "v21": 0.26735345065239713,
+      "obj_value": 0.39192994881381926
+    },
+    {
+      "sample_id": 109,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.016781901281505585,
+      "v21": 0.3515117089094182,
+      "obj_value": 0.4471936567924185
+    },
+    {
+      "sample_id": 110,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.28314777707930905,
+      "v21": 0.41142486079099294,
+      "obj_value": 0.04064102230612062
+    },
+    {
+      "sample_id": 111,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.40194435713848264,
+      "v21": -0.3271036085793265,
+      "obj_value": 0.05330169030171622
+    },
+    {
+      "sample_id": 112,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.45846557662840426,
+      "v21": -0.27294813745380864,
+      "obj_value": 0.36452456014527757
+    },
+    {
+      "sample_id": 113,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6751803875430664,
+      "v21": -0.1594944483153059,
+      "obj_value": 0.25101936087106574
+    },
+    {
+      "sample_id": 114,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.06640926141561687,
+      "v21": 0.07017207499894396,
+      "obj_value": 0.4080570414954314
+    },
+    {
+      "sample_id": 115,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.590455191064023,
+      "v21": 0.17723226947895276,
+      "obj_value": 0.05033594099933181
+    },
+    {
+      "sample_id": 116,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.21963851268043033,
+      "v21": 0.4036088215890281,
+      "obj_value": 0.3234006906467909
+    },
+    {
+      "sample_id": 117,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4290548907985894,
+      "v21": -0.3726762761184114,
+      "obj_value": 0.4295831678387008
+    },
+    {
+      "sample_id": 118,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2178988546820686,
+      "v21": 0.14131406001203028,
+      "obj_value": 0.15315782888041912
+    },
+    {
+      "sample_id": 119,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4348977979160783,
+      "v21": -0.14792904747382274,
+      "obj_value": 0.3238781136045212
+    },
+    {
+      "sample_id": 120,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.09933667324100959,
+      "v21": 0.12582971240575602,
+      "obj_value": 0.2176533930040178
+    },
+    {
+      "sample_id": 121,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6370846900002813,
+      "v21": -0.6142168946826154,
+      "obj_value": 0.3894334158842124
+    },
+    {
+      "sample_id": 122,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4597585555099414,
+      "v21": -0.29790475112192305,
+      "obj_value": 0.051884688368112164
+    },
+    {
+      "sample_id": 123,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7848085223777759,
+      "v21": -0.048925004223346336,
+      "obj_value": 0.49838334737285617
+    },
+    {
+      "sample_id": 124,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.07929193473180329,
+      "v21": -0.012307649168754264,
+      "obj_value": 0.3114643373805871
+    },
+    {
+      "sample_id": 125,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2060962713202643,
+      "v21": 0.15680068318390794,
+      "obj_value": 0.16965107777098587
+    },
+    {
+      "sample_id": 126,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3001299948072689,
+      "v21": 0.005233002791283137,
+      "obj_value": 0.07985509860036728
+    },
+    {
+      "sample_id": 127,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3363222031883357,
+      "v21": -0.04568866943582106,
+      "obj_value": 0.28603614826773655
+    },
+    {
+      "sample_id": 128,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.14224158198834957,
+      "v21": 0.2972699572280868,
+      "obj_value": 0.22687242466218188
+    },
+    {
+      "sample_id": 129,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.24793888627551786,
+      "v21": 0.39013290268145506,
+      "obj_value": 0.172106520736798
+    },
+    {
+      "sample_id": 130,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6894863304422836,
+      "v21": 0.40435731116849016,
+      "obj_value": 0.3263097983175481
+    },
+    {
+      "sample_id": 131,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5914731134007383,
+      "v21": -0.20307477914079697,
+      "obj_value": 0.3592151783548946
+    },
+    {
+      "sample_id": 132,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.160470406782801,
+      "v21": 0.29738302984087683,
+      "obj_value": 0.2488686349829041
+    },
+    {
+      "sample_id": 133,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4445825004204214,
+      "v21": -0.0882221472468353,
+      "obj_value": 0.23491638839072754
+    },
+    {
+      "sample_id": 134,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5269538952557888,
+      "v21": -0.22199819368049156,
+      "obj_value": 0.051103333757225915
+    },
+    {
+      "sample_id": 135,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.10420819482699317,
+      "v21": 0.3017356013530934,
+      "obj_value": 0.40289926736400966
+    },
+    {
+      "sample_id": 136,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6935101274330189,
+      "v21": -0.7299947563657072,
+      "obj_value": 0.1622209039881711
+    },
+    {
+      "sample_id": 137,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.0044498417887366415,
+      "v21": 0.36917142564103433,
+      "obj_value": 0.39103461921242927
+    },
+    {
+      "sample_id": 138,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.10413787549053466,
+      "v21": -0.3634950961357337,
+      "obj_value": 0.4530548301815311
+    },
+    {
+      "sample_id": 139,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2594531040965318,
+      "v21": 0.451571339758432,
+      "obj_value": 0.3491422933500768
+    },
+    {
+      "sample_id": 140,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.10532441959061167,
+      "v21": -0.5521520576331101,
+      "obj_value": 0.04775638638217074
+    },
+    {
+      "sample_id": 141,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.49185935516775114,
+      "v21": -0.39741783239573053,
+      "obj_value": 0.19384695671617486
+    },
+    {
+      "sample_id": 142,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.29718752189845876,
+      "v21": 0.4391147425571933,
+      "obj_value": 0.4679400063612301
+    },
+    {
+      "sample_id": 143,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3374800180834442,
+      "v21": 0.3018408321120636,
+      "obj_value": 0.42630515367417415
+    },
+    {
+      "sample_id": 144,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1543594498546419,
+      "v21": -0.2344985232359873,
+      "obj_value": 0.32443515408758083
+    },
+    {
+      "sample_id": 145,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7893277168420695,
+      "v21": 0.16885876067289118,
+      "obj_value": 0.05421128230396318
+    },
+    {
+      "sample_id": 146,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.0744958293419331,
+      "v21": 0.39365133273249064,
+      "obj_value": 0.3327138713713985
+    },
+    {
+      "sample_id": 147,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.14736553726445278,
+      "v21": -0.26713252097341866,
+      "obj_value": 0.04298431507311253
+    },
+    {
+      "sample_id": 148,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5486894772579728,
+      "v21": 0.4768590253646534,
+      "obj_value": 0.29411594600631125
+    },
+    {
+      "sample_id": 149,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5388249066203072,
+      "v21": -0.7047682402987138,
+      "obj_value": 0.26507084869887815
+    },
+    {
+      "sample_id": 150,
+      "success": false,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.31342114473199634,
+      "v21": -0.3489841297328767,
+      "obj_value": 0.24642473699361023
+    },
+    {
+      "sample_id": 151,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6342414121265818,
+      "v21": -0.29745308777766366,
+      "obj_value": 0.4769347958891032
+    },
+    {
+      "sample_id": 152,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.18050947671382434,
+      "v21": 0.4292213878283684,
+      "obj_value": 0.23410125647220129
+    },
+    {
+      "sample_id": 153,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.16639600447267644,
+      "v21": -0.17084290166375105,
+      "obj_value": 0.10121193195960591
+    },
+    {
+      "sample_id": 154,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.12647914093070278,
+      "v21": -0.6210874727729251,
+      "obj_value": 0.4773363023843719
+    },
+    {
+      "sample_id": 155,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.10355131204196233,
+      "v21": 0.2641336973631261,
+      "obj_value": 0.4993950985309863
+    },
+    {
+      "sample_id": 156,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3468377838242848,
+      "v21": -0.2673804969729109,
+      "obj_value": 0.39093808754334913
+    },
+    {
+      "sample_id": 157,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.44228146134899604,
+      "v21": 0.1741395063150737,
+      "obj_value": 0.07418028025739555
+    },
+    {
+      "sample_id": 158,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6769315106559485,
+      "v21": 0.06329768151869497,
+      "obj_value": 0.45114848357656334
+    },
+    {
+      "sample_id": 159,
+      "success": true,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.05982849676337465,
+      "v21": 0.3102371782678106,
+      "obj_value": 0.37268744120222147
+    },
+    {
+      "sample_id": 160,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7182097134972947,
+      "v21": -0.20546942881648778,
+      "obj_value": 0.012393149691075786
+    },
+    {
+      "sample_id": 161,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5665726306417678,
+      "v21": 0.4038140292938992,
+      "obj_value": 0.198831439797104
+    },
+    {
+      "sample_id": 162,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.45777314513680617,
+      "v21": 0.4189408010191795,
+      "obj_value": 0.2520328022699415
+    },
+    {
+      "sample_id": 163,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2518002595354809,
+      "v21": -0.0003790670153581699,
+      "obj_value": 0.351073653591395
+    },
+    {
+      "sample_id": 164,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5901031991801045,
+      "v21": 0.36733874852794624,
+      "obj_value": 0.3814876861003017
+    },
+    {
+      "sample_id": 165,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.14761959507907785,
+      "v21": -0.7065304218010222,
+      "obj_value": 0.4678966552856442
+    },
+    {
+      "sample_id": 166,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4941177238121879,
+      "v21": -0.7805695737585696,
+      "obj_value": 0.27343694005612357
+    },
+    {
+      "sample_id": 167,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3661489255973249,
+      "v21": -0.22901780451990972,
+      "obj_value": 0.26481902156474313
+    },
+    {
+      "sample_id": 168,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.1829140740272569,
+      "v21": -0.11112758403938339,
+      "obj_value": 0.3571733558534961
+    },
+    {
+      "sample_id": 169,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.13497204150413233,
+      "v21": -0.7362822740359135,
+      "obj_value": 0.3774594676346269
+    },
+    {
+      "sample_id": 170,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3274164006162601,
+      "v21": -0.23048455021942005,
+      "obj_value": 0.03462217317202279
+    },
+    {
+      "sample_id": 171,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6110439830774118,
+      "v21": -0.315211569289852,
+      "obj_value": 0.4348768067096648
+    },
+    {
+      "sample_id": 172,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3481347130699204,
+      "v21": 0.018660298711598466,
+      "obj_value": 0.11727719031693025
+    },
+    {
+      "sample_id": 173,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3090095680828102,
+      "v21": -0.684771489008071,
+      "obj_value": 0.3086996907056516
+    },
+    {
+      "sample_id": 174,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3892041353782056,
+      "v21": -0.32470013700714434,
+      "obj_value": 0.23699108467077765
+    },
+    {
+      "sample_id": 175,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3242889430559217,
+      "v21": 0.2275459440689811,
+      "obj_value": 0.4885509656358416
+    },
+    {
+      "sample_id": 176,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.24912593297726882,
+      "v21": 0.3484660809121889,
+      "obj_value": 0.013055812247428824
+    },
+    {
+      "sample_id": 177,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6125712183941194,
+      "v21": 0.18653496166393047,
+      "obj_value": 0.04545148718313997
+    },
+    {
+      "sample_id": 178,
+      "success": false,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.08531195451966389,
+      "v21": 0.39022166082258747,
+      "obj_value": 0.4747027575359595
+    },
+    {
+      "sample_id": 179,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4669422989719614,
+      "v21": -0.09312972082234516,
+      "obj_value": 0.3418529701389709
+    },
+    {
+      "sample_id": 180,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7393632926272921,
+      "v21": 0.4297041120913061,
+      "obj_value": 0.019298444732061576
+    },
+    {
+      "sample_id": 181,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3547405952270378,
+      "v21": 0.3997482094252385,
+      "obj_value": 0.19744332066020218
+    },
+    {
+      "sample_id": 182,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.27184668842112014,
+      "v21": -0.6883248956519972,
+      "obj_value": 0.03721567613987852
+    },
+    {
+      "sample_id": 183,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.12023037367207368,
+      "v21": -0.2483004340790138,
+      "obj_value": 0.36071055603062996
+    },
+    {
+      "sample_id": 184,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3194732388490339,
+      "v21": 0.45463521760876957,
+      "obj_value": 0.10960490916541547
+    },
+    {
+      "sample_id": 185,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.44245625947558537,
+      "v21": -0.36684326334723383,
+      "obj_value": 0.252834580867631
+    },
+    {
+      "sample_id": 186,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.33987886826394187,
+      "v21": -0.0020367890868110416,
+      "obj_value": 0.3681882892991396
+    },
+    {
+      "sample_id": 187,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.10493385351160889,
+      "v21": 0.16292492483228938,
+      "obj_value": 0.35686852501804545
+    },
+    {
+      "sample_id": 188,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5242775516553183,
+      "v21": 0.18354993995725566,
+      "obj_value": 0.0292543683484457
+    },
+    {
+      "sample_id": 189,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.706273426337074,
+      "v21": 0.15942318476642303,
+      "obj_value": 0.32795925396629394
+    },
+    {
+      "sample_id": 190,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.44114783870946117,
+      "v21": 0.44360580438013986,
+      "obj_value": 0.3838255443333053
+    },
+    {
+      "sample_id": 191,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.523152800568331,
+      "v21": -0.0050439813552265456,
+      "obj_value": 0.28225057266704007
+    },
+    {
+      "sample_id": 192,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2864771839384569,
+      "v21": -0.14402509913460104,
+      "obj_value": 0.1100974465364387
+    },
+    {
+      "sample_id": 193,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4820411332281326,
+      "v21": -0.3828411443676038,
+      "obj_value": 0.3301958142661191
+    },
+    {
+      "sample_id": 194,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3153224988229704,
+      "v21": -0.19723940059643796,
+      "obj_value": 0.13481618484789842
+    },
+    {
+      "sample_id": 195,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3988758387999998,
+      "v21": -0.7248010721656507,
+      "obj_value": 0.03763273161650856
+    },
+    {
+      "sample_id": 196,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.08114854652187742,
+      "v21": -0.14877984652494247,
+      "obj_value": 0.16323733060748963
+    },
+    {
+      "sample_id": 197,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7470873739113028,
+      "v21": -0.6405168676178461,
+      "obj_value": 0.18431447981503962
+    },
+    {
+      "sample_id": 198,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4547079905782235,
+      "v21": -0.3465247121786618,
+      "obj_value": 0.029039192605701855
+    },
+    {
+      "sample_id": 199,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3814511778324974,
+      "v21": 0.11027592811775244,
+      "obj_value": 0.2871292319472987
+    },
+    {
+      "sample_id": 200,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7959894975623059,
+      "v21": 0.23752797927756286,
+      "obj_value": 0.18747135888497102
+    },
+    {
+      "sample_id": 201,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5235229751635224,
+      "v21": 0.4328532133624339,
+      "obj_value": 0.2471240759646223
+    },
+    {
+      "sample_id": 202,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.48619689836526714,
+      "v21": -0.5217510156943694,
+      "obj_value": 0.0759092337240484
+    },
+    {
+      "sample_id": 203,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3007247935924182,
+      "v21": 0.28153295252917787,
+      "obj_value": 0.20386946288925184
+    },
+    {
+      "sample_id": 204,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3947157072395745,
+      "v21": 0.360336914789825,
+      "obj_value": 0.0622046063331626
+    },
+    {
+      "sample_id": 205,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.14292540723588043,
+      "v21": 0.4875827782724824,
+      "obj_value": 0.37347168234231104
+    },
+    {
+      "sample_id": 206,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.09759958501898713,
+      "v21": -0.7567094689542881,
+      "obj_value": 0.3427108792361127
+    },
+    {
+      "sample_id": 207,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.12049628635698084,
+      "v21": 0.02376908370851505,
+      "obj_value": 0.29412095002689087
+    },
+    {
+      "sample_id": 208,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.664567389540359,
+      "v21": -0.09012689666369222,
+      "obj_value": 0.10849163118414255
+    },
+    {
+      "sample_id": 209,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4439149920793444,
+      "v21": -0.17607987072049214,
+      "obj_value": 0.11284831798762879
+    },
+    {
+      "sample_id": 210,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.17756683808400187,
+      "v21": -0.5884476075445533,
+      "obj_value": 0.45975437166276023
+    },
+    {
+      "sample_id": 211,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.24529027274052073,
+      "v21": 0.08121640663150709,
+      "obj_value": 0.3082792866368216
+    },
+    {
+      "sample_id": 212,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5917233490250604,
+      "v21": -0.5160652461492481,
+      "obj_value": 0.25400977072874786
+    },
+    {
+      "sample_id": 213,
+      "success": false,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.23228594202508734,
+      "v21": -0.210029866947263,
+      "obj_value": 0.2569500783180048
+    },
+    {
+      "sample_id": 214,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.598224741967863,
+      "v21": -0.4156160897419507,
+      "obj_value": 0.4318442088413401
+    },
+    {
+      "sample_id": 215,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.11517433409936984,
+      "v21": -0.6374755803017402,
+      "obj_value": 0.08949798089325764
+    },
+    {
+      "sample_id": 216,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4477526608883384,
+      "v21": 0.2587995189547756,
+      "obj_value": 0.23441553867845583
+    },
+    {
+      "sample_id": 217,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.05625939102427424,
+      "v21": -0.16183724698667312,
+      "obj_value": 0.2302714614846715
+    },
+    {
+      "sample_id": 218,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.09622195419448187,
+      "v21": -0.25053736865486875,
+      "obj_value": 0.31070307103957345
+    },
+    {
+      "sample_id": 219,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4932195714007115,
+      "v21": -0.197820943542228,
+      "obj_value": 0.04460280501674972
+    },
+    {
+      "sample_id": 220,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.28600375132331735,
+      "v21": -0.7525756428541763,
+      "obj_value": 0.16959530204235068
+    },
+    {
+      "sample_id": 221,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.40504398962860155,
+      "v21": 0.0035313301073292003,
+      "obj_value": 0.3446089826575324
+    },
+    {
+      "sample_id": 222,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.13048728228220596,
+      "v21": -0.07778548054850676,
+      "obj_value": 0.4549480833485272
+    },
+    {
+      "sample_id": 223,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4324964670929219,
+      "v21": -0.004216934384920545,
+      "obj_value": 0.28500179494400657
+    },
+    {
+      "sample_id": 224,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.12177352574638534,
+      "v21": -0.28892432040910787,
+      "obj_value": 0.4078683300374799
+    },
+    {
+      "sample_id": 225,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3324471142285174,
+      "v21": -0.5968951793806458,
+      "obj_value": 0.4471998556033323
+    },
+    {
+      "sample_id": 226,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.35764691185347025,
+      "v21": 0.2740000529078832,
+      "obj_value": 0.20759209171231743
+    },
+    {
+      "sample_id": 227,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.11454200576710682,
+      "v21": 0.24381520294794012,
+      "obj_value": 0.22316295112031423
+    },
+    {
+      "sample_id": 228,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7249828678552216,
+      "v21": 0.13929600334161307,
+      "obj_value": 0.2537776512663945
+    },
+    {
+      "sample_id": 229,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4157299146301168,
+      "v21": -0.5488652571652874,
+      "obj_value": 0.2925955483267882
+    },
+    {
+      "sample_id": 230,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3671271079818352,
+      "v21": -0.6686283193212263,
+      "obj_value": 0.17406453944444467
+    },
+    {
+      "sample_id": 231,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.08633667892426333,
+      "v21": 0.4236817176921497,
+      "obj_value": 0.4238793115217434
+    },
+    {
+      "sample_id": 232,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6339733964238562,
+      "v21": 0.13226359572533275,
+      "obj_value": 0.11567801846126527
+    },
+    {
+      "sample_id": 233,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.05695701989347901,
+      "v21": 0.3744674131252559,
+      "obj_value": 0.3382960208297103
+    },
+    {
+      "sample_id": 234,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5266103658767561,
+      "v21": -0.21803629859872264,
+      "obj_value": 0.20687839534449928
+    },
+    {
+      "sample_id": 235,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.46561054926340373,
+      "v21": -0.7188113766135312,
+      "obj_value": 0.46634777577938485
+    },
+    {
+      "sample_id": 236,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.02750658714729648,
+      "v21": -0.6612451058151061,
+      "obj_value": 0.03525836105312421
+    },
+    {
+      "sample_id": 237,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.20738989219242487,
+      "v21": -0.5558822807176991,
+      "obj_value": 0.24475516668022826
+    },
+    {
+      "sample_id": 238,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7205849636281858,
+      "v21": 0.23507867698240603,
+      "obj_value": 0.4555942799762766
+    },
+    {
+      "sample_id": 239,
+      "success": true,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.48667274734929505,
+      "v21": -0.292383499152575,
+      "obj_value": 0.20320594952191323
+    },
+    {
+      "sample_id": 240,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3824911904926131,
+      "v21": -0.18981655269782793,
+      "obj_value": 0.4470954920851072
+    },
+    {
+      "sample_id": 241,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.12075452918421847,
+      "v21": -0.64857404069205,
+      "obj_value": 0.24899929578005453
+    },
+    {
+      "sample_id": 242,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3089362039344307,
+      "v21": -0.3966227785685299,
+      "obj_value": 0.14052175041263829
+    },
+    {
+      "sample_id": 243,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3937873016785751,
+      "v21": 0.2807988992288386,
+      "obj_value": 0.47511017294621655
+    },
+    {
+      "sample_id": 244,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.733567655153273,
+      "v21": -0.5293647767662344,
+      "obj_value": 0.1843034537706951
+    },
+    {
+      "sample_id": 245,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4023870023719711,
+      "v21": -0.75337988033902,
+      "obj_value": 0.042084344309146586
+    },
+    {
+      "sample_id": 246,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.04873014654533181,
+      "v21": -0.6025669769314844,
+      "obj_value": 0.4206286219283828
+    },
+    {
+      "sample_id": 247,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.05476228491514268,
+      "v21": -0.3111052052066149,
+      "obj_value": 0.2554142019754561
+    },
+    {
+      "sample_id": 248,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.575800918546625,
+      "v21": -0.6193673312910876,
+      "obj_value": 0.2083674295598549
+    },
+    {
+      "sample_id": 249,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.33934504570055163,
+      "v21": 0.0716816621426305,
+      "obj_value": 0.287445059478028
+    },
+    {
+      "sample_id": 250,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6383937425364249,
+      "v21": -0.13724729594836949,
+      "obj_value": 0.23656406757287352
+    },
+    {
+      "sample_id": 251,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.19862816617027024,
+      "v21": -0.3655551362696398,
+      "obj_value": 0.46728147656584884
+    },
+    {
+      "sample_id": 252,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3277704167190278,
+      "v21": -0.2156372795697742,
+      "obj_value": 0.06483212735464586
+    },
+    {
+      "sample_id": 253,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7149970762617895,
+      "v21": 0.29601173724533236,
+      "obj_value": 0.04996423621757407
+    },
+    {
+      "sample_id": 254,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3201062461585706,
+      "v21": -0.4850416819413777,
+      "obj_value": 0.36984768208984276
+    },
+    {
+      "sample_id": 255,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7983539488170337,
+      "v21": 0.4985678041157384,
+      "obj_value": 0.46087441575667776
+    },
+    {
+      "sample_id": 256,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3183892140482534,
+      "v21": -0.6981993633317971,
+      "obj_value": 0.3243014951836609
+    },
+    {
+      "sample_id": 257,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.25036978286974987,
+      "v21": -0.6601696079773725,
+      "obj_value": 0.386890666264136
+    },
+    {
+      "sample_id": 258,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.04944330063818747,
+      "v21": -0.6490817803035626,
+      "obj_value": 0.19704810814830215
+    },
+    {
+      "sample_id": 259,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.600471667790089,
+      "v21": -0.6867591888156486,
+      "obj_value": 0.31239928148588025
+    },
+    {
+      "sample_id": 260,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3054520858473688,
+      "v21": 0.15519751076822397,
+      "obj_value": 0.012086206412625115
+    },
+    {
+      "sample_id": 261,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.27128608909927787,
+      "v21": -0.363457934567083,
+      "obj_value": 0.0999991786892976
+    },
+    {
+      "sample_id": 262,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.08277758792456491,
+      "v21": -0.14989337798571933,
+      "obj_value": 0.08032211768417785
+    },
+    {
+      "sample_id": 263,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.20909690046673468,
+      "v21": -0.041110337382245676,
+      "obj_value": 0.3745730009521042
+    },
+    {
+      "sample_id": 264,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5649229615617427,
+      "v21": 0.13843575607036362,
+      "obj_value": 0.12754008690781357
+    },
+    {
+      "sample_id": 265,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2608879960864876,
+      "v21": 0.058714462313263494,
+      "obj_value": 0.4291426541061395
+    },
+    {
+      "sample_id": 266,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7030749196857842,
+      "v21": 0.19079699778480674,
+      "obj_value": 0.10250962818293499
+    },
+    {
+      "sample_id": 267,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4887676292745459,
+      "v21": -0.6479508942969676,
+      "obj_value": 0.05340534794002515
+    },
+    {
+      "sample_id": 268,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2664318764485205,
+      "v21": -0.5917275807735621,
+      "obj_value": 0.019570647246483733
+    },
+    {
+      "sample_id": 269,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.484426967193327,
+      "v21": 0.3193124115643815,
+      "obj_value": 0.3234420967372689
+    },
+    {
+      "sample_id": 270,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.19780679923010014,
+      "v21": -0.72004291258133,
+      "obj_value": 0.15497044094563295
+    },
+    {
+      "sample_id": 271,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7290586212235026,
+      "v21": -0.08968290253223543,
+      "obj_value": 0.41984604425395133
+    },
+    {
+      "sample_id": 272,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.030095277401358644,
+      "v21": -0.4450271241571213,
+      "obj_value": 0.28471257386231347
+    },
+    {
+      "sample_id": 273,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.09694048468887273,
+      "v21": -0.20470785513117906,
+      "obj_value": 0.2029654016312985
+    },
+    {
+      "sample_id": 274,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.24712967245221806,
+      "v21": 0.13711092051809093,
+      "obj_value": 0.46163418501672654
+    },
+    {
+      "sample_id": 275,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.39902310623821347,
+      "v21": -0.5476577911271072,
+      "obj_value": 0.413737253883689
+    },
+    {
+      "sample_id": 276,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7064827179787607,
+      "v21": -0.7656112622754496,
+      "obj_value": 0.48480063433052956
+    },
+    {
+      "sample_id": 277,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.302841802119886,
+      "v21": 0.3887987772155206,
+      "obj_value": 0.02657564013204658
+    },
+    {
+      "sample_id": 278,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.35333703319076215,
+      "v21": 0.17362795017456145,
+      "obj_value": 0.11190653579023511
+    },
+    {
+      "sample_id": 279,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4450774860118548,
+      "v21": -0.062020142442496984,
+      "obj_value": 0.19194146670182227
+    },
+    {
+      "sample_id": 280,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.1294226255036116,
+      "v21": -0.39669287444764406,
+      "obj_value": 0.14156196216534908
+    },
+    {
+      "sample_id": 281,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.018690131426032153,
+      "v21": -0.5203909526683956,
+      "obj_value": 0.07499942327546724
+    },
+    {
+      "sample_id": 282,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5586896282388445,
+      "v21": -0.45436078551355186,
+      "obj_value": 0.04035629805530452
+    },
+    {
+      "sample_id": 283,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.21858334360792664,
+      "v21": -0.6090507218662615,
+      "obj_value": 0.03130714604575618
+    },
+    {
+      "sample_id": 284,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.21495577027031754,
+      "v21": 0.0245415431595033,
+      "obj_value": 0.2349925404409518
+    },
+    {
+      "sample_id": 285,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.24121054200254766,
+      "v21": 0.45690988486945594,
+      "obj_value": 0.259803362144469
+    },
+    {
+      "sample_id": 286,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.14742341175479978,
+      "v21": -0.635099951381781,
+      "obj_value": 0.3887658639655521
+    },
+    {
+      "sample_id": 287,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6999018618730979,
+      "v21": 0.2553736366263777,
+      "obj_value": 0.47226028145213694
+    },
+    {
+      "sample_id": 288,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.39127503119204654,
+      "v21": 0.3864101905011148,
+      "obj_value": 0.3722938436545955
+    },
+    {
+      "sample_id": 289,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.09689541132319113,
+      "v21": 0.28990771548268124,
+      "obj_value": 0.037885054161575435
+    },
+    {
+      "sample_id": 290,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1318435885817585,
+      "v21": 0.08176948104851745,
+      "obj_value": 0.10231168783877968
+    },
+    {
+      "sample_id": 291,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.0889875331338611,
+      "v21": -0.0026587555216806003,
+      "obj_value": 0.11935682919968107
+    },
+    {
+      "sample_id": 292,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.009323413879778641,
+      "v21": -0.41760547676070875,
+      "obj_value": 0.1496103762948588
+    },
+    {
+      "sample_id": 293,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.13898970656808596,
+      "v21": -0.5810466764934082,
+      "obj_value": 0.4704230307448459
+    },
+    {
+      "sample_id": 294,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.24004632402450088,
+      "v21": -0.04709541125100092,
+      "obj_value": 0.44703067547915704
+    },
+    {
+      "sample_id": 295,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4836247777584209,
+      "v21": -0.45203122225138065,
+      "obj_value": 0.41437514629281114
+    },
+    {
+      "sample_id": 296,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.438041009533132,
+      "v21": -0.30700399194963696,
+      "obj_value": 0.17031605235026626
+    },
+    {
+      "sample_id": 297,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2629478076652373,
+      "v21": -0.09126422246869648,
+      "obj_value": 0.45177616626047934
+    },
+    {
+      "sample_id": 298,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.1535811971795632,
+      "v21": -0.3120451182929149,
+      "obj_value": 0.30477559200740456
+    },
+    {
+      "sample_id": 299,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.04537612744445596,
+      "v21": 0.12719209048554947,
+      "obj_value": 0.17508344090059993
+    },
+    {
+      "sample_id": 300,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6207449910181588,
+      "v21": 0.13479580791177315,
+      "obj_value": 0.230297413818281
+    },
+    {
+      "sample_id": 301,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6230523668925112,
+      "v21": 0.16072657729769213,
+      "obj_value": 0.4014558652630366
+    },
+    {
+      "sample_id": 302,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5206318655281885,
+      "v21": -0.6205100659477558,
+      "obj_value": 0.37652064398588947
+    },
+    {
+      "sample_id": 303,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6620111333469693,
+      "v21": -0.5779311663062529,
+      "obj_value": 0.04560330988590456
+    },
+    {
+      "sample_id": 304,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2381416962420274,
+      "v21": -0.1108124288110498,
+      "obj_value": 0.07941130217993378
+    },
+    {
+      "sample_id": 305,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.005059360961130688,
+      "v21": -0.21520765233961248,
+      "obj_value": 0.022349009733283326
+    },
+    {
+      "sample_id": 306,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.08817907145781279,
+      "v21": 0.09756749022249545,
+      "obj_value": 0.4380839950086865
+    },
+    {
+      "sample_id": 307,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5480185374640645,
+      "v21": -0.05784699809984062,
+      "obj_value": 0.1408740789077478
+    },
+    {
+      "sample_id": 308,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.18129475169193554,
+      "v21": -0.6395977690278406,
+      "obj_value": 0.12870786610088683
+    },
+    {
+      "sample_id": 309,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.09155611005737785,
+      "v21": 0.42855118898377476,
+      "obj_value": 0.20997878668925485
+    },
+    {
+      "sample_id": 310,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.13627682399716756,
+      "v21": -0.12030485458863138,
+      "obj_value": 0.49476838384388444
+    },
+    {
+      "sample_id": 311,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5629927368943581,
+      "v21": -0.6485009615809232,
+      "obj_value": 0.4804496160427539
+    },
+    {
+      "sample_id": 312,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.052977464745017744,
+      "v21": -0.2854851365582034,
+      "obj_value": 0.43927823110306025
+    },
+    {
+      "sample_id": 313,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3200941075271907,
+      "v21": -0.43395791277332835,
+      "obj_value": 0.04595609881559276
+    },
+    {
+      "sample_id": 314,
+      "success": false,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.07400256009832362,
+      "v21": -0.22898326634174138,
+      "obj_value": 0.2267688213189169
+    },
+    {
+      "sample_id": 315,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4872034222395931,
+      "v21": -0.21138251143179476,
+      "obj_value": 0.3683224913581943
+    },
+    {
+      "sample_id": 316,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.242451334470279,
+      "v21": -0.40402376908464077,
+      "obj_value": 0.46132374629020345
+    },
+    {
+      "sample_id": 317,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2778292162392193,
+      "v21": -0.7877331519018217,
+      "obj_value": 0.3749701093017489
+    },
+    {
+      "sample_id": 318,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.19087584068764696,
+      "v21": -0.21587443703273423,
+      "obj_value": 0.18778245323980475
+    },
+    {
+      "sample_id": 319,
+      "success": true,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3171184926082138,
+      "v21": 0.3618259616065309,
+      "obj_value": 0.28605253519323154
+    },
+    {
+      "sample_id": 320,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.25089868310254126,
+      "v21": 0.23450115139200123,
+      "obj_value": 0.013733122093957852
+    },
+    {
+      "sample_id": 321,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2111171611164162,
+      "v21": -0.5785624997254342,
+      "obj_value": 0.16335760749454722
+    },
+    {
+      "sample_id": 322,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2229857544646715,
+      "v21": 0.13865946060297984,
+      "obj_value": 0.3673922894639127
+    },
+    {
+      "sample_id": 323,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6030579328747181,
+      "v21": -0.6041460906904268,
+      "obj_value": 0.3977591548219924
+    },
+    {
+      "sample_id": 324,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1111610809142708,
+      "v21": -0.6620015429252448,
+      "obj_value": 0.4155271572686005
+    },
+    {
+      "sample_id": 325,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.2564591375828439,
+      "v21": 0.14206723776667873,
+      "obj_value": 0.1392341604495245
+    },
+    {
+      "sample_id": 326,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4884616461006606,
+      "v21": 0.10476412080859765,
+      "obj_value": 0.11903965860036828
+    },
+    {
+      "sample_id": 327,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7328974035402904,
+      "v21": -0.744884970922783,
+      "obj_value": 0.24792695196901035
+    },
+    {
+      "sample_id": 328,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4194353788915115,
+      "v21": -0.6098996653611489,
+      "obj_value": 0.14508173023452695
+    },
+    {
+      "sample_id": 329,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4161705649285917,
+      "v21": 0.43066659176416744,
+      "obj_value": 0.16253352308090138
+    },
+    {
+      "sample_id": 330,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6549617801290144,
+      "v21": -0.3033735680991066,
+      "obj_value": 0.2863579738859588
+    },
+    {
+      "sample_id": 331,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.32698562111288776,
+      "v21": 0.21908353496066746,
+      "obj_value": 0.07727227952466112
+    },
+    {
+      "sample_id": 332,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6440093990220196,
+      "v21": -0.7819823162929078,
+      "obj_value": 0.4066121617341524
+    },
+    {
+      "sample_id": 333,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.539098366523532,
+      "v21": -0.12723031037865629,
+      "obj_value": 0.06701200853008304
+    },
+    {
+      "sample_id": 334,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6403906238007008,
+      "v21": -0.23255826189996065,
+      "obj_value": 0.03065767883250524
+    },
+    {
+      "sample_id": 335,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.327122790793945,
+      "v21": 0.17584990152851732,
+      "obj_value": 0.08091531804788037
+    },
+    {
+      "sample_id": 336,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.03180331750636489,
+      "v21": -0.5537710999488816,
+      "obj_value": 0.48586504135234915
+    },
+    {
+      "sample_id": 337,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.18902942402625067,
+      "v21": -0.23340727915680626,
+      "obj_value": 0.48335817430627803
+    },
+    {
+      "sample_id": 338,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.12375392655149386,
+      "v21": -0.19636020380898278,
+      "obj_value": 0.016214512980198246
+    },
+    {
+      "sample_id": 339,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.21253997040657546,
+      "v21": -0.548269833362969,
+      "obj_value": 0.30236454993120077
+    },
+    {
+      "sample_id": 340,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6240183321467676,
+      "v21": -0.5063275998060263,
+      "obj_value": 0.32379558476008
+    },
+    {
+      "sample_id": 341,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3889397021179332,
+      "v21": 0.23493442710268297,
+      "obj_value": 0.029255834523299037
+    },
+    {
+      "sample_id": 342,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.028518107308893814,
+      "v21": 0.2858081128073695,
+      "obj_value": 0.06706954086028497
+    },
+    {
+      "sample_id": 343,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.12573407308279472,
+      "v21": -0.26042431565184576,
+      "obj_value": 0.4062778751786203
+    },
+    {
+      "sample_id": 344,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.21663742803530472,
+      "v21": -0.48092599149921816,
+      "obj_value": 0.20490674006443746
+    },
+    {
+      "sample_id": 345,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7505993712905864,
+      "v21": -0.5364972947240294,
+      "obj_value": 0.19223310141723235
+    },
+    {
+      "sample_id": 346,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1593101549295899,
+      "v21": 0.13868741521473038,
+      "obj_value": 0.4840401680754069
+    },
+    {
+      "sample_id": 347,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.39339614464824163,
+      "v21": -0.35170439429308653,
+      "obj_value": 0.05320959697252991
+    },
+    {
+      "sample_id": 348,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3740837095935815,
+      "v21": 0.19486371855651052,
+      "obj_value": 0.4173488243282241
+    },
+    {
+      "sample_id": 349,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4420077888245788,
+      "v21": 0.12976995448043827,
+      "obj_value": 0.14642090254681234
+    },
+    {
+      "sample_id": 350,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7427753488292387,
+      "v21": -0.4086028312146035,
+      "obj_value": 0.26721244454202764
+    },
+    {
+      "sample_id": 351,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3046716908511419,
+      "v21": -0.730738646031963,
+      "obj_value": 0.3151593159140703
+    },
+    {
+      "sample_id": 352,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.28748901929469917,
+      "v21": 0.18859693584066328,
+      "obj_value": 0.23324597759289642
+    },
+    {
+      "sample_id": 353,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.010156920796737468,
+      "v21": 0.31199802199133253,
+      "obj_value": 0.2111193670347658
+    },
+    {
+      "sample_id": 354,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1211986448946416,
+      "v21": 0.3886070598876963,
+      "obj_value": 0.22120946626720905
+    },
+    {
+      "sample_id": 355,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.05862052457876488,
+      "v21": -0.3162096396158188,
+      "obj_value": 0.14810620850382938
+    },
+    {
+      "sample_id": 356,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4850450436776805,
+      "v21": 0.3487098571431819,
+      "obj_value": 0.40150495086356575
+    },
+    {
+      "sample_id": 357,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.18272097836377,
+      "v21": -0.6656733085261407,
+      "obj_value": 0.15087038509466394
+    },
+    {
+      "sample_id": 358,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.20424201749858073,
+      "v21": 0.12952742173257326,
+      "obj_value": 0.2357158701082936
+    },
+    {
+      "sample_id": 359,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2239769092909718,
+      "v21": 0.33573475046157064,
+      "obj_value": 0.13510237773093225
+    },
+    {
+      "sample_id": 360,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.16769946352425025,
+      "v21": 0.18875914694310147,
+      "obj_value": 0.40988100889378787
+    },
+    {
+      "sample_id": 361,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2654102131590499,
+      "v21": -0.1420365199978868,
+      "obj_value": 0.3253824248720905
+    },
+    {
+      "sample_id": 362,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.15078191654064566,
+      "v21": 0.19785306881252318,
+      "obj_value": 0.3188125090163251
+    },
+    {
+      "sample_id": 363,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.20486060542873286,
+      "v21": 0.08318099113245603,
+      "obj_value": 0.04138628533811543
+    },
+    {
+      "sample_id": 364,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.40980268737727577,
+      "v21": -0.4706270521710869,
+      "obj_value": 0.39913030181774733
+    },
+    {
+      "sample_id": 365,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4511230676968114,
+      "v21": -0.4607932390479172,
+      "obj_value": 0.21922303720531308
+    },
+    {
+      "sample_id": 366,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.17532502691511165,
+      "v21": 0.44582109430345085,
+      "obj_value": 0.30311169415847206
+    },
+    {
+      "sample_id": 367,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3182789066882315,
+      "v21": -0.2417713428940349,
+      "obj_value": 0.4690023563813356
+    },
+    {
+      "sample_id": 368,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.47854051226523353,
+      "v21": -0.4950448883998061,
+      "obj_value": 0.39734840918380604
+    },
+    {
+      "sample_id": 369,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6373191437528744,
+      "v21": -0.47817613384725044,
+      "obj_value": 0.19683387167983585
+    },
+    {
+      "sample_id": 370,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.09228482757694301,
+      "v21": -0.056517121641621815,
+      "obj_value": 0.34446489396137037
+    },
+    {
+      "sample_id": 371,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.43146805606535543,
+      "v21": 0.10614263272550528,
+      "obj_value": 0.4967110921631586
+    },
+    {
+      "sample_id": 372,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.441835561173612,
+      "v21": -0.5035574020909344,
+      "obj_value": 0.392699783016428
+    },
+    {
+      "sample_id": 373,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.23740254907116642,
+      "v21": -0.1942457918051993,
+      "obj_value": 0.45320242370827496
+    },
+    {
+      "sample_id": 374,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.36901335587758544,
+      "v21": -0.14125774397363244,
+      "obj_value": 0.13014521467333115
+    },
+    {
+      "sample_id": 375,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3088833654417147,
+      "v21": -0.33596958336713223,
+      "obj_value": 0.22203363554799216
+    },
+    {
+      "sample_id": 376,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.7082996711997753,
+      "v21": -0.011404883690818157,
+      "obj_value": 0.3194923336938921
+    },
+    {
+      "sample_id": 377,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2073812790472893,
+      "v21": -0.6881390533840368,
+      "obj_value": 0.33904851972224404
+    },
+    {
+      "sample_id": 378,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.1332191712207278,
+      "v21": 0.1391547766554947,
+      "obj_value": 0.023178303611932648
+    },
+    {
+      "sample_id": 379,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.09760903666135368,
+      "v21": -0.508265116380149,
+      "obj_value": 0.4573128188110648
+    },
+    {
+      "sample_id": 380,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4781678367523605,
+      "v21": -0.08417525388738778,
+      "obj_value": 0.09325391112315676
+    },
+    {
+      "sample_id": 381,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6769652922845528,
+      "v21": -0.05601913855400853,
+      "obj_value": 0.09508191636818708
+    },
+    {
+      "sample_id": 382,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.306458992731887,
+      "v21": -0.6318437327375044,
+      "obj_value": 0.4860561237044141
+    },
+    {
+      "sample_id": 383,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5031511016659826,
+      "v21": 0.007642851171039244,
+      "obj_value": 0.44772986985308155
+    },
+    {
+      "sample_id": 384,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4728200137224381,
+      "v21": -0.29718705583333926,
+      "obj_value": 0.08860394114878425
+    },
+    {
+      "sample_id": 385,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.003903146051481343,
+      "v21": 0.3147106329299936,
+      "obj_value": 0.2780261382808382
+    },
+    {
+      "sample_id": 386,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4422224256047697,
+      "v21": 0.400832799171587,
+      "obj_value": 0.35355738518891977
+    },
+    {
+      "sample_id": 387,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.6430070201032935,
+      "v21": 0.06819788158310214,
+      "obj_value": 0.22196752492567878
+    },
+    {
+      "sample_id": 388,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.2327472406527562,
+      "v21": -0.35107282913503207,
+      "obj_value": 0.11016185360015464
+    },
+    {
+      "sample_id": 389,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5182595454471081,
+      "v21": 0.13415843220407786,
+      "obj_value": 0.2696295317949605
+    },
+    {
+      "sample_id": 390,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4807885963215117,
+      "v21": -0.6949587921618686,
+      "obj_value": 0.4840504692011574
+    },
+    {
+      "sample_id": 391,
+      "success": false,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.4411063967227151,
+      "v21": -0.6126301957310385,
+      "obj_value": 0.44730980751997096
+    },
+    {
+      "sample_id": 392,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.4202910506557669,
+      "v21": -0.06737027797959072,
+      "obj_value": 0.42177086869394786
+    },
+    {
+      "sample_id": 393,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5185052508172983,
+      "v21": -0.7810921993564528,
+      "obj_value": 0.41964636260891974
+    },
+    {
+      "sample_id": 394,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3126432745465677,
+      "v21": 0.27314143735145846,
+      "obj_value": 0.38279783498530595
+    },
+    {
+      "sample_id": 395,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.3982157075535806,
+      "v21": 0.34605422520429685,
+      "obj_value": 0.11712730445014566
+    },
+    {
+      "sample_id": 396,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.3721595637572959,
+      "v21": -0.26028566081387805,
+      "obj_value": 0.07791458589180528
+    },
+    {
+      "sample_id": 397,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.11617265122515419,
+      "v21": -0.3090816778748285,
+      "obj_value": 0.128933383693916
+    },
+    {
+      "sample_id": 398,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": 0.15854849685714456,
+      "v21": 0.3704924111755641,
+      "obj_value": 0.05629545148092107
+    },
+    {
+      "sample_id": 399,
+      "success": true,
+      "seed": "square",
+      "objective": "auxetic",
+      "params": {},
+      "v12": -0.5820156138889943,
+      "v21": -0.5286089609851728,
+      "obj_value": 0.05028259248412246
+    }
+  ]
+}

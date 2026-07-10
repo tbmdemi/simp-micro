@@ -1,0 +1,24 @@
+{
+  "batch_id": 1,
+  "n_samples": 10,
+  "strategy": "sobol",
+  "mode": "explore",
+  "objectives": [
+    "auxetic",
+    "first"
+  ],
+  "seeds": [
+    "circle",
+    "square"
+  ],
+  "param_ranges": {
+    "volfrac": [
+      0.3,
+      0.7
+    ],
+    "void_size_frac": [
+      0.1,
+      0.4
+    ]
+  }
+}

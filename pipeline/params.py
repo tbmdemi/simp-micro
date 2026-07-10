@@ -8,11 +8,11 @@ from typing import Dict, Tuple, List
 #  Định nghĩa khoảng tham số (min, max)
 # ──────────────────────────────────────────────
 PARAM_SPACE: Dict[str, Tuple[float, float]] = {
-    'volfrac':       (0.2, 0.6),
+    'volfrac':       (0.25, 0.65),
     'penal':         (1.0, 5.0),
     'rmin':          (1.0, 6.0),
     'move':          (0.05, 0.3),
-    'void_size_frac': (0.2, 0.7),
+    'void_size_frac': (0.15, 0.45),
     'rotation_deg':   (0.0, 90.0),
     'beta':          (0.3, 1.5),     # chỉ dùng cho 'first'
     'beta_second':   (0.5, 2.5),     # chỉ dùng cho 'second'

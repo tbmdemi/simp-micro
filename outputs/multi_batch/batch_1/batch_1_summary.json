@@ -1,0 +1,26 @@
+{
+  "batch_id": 1,
+  "n_samples": 40,
+  "n_success": 39,
+  "status": "completed_mock",
+  "output_dir": "outputs/multi_batch/batch_1",
+  "best_per_combo": {
+    "circle_auxetic": {
+      "obj_value": 0.01109739280514302
+    }
+  },
+  "parameters": {
+    "volfrac": {
+      "range": [
+        0.3,
+        0.7
+      ]
+    },
+    "void_size_frac": {
+      "range": [
+        0.1,
+        0.4
+      ]
+    }
+  }
+}

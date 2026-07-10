@@ -1,0 +1,17 @@
+{
+  "batch_id": 2,
+  "n_samples": 80,
+  "strategy": "optimized_lhs",
+  "mode": "refine",
+  "objectives": [
+    "auxetic"
+  ],
+  "seeds": [
+    "circle",
+    "cross_rectangular",
+    "hexagonal",
+    "hourglass",
+    "square"
+  ],
+  "param_ranges": {}
+}
