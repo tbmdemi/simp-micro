@@ -80,7 +80,7 @@ và mở rộng với:
 ```
 Input_SIMP_Analyst/
 ├── simp/                          # ★ Core SIMP optimization package
-│   ├── __init__.py                # Package metadata (version 1.2.1)
+│   ├── __init__.py                # Package metadata (version 1.4.0)
 │   ├── main.py                    # CLI entry point
 │   ├── run.py                     # Entry - run with default params
 │   ├── runner.py                  # Main optimization loop orchestrator
@@ -119,7 +119,8 @@ Input_SIMP_Analyst/
 │   ├── __init__.py
 │   ├── params.py                  # Parameter space definitions (PARAM_SPACE, FIXED_PARAMS)
 │   ├── phase1_screening_parallel.py # Phase 1: LHS screening, batch runner
-│   └── phase2_tuning.py           # Phase 2: Global optimization tuning (DE, SHGO, basinhopping)
+│   ├── phase2_tuning.py           # Phase 2: Global optimization tuning (DE, SHGO, basinhopping)
+│   └── multi_batch/               # Phase 3: Multi-batch adaptive sampling (Sobol, LHS, optimized LHS)
 │
 ├── analysis/                      # Post-processing analysis
 │   ├── __init__.py
@@ -160,11 +161,12 @@ Input_SIMP_Analyst/
 │       ├── square/auxetic/
 │       └── ... (10 seeds × 3 objectives)
 │
-├── tests/                         # Unit tests
+├── tests/                         # 80 unit/smoke tests (pytest)
 ├── pyproject.toml                 # Package metadata + tool config
 ├── Makefile                       # Convenience commands
 ├── requirements.txt               # Python dependencies
-└── CHANGELOG.md
+├── CHANGELOG.md                   # Lịch sử thay đổi (v1.0.0 → v1.4.0)
+└── outputs/danh_gia_project.md    # Project assessment report (2026-07-10)
 ```
 
 ---
@@ -399,7 +401,7 @@ Vòng lặp tối ưu SIMP được tổ chức theo kiến trúc modular, mỗi
 3. **Homogenization**: Tính tensor độ cứng tương đương `Q` (3×3) từ trường chuyển vị
 4. **Objective**: Tính giá trị hàm mục tiêu `c` và độ nhạy `dc/dx`
 5. **Filter**: Lọc trường độ nhạy/mật độ bằng cone-shaped filter (chống checkerboard)
-6. **OC update**: Cập nhật mật độ bằng Optimality Criteria (bisection tìm λ)
+6. **OC update**: Cập nhật mật độ bằng Optimality Criteria (bisection tìm λ) — hỗ trợ 2 chế độ: MATLAB (mặc định, không sqrt) và Sigmund 2001 (có sqrt, dùng `use_sqrt=True`)
 7. **Convergence check**: Kiểm tra hội tụ qua 3 tiêu chí (change, objective stability, max iter)
 8. Lặp lại từ bước 2 nếu chưa hội tụ
 
@@ -407,7 +409,9 @@ Vòng lặp tối ưu SIMP được tổ chức theo kiến trúc modular, mỗi
 
 Module pipeline thực hiện **screening tự động**:
 
-- **Phase 1** (`phase1_screening.py`): Sinh `N` mẫu LHS từ không gian tham số (6–8 biến), chạy SIMP cho mỗi mẫu, phân tích tương quan Spearman để tìm top-3 tham số ảnh hưởng nhất đến objective. Có thể chạy đơn lẻ hoặc quét toàn bộ 30 combo.
+- **Phase 1** (`phase1_screening_parallel.py`): Sinh `N` mẫu LHS từ không gian tham số (6–8 biến), chạy SIMP song song, phân tích Spearman tìm top-3 tham số ảnh hưởng nhất.
+- **Phase 2** (`phase2_tuning.py`): Tối ưu hóa toàn cục (DE, SHGO, basinhopping).
+- **Multi-batch** (`multi_batch/`): Adaptive sampling (Sobol/LHS), coverage analysis, decision-making.
 
 ### Analysis (`analysis/`)
 
@@ -556,10 +560,23 @@ Các báo cáo được thiết kế **self-contained** (tất cả CSS/JS inlin
 
 ---
 
+## Tính năng mới trong v1.4.0
+
+| Tính năng | Mô tả |
+|-----------|-------|
+| **OC sqrt toggle** | `use_sqrt=False` (mặc định, khớp MATLAB). Set `True` cho heuristic Sigmund 2001. |
+| **Symmetrize K** | Ma trận độ cứng FE được symmetrize giống MATLAB: `K = (K + K')/2`. |
+| **xPhys unfiltered (First_Obj)** | Dùng unfiltered density cho FE kế tiếp, đúng MATLAB behavior. |
+| **rho0 scaling** | Tham số `rho0` (mặc định 1.0) cho solve_fe và homogenization. MATLAB Second_Obj dùng rho0=7850. |
+| **Error handling** | `try/except` trong vòng lặp SIMP — tự động phục hồi, dừng sau 5 lỗi. |
+| **Metadata reproducibility** | Mỗi output có `metadata.json` (git hash, timestamp, params). |
+| **Multi-batch adaptive** | Pipeline Sobol/LHS, coverage analysis, decision-making tự động. |
+| **Bug fixes** | OC sqrt, symmetrize K, xPhys, rho0 — 8 bug Phase 2 đã fix. |
+
 ## Testing
 
 ```bash
-# Chạy toàn bộ test suite
+# Chạy toàn bộ test suite (80 tests)
 python -m pytest tests/ -v
 
 # Với coverage report

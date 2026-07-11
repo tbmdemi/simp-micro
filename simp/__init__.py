@@ -13,6 +13,6 @@ Các gói con:
     io:             Công cụ ghi log và trực quan hóa.
 """
 
-__version__ = '1.2.1'
+__version__ = '1.4.0'
 __author__ = 'SIMP Analyst Team'
 __license__ = 'MIT'

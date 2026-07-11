@@ -11,6 +11,9 @@ import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve, cg, LinearOperator
 
+# Hằng số local cho eps (tránh magic number)
+_EPS_SOLVER = 1e-9
+
 
 def solve_fe(
     xPhys: np.ndarray,
@@ -21,6 +24,7 @@ def solve_fe(
     penal: float,
     E0: float,
     Emin: float,
+    rho0: float = 1.0,
 ):
     """Giải bài toán FE với ràng buộc PBC.
 
@@ -53,13 +57,19 @@ def solve_fe(
     KE_vec = KE.flatten()  # (64,)
     # Mỗi phần tử có KE riêng: (64, 1) * (1, nele) -> (64, nele)
     # Công thức SIMP: E(x) = Emin + x^penal * (E0 - Emin)
-    sK = KE_vec[:, np.newaxis] * (Emin + xPhys_vec[np.newaxis, :] ** penal * (E0 - Emin))
+    # Hỗ trợ rho0 scaling (MATLAB Second_Obj: rho0=7850, E0=1)
+    # E_penal = Emin + (rho0 * x^penal) * (E0 - Emin)
+    xe = rho0 * xPhys_vec ** penal
+    sK = KE_vec[:, np.newaxis] * (Emin + xe[np.newaxis, :] * (E0 - Emin))
     sK = sK.flatten('F')
 
     K_global = coo_matrix(
         (sK, (iK, jK)),
         shape=(ndof, ndof),
     ).tocsr()
+
+    # Symmetrize K để tránh sai số số học (giống MATLAB: K = (K+K')/2)
+    K_global = (K_global + K_global.T) * 0.5
 
     # PBC là ma trận chiếu (ndof, n_master)
     # K_pbc = PBC^T @ K_global @ PBC
@@ -128,7 +138,7 @@ def solve_fe(
             
             # Tiền điều kiện Jacobi: M = diag(K)^{-1}
             diag_K = K_pbc_free.diagonal()
-            diag_K[diag_K == 0] = 1e-9 # Tránh chia cho 0
+            diag_K[diag_K == 0] = _EPS_SOLVER # Tránh chia cho 0
             M_inv = LinearOperator((K_pbc_free.shape), matvec=lambda x: x / diag_K)
             
             U_reduced_free[:, i], info = cg(K_pbc_free, F_free[:, i], tol=1e-6, maxiter=10000, M=M_inv)

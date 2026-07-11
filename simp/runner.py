@@ -5,9 +5,11 @@ Phối hợp: FE → đồng nhất hóa → hàm mục tiêu → lọc → OC.
 Dùng dict params thay cho SimpConfig.
 """
 
+import json
 import math
 import os
 import shutil
+import subprocess
 import time
 
 import numpy as np
@@ -53,6 +55,16 @@ def run_simp(params: dict) -> dict:
             xPhys, Q, n_iters, converged, v12, v21, objective,
             output_dir, elapsed_time, history.
     """
+    # Metadata cho reproducibility
+    def _get_git_hash():
+        try:
+            return subprocess.run(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+        except Exception:
+            return 'unknown'
+
     # --- Trích xuất tham số ---
     nelx    = params['nelx']
     nely    = params['nely']
@@ -74,6 +86,7 @@ def run_simp(params: dict) -> dict:
     rotation_deg   = params.get('rotation_deg', 0.0)
     beta       = params.get('beta', 0.8)          # Khớp MATLAB First_Obj
     beta_second = params.get('beta_second', 100.0)  # Khớp MATLAB Second_Obj
+    rho0 = params.get('rho0', 1.0)  # Hệ số mật độ (MATLAB Second_Obj: 7850)
     save_every = params.get('save_every', 1)
     scale_factor = params.get('scale_factor', 1)
 
@@ -133,38 +146,63 @@ def run_simp(params: dict) -> dict:
         'volume': [float(np.mean(xPhys))],
     }
 
+    # Lưu metadata (git hash, timestamp, params) vào output_dir
+    metadata = {
+        'git_hash': _get_git_hash(),
+        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S'),
+        'version': '1.3.0',
+        'params': {k: v for k, v in params.items() if k != 'output_dir'},
+    }
+    with open(os.path.join(output_dir, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f, indent=2)
+
     t_start = time.time()
 
     while loop < max_iter:
         loop += 1
 
-        # FE
-        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal, E0, Emin)
+        try:
+            # FE
+            U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal, E0, Emin, rho0=rho0)
 
-        # Đồng nhất hóa
-        Q, dQ, _ = compute_homogenized_tensor(
-            U, U0, xPhys, material.KE, edofMat, penal, E0, Emin,
-        )
+            # Đồng nhất hóa
+            Q, dQ, _ = compute_homogenized_tensor(
+                U, U0, xPhys, material.KE, edofMat, penal, E0, Emin, rho0=rho0,
+            )
 
-        # Hàm mục tiêu
-        if obj_type == 'first':
-            c, dc = compute_first_objective(Q, dQ, loop, beta)
-        elif obj_type == 'second':
-            c, dc = compute_second_objective(Q, dQ, loop, volfrac, E0, beta_second)
-        else:  # auxetic - dùng beta=1.0 (không phải beta_second=100) để tránh over-penalty
-            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=1.0)
+            # Hàm mục tiêu
+            if obj_type == 'first':
+                c, dc = compute_first_objective(Q, dQ, loop, beta)
+            elif obj_type == 'second':
+                c, dc = compute_second_objective(Q, dQ, loop, volfrac, E0, beta_second)
+            else:  # auxetic - dùng beta=1.0 (không phải beta_second=100) để tránh over-penalty
+                c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=1.0)
 
-        # Chuyển đổi bài toán maximize thành minimize cho OC update
-        # OC update thực hiện: x * sqrt(max(0, -dc / (dv * lmid + eps))) -> cần dc âm khi objective tăng theo x
-        # Vì các hàm mục tiêu first và second được thiết kế để maximize, ta đổi dấu để biến thành minimize
-        if obj_type in ('first', 'second'):
-            c = -c
-            dc = -dc
+            # Chuyển đổi bài toán maximize thành minimize cho OC update
+            # OC update thực hiện: x * (-dc/(dv*lmid)) -> cần dc âm khi objective tăng theo x
+            # Vì các hàm mục tiêu first và second được thiết kế để maximize, ta đổi dấu để biến thành minimize
+            if obj_type in ('first', 'second'):
+                c = -c
+                dc = -dc
 
-        # Kiểm tra nan (ưu tiên kiểm tra nhanh — np.any(np.isnan) thay vì np.isnan(np.mean))
-        if math.isnan(c) or np.isnan(np.sum(xPhys)):
-            print(f'[STOP] NaN tại lần lặp {loop}')
-            break
+            # Kiểm tra nan
+            if math.isnan(c) or np.isnan(np.sum(xPhys)):
+                print(f'[STOP] NaN tại lần lặp {loop}')
+                break
+
+        except Exception as e:
+            print(f'[ERROR] Loop {loop}: {e}')
+            # Gán giá trị lớn để OC không chọn điểm này
+            c = 1e12
+            dc = -np.ones((nely, nelx)) * 1e6
+            # Không break — tiếp tục với giá trị lớn
+            # Kiểm tra xem có nên dừng hẳn không nếu lỗi liên tiếp
+            if not hasattr(run_simp, '_err_count'):
+                run_simp._err_count = 0
+            run_simp._err_count += 1
+            if run_simp._err_count >= 5:
+                print('[STOP] Quá 5 lỗi liên tiếp, dừng pipeline')
+                break
 
         # Hệ số Poisson: νᵢⱼ = Qᵢⱼ / Qⱼⱼ (từ compliance tensor S = Q⁻¹)
         # Công thức đúng cho 2D orthotropic: ν₁₂ = Q₁₂ / Q₂₂
@@ -189,12 +227,19 @@ def run_simp(params: dict) -> dict:
 
         # OC
         # Với First_Obj, thêm ràng buộc stiffness Q>=delta (giống MATLAB)
+        # Và dùng unfiltered xPhys cho FE kế tiếp (giống MATLAB First_Obj)
         if obj_type == 'first':
             delta_first = 0.1 * volfrac * E0  # xi=0.1, Vmax=volfrac (MATLAB)
-            xnew, xPhys = oc_update(
+            xnew, _ = oc_update(
                 x, dc, dv, volfrac, move, H, Hs, ft,
                 Q=Q, delta=delta_first,
             )
+            # MATLAB First_Obj: xPhys = xnew (unfiltered cho FE kế tiếp)
+            if ft == 2:
+                xPhys_flat = H @ xnew.flatten('F') / Hs
+                xPhys = np.reshape(xPhys_flat, (nely, nelx), order='F')
+            else:
+                xPhys = xnew.copy()
         else:
             xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
         change = np.max(np.abs(xnew - x))
@@ -213,6 +258,10 @@ def run_simp(params: dict) -> dict:
 
         print(f'Loop:{loop:4d}  obj:{c:+.4e}  vol:{np.mean(xPhys):.3f}  '
               f'chg:{change:.3f}  v12:{v12:.4f}  v21:{v21:.4f}')
+
+        # Reset error counter khi loop thành công
+        if hasattr(run_simp, '_err_count'):
+            run_simp._err_count = 0
 
     # --- Kết thúc ---
     t_elapsed = time.time() - t_start

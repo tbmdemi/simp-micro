@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-10
+
+### Fixed
+- **OC sqrt tranh cãi (Bug #1)**: Thêm tham số `use_sqrt=False` vào `oc_update()`. Mặc định `False` để khớp MATLAB (không sqrt). Khi cần Sigmund 2001 heuristic, có thể set `True`. Xem docs/summary.md và bug_reports.md.
+- **Symmetrize K (Bug #6)**: Thêm `K_global = (K_global + K_global.T) * 0.5` trong `solve_fe()` — giống MATLAB, tăng ổn định số học.
+- **xPhys unfiltered cho First_Obj (Bug #4)**: Runner.py nay dùng unfiltered `xPhys` từ OC update cho First_Obj, đúng với MATLAB behavior. Code cũ dùng filtered cho mọi objective.
+- **rho0 scaling (Bug #8)**: Thêm tham số `rho0` (mặc định 1.0) vào `solve_fe()`, `compute_homogenized_tensor()`, `compute_second_objective()`. MATLAB Second_Obj dùng `rho0=7850`, `E0=1` — Python giờ hỗ trợ đồng bộ.
+- **Error handling (R3)**: Thêm `try/except` trong vòng lặp chính của `run_simp()`. Khi lỗi xảy ra, gán objective lớn + gradient mạnh để OC tránh điểm đó. Tự động dừng nếu có 5 lỗi liên tiếp.
+- **Metadata reproducibility (R6)**: Thêm `metadata.json` vào mỗi output directory — lưu git hash, timestamp, version, params.
+
+### Changed
+- **`simp/core/oc.py`**: `oc_update()` signature thay đổi — thêm `use_sqrt=False`. Tham số mới, backward compatible.
+- **`simp/core/solver.py`**: `solve_fe()` signature thay đổi — thêm `rho0=1.0`. Backward compatible.
+- **`simp/homogenization/compute.py`**: `compute_homogenized_tensor()` signature thay đổi — thêm `rho0=1.0`. Backward compatible.
+- **`simp/runner.py`**: Thêm `rho0` vào params extraction.
+
 ## [1.3.0] - 2026-07-10
 
 ### Added
