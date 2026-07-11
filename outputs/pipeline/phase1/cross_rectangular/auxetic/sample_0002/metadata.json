@@ -1,0 +1,27 @@
+{
+  "git_hash": "ddbe82c",
+  "timestamp": "2026-07-11T08:09:26",
+  "version": "1.3.0",
+  "params": {
+    "volfrac": 0.3488490790393547,
+    "penal": 1.3341790709383337,
+    "rmin": 1.655658580117267,
+    "move": 0.13886380639107612,
+    "void_size_frac": 0.4286724912779051,
+    "rotation_deg": 21.485128939012483,
+    "nelx": 50,
+    "nely": 50,
+    "ft": 2,
+    "E0": 199.0,
+    "Emin": 1e-09,
+    "nu": 0.3,
+    "max_iter": 150,
+    "tol_change": 0.01,
+    "tol_obj": 0.05,
+    "window_size": 20,
+    "save_every": 9999,
+    "scale_factor": 1,
+    "seed": "cross_rectangular",
+    "objective": "auxetic"
+  }
+}
