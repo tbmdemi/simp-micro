@@ -1,6 +1,6 @@
 {
   "batch_id": 1,
-  "n_samples": 10,
+  "n_samples": 100,
   "strategy": "sobol",
   "mode": "explore",
   "objectives": [
@@ -9,7 +9,15 @@
   ],
   "seeds": [
     "circle",
-    "square"
+    "square",
+    "hourglass",
+    "hexagonal",
+    "cross_rectangular",
+    "nine_circle",
+    "four_circle",
+    "grid_circular_voids",
+    "small_square_cross",
+    "circle_half_quarter"
   ],
   "param_ranges": {
     "volfrac": [

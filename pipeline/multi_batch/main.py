@@ -126,7 +126,7 @@ def _find_summary_jsons(phase1_path: str) -> List[str]:
         return [str(p)]
     if p.is_dir():
         candidates = []
-        for pattern in ['*summary*.json', '*_results.json', '*batch*.json']:
+        for pattern in ['*summar*.json', '*_results.json', '*batch*.json']:
             candidates.extend(sorted(p.glob(pattern)))
         return [str(c) for c in candidates]
     return []
@@ -188,12 +188,10 @@ def _build_pipeline_config(
 
     # If still empty, fatal error
     if not all_active:
-        print(
+        raise ValueError(
             "FATAL: _build_pipeline_config could not extract active params.\n"
-            "  Check that summaries contain either 'active_parameters' or 'parameters' with 'range' key.",
-            file=sys.stderr,
+            "  Check that summaries contain either 'active_parameters' or 'parameters' with 'range' key."
         )
-        sys.exit(1)
 
     if not all_seeds:
         all_seeds = {'circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular'}
@@ -253,6 +251,18 @@ def main() -> None:
     fixed_params: Dict[str, float] = {}
     active_params_meta: Dict[str, Dict] = {}
 
+    # Load refined_parameters.json directly for active/fixed params
+    refined_path = Path(args.phase1_summary) / 'refined_parameters.json'
+    if refined_path.exists():
+        with open(refined_path) as f:
+            refined = json.load(f)
+        if 'active_parameters' in refined:
+            for pname, prange in refined['active_parameters'].items():
+                if isinstance(prange, (list, tuple)) and len(prange) == 2:
+                    active_params_meta[pname] = {'range': list(prange)}
+        if 'fixed_parameters' in refined:
+            fixed_params.update(refined['fixed_parameters'])
+
     for s in summaries:
         if 'active_parameters' in s and 'fixed_parameters' in s:
             # refined_parameters.json format
@@ -263,6 +273,14 @@ def main() -> None:
             for pname, pdef in s['parameters'].items():
                 if isinstance(pdef, dict) and 'range' in pdef:
                     active_params_meta[pname] = pdef
+        # Detect mock data early
+        if s.get('_is_mock'):
+            print("\n" + "!" * 70)
+            print("  ⚠️  MOCK DATA DETECTED in input summaries!")
+            print("  Results will be synthetic — NOT from actual SIMP execution.")
+            print("  Realistic timing and convergence analysis is not possible.")
+            print("!" * 70 + "\n")
+            break
 
     # Build param_ranges from active_params_meta
     param_ranges: Dict[str, Tuple[float, float]] = {}
@@ -317,6 +335,9 @@ def main() -> None:
     # Initial batch config (will be overwritten for batch 1)
     batch_config = None
 
+    # Track narrowed parameter ranges across iterations (Issue #1 fix)
+    effective_param_ranges: Dict[str, Tuple[float, float]] = dict(param_ranges)
+
     for batch_idx in range(n_to_run):
         batch_id = current_batch_id + batch_idx
         print(f"\n{'='*60}")
@@ -335,7 +356,7 @@ def main() -> None:
                 mode=BatchMode.EXPLORE,
                 objectives=batch_objectives,
                 seeds=batch_seeds,
-                param_ranges=param_ranges,
+                param_ranges=effective_param_ranges,
             )
         else:
             # Use decide_next_action to determine next config
@@ -346,11 +367,13 @@ def main() -> None:
                 active_params_meta=active_params_meta,
             )
 
+            # Always pass effective_param_ranges so that refinement operates on
+            # the most recently narrowed bounds, not the original wide bounds
             decision = decide_next_action(
                 summaries=batch_summaries,
                 config=pipeline_cfg,
                 max_batches=args.max_batches,
-                param_ranges=param_ranges,
+                param_ranges=effective_param_ranges,
             )
 
             action = decision.get('action', 'stop')
@@ -370,8 +393,36 @@ def main() -> None:
                 if narrowed:
                     print(f"  Using narrowed parameter ranges ({len(narrowed)} params).")
                     for pname, pdef in narrowed.items():
-                        if pdef['range'] != param_ranges.get(pname):
-                            print(f"    {pname}: [{pdef['range'][0]:.4f}, {pdef['range'][1]:.4f}]")
+                        if pdef['range'] != effective_param_ranges.get(pname):
+                            old_lo, old_hi = effective_param_ranges.get(pname, (0, 0))
+                            new_lo, new_hi = pdef['range']
+                            reduction = (1 - (new_hi - new_lo) / max(old_hi - old_lo, 1e-10)) * 100
+                            print(f"    {pname}: [{new_lo:.4f}, {new_hi:.4f}] "
+                                  f"({reduction:.0f}% reduction)")
+
+                # Persist narrowed ranges for next iteration (Issue #1 fix)
+                # The decision returns next_config with param_ranges already set
+                # to narrowed values. Use those directly.
+                if decision_config and decision_config.param_ranges:
+                    # Check if the new ranges differ from current effective ranges
+                    any_change = False
+                    for pname, (nlo, nhi) in decision_config.param_ranges.items():
+                        if pname in effective_param_ranges:
+                            olo, ohi = effective_param_ranges[pname]
+                            orig_span = ohi - olo
+                            new_span = nhi - nlo
+                            if abs(new_span - orig_span) / max(orig_span, 1e-10) > 0.01:
+                                any_change = True
+                                break
+                    if any_change:
+                        print(f"  Updating effective param ranges for next batch.")
+                        for pname, (lo, hi) in decision_config.param_ranges.items():
+                            if pname in effective_param_ranges:
+                                olo, ohi = effective_param_ranges[pname]
+                                reduction = (1 - (hi - lo) / max(ohi - olo, 1e-10)) * 100
+                                if reduction > 1:
+                                    print(f"    {pname}: [{lo:.4f}, {hi:.4f}] ({reduction:.0f}% reduction)")
+                        effective_param_ranges.update(decision_config.param_ranges)
             else:
                 # Fallback: repeat previous config with +20% samples
                 batch_config = BatchConfig(
@@ -381,7 +432,7 @@ def main() -> None:
                     mode=BatchMode.EXPLORE,
                     objectives=objectives[:2],
                     seeds=seeds[:5],
-                    param_ranges=param_ranges,
+                    param_ranges=effective_param_ranges,
                 )
 
             # Save decision (JSON-safe)
@@ -442,7 +493,7 @@ def main() -> None:
                     design=design,
                     output_dir=str(batch_output_dir),
                     batch_id=batch_config.batch_id,
-                    n_workers=4,
+                    n_workers=(os.cpu_count() - 2),
                 )
             except Exception as e:
                 print(f"  ERROR during batch execution: {e}", file=sys.stderr)
@@ -549,27 +600,42 @@ def _mock_batch_summary(
     design: 'pd.DataFrame',
     output_dir: Path,
 ) -> Dict:
-    """Generate mock summary for testing without running SIMP."""
+    """Generate mock summary for testing without running SIMP.
+
+    NOTE: This produces synthetic data and is intended ONLY for testing
+    the pipeline logic. The mock mimics realistic auxetic behavior:
+    lower objective values (potentially negative) for good designs,
+    correlated v12/v21 with design parameters.
+    """
     import pandas as pd
 
     n = len(design)
     np.random.seed(42 + config.batch_id)
 
-    # Mock results
+    # Mock results with realistic objective values (can be negative for auxetic)
     results = []
     for idx, row in design.iterrows():
-        v12 = np.random.uniform(-0.8, 0.5)
-        v21 = np.random.uniform(-0.8, 0.5)
-        obj = np.random.uniform(0.01, 0.5)
+        # Extract parameters for mock dependency
+        volfrac = float(row.get('volfrac', 0.3))
+        void_size = float(row.get('void_size_frac', 0.2))
+
+        # v12 depends on volfrac (higher volfrac → less auxetic → v12 less negative)
+        v12 = -0.6 + 0.8 * (1.0 - volfrac) + 0.1 * np.random.randn()
+        v21 = -0.5 + 0.7 * (1.0 - volfrac) + 0.1 * np.random.randn()
+
+        # Objective: better (more negative) for designs with low volfrac + certain void sizes
+        obj_base = -0.3 * (1.0 - volfrac) + 0.1 * abs(void_size - 0.25)
+        obj = obj_base + 0.05 * np.random.randn()
+
         results.append({
             'sample_id': int(idx),
             'success': np.random.random() > 0.1,
             'seed': str(row.get('seed', 'circle')),
             'objective': str(row.get('objective', 'auxetic')),
             'params': {k: float(row[k]) for k in config.param_ranges if k in row},
-            'v12': v12,
-            'v21': v21,
-            'obj_value': obj,
+            'v12': round(v12, 6),
+            'v21': round(v21, 6),
+            'obj_value': round(obj, 6),
         })
 
     # Save mock results
@@ -577,18 +643,20 @@ def _mock_batch_summary(
     with open(results_path, 'w') as f:
         json.dump({'results': results}, f, indent=2)
 
+    best_success = [r for r in results if r['success']]
+    best_obj = min(r['obj_value'] for r in best_success) if best_success else 1.0
+
     summary = {
         'batch_id': config.batch_id,
         'n_samples': n,
-        'n_success': sum(1 for r in results if r['success']),
+        'n_success': len(best_success),
         'status': 'completed_mock',
         'output_dir': str(output_dir),
         'best_per_combo': {
-            'circle_auxetic': {'obj_value': min(
-                r['obj_value'] for r in results if r['success']
-            )},
+            'circle_auxetic': {'obj_value': best_obj},
         },
         'parameters': {k: {'range': list(v)} for k, v in config.param_ranges.items()},
+        '_is_mock': True,
     }
     return summary
 

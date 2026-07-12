@@ -288,7 +288,7 @@ def run_batch(
         Summary dict with path, n_success, best_sample, top_results.
     """
     if n_workers is None:
-        n_workers = max(1, cpu_count() - 1)
+        n_workers = max(1, cpu_count() - 2)
 
     output_dir = batch_cfg.get_output_dir(base_output_dir)
     os.makedirs(output_dir, exist_ok=True)

@@ -1,10 +1,11 @@
 {
   "batch_id": 2,
-  "n_samples": 80,
-  "strategy": "optimized_lhs",
-  "mode": "refine",
+  "n_samples": 120,
+  "strategy": "sobol",
+  "mode": "explore",
   "objectives": [
-    "auxetic"
+    "auxetic",
+    "first"
   ],
   "seeds": [
     "circle",
@@ -13,5 +14,14 @@
     "hourglass",
     "square"
   ],
-  "param_ranges": {}
+  "param_ranges": {
+    "volfrac": [
+      0.3,
+      0.7
+    ],
+    "void_size_frac": [
+      0.1,
+      0.4
+    ]
+  }
 }

@@ -2,48 +2,289 @@
   "batch_summaries": [
     {
       "batch_id": 1,
-      "n_samples": 40,
-      "n_success": 39,
-      "status": "completed_mock",
+      "strategy": "design_df",
+      "n_samples": 2000,
+      "n_total_tasks": 2000,
+      "n_success": 2000,
+      "n_converged": 2000,
+      "n_workers": 10,
+      "elapsed_time": 6610.4,
       "output_dir": "outputs/multi_batch/batch_1",
       "best_per_combo": {
-        "circle_auxetic": {
-          "obj_value": 0.01109739280514302
+        "circle/auxetic": {
+          "sample_id": 68,
+          "seed": "circle",
+          "objective": "auxetic",
+          "obj_value": 17.793244744293283,
+          "v12": 0.3006758405262436,
+          "v21": 0.3006758405237887
+        },
+        "circle/first": {
+          "sample_id": 176,
+          "seed": "circle",
+          "objective": "first",
+          "obj_value": -3.794764577043839,
+          "v12": 0.3302255115871749,
+          "v21": 0.3302255115871568
+        },
+        "square/auxetic": {
+          "sample_id": 273,
+          "seed": "square",
+          "objective": "auxetic",
+          "obj_value": 19.004349723016773,
+          "v12": 0.18991422483422957,
+          "v21": 0.18991422483422046
+        },
+        "square/first": {
+          "sample_id": 313,
+          "seed": "square",
+          "objective": "first",
+          "obj_value": -3.7449391670791643,
+          "v12": 0.33374437261190987,
+          "v21": 0.3337443726118911
+        },
+        "hourglass/auxetic": {
+          "sample_id": 422,
+          "seed": "hourglass",
+          "objective": "auxetic",
+          "obj_value": 19.417633505171473,
+          "v12": 0.1246893461567886,
+          "v21": 0.1256462060648134
+        },
+        "hourglass/first": {
+          "sample_id": 502,
+          "seed": "hourglass",
+          "objective": "first",
+          "obj_value": -1.2009852471090374,
+          "v12": 0.3000000000148045,
+          "v21": 0.3000002563804492
+        },
+        "hexagonal/auxetic": {
+          "sample_id": 657,
+          "seed": "hexagonal",
+          "objective": "auxetic",
+          "obj_value": 6.4924449478381,
+          "v12": 0.3000000000049993,
+          "v21": 0.3000000000050069
+        },
+        "hexagonal/first": {
+          "sample_id": 741,
+          "seed": "hexagonal",
+          "objective": "first",
+          "obj_value": -3.7017967164244086,
+          "v12": 0.3565365454433889,
+          "v21": 0.3349397545420471
+        },
+        "cross_rectangular/auxetic": {
+          "sample_id": 875,
+          "seed": "cross_rectangular",
+          "objective": "auxetic",
+          "obj_value": 20.86419975831733,
+          "v12": 0.2422268779502167,
+          "v21": 0.2422268779494685
+        },
+        "cross_rectangular/first": {
+          "sample_id": 910,
+          "seed": "cross_rectangular",
+          "objective": "first",
+          "obj_value": -3.8133998229239983,
+          "v12": 0.35438756095697693,
+          "v21": 0.3543875609569399
+        },
+        "nine_circle/auxetic": {
+          "sample_id": 1003,
+          "seed": "nine_circle",
+          "objective": "auxetic",
+          "obj_value": 10.157970344847822,
+          "v12": 0.29999999999383353,
+          "v21": 0.2999999999938211
+        },
+        "nine_circle/first": {
+          "sample_id": 1126,
+          "seed": "nine_circle",
+          "objective": "first",
+          "obj_value": -1.964829814011853,
+          "v12": 0.26250278796498383,
+          "v21": 0.2625027879647939
+        },
+        "four_circle/auxetic": {
+          "sample_id": 1243,
+          "seed": "four_circle",
+          "objective": "auxetic",
+          "obj_value": 13.548245693567358,
+          "v12": 0.3000000000194395,
+          "v21": 0.3000000000194401
+        },
+        "four_circle/first": {
+          "sample_id": 1330,
+          "seed": "four_circle",
+          "objective": "first",
+          "obj_value": -2.8381210050642243,
+          "v12": 0.42123234573778423,
+          "v21": 0.42123234573778007
+        },
+        "grid_circular_voids/auxetic": {
+          "sample_id": 1435,
+          "seed": "grid_circular_voids",
+          "objective": "auxetic",
+          "obj_value": 13.919727337959767,
+          "v12": 0.29999999999861177,
+          "v21": 0.2999999999985944
+        },
+        "grid_circular_voids/first": {
+          "sample_id": 1567,
+          "seed": "grid_circular_voids",
+          "objective": "first",
+          "obj_value": -1.9707534423235047,
+          "v12": 0.2721110908261787,
+          "v21": 0.27211109082618035
+        },
+        "small_square_cross/auxetic": {
+          "sample_id": 1606,
+          "seed": "small_square_cross",
+          "objective": "auxetic",
+          "obj_value": 21.555926516359587,
+          "v12": 0.16597425721027428,
+          "v21": 0.16597425721027395
+        },
+        "small_square_cross/first": {
+          "sample_id": 1715,
+          "seed": "small_square_cross",
+          "objective": "first",
+          "obj_value": -3.8663289881717104,
+          "v12": 0.3258602587303265,
+          "v21": 0.32586025873028723
+        },
+        "circle_half_quarter/auxetic": {
+          "sample_id": 1835,
+          "seed": "circle_half_quarter",
+          "objective": "auxetic",
+          "obj_value": 8.56345717467414,
+          "v12": 0.2999999999972049,
+          "v21": 0.2999999999971975
+        },
+        "circle_half_quarter/first": {
+          "sample_id": 1914,
+          "seed": "circle_half_quarter",
+          "objective": "first",
+          "obj_value": -1.8831426817992651,
+          "v12": 0.24640027101078885,
+          "v21": 0.2464002710106301
         }
       },
-      "parameters": {
-        "volfrac": {
-          "range": [
-            0.3,
-            0.7
-          ]
-        },
-        "void_size_frac": {
-          "range": [
-            0.1,
-            0.4
-          ]
-        }
-      }
+      "timestamp": "2026-07-12T00:46:00.124640"
     },
     {
       "batch_id": 2,
-      "n_samples": 400,
-      "n_success": 365,
-      "status": "completed_mock",
+      "strategy": "design_df",
+      "n_samples": 1200,
+      "n_total_tasks": 1200,
+      "n_success": 1200,
+      "n_converged": 1200,
+      "n_workers": 10,
+      "elapsed_time": 3466.2,
       "output_dir": "outputs/multi_batch/batch_2",
       "best_per_combo": {
-        "circle_auxetic": {
-          "obj_value": 0.012086206412625115
+        "circle/auxetic": {
+          "sample_id": 58,
+          "seed": "circle",
+          "objective": "auxetic",
+          "obj_value": 6.671316429380003,
+          "v12": 0.3000000000049675,
+          "v21": 0.30000000000497
+        },
+        "circle/first": {
+          "sample_id": 181,
+          "seed": "circle",
+          "objective": "first",
+          "obj_value": -3.774892629022009,
+          "v12": 0.34482083782602874,
+          "v21": 0.34482083782601003
+        },
+        "cross_rectangular/auxetic": {
+          "sample_id": 347,
+          "seed": "cross_rectangular",
+          "objective": "auxetic",
+          "obj_value": 20.75382969226233,
+          "v12": 0.154316673905817,
+          "v21": 0.15431667390581363
+        },
+        "cross_rectangular/first": {
+          "sample_id": 430,
+          "seed": "cross_rectangular",
+          "objective": "first",
+          "obj_value": -3.8217209449946155,
+          "v12": 0.3191164769113433,
+          "v21": 0.31911647691131334
+        },
+        "hexagonal/auxetic": {
+          "sample_id": 563,
+          "seed": "hexagonal",
+          "objective": "auxetic",
+          "obj_value": 21.696549270321555,
+          "v12": 0.22360175435579166,
+          "v21": 0.22398056828877402
+        },
+        "hexagonal/first": {
+          "sample_id": 678,
+          "seed": "hexagonal",
+          "objective": "first",
+          "obj_value": -3.7709134895892915,
+          "v12": 0.3364050835850068,
+          "v21": 0.3532333425437831
+        },
+        "hourglass/auxetic": {
+          "sample_id": 746,
+          "seed": "hourglass",
+          "objective": "auxetic",
+          "obj_value": 19.502601888149208,
+          "v12": 0.12488246034919355,
+          "v21": 0.12581945855923415
+        },
+        "hourglass/first": {
+          "sample_id": 945,
+          "seed": "hourglass",
+          "objective": "first",
+          "obj_value": -1.2028402520724781,
+          "v12": 0.30000000001477944,
+          "v21": 0.3000002559850666
+        },
+        "square/auxetic": {
+          "sample_id": 1068,
+          "seed": "square",
+          "objective": "auxetic",
+          "obj_value": 18.17839702511766,
+          "v12": 0.19764745298184364,
+          "v21": 0.19764745298184253
+        },
+        "square/first": {
+          "sample_id": 1106,
+          "seed": "square",
+          "objective": "first",
+          "obj_value": -3.7449391670791643,
+          "v12": 0.33374437261190987,
+          "v21": 0.3337443726118911
         }
       },
-      "parameters": {}
+      "timestamp": "2026-07-12T01:43:46.500986"
     }
   ],
   "coverage": {
-    "n_valid": 404,
-    "n_total": 440,
-    "coverage_pct": 91.81818181818181,
+    "n_valid": 3200,
+    "n_total": 3200,
+    "success_rate_pct": 100.0,
+    "spatial_coverage_pct": 13.9,
+    "spatial_coverage_detail": {
+      "n_bins_per_dim": 8,
+      "n_dims": 3,
+      "n_bins_total": 512,
+      "n_bins_occupied": 71,
+      "dim_coverage": {
+        "v12": 1.0,
+        "v21": 0.75,
+        "obj_value": 1.0
+      }
+    },
     "dimensions": [
       "v12",
       "v21",
@@ -51,34 +292,227 @@
     ],
     "ranges": {
       "v12": {
-        "min": -0.7983539488170337,
-        "max": 0.4941177238121879,
-        "mean": -0.18266285632187107,
-        "std": 0.3673732951128425
+        "min": 1.7154589278503522e-24,
+        "max": 0.8606511876838568,
+        "mean": 0.234862535541954,
+        "std": 0.09901143390460677
       },
       "v21": {
-        "min": -0.7947401462879097,
-        "max": 0.4985678041157384,
-        "mean": -0.13355105718387095,
-        "std": 0.3728984952530114
+        "min": 1.7154589278491334e-24,
+        "max": 0.7735296862850813,
+        "mean": 0.23369192786255988,
+        "std": 0.09559166848114033
       },
       "obj_value": {
-        "min": 0.01109739280514302,
-        "max": 0.4993950985309863,
-        "mean": 0.2652788753453436,
-        "std": 0.1466550320916036
+        "min": -3.8663289881717104,
+        "max": 199.82577213039545,
+        "mean": 38.17457152485883,
+        "std": 49.91823962909352
       }
     },
     "sparsity": {
-      "n_sparse_regions": 0,
-      "regions": []
+      "n_sparse_regions": 5,
+      "regions": [
+        {
+          "index": [
+            0,
+            2
+          ],
+          "n_points": 0,
+          "volume": 0.07397102702333071,
+          "bounds": [
+            [
+              1.7154589278503522e-24,
+              0.2868837292279523
+            ],
+            [
+              0.5156864575233876,
+              0.7735296862850813
+            ]
+          ],
+          "density": 0.0
+        },
+        {
+          "index": [
+            2,
+            2
+          ],
+          "n_points": 0,
+          "volume": 0.0739710270233307,
+          "bounds": [
+            [
+              0.5737674584559046,
+              0.8606511876838568
+            ],
+            [
+              0.5156864575233876,
+              0.7735296862850813
+            ]
+          ],
+          "density": 0.0
+        },
+        {
+          "index": [
+            1,
+            2
+          ],
+          "n_points": 2,
+          "volume": 0.07397102702333071,
+          "bounds": [
+            [
+              0.2868837292279523,
+              0.5737674584559046
+            ],
+            [
+              0.5156864575233876,
+              0.7735296862850813
+            ]
+          ],
+          "density": 27.037612974728518
+        },
+        {
+          "index": [
+            2,
+            0
+          ],
+          "n_points": 2,
+          "volume": 0.07397102702333071,
+          "bounds": [
+            [
+              0.5737674584559046,
+              0.8606511876838568
+            ],
+            [
+              1.7154589278491334e-24,
+              0.2578432287616938
+            ]
+          ],
+          "density": 27.037612974728518
+        },
+        {
+          "index": [
+            2,
+            1
+          ],
+          "n_points": 10,
+          "volume": 0.07397102702333071,
+          "bounds": [
+            [
+              0.5737674584559046,
+              0.8606511876838568
+            ],
+            [
+              0.2578432287616938,
+              0.5156864575233876
+            ]
+          ],
+          "density": 135.1880648736426
+        }
+      ]
     },
+    "interpretation": "LOW spatial coverage \u2014 property space is poorly explored",
     "correlations": {
-      "v12_vs_v21": -0.00023205659541006374,
-      "v12_vs_obj_value": -0.021137896914763008,
-      "v21_vs_obj_value": -0.05420268857201869
+      "v12_vs_v21": 0.9384657413680911,
+      "v12_vs_obj_value": -0.22935746518899008,
+      "v21_vs_obj_value": -0.2256529882356183
     }
   },
-  "sparse_regions": [],
+  "sparse_regions": [
+    {
+      "index": [
+        0,
+        2
+      ],
+      "n_points": 0,
+      "volume": 0.07397102702333071,
+      "bounds": [
+        [
+          1.7154589278503522e-24,
+          0.2868837292279523
+        ],
+        [
+          0.5156864575233876,
+          0.7735296862850813
+        ]
+      ],
+      "density": 0.0
+    },
+    {
+      "index": [
+        2,
+        2
+      ],
+      "n_points": 0,
+      "volume": 0.0739710270233307,
+      "bounds": [
+        [
+          0.5737674584559046,
+          0.8606511876838568
+        ],
+        [
+          0.5156864575233876,
+          0.7735296862850813
+        ]
+      ],
+      "density": 0.0
+    },
+    {
+      "index": [
+        1,
+        2
+      ],
+      "n_points": 2,
+      "volume": 0.07397102702333071,
+      "bounds": [
+        [
+          0.2868837292279523,
+          0.5737674584559046
+        ],
+        [
+          0.5156864575233876,
+          0.7735296862850813
+        ]
+      ],
+      "density": 27.037612974728518
+    },
+    {
+      "index": [
+        2,
+        0
+      ],
+      "n_points": 2,
+      "volume": 0.07397102702333071,
+      "bounds": [
+        [
+          0.5737674584559046,
+          0.8606511876838568
+        ],
+        [
+          1.7154589278491334e-24,
+          0.2578432287616938
+        ]
+      ],
+      "density": 27.037612974728518
+    },
+    {
+      "index": [
+        2,
+        1
+      ],
+      "n_points": 10,
+      "volume": 0.07397102702333071,
+      "bounds": [
+        [
+          0.5737674584559046,
+          0.8606511876838568
+        ],
+        [
+          0.2578432287616938,
+          0.5156864575233876
+        ]
+      ],
+      "density": 135.1880648736426
+    }
+  ],
   "last_batch_id": 2
 }

@@ -1,13 +1,94 @@
 {
   "batch_id": 2,
-  "n_samples": 400,
-  "n_success": 365,
-  "status": "completed_mock",
+  "strategy": "design_df",
+  "n_samples": 1200,
+  "n_total_tasks": 1200,
+  "n_success": 1200,
+  "n_converged": 1200,
+  "n_workers": 10,
+  "elapsed_time": 3466.2,
   "output_dir": "outputs/multi_batch/batch_2",
   "best_per_combo": {
-    "circle_auxetic": {
-      "obj_value": 0.012086206412625115
+    "circle/auxetic": {
+      "sample_id": 58,
+      "seed": "circle",
+      "objective": "auxetic",
+      "obj_value": 6.671316429380003,
+      "v12": 0.3000000000049675,
+      "v21": 0.30000000000497
+    },
+    "circle/first": {
+      "sample_id": 181,
+      "seed": "circle",
+      "objective": "first",
+      "obj_value": -3.774892629022009,
+      "v12": 0.34482083782602874,
+      "v21": 0.34482083782601003
+    },
+    "cross_rectangular/auxetic": {
+      "sample_id": 347,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "obj_value": 20.75382969226233,
+      "v12": 0.154316673905817,
+      "v21": 0.15431667390581363
+    },
+    "cross_rectangular/first": {
+      "sample_id": 430,
+      "seed": "cross_rectangular",
+      "objective": "first",
+      "obj_value": -3.8217209449946155,
+      "v12": 0.3191164769113433,
+      "v21": 0.31911647691131334
+    },
+    "hexagonal/auxetic": {
+      "sample_id": 563,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "obj_value": 21.696549270321555,
+      "v12": 0.22360175435579166,
+      "v21": 0.22398056828877402
+    },
+    "hexagonal/first": {
+      "sample_id": 678,
+      "seed": "hexagonal",
+      "objective": "first",
+      "obj_value": -3.7709134895892915,
+      "v12": 0.3364050835850068,
+      "v21": 0.3532333425437831
+    },
+    "hourglass/auxetic": {
+      "sample_id": 746,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "obj_value": 19.502601888149208,
+      "v12": 0.12488246034919355,
+      "v21": 0.12581945855923415
+    },
+    "hourglass/first": {
+      "sample_id": 945,
+      "seed": "hourglass",
+      "objective": "first",
+      "obj_value": -1.2028402520724781,
+      "v12": 0.30000000001477944,
+      "v21": 0.3000002559850666
+    },
+    "square/auxetic": {
+      "sample_id": 1068,
+      "seed": "square",
+      "objective": "auxetic",
+      "obj_value": 18.17839702511766,
+      "v12": 0.19764745298184364,
+      "v21": 0.19764745298184253
+    },
+    "square/first": {
+      "sample_id": 1106,
+      "seed": "square",
+      "objective": "first",
+      "obj_value": -3.7449391670791643,
+      "v12": 0.33374437261190987,
+      "v21": 0.3337443726118911
     }
   },
-  "parameters": {}
+  "timestamp": "2026-07-12T01:43:46.500986"
 }

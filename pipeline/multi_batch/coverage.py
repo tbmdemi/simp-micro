@@ -183,12 +183,97 @@ def find_sparse_regions(
     return sparsity_rank[:n_regions]
 
 
+def _compute_spatial_coverage(
+    results: List[Dict],
+    dims: Tuple[str, ...] = ('v12', 'v21', 'obj_value'),
+    n_bins_per_dim: int = 8,
+) -> Tuple[float, Dict]:
+    """Compute actual spatial coverage fraction across property space.
+
+    Divides each property dimension into n_bins_per_dim intervals and
+    counts how many bins contain at least one data point.
+
+    Returns:
+        Tuple of (coverage_fraction, coverage_detail_dict).
+    """
+    valid = [r for r in results if r.get('success') and r.get('obj_value') is not None]
+    n_valid = len(valid)
+
+    coverage_detail: Dict = {
+        'n_bins_per_dim': n_bins_per_dim,
+        'n_dims': len(dims),
+        'n_bins_total': 1,
+        'n_bins_occupied': 0,
+        'dim_coverage': {},
+    }
+
+    if n_valid < 2:
+        return 0.0, coverage_detail
+
+    # Extract data
+    arrays = []
+    for d in dims:
+        vals = _to_array(valid, d)
+        if len(vals) == 0:
+            return 0.0, coverage_detail
+        arrays.append(vals)
+
+    points = np.column_stack(arrays)
+    n_dims = points.shape[1]
+
+    # Define bin edges per dimension (from data range)
+    edges = []
+    for i in range(n_dims):
+        lo, hi = float(points[:, i].min()), float(points[:, i].max())
+        if hi - lo < 1e-12:
+            hi = lo + 1.0
+        edges.append(np.linspace(lo, hi, n_bins_per_dim + 1))
+
+    total_bins = n_bins_per_dim ** n_dims
+    coverage_detail['n_bins_total'] = total_bins
+
+    # Bin occupancy
+    occupied = np.zeros([n_bins_per_dim] * n_dims, dtype=bool)
+    for p in points:
+        idxs = []
+        for i in range(n_dims):
+            idx = np.searchsorted(edges[i][1:], p[i], side='left')
+            idx = min(idx, n_bins_per_dim - 1)
+            idxs.append(idx)
+        occupied[tuple(idxs)] = True
+
+    n_occupied = int(occupied.sum())
+    coverage_detail['n_bins_occupied'] = n_occupied
+
+    if total_bins > 0:
+        coverage_frac = n_occupied / total_bins
+    else:
+        coverage_frac = 0.0
+
+    # Per-dim marginal coverage
+    for i, d in enumerate(dims):
+        # Project: collapse all other dimensions
+        axis = i
+        projected = np.any(occupied, axis=tuple(
+            [j for j in range(n_dims) if j != axis]
+        ))
+        cov_dim = int(projected.sum()) / n_bins_per_dim
+        coverage_detail['dim_coverage'][d] = round(cov_dim, 4)
+
+    return round(coverage_frac, 4), coverage_detail
+
+
 def coverage_report(
     results: List[Dict],
     dims: Tuple[str, ...] = ('v12', 'v21', 'obj_value'),
     density_result: Optional[Dict] = None,
 ) -> Dict:
     """Generate a structured coverage quality report.
+
+    Computes TWO coverage metrics:
+      - success_rate: fraction of sample runs that succeeded
+      - spatial_coverage_pct: fraction of property-space bins occupied
+        (true measure of how well the space is explored)
 
     Args:
         results: List of result dicts.
@@ -201,14 +286,28 @@ def coverage_report(
     valid = [r for r in results if r.get('success') and r.get('obj_value') is not None]
     n = len(valid)
 
+    # Compute spatial coverage
+    spat_frac, spat_detail = _compute_spatial_coverage(valid, dims)
+
     report: Dict = {
         'n_valid': n,
         'n_total': len(results),
-        'coverage_pct': 100.0 * n / len(results) if results else 0,
+        'success_rate_pct': round(100.0 * n / len(results), 1) if results else 0,
+        'spatial_coverage_pct': round(spat_frac * 100, 1),
+        'spatial_coverage_detail': spat_detail,
         'dimensions': list(dims),
         'ranges': {},
         'sparsity': {},
+        'interpretation': None,
     }
+
+    # Human-readable interpretation
+    if spat_frac < 0.3:
+        report['interpretation'] = 'LOW spatial coverage — property space is poorly explored'
+    elif spat_frac < 0.7:
+        report['interpretation'] = 'MODERATE spatial coverage — significant gaps remain'
+    else:
+        report['interpretation'] = 'HIGH spatial coverage — well-explored property space'
 
     if n == 0:
         return report

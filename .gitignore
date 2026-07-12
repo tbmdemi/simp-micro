@@ -106,3 +106,12 @@ environment.yaml
 *.tar.gz
 *.rar
 .tox/
+
+outputs/
+samples/
+*.png
+*.npy
+*.npz
+*.h5
+*.tar.gz
+*.zip

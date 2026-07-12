@@ -1,106 +1,157 @@
-<!--
-  Title:    SIMP Analyst - SIMP Topology Optimization for Periodic Material Microstructure Design
-  Type:     Project README
-  Language: Tiếng Việt (with English technical terms)
--->
+# SIMP Analyst
 
-# SIMP Analyst 🧊✨
+**Topology Optimization for Periodic Material Microstructure Design**
 
-**Tối ưu hóa hình dạng (topology optimization) cho thiết kế micro-cấu trúc vật liệu tuần hoàn với hệ số Poisson âm (auxetic).**
-
-> **S**olid **I**sotropic **M**aterial with **P**enalization - implementation Python thuần của thuật toán SIMP,
-> kết hợp phân tích phần tử hữu hạn (FEA) + đồng nhất hóa (homogenization) + tối ưu hóa hình dạng,
-> nhắm đến mục tiêu thiết kế các ô cơ sở (unit cell) có tính chất cơ học đặc biệt, đặc biệt là **hành vi auxetic** (ν < 0).
+[![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](#)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
+[![Version](https://img.shields.io/badge/version-1.4.0-blueviolet)](simp/__init__.py)
 
 ---
 
-## Mục lục
+## Overview
 
-- [Tổng quan dự án](#tổng-quan-dự-án)
-- [Tính năng chính](#tính-năng-chính)
-- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
-- [Cài đặt](#cài-đặt)
-- [Sử dụng](#sử-dụng)
-  - [Chạy tối ưu hóa SIMP](#chạy-tối-ưu-hóa-simp)
-  - [Screening Pipeline (Phase 1)](#screening-pipeline-phase-1)
-  - [Phân tích kết quả (Analysis)](#phân-tích-kết-quả-analysis)
-  - [Makefile](#makefile)
-- [Kiến trúc phần mềm](#kiến-trúc-phần-mềm)
-  - [SIMP Core (`simp/`)](#simp-core)
-  - [Pipeline (`pipeline/`)](#pipeline)
-  - [Analysis (`analysis/`)](#analysis)
-- [Seeds - Mẫu khởi tạo](#seeds--mẫu-khởi-tạo)
-- [Objective Functions - Hàm mục tiêu](#objective-functions--hàm-mục-tiêu)
-- [Homogenization & Periodic Boundary Conditions](#homogenization--periodic-boundary-conditions)
-- [Convergence - Tiêu chí hội tụ](#convergence--tiêu-chí-hội-tụ)
-- [Kết quả đầu ra](#kết-quả-đầu-ra)
-- [HTML Reports & Dashboards](#html-reports--dashboards)
-- [Testing](#testing)
-- [Dependencies](#dependencies)
-- [Tài liệu tham khảo](#tài-liệu-tham-khảo)
+**SIMP Analyst** implements the **Solid Isotropic Material with Penalization (SIMP)** method for topology optimization of periodic unit-cell microstructures with targeted mechanical properties - primarily **auxetic behaviour** (negative Poisson's ratio).
+
+The optimization pipeline follows a standard SIMP loop:
+
+```
+Seed Generation → FE Analysis → Homogenization → Objective & Sensitivity →
+Sensitivity/Density Filtering → OC Update → Convergence Check → Repeat
+```
+
+This codebase is a Python reimplementation of original MATLAB reference code and provides a complete, modular, and extensible framework for computational material design.
+
+---
+
+## Table of Contents
+
+- [Project Status](#project-status)
+- [Getting Started](#getting-started)
+- [Package Structure](#package-structure)
+- [Available Seeds](#available-seeds)
+- [Objective Functions](#objective-functions)
+- [Pipeline: Screening & Adaptive Sampling](#pipeline-screening--adaptive-sampling)
+- [CLI Reference](#cli-reference)
+- [Programmatic Usage](#programmatic-usage)
+- [Output Files](#output-files)
+- [Convergence Criteria](#convergence-criteria)
+- [Output Data (Google Drive)](#output-data-google-drive)
+- [Tests](#tests)
+- [Key Bugfixes](#key-bugfixes)
+- [References](#references)
 - [License](#license)
 
 ---
 
-## Tổng quan dự án
+## Project Status
 
-**Input_SIMP_Analyst** (gọi tắt là **SIMPAnalyst**) là một dự án nghiên cứu và kỹ thuật nhằm **thiết kế ngược** micro-cấu trúc vật liệu
-thông qua tối ưu hóa hình dạng. Mục tiêu là tìm ra sự phân bố vật liệu trong một ô cơ sở (unit cell) tuần hoàn sao cho
-vật liệu tương đương (homogenized material) có các tính chất đàn hồi mong muốn - đặc biệt là **hệ số Poisson âm (auxetic)**.
-
-Dự án được xây dựng bằng **Python 3.10+**, kế thừa tinh thần của mã MATLAB 99-dòng kinh điển (Sigmund, 2001)
-và mở rộng với:
-- Điều kiện biên tuần hoàn (PBC) cho ô cơ sở
-- Đồng nhất hóa dựa trên năng lượng (energy-based homogenization) - Xia & Breitkopf (2015)
-- 3 hàm mục tiêu khác nhau cho các chiến lược tối ưu khác nhau
-- 10 mẫu seed khởi tạo khác nhau để khám phá không gian thiết kế
-- Pipeline screening tự động với LHS (Latin Hypercube Sampling) và phân tích tương quan Spearman
-- Hệ thống báo cáo HTML tự chứa (self-contained), hỗ trợ biểu đồ Chart.js
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Core SIMP Engine | ✅ Stable | 10 seed types, 3 objectives, PBC, homogenization |
+| Phase 1 Screening (LHS) | ✅ Complete | 30 combos (10 seeds × 3 objectives) × 50 samples run |
+| Phase 2 Parameter Tuning | 🟡 Implemented | `differential_evolution`, SHGO, basinhopping, L-BFGS-B |
+| Multi-Batch Adaptive Pipeline | 🟡 Implemented | Sobol/LHS + coverage analysis + adaptive decision logic, not yet run in production |
+| Unit Tests | 🟡 Partial | Coverage: convergence, logger, config, CLI, dataset smoke tests |
+| Performance Optimisation | 🟡 Pending | Seed generators and density filter still use nested loops; vectorisation planned |
 
 ---
 
-## Tính năng chính
+## Getting Started
 
-| Tính năng | Mô tả |
-|-----------|-------|
-| **SIMP Loop** | Vòng lặp tối ưu hoàn chỉnh: FE → homogenization → objective → filter → OC update → convergence check |
-| **Periodic BC** | Áp điều kiện biên tuần hoàn (null-space projection) cho ô cơ sở, đảm bảo tính tuần hoàn của trường chuyển vị |
-| **Đồng nhất hóa (Homogenization)** | Tính tensor độ cứng tương đương `Q` (3×3) và độ nhạy `dQ/dx` bằng phương pháp năng lượng |
-| **3 Objective Functions** | `auxetic` (Q₁₂, tối thiểu hóa trực tiếp shear coupling), `first` (Q₁₂ − β·(Q₁₁+Q₂₂)), `second` (Q₁₂ + penalty) |
-| **10 Seed Patterns** | Đa dạng mẫu khởi tạo: void tròn, vuông, lục giác, hình chữ thập, grid, v.v. |
-| **LHS Screening** | Sinh mẫu Latin Hypercube, chạy batch, phân tích Spearman → xác định top-3 tham số ảnh hưởng nhất |
-| **Image Metrics** | Phân tích chất lượng ảnh kết quả: binary rate, edge density, noise ratio, symmetry |
-| **HTML Reports** | Báo cáo tự chứa (single-file) với biểu đồ Chart.js, dashboard, bảng phân loại |
-| **CLI & Library** | Vừa dùng được qua dòng lệnh vừa import như một Python library |
+### Requirements
 
----
+- **Python** ≥ 3.10
+- **numpy** ≥ 1.24
+- **scipy** ≥ 1.10
+- **matplotlib** ≥ 3.7 (PNG output; optional but recommended)
 
-## Cấu trúc thư mục
+Install dependencies:
+
+```bash
+pip install numpy scipy matplotlib
+```
+
+### Quick Start
+
+```bash
+# Run with default parameters (100×100 mesh, hourglass seed, auxetic objective)
+python -m simp.run
+```
+
+### CLI Parameter Overrides
+
+```bash
+python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+```
+
+If the package is installed in editable mode, the same options are available via the console script:
+
+```bash
+simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+```
+
+### Full CLI Example
+
+```bash
+python -m simp.main \
+  --nelx 80 --nely 60 \
+  --volfrac 0.35 \
+  --penal 4.0 \
+  --seed hexagonal \
+  --objective second \
+  --void_size_frac 0.5 \
+  --save_every 5 \
+  --output_dir outputs/simp_hex_second
+```
+
+Expected output:
 
 ```
-Input_SIMP_Analyst/
-├── simp/                          # ★ Core SIMP optimization package
-│   ├── __init__.py                # Package metadata (version 1.4.0)
-│   ├── main.py                    # CLI entry point
-│   ├── run.py                     # Entry - run with default params
-│   ├── runner.py                  # Main optimization loop orchestrator
-│   ├── config.py                  # SimpConfig dataclass với validation
-│   ├── core/                      # Các thuật toán SIMP core
-│   │   ├── fem.py                 # FEM mesh: node numbering, DOF mapping, sparse index vectors
-│   │   ├── filter.py              # Cone-shaped density filter (chống checkerboard)
+Loop:   1  obj:+1.3345e-01  vol:0.532  chg:0.984  v12:-0.0489  v21:-0.0489
+Loop:   2  obj:+9.5432e-02  vol:0.410  chg:0.231  v12:-0.1412  v21:-0.1412
+...
+Loop: 134  obj:-2.8750e-01  vol:0.400  chg:0.003  v12:-0.8510  v21:-0.8510
+[DONE] Hội tụ tại lần lặp 134
+Hoàn thành 134 loops (45.2s)
+  obj=-0.2875  v12=-0.8510  v21=-0.8510  vol=0.400
+```
+
+Results are written to `outputs/simp_results_{seed}/`:
+- `iteration_XXXXX.png` - density field images (grayscale: black = solid, white = void)
+- `iteration_data.csv` - convergence history (Poisson ratio, objective, volume fraction)
+
+---
+
+## Package Structure
+
+```
+├── simp/                          # Core SIMP package (v1.4.0)
+│   ├── __init__.py
+│   ├── run.py                     # Default entry point (hourglass, auxetic)
+│   ├── main.py                    # CLI entry point with argparse
+│   ├── runner.py                  # Optimisation loop orchestrator
+│   ├── config.py                  # SimpConfig dataclass (alternative interface)
+│   │
+│   ├── core/                      # Core SIMP algorithms
+│   │   ├── fem.py                 # FE mesh: node numbering, DOF mapping, sparse index vectors
+│   │   ├── filter.py              # Cone-shaped density/sensitivity filter
 │   │   ├── pbc.py                 # Periodic Boundary Conditions (null-space projection)
-│   │   ├── solver.py              # Sparse FE solver with PBC (direct LU + CG fallback)
-│   │   ├── oc.py                  # Optimality Criteria update (bisection on Lagrange multiplier)
-│   │   └── convergence.py         # Convergence detection (design change + objective stability)
+│   │   ├── solver.py              # Sparse FE solver with PBC (LU + CG fallback)
+│   │   ├── oc.py                  # Optimality Criteria update (bisection on λ)
+│   │   └── convergence.py         # Multi-criterion convergence detection
+│   │
 │   ├── materials/
-│   │   └── isotropic.py           # 4-node quad element stiffness matrix (plane stress)
+│   │   └── isotropic.py           # Isotropic material: 4-node quad element stiffness (plane stress)
+│   │
 │   ├── objectives/
-│   │   ├── auxetic.py             # Auxetic: c = Q₁₂  (+ penalty for low axial stiffness)
-│   │   ├── first_obj.py           # Type 1: c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
-│   │   └── second_obj.py          # Type 2: c = Q₁₂ + penalty for low axial stiffness
+│   │   ├── auxetic.py             # Minimise Q₁₂ (auxetic target)
+│   │   ├── first_obj.py           # Maximise Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
+│   │   └── second_obj.py          # Maximise Q₁₂ + stiffness penalty
+│   │
 │   ├── homogenization/
-│   │   └── compute.py             # Energy-based homogenization: Q + dQ
-│   ├── seeds/                     # 10 initial void pattern generators
+│   │   └── compute.py             # Energy-based homogenisation: stiffness tensor Q + sensitivity dQ
+│   │
+│   ├── seeds/                     # 10 initial void-pattern generators
 │   │   ├── circle.py
 │   │   ├── square.py
 │   │   ├── hourglass.py
@@ -111,157 +162,166 @@ Input_SIMP_Analyst/
 │   │   ├── grid_circular_voids.py
 │   │   ├── small_square_cross.py
 │   │   └── circle_half_quarter.py
+│   │
 │   └── io/
-│       ├── logger.py              # CSV logging per iteration
-│       └── visualizer.py          # Density field PNG export
+│       ├── logger.py              # CSV logging (iteration, ν₁₂, ν₂₁, objective, volume)
+│       └── visualizer.py          # Density-field PNG export
 │
-├── pipeline/                      # Screening pipeline
-│   ├── __init__.py
-│   ├── params.py                  # Parameter space definitions (PARAM_SPACE, FIXED_PARAMS)
-│   ├── phase1_screening_parallel.py # Phase 1: LHS screening, batch runner
-│   ├── phase2_tuning.py           # Phase 2: Global optimization tuning (DE, SHGO, basinhopping)
-│   └── multi_batch/               # Phase 3: Multi-batch adaptive sampling (Sobol, LHS, optimized LHS)
+├── pipeline/                      # Screening & tuning pipelines
+│   ├── params.py                  # Parameter space definitions (LHS ranges, fixed params)
+│   ├── phase1_screening_parallel.py  # Phase 1: LHS screening with multiprocessing
+│   ├── phase2_tuning.py           # Phase 2: derivative-free optimisation tuning
+│   ├── REVIEW_ALGORITHMS_VI.md    # Algorithm review report (in Vietnamese)
+│   │
+│   └── multi_batch/               # Adaptive multi-batch pipeline
+│       ├── params.py              # BatchConfig, PipelineConfig, enums
+│       ├── sampling.py            # Sobol, LHS, Optimised LHS strategies
+│       ├── runner.py              # Batch execution with multiprocessing Pool
+│       ├── adaptive.py            # Decision logic: stop / refine / expand
+│       ├── coverage.py            # KDE density, sparse-region detection
+│       └── visualize.py           # Standalone HTML scatter + contour reports
 │
-├── analysis/                      # Post-processing analysis
-│   ├── __init__.py
-│   ├── cli.py                     # CLI: analysis entry point
-│   ├── dataset.py                 # Xử lý dataset: đọc CSV/json → DataFrame
-│   ├── image.py                   # Image metrics: binary rate, edge density, noise, symmetry
-│   └── report.py                  # Generate self-contained HTML report
+├── tests/                         # PyTest test suite
+│   ├── test_cli.py
+│   ├── test_config.py
+│   ├── test_convergence.py
+│   ├── test_core_smoke.py
+│   ├── test_dataset.py
+│   └── test_logger.py
 │
-├── html/                          # Pre-built HTML resources
-│   ├── index.html                 # Documentation landing page
-│   ├── dashboards/
-│   │   └── phase1_screening_dashboard.html
-│   ├── guides/
-│   │   ├── optimization_pipeline.html
-│   │   └── simp_guide_and_roadmap.html
-│   └── reports/
-│       └── auxetic_report.html
+├── outputs/                       # ⚠️ Not tracked in git - see section below
 │
-├── docs/                          # Documentation (canonical sources)
-│   ├── INDEX.md                   # Docs index / overview
-│   ├── comparison_matlab_python.md# So sánh MATLAB vs Python SIMP
-│   ├── phase1_screening_report.md # Báo cáo Phase 1 (gộp từ root + outputs/reports)
-│   ├── architecture_review.md     # Architecture review report
-│   ├── bug_reports.md             # Bug report tổng hợp (Phase 1 + Phase 2)
-│   ├── phase2_guide.md            # Hướng dẫn Phase 2 tuning
-│   ├── PROJECT_ONBOARDING.md      # Project introduction for new collaborators
-│   ├── SUMMARY.md                 # Docs summary
-│   ├── TASK_IMAGE_QUALITY_CHECK.md# Image quality check task
-│   └── WORKFLOW_SIMP_ANALYSIS.md  # Workflow documentation
-│
-├── outputs/                       # Kết quả sinh ra từ quá trình chạy
-│   ├── report_simp_analysis.html  # Self-contained analysis report
-│   ├── figures/                   # Biểu đồ phân tích (.png)
-│   └── pipeline/phase1/           # Kết quả Phase 1 screening
-│       ├── circle/auxetic/
-│       ├── circle/first/
-│       ├── circle/second/
-│       ├── square/auxetic/
-│       └── ... (10 seeds × 3 objectives)
-│
-├── tests/                         # 80 unit/smoke tests (pytest)
-├── pyproject.toml                 # Package metadata + tool config
-├── Makefile                       # Convenience commands
-├── requirements.txt               # Python dependencies
-├── CHANGELOG.md                   # Lịch sử thay đổi (v1.0.0 → v1.4.0)
-└── outputs/danh_gia_project.md    # Project assessment report (2026-07-10)
+└── README.md                      # This file
 ```
 
 ---
 
-## Cài đặt
+## Available Seeds
 
-### Yêu cầu hệ thống
+| Seed | Description | Preview |
+|------|-------------|---------|
+| `circle` | Single circular void at centre | ⬤ |
+| `square` | Single square void at centre | ◼ |
+| `hourglass` | Two triangular voids (hourglass shape) | ⌛ |
+| `four_circle` | Four circular voids, symmetric | ◉ ◉ |
+| `hexagonal` | Single hexagonal void | ⬡ |
+| `nine_circle` | 3×3 grid of circular voids | 9× ◯ |
+| `cross_rectangular` | Cross-shaped void | ✚ |
+| `grid_circular_voids` | N×N uniform grid of circular voids | ◯◯◯ |
+| `small_square_cross` | Small square cross at centre | ┼ |
+| `circle_half_quarter` | Centre circle + four quarter-circles at corners | ⊙ |
 
-- **Python** ≥ 3.10
-- **pip** (khuyên dùng phiên bản mới nhất)
-- **Git** (để clone repository)
-
-### Các bước cài đặt
-
-```bash
-# Clone repository
-git https://github.com/tbmdemi/simp-micro.git
-cd simp-micro
-
-# (Khuyên dùng) Tạo virtual environment
-python -m venv venv
-source venv/bin/activate   # Linux/macOS
-# venv\Scripts\activate    # Windows
-
-# Cài đặt package ở chế độ development (editable)
-pip install -e .
-```
-
-Sau khi cài đặt, bạn có thể dùng lệnh `simp` và `simp-analysis` từ terminal.
-
-### Cài đặt optional dependencies
-
-```bash
-# Cài thêm dependencies cho analysis (pandas, scikit-image, seaborn, ...)
-pip install -e ".[analysis]"
-
-# Cài thêm dependencies cho development (pytest, flake8, black, mypy, ...)
-pip install -e ".[dev]"
-
-# Cài tất cả
-pip install -e ".[all]"
-```
-
-Hoặc dùng Makefile:
-
-```bash
-make install           # pip install -e .
-make install-core      # core dependencies only
-make install-analysis  # analysis dependencies
-make install-dev       # all dev dependencies
-```
+Rotation (`--rotation_deg`) can be applied to any seed.
 
 ---
 
-## Sử dụng
+## Objective Functions
 
-### Chạy tối ưu hóa SIMP
+### 1. Auxetic (default)
 
-**Câu lệnh cơ bản nhất:**
-
-```bash
-python -m simp.run
+```
+c = Q₁₂    (+ penalty if Q₁₁ < δ or Q₂₂ < δ)
+δ = 0.1 · volfrac · E₀
 ```
 
-Chạy với mesh 100×100, seed `circle`, objective `auxetic` - kết quả lưu vào `outputs/simp_results_circle/`.
+- Directly minimises the shear-coupling term `Q₁₂` (negative → auxetic)
+- Stiffness penalty prevents structural collapse
+- **Use this for achieving ν₁₂ < 0**
 
-**Tùy chỉnh tham số qua CLI:**
+### 2. First Objective
 
-```bash
-python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second --output_dir outputs/my_run
+```
+c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
 ```
 
-**Hoặc dùng console script (nếu đã cài `pip install -e .`):**
+- Maximises shear coupling while suppressing axial stiffness
+- `β^loop` decays over iterations, gradually relaxing the axial penalty
+- Smooth, stable convergence; useful for exploring the design space
 
-```bash
-simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+### 3. Second Objective
+
+```
+c = Q₁₂    (+ quadratic penalty if Q₁₁ < δ or Q₂₂ < δ)
+δ = 0.1 · volfrac · E₀
 ```
 
-**Tất cả CLI options** (xem chi tiết trong [`simp/README.md`](simp/README.md)):
+- Aggressively maximises `Q₁₂`
+- Penalty activates only when axial stiffness drops below threshold
+- May produce more extreme topologies
 
-| Option | Default | Mô tả |
-|--------|---------|-------|
-| `--nelx`, `--nely` | 100, 100 | Kích thước lưới phần tử |
-| `--volfrac` | 0.4 | Tỉ lệ thể tích mục tiêu |
-| `--penal` | 3.0 | Hệ số penalization SIMP |
-| `--rmin` | 3.0 | Bán kính filter |
-| `--ft` | 2 | Loại filter (1 = sensitivity, 2 = density) |
-| `--seed` | circle | Tên seed khởi tạo |
-| `--objective` | auxetic | Hàm mục tiêu: `auxetic`, `first`, `second` |
-| `--void_size_frac` | 0.4 | Kích thước void ban đầu |
-| `--rotation_deg` | 0.0 | Góc xoay seed |
-| `--max_iter` | 200 | Số vòng lặp tối đa |
-| `--save_every` | 1 | Lưu ảnh PNG mỗi N vòng lặp |
+---
 
-**Sử dụng programmatic (Python API):**
+## Pipeline: Screening & Adaptive Sampling
+
+The project provides a phased approach to parameter exploration:
+
+### Phase 1 - LHS Screening
+
+Scans the 7-dimensional parameter space (`volfrac`, `penal`, `rmin`, `move`, `void_size_frac`, `rotation_deg`, beta) using **Latin Hypercube Sampling** (50 samples per combination). Spearman rank correlation identifies the most influential parameters.
+
+```bash
+# Single combination
+python -m pipeline.phase1_screening_parallel --objective auxetic --seed hexagonal
+
+# Full sweep (30 combos)
+python -m pipeline.phase1_screening_parallel --all
+```
+
+The screening narrows the active parameter set from 7 to the 2–3 most influential dimensions (currently `volfrac` and `void_size_frac`).
+
+### Phase 2 - Derivative-Free Tuning
+
+Uses `scipy.optimize` solvers (`differential_evolution`, SHGO, basinhopping, L-BFGS-B) to locate the global optimum within the reduced parameter space identified in Phase 1.
+
+### Multi-Batch Adaptive Pipeline
+
+An advanced adaptive-sampling pipeline that runs sequential batches, each guided by coverage analysis of the accumulated results:
+
+- **Batch 1:** Space-filling (Sobol sequence)
+- **Batch 2+:** Decision-driven - `adaptive.py` chooses to refine promising regions, expand to new seeds/objectives, or stop
+- **Coverage:** KDE density estimation + sparse-region detection
+- **Reports:** Standalone HTML pages with scatter plots, density contours, and per-batch progression
+
+```
+python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
+```
+
+> **Note:** The multi-batch pipeline is implemented but has not yet been run in production.
+
+---
+
+## CLI Reference
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--nelx` | int | 100 | Number of elements in x-direction |
+| `--nely` | int | 100 | Number of elements in y-direction |
+| `--volfrac` | float | 0.4 | Target volume fraction |
+| `--penal` | float | 3.0 | SIMP penalisation factor |
+| `--rmin` | float | 3.0 | Filter radius (density/sensitivity) |
+| `--ft` | int | 2 | Filter type (1 = sensitivity, 2 = density) |
+| `--E0` | float | 199.0 | Young's modulus of solid material (GPa) |
+| `--Emin` | float | 1e-9 | Young's modulus of void material |
+| `--nu` | float | 0.3 | Base-material Poisson ratio |
+| `--move` | float | 0.1 | Maximum change per OC update |
+| `--max_iter` | int | 200 | Maximum optimisation iterations |
+| `--tol_change` | float | 0.01 | Convergence threshold for design change |
+| `--tol_obj` | float | 0.05 | Convergence threshold for objective stability |
+| `--window_size` | int | 20 | Stable-iteration window for objective convergence |
+| `--seed` | str | hourglass | Initial seed pattern name |
+| `--objective` | str | auxetic | Objective: `first`, `second`, or `auxetic` |
+| `--void_size_frac` | float | 0.4 | Void-size fraction for seed generation |
+| `--rotation_deg` | float | 0.0 | Seed rotation angle (degrees) |
+| `--beta` | float | 0.8 | Beta decay coefficient (first objective) |
+| `--beta_second` | float | 100.0 | Penalty weight (second objective) |
+| `--save_every` | int | 1 | Save image every N iterations |
+| `--scale_factor` | int | 1 | PNG upscale factor |
+| `--output_dir` | str | auto | Output directory (default: `outputs/simp_results_{seed}`) |
+| `--quiet` | flag | false | Suppress final summary |
+
+---
+
+## Programmatic Usage
 
 ```python
 from simp.runner import run_simp
@@ -280,358 +340,128 @@ params = {
 }
 
 result = run_simp(params)
-print(f'ν₁₂ = {result["v12"]:.4f}, ν₂₁ = {result["v21"]:.4f}')
-print(f'Converged: {result["converged"]} after {result["n_iters"]} iterations')
 
-# Kết quả trả về
-xPhys   = result['xPhys']      # (nely, nelx) numpy array - density field
-Q       = result['Q']           # 3×3 homogenized stiffness tensor
-history = result['history']     # dict - convergence history
+print(f'Final Poisson ratio: ν₁₂ = {result["v12"]:.4f}, ν₂₁ = {result["v21"]:.4f}')
+print(f'Converged: {result["converged"]}')
+print(f'Iterations: {result["n_iters"]}')
+print(f'Output directory: {result["output_dir"]}')
+
+# Access results
+xPhys = result['xPhys']          # (nely, nelx) density field
+Q     = result['Q']              # 3×3 homogenised stiffness tensor
+history = result['history']      # dict with iteration, v12, v21, objective, volume
 ```
 
-### Screening Pipeline (Phase 1)
+---
 
-Pipeline Phase 1 thực hiện **LHS (Latin Hypercube Sampling) Screening** để xác định tham số nào có ảnh hưởng nhất đến kết quả tối ưu (phân tích tương quan Spearman).
+## Output Files
 
-**Chạy một combo (seed + objective):**
+### PNG Images (`iteration_XXXXX.png`)
+
+Grayscale density field at saved iterations:
+- **Black (0)** = void
+- **White (1)** = solid material
+- Zero-padded iteration numbers for animation assembly
+
+### CSV Data (`iteration_data.csv`)
+
+| Column | Description |
+|--------|-------------|
+| `Iteration` | Loop number |
+| `Poisson_v12` | ν₁₂ = Q₁₂ / Q₂₂ |
+| `Poisson_v21` | ν₂₁ = Q₁₂ / Q₁₁ |
+| `Objective` | Objective function value |
+| `Volume_Fraction` | Mean of `xPhys` |
+
+### Metadata (`metadata.json`)
+
+Each run produces a JSON file containing:
+- `git_hash` - commit hash of the code that produced the result
+- `timestamp` - run start time
+- `version` - SIMP package version
+- `params` - full parameter set used
+
+---
+
+## Convergence Criteria
+
+Optimisation stops when **any** of the following conditions is met:
+
+1. **Design change** < `tol_change` - maximum absolute density change between consecutive iterations
+2. **Objective stability** - relative objective change < `tol_obj` for `window_size` consecutive iterations
+3. **Maximum iterations** - `max_iter` reached
+
+A `ConvergenceChecker` class (in `simp/core/convergence.py`) handles all three criteria, with `min_iter` to prevent premature stopping.
+
+---
+
+## Output Data (Google Drive)
+
+The `outputs/` directory contains all experimental results - raw iteration data, convergence logs, density-field images, screening reports, and slide images - and is **not tracked in this repository**.
+
+All outputs are available on Google Drive:
+
+📁 **[SIMP Analyst - Output Data](https://drive.google.com/drive/folders/1dZHKKWdp4mDRVEXAiOVGuguAr5QYCMBD?usp=sharing)**
+
+The directory includes:
+
+| Path | Contents |
+|------|----------|
+| `outputs/pipeline/phase1/` | Phase 1 LHS screening: 30 combos × 50 samples, Spearman correlation analysis, refined parameters |
+| `outputs/simp_results_circle/` | Single-run example (circle/auxetic) |
+| `outputs/slide_images/` | 18 representative topology images for reports and presentations |
+| `outputs/figures/` | Spearman correlation heatmaps, bar plots, analysis charts |
+
+To use these results locally, download the desired folder and place it under `outputs/` in the project root.
+
+---
+
+## Tests
 
 ```bash
-python -m pipeline.phase1_screening --objective auxetic --seed circle --n_samples 50
+pytest tests/ -v
 ```
 
-**Quét toàn bộ 30 combo (10 seeds × 3 objectives):**
+Current test coverage:
 
-```bash
-python -m pipeline.phase1_screening --all --n_samples 30
-```
+| Module | Status |
+|--------|--------|
+| CLI argument parsing | ✅ |
+| SimpConfig validation | ✅ |
+| Convergence checker | ✅ |
+| Core smoke (FEM, material, filter, OC, solver, PBC) | ✅ |
+| Dataset loading & auxetic classification | ✅ |
+| Logger CSV formatting | ✅ |
 
-Kết quả được lưu vào `outputs/pipeline/phase1/` dưới dạng CSV + JSON cho mỗi combo.
-
-**Tham số được screening:**
-
-| Tham số | Khoảng | Áp dụng cho |
-|---------|--------|-------------|
-| `volfrac` | (0.2, 0.6) | Tất cả |
-| `penal` | (1.0, 5.0) | Tất cả |
-| `rmin` | (1.0, 6.0) | Tất cả |
-| `move` | (0.05, 0.3) | Tất cả |
-| `void_size_frac` | (0.2, 0.7) | Tất cả |
-| `rotation_deg` | (0.0, 90.0) | Tất cả |
-| `beta` | (0.3, 1.5) | `first` objective |
-| `beta_second` | (0.5, 2.5) | `second` objective |
-
-### Phân tích kết quả (Analysis)
-
-```bash
-# Chạy analysis CLI
-python -m analysis.cli
-
-# Hoặc console script
-simp-analysis
-```
-
-Module `analysis/` cung cấp:
-- `dataset.py` - Đọc và xử lý dữ liệu từ CSV/JSON kết quả SIMP
-- `image.py` - Tính các chỉ số chất lượng ảnh (binary rate, edge density, noise ratio, symmetry L/R)
-- `report.py` - Tạo báo cáo HTML tự chứa với bảng phân loại và chỉ số hình ảnh
-
-### Makefile
-
-```bash
-make test              # Chạy pytest với coverage
-make lint              # flake8 + mypy
-make format            # black + isort
-make run-simp ARGS="--nelx 60 --nely 60 --volfrac 0.3"
-make run-analysis      # Run analysis CLI
-make clean             # Xóa build artifacts
-```
+> **Note:** Coverage for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, and `core/pbc.py` is still pending.
 
 ---
 
-## Kiến trúc phần mềm
+## Key Bugfixes
 
-<a name="simp-core"></a>
-### SIMP Core (`simp/`)
+The following critical issues were identified during an algorithm review (June 2026) and have been fixed:
 
-Vòng lặp tối ưu SIMP được tổ chức theo kiến trúc modular, mỗi module chịu trách nhiệm một giai đoạn trong pipeline:
-
-```
-                    ┌──────────────┐
-                    │   Seeding    │  ← seeds/*.py: tạo mật độ ban đầu x
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │  FE Solver   │  ← core/fem.py + core/solver.py + core/pbc.py
-                    │  (with PBC)  │    K · u = f  (trong không gian PBC-reduced)
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │Homogenization│  ← homogenization/compute.py
-                    │   Q = f(u)   │    Tính tensor Q (3×3) + độ nhạy dQ
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │   Objective  │  ← objectives/*.py
-                    │  c = f(Q)    │    c = ν₁₂, Q₁₂ - β·tr(Q), ...
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │    Filter    │  ← core/filter.py
-                    │  x̃ = H · x   │    Cone-shaped density filter
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │  OC Update   │  ← core/oc.py
-                    │ x_new = OC() │    Optimality Criteria bisection
-                    └──────┬───────┘
-                           ▼
-                    ┌──────────────┐
-                    │  Convergence │  ← core/convergence.py
-                    │   Check?     │    Δx < tol_change OR
-                    │              │    Δobj < tol_obj (×window_size)?
-                    └──────┬───────┘
-                           ▼
-                     Done / Next iter
-```
-
-**Luồng chi tiết** (do `runner.py` điều phối):
-
-1. **Seed generation**: Tạo trường mật độ ban đầu `x` từ một trong 10 seed patterns
-2. **FEM with PBC**: Lắp ráp ma trận độ cứng toàn cục `K`, áp PBC → giải tìm chuyển vị `u`
-3. **Homogenization**: Tính tensor độ cứng tương đương `Q` (3×3) từ trường chuyển vị
-4. **Objective**: Tính giá trị hàm mục tiêu `c` và độ nhạy `dc/dx`
-5. **Filter**: Lọc trường độ nhạy/mật độ bằng cone-shaped filter (chống checkerboard)
-6. **OC update**: Cập nhật mật độ bằng Optimality Criteria (bisection tìm λ) — hỗ trợ 2 chế độ: MATLAB (mặc định, không sqrt) và Sigmund 2001 (có sqrt, dùng `use_sqrt=True`)
-7. **Convergence check**: Kiểm tra hội tụ qua 3 tiêu chí (change, objective stability, max iter)
-8. Lặp lại từ bước 2 nếu chưa hội tụ
-
-### Pipeline (`pipeline/`)
-
-Module pipeline thực hiện **screening tự động**:
-
-- **Phase 1** (`phase1_screening_parallel.py`): Sinh `N` mẫu LHS từ không gian tham số (6–8 biến), chạy SIMP song song, phân tích Spearman tìm top-3 tham số ảnh hưởng nhất.
-- **Phase 2** (`phase2_tuning.py`): Tối ưu hóa toàn cục (DE, SHGO, basinhopping).
-- **Multi-batch** (`multi_batch/`): Adaptive sampling (Sobol/LHS), coverage analysis, decision-making.
-
-### Analysis (`analysis/`)
-
-Module phân tích hậu kỳ:
-
-- **dataset.py**: Đọc CSV/JSON → pandas DataFrame
-- **image.py**: Tính các chỉ số từ ảnh kết quả:
-  - `binary_rate`: Tỉ lệ pixel đã phân cực về 0 hoặc 1
-  - `edge_density`: Mật độ biên giữa vật liệu và void
-  - `noise_ratio`: Tỉ lệ nhiễu (pixel không ổn định)
-  - `symmetry_lr`: Đối xứng trái-phải
-- **report.py**: Tạo HTML self-contained với:
-  - Summary cards (tổng số mẫu, số auxetic, số conventional)
-  - Bảng phân loại (màu xanh cho auxetic, vàng cho conventional)
-  - Bảng chỉ số chất lượng ảnh
-  - Tất cả CSS/JS inline, không phụ thuộc CDN
+| Bug | Impact | Fix |
+|-----|--------|-----|
+| **Objective sign for `first`/`second` objectives** | OC update moved in wrong direction for maximise-type objectives | Negate `c` and `dc` for `first`/`second` before OC update in `runner.py` |
+| **`max` instead of `min` in `aggregate_correlations.py`** | Best-sample selection picked worst objective value | Changed `max(...)` → `min(...)` |
+| **Poisson-ratio formula sign** | `ν₁₂ = -Q₁₂/Q₂₂` produced positive ν₁₂ for auxetic designs | Fixed to `ν₁₂ = Q₁₂/Q₂₂` in commit `07914ea` |
 
 ---
 
-## Seeds - Mẫu khởi tạo
+## References
 
-10 seed patterns giúp khám phá đa dạng không gian thiết kế:
-
-| Seed | Mô tả | Số void |
-|------|-------|---------|
-| `circle` | Một lỗ tròn ở tâm | 1 |
-| `square` | Một lỗ vuông ở tâm | 1 |
-| `hourglass` | Hai lỗ tam giác đối xứng (hình đồng hồ cát) | 2 |
-| `four_circle` | Bốn lỗ tròn đối xứng | 4 |
-| `hexagonal` | Một lỗ lục giác | 1 |
-| `nine_circle` | 3×3 lỗ tròn dạng grid | 9 |
-| `cross_rectangular` | Lỗ hình chữ thập | 1 |
-| `grid_circular_voids` | Grid đều các lỗ tròn | Nhiều |
-| `small_square_cross` | Hình chữ thập vuông nhỏ ở tâm | 1 |
-| `circle_half_quarter` | Lỗ tròn tâm + 4 phần tư lỗ tròn ở góc | 5 |
-
-Các seed được parameter hóa bởi `void_size_frac` (kích thước void) và `rotation_deg` (góc xoay), cho phép tạo ra vô số biến thể khởi tạo.
-
----
-
-## Objective Functions - Hàm mục tiêu
-
-### 1. Auxetic Objective (`auxetic`)
-
-$$
-c = Q_{12} + \text{penalty}(\text{nếu } Q_{11} < \delta \text{ hoặc } Q_{22} < \delta), \quad
-\delta = 0.1 \cdot \text{volfrac} \cdot E_0
-$$
-
-- **Mục tiêu**: Cực tiểu hóa `Q₁₂` (shear coupling). `Q₁₂ < 0` → auxetic
-- **Lý do**: Gradient `dν₁₂/dx ≈ 0` (do `dQ₁₂/Q₁₂ ≈ dQ₂₂/Q₂₂`), nên `ν₁₂` không thể dùng cho topology optimization
-- **Giải pháp**: Tối ưu trực tiếp `Q₁₂` với penalty stiffness để tránh collapse
-- **Phù hợp nhất** cho việc tìm kiếm thiết kế auxetic thuần túy
-
-### 2. First Objective (`first`)
-
-$$
-c = Q_{12} - \beta^{\text{loop}} \cdot (Q_{11} + Q_{22})
-$$
-
-- **Mục tiêu**: Cực đại hóa `Q₁₂` đồng thời triệt tiêu độ cứng dọc trục
-- **Điểm đặc biệt**: Hệ số `β^loop` giảm dần (decay) theo số vòng lặp - ban đầu penalty nặng lên `Q₁₁+Q₂₂`, sau đó nhẹ dần
-- **Hội tụ ổn định**, thích hợp để thăm dò không gian thiết kế
-
-### 3. Second Objective (`second`)
-
-$$
-c = Q_{12} + \text{penalty}(\text{nếu } Q_{11} < \delta \text{ hoặc } Q_{22} < \delta)
-$$
-
-- **Mục tiêu**: Cực đại hóa `Q₁₂` một cách trực diện
-- **Penalty**: Chỉ kích hoạt khi độ cứng dọc trục xuống dưới ngưỡng `δ = 0.1 · volfrac · E₀`
-- **Tập trung vào shear**, có thể cho kết quả agressive hơn `first`
-
----
-
-## Homogenization & Periodic Boundary Conditions
-
-### Homogenization
-
-Module `homogenization/compute.py` thực hiện:
-
-- **Tính tensor độ cứng tương đương** `Q` (3×3) từ trường chuyển vị trên unit cell:
-  $$
-  Q_{ij} = \frac{1}{|Y|} \int_Y (\boldsymbol{\varepsilon}^0_i - \boldsymbol{\varepsilon}(u_i))^T \cdot \mathbb{C} \cdot (\boldsymbol{\varepsilon}^0_j - \boldsymbol{\varepsilon}(u_j)) \, dY
-  $$
-- **Tính độ nhạy** `dQ/dx` - cần thiết cho gradient-based optimization
-
-3 trường hợp tải (load case) được giải: epsilon_xx, epsilon_yy, epsilon_xy.
-
-### Periodic Boundary Conditions (PBC)
-
-Module `core/pbc.py` áp PBC bằng phương pháp **null-space projection**:
-
-1. Xác định master/slave DOFs trên các biên đối diện
-2. Xây dựng ma trận chiếu `P` sao cho `u = P · u_reduced`
-3. Bài toán FE được giải trong không gian reduced: `(P^T · K · P) · u_reduced = P^T · f`
-4. Kết quả `u` được khôi phục từ `u_reduced = P · u_reduced`
-
-Phương pháp này hiệu quả vì giảm kích thước hệ phương trình (loại bỏ DOFs dư thừa do PBC).
-
----
-
-## Convergence - Tiêu chí hội tụ
-
-Vòng lặp tối ưu dừng khi **bất kỳ** điều kiện nào sau đây được thỏa mãn:
-
-1. **Design change** < `tol_change` (mặc định 0.01):
-   $$
-   \max |x_{new} - x_{old}| < \text{tol\_change}
-   $$
-
-2. **Objective stability**: Biến thiên tương đối của objective < `tol_obj` (0.05) trong `window_size` (20) vòng lặp liên tiếp
-
-3. **Max iterations** đạt `max_iter` (mặc định 200)
-
-Module `core/convergence.py` triển khai class `ConvergenceChecker` quản lý cả 3 tiêu chí này.
-
----
-
-## Kết quả đầu ra
-
-Sau khi chạy tối ưu, thư mục `output_dir` chứa:
-
-| File | Mô tả |
-|------|-------|
-| `iteration_00001.png` ... | Ảnh xám trường mật độ (đen = void, trắng = solid) tại mỗi vòng lưu |
-| `iteration_data.csv` | Lịch sử hội tụ: Iteration, Poisson_v12, Poisson_v21, Objective, Volume_Fraction |
-| (Thư mục con `sample_*/`) | Kết quả từng mẫu trong Phase 1 screening |
-
----
-
-## HTML Reports & Dashboards
-
-Dự án bao gồm các báo cáo HTML đã được xây dựng sẵn:
-
-| Resource | Mô tả |
-|------|-------|
-| [`html/reports/auxetic_report.html`](html/reports/auxetic_report.html) | Báo cáo kết quả auxetic |
-| [`html/dashboards/phase1_screening_dashboard.html`](html/dashboards/phase1_screening_dashboard.html) | Dashboard Phase 1 screening |
-| [`html/guides/optimization_pipeline.html`](html/guides/optimization_pipeline.html) | Hướng dẫn pipeline tối ưu (tiếng Việt) |
-| [`html/guides/simp_guide_and_roadmap.html`](html/guides/simp_guide_and_roadmap.html) | Guide và roadmap SIMP (tiếng Việt) |
-| [`outputs/report_simp_analysis.html`](outputs/report_simp_analysis.html) | Báo cáo phân tích tổng hợp |
-
-Các báo cáo được thiết kế **self-contained** (tất cả CSS/JS inline), có thể mở trực tiếp bằng `file://` mà không cần server.
-
----
-
-## Tính năng mới trong v1.4.0
-
-| Tính năng | Mô tả |
-|-----------|-------|
-| **OC sqrt toggle** | `use_sqrt=False` (mặc định, khớp MATLAB). Set `True` cho heuristic Sigmund 2001. |
-| **Symmetrize K** | Ma trận độ cứng FE được symmetrize giống MATLAB: `K = (K + K')/2`. |
-| **xPhys unfiltered (First_Obj)** | Dùng unfiltered density cho FE kế tiếp, đúng MATLAB behavior. |
-| **rho0 scaling** | Tham số `rho0` (mặc định 1.0) cho solve_fe và homogenization. MATLAB Second_Obj dùng rho0=7850. |
-| **Error handling** | `try/except` trong vòng lặp SIMP — tự động phục hồi, dừng sau 5 lỗi. |
-| **Metadata reproducibility** | Mỗi output có `metadata.json` (git hash, timestamp, params). |
-| **Multi-batch adaptive** | Pipeline Sobol/LHS, coverage analysis, decision-making tự động. |
-| **Bug fixes** | OC sqrt, symmetrize K, xPhys, rho0 — 8 bug Phase 2 đã fix. |
-
-## Testing
-
-```bash
-# Chạy toàn bộ test suite (80 tests)
-python -m pytest tests/ -v
-
-# Với coverage report
-python -m pytest tests/ -v --cov=simp --cov=analysis --cov-report=term-missing
-
-# HTML coverage report
-python -m pytest tests/ -v --cov=simp --cov=analysis --cov-report=html
-# open htmlcov/index.html
-
-# Hoặc dùng Makefile
-make test
-make test-coverage
-```
-
----
-
-## Dependencies
-
-### Core dependencies
-
-- **Python** ≥ 3.10
-- **numpy** ≥ 1.24
-- **scipy** ≥ 1.10
-- **matplotlib** ≥ 3.7
-
-### Analysis dependencies (optional)
-
-- pandas ≥ 2.0
-- scikit-image ≥ 0.20
-- Pillow ≥ 10.0
-- seaborn ≥ 0.13
-
-### Dev dependencies (optional)
-
-- pytest ≥ 7.0 + pytest-cov
-- flake8, black, isort
-- mypy
-
-Xem đầy đủ trong [`pyproject.toml`](pyproject.toml) và [`requirements.txt`](requirements.txt).
-
----
-
-## Tài liệu tham khảo
-
-1. Sigmund, O. (2001). *A 99 line topology optimization code written in Matlab.* Structural and Multidisciplinary Optimization, 21(2), 120–127.
-2. Andreassen, E., et al. (2011). *Efficient topology optimization in MATLAB using 88 lines of code.* Structural and Multidisciplinary Optimization, 43(1), 1–16.
-3. Xia, L., & Breitkopf, P. (2015). *Design of materials using topology optimization and energy-based homogenization.* Archives of Computational Methods in Engineering, 22(2), 229–260.
-4. Bendsøe, M. P., & Sigmund, O. (2003). *Topology Optimization: Theory, Methods, and Applications.* Springer.
+- Sigmund, O. (2001). *A 99 line topology optimization code written in Matlab.* Structural and Multidisciplinary Optimization, 21(2), 120–127.
+- Andreassen, E., et al. (2011). *Efficient topology optimization in MATLAB using 88 lines of code.* Structural and Multidisciplinary Optimization, 43(1), 1–16.
+- Xia, L., & Breitkopf, P. (2015). *Design of materials using topology optimization and energy‑based homogenization.* Archives of Computational Methods in Engineering, 22(2), 229–260.
+- Bendsøe, M. P., & Sigmund, O. (2003). *Topology Optimization: Theory, Methods, and Applications.* Springer.
 
 ---
 
 ## License
 
-MIT License - xem file [`LICENSE`](LICENSE) (hoặc tham khảo trong `simp/__init__.py`).
+MIT - see [`simp/__init__.py`](simp/__init__.py).
 
 ---
 
-> ⚡ **SIMPAnalyst** - từ tư duy thiết kế đến micro-cấu trúc auxetic.
+*Maintained by the SIMP Analyst Team.*
