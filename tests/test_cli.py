@@ -10,7 +10,7 @@ def test_build_parser_has_expected_options():
         '--nely', '40',
         '--volfrac', '0.3',
         '--seed', 'hexagonal',
-        '--objective', 'second',
+        '--objective', 'auxetic',
         '--output_dir', 'outputs/test_cli',
     ])
 
@@ -18,7 +18,7 @@ def test_build_parser_has_expected_options():
     assert args.nely == 40
     assert args.volfrac == 0.3
     assert args.seed == 'hexagonal'
-    assert args.objective == 'second'
+    assert args.objective == 'auxetic'
     assert args.output_dir == 'outputs/test_cli'
 
 

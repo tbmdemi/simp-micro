@@ -150,7 +150,8 @@ def classify_auxetic(
     Phân loại vật liệu là auxetic hay thông thường dựa trên hệ số Poisson.
 
     Một vật liệu được coi là auxetic nếu bất kỳ hệ số Poisson nào (ν₁₂ hoặc ν₂₁)
-    nhỏ hơn ngưỡng cho trước.
+    nhỏ hơn ngưỡng cho trước. Tuy nhiên, vì gradient của ν₁₂ không phù hợp với tối ưu hóa,
+    phương pháp thay thế thường sẽ dựa trên Q₁₂ để định lượng tính auxetic.
 
     Args:
         v12 (float): Hệ số Poisson ν₁₂.
@@ -167,7 +168,7 @@ def classify_auxetic(
 
 def build_classification_table(
     data_dir: str,
-    objective_type: str = 'first',
+    objective_type: str = 'auxetic',
 ) -> pd.DataFrame:
     """
     Xây dựng bảng phân loại từ tất cả các thư mục kết quả SIMP.
@@ -176,7 +177,7 @@ def build_classification_table(
 
     Args:
         data_dir (str): Thư mục gốc chứa các thư mục kết quả SIMP.
-        objective_type (str): 'first' hoặc 'second' - dùng để lọc thư mục.
+        objective_type (str): 'auxetic' - dùng để lọc thư mục (chỉ hỗ trợ auxetic).
 
     Returns:
         pd.DataFrame: DataFrame với các cột: Shape, Poisson_v12, Poisson_v21,

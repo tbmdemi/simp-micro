@@ -25,8 +25,7 @@ params = {
     'objective': 'auxetic',
     'void_size_frac': 0.4,
     'rotation_deg': 0.0,
-    'beta': 0.8,           # Khớp MATLAB First_Obj
-    'beta_second': 100.0,   # Khớp MATLAB Second_Obj
+    'beta': 1.0,
     'save_every': 1,
     'scale_factor': 1,
 }

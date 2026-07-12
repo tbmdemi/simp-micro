@@ -18,13 +18,13 @@ python -m simp.run
 You can override the default parameters directly from the terminal by using the CLI entry point:
 
 ```bash
-python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second --output_dir outputs/simp_hex
+python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --output_dir outputs/simp_hex
 ```
 
 If the package is installed in editable or normal mode, the same options can also be used via the console script:
 
 ```bash
-simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal
 ```
 
 ### Available CLI options
@@ -46,11 +46,10 @@ simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
 | `--tol_obj` | float | 0.05 | Convergence threshold for objective stability |
 | `--window_size` | int | 20 | Number of stable iterations required for objective convergence |
 | `--seed` | str | circle | Initial seed pattern name |
-| `--objective` | str | auxetic | Objective type; allowed: `first`, `second`, `auxetic` |
+| `--objective` | str | auxetic | Objective type; chỉ hỗ trợ `auxetic` |
 | `--void_size_frac` | float | 0.4 | Void size fraction used by the seed generator |
 | `--rotation_deg` | float | 0.0 | Initial seed rotation angle in degrees |
-| `--beta` | float | 0.8 | Beta decay coefficient for first objective |
-| `--beta_second` | float | 100.0 | Penalty weight for second objective |
+| `--beta` | float | 1.0 | Beta scaling for auxetic objective |
 | `--save_every` | int | 1 | Save image every N iterations |
 | `--scale_factor` | int | 1 | Image upscale factor for saved PNGs |
 | `--output_dir` | str | outputs/simp_results_[seed] | Output directory for results |
@@ -66,10 +65,9 @@ python -m simp.main \
   --volfrac 0.35 \
   --penal 4.0 \
   --seed hexagonal \
-  --objective second \
   --void_size_frac 0.5 \
   --save_every 5 \
-  --output_dir outputs/simp_hex_second
+  --output_dir outputs/simp_hex_run
 ```
 
 Expected output:
@@ -109,9 +107,7 @@ simp/
 │   └── isotropic.py          # Isotropic material: 4-node quad element stiffness matrix (plane stress)
 │
 ├── objectives/               # Objective functions
-│   ├── first_obj.py          # Type 1: c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
-│   ├── second_obj.py         # Type 2: c = Q₁₂ + penalty for low axial stiffness
-│   └── auxetic.py            # Auxetic: c = Q₁₂  (+ penalty for low axial stiffness)
+│   └── auxetic.py            # Auxetic: c = Q₁₂ (+ penalty for low axial stiffness)
 │
 ├── homogenization/           # Homogenization
 │   └── compute.py            # Energy‑based homogenization: stiffness tensor Q + sensitivity dQ
@@ -152,37 +148,18 @@ simp/
 
 To use a specific seed, set `params['seed'] = 'hexagonal'` (or any name from the list above).
 
+
 ---
 
-## Objective Functions
+## Auxetic Objective
 
-### 1. First Objective (`first_obj`)
-
-```
-c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
-```
-
-- Maximizes shear coupling `Q₁₂` while suppressing axial stiffness `Q₁₁`, `Q₂₂`
-- The `β` decay term (`β^loop`) gradually reduces the axial penalty over iterations
-- **Stable convergence**, good for exploring the design space
-
-### 2. Second Objective (`second_obj`)
+The objective function is:
 
 ```
 c = Q₁₂  (+ penalty if Q₁₁ < δ or Q₂₂ < δ,  δ = 0.1 · volfrac · E₀)
 ```
 
-- Directly maximizes `Q₁₂`
-- Penalty activates only when axial stiffness falls below threshold `δ`
-- **Focused on shear**, may be more aggressive
-
-### 3. Auxetic Objective (`auxetic`)
-
-```
-c = Q₁₂  (+ penalty if Q₁₁ < δ or Q₂₂ < δ,  δ = 0.1 · volfrac · E₀)
-```
-
-- Directly minimizes `Q₁₂` (shear coupling). `Q₁₂ < 0` → auxetic
+- Directly minimizes `Q₁₂` (shear coupling). `Q₁₂ < 0` → auxetic (negative Poisson's ratio)
 - Gradient of `ν₁₂` is near-zero for topology optimization (`dQ₁₂/Q₁₂ ≈ dQ₂₂/Q₂₂`), so `Q₁₂` is used instead
 - Stiffness penalty prevents structural collapse
 - **Best for achieving auxetic designs** (ν₁₂ < 0)

@@ -38,7 +38,7 @@ except ImportError:
     SCIPY_OK = False
 
 # ─── Constants ───────────────────────────────────────────────────────────────
-OBJECTIVES = ['auxetic', 'first', 'second']
+OBJECTIVES = ['auxetic']
 
 SEEDS = [
     'circle', 'square', 'hourglass', 'four_circle', 'hexagonal',
@@ -231,13 +231,9 @@ def rank_records(records: List[Dict], top_n: int = 3) -> Dict:
     def top(lst, key_fn, n, reverse=True):
         return sorted(lst, key=key_fn, reverse=reverse)[:n]
 
-    objective = valid[0]['objective'] if valid else 'auxetic'
-    if objective == 'auxetic':
-        best = top(valid, lambda r: r['final_obj'], top_n, reverse=True)
-        worst = top(valid, lambda r: r['final_obj'], top_n, reverse=False)
-    else:
-        best = top(valid, lambda r: r['final_obj'], top_n, reverse=False)
-        worst = top(valid, lambda r: r['final_obj'], top_n, reverse=True)
+    # Với auxetic: final_obj càng cao (≥0) càng tốt
+    best = top(valid, lambda r: r['final_obj'], top_n, reverse=True)
+    worst = top(valid, lambda r: r['final_obj'], top_n, reverse=False)
 
     max_edge = max(r['edge_density'] for r in valid) or 1.0
     complex_score = lambda r: (

@@ -68,8 +68,8 @@ class BatchConfig:
     seed: Optional[int] = None
     """Random seed for reproducibility."""
 
-    objectives: List[str] = field(default_factory=lambda: ["first", "second", "auxetic"])
-    """Objective functions to run (list of 'first', 'second', 'auxetic')."""
+    objectives: List[str] = field(default_factory=lambda: ["auxetic"])
+    """Objective functions to run (only 'auxetic')."""
 
     seeds: List[str] = field(
         default_factory=lambda: [

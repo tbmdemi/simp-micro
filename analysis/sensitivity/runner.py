@@ -19,31 +19,24 @@ from analysis.sensitivity import regression, sobol, anova, classify, visualize
 PHASE1_DIR = Path('outputs/pipeline/phase1')
 
 PARAM_COLS = ['volfrac', 'penal', 'rmin', 'move', 'void_size_frac', 'rotation_deg']
-PARAM_COLS_FIRST = PARAM_COLS + ['beta']
-PARAM_COLS_SECOND = PARAM_COLS + ['beta_second']
 
 PARAM_BOUNDS: Dict[str, List[Tuple[float, float]]] = {
     'auxetic': [
         (0.2, 0.6), (1.0, 5.0), (1.0, 6.0), (0.05, 0.3),
         (0.2, 0.7), (0.0, 90.0),
     ],
-    'first': [
-        (0.2, 0.6), (1.0, 5.0), (1.0, 6.0), (0.05, 0.3),
-        (0.2, 0.7), (0.0, 90.0), (0.3, 1.5),
-    ],
-    'second': [
-        (0.2, 0.6), (1.0, 5.0), (1.0, 6.0), (0.05, 0.3),
-        (0.2, 0.7), (0.0, 90.0), (0.5, 2.5),
-    ],
 }
 
 
 def get_param_cols(objective: str) -> List[str]:
-    """Lấy danh sách cột tham số theo objective."""
-    if objective == 'first':
-        return PARAM_COLS_FIRST
-    elif objective == 'second':
-        return PARAM_COLS_SECOND
+    """Lấy danh sách cột tham số theo objective.
+
+    Args:
+        objective: Tên objective (chỉ 'auxetic' được hỗ trợ).
+
+    Returns:
+        Danh sách tên cột tham số.
+    """
     return PARAM_COLS
 
 
@@ -75,7 +68,7 @@ def run_sensitivity_for_seed_objective(
 
     Args:
         csv_path: Đường dẫn file CSV.
-        objective: 'auxetic', 'first', hoặc 'second'.
+        objective: Tên objective (ví dụ 'auxetic').
         output_dir: Thư mục lưu ảnh (nếu None, không lưu).
 
     Returns:
@@ -191,7 +184,7 @@ def run_all_sensitivities(
                 f.name.split('_')[1] for f in PHASE1_DIR.rglob('phase1_*.csv')
             ))
     if objectives is None:
-        objectives = ['auxetic', 'first', 'second']
+        objectives = ['auxetic']
 
     all_results: Dict = {}
 

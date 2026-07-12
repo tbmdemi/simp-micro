@@ -27,8 +27,8 @@ def oc_update(
     Thực hiện cập nhật OC với tìm kiếm nhị phân trên hệ số Lagrange
     để thỏa mãn ràng buộc thể tích.
 
-    Hỗ trợ thêm ràng buộc stiffness (Q₁₁ ≥ δ, Q₂₂ ≥ δ) dùng cho First_Obj
-    giống MATLAB topK_Hourglass.m.
+    Hỗ trợ thêm ràng buộc stiffness (Q₁₁ ≥ δ, Q₂₂ ≥ δ) dùng cho auxetic objective
+    (giống MATLAB topK_Hourglass.m).
 
     Args:
         x: Mảng (nely, nelx) biến thiết kế hiện tại.

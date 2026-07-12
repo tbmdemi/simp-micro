@@ -27,7 +27,10 @@ def compute_auxetic_q12_objective(
 
     Hàm mục tiêu (dạng minimization cho OC):
         c = Q12 + penalty_terms
-    Trong đó penalty kích hoạt khi Q11 < δ hoặc Q22 < δ.
+    Trong đó penalty kích hoạt khi Q11 < δ hoặc Q22 < δ. 
+    Mặc dù hướng tiếp cận hiện tại dựa trên Q12 (coupling), việc đối chiếu với công thức chuẩn 
+    cho ν₁₂ = -S₁₂ / S₁₁ từ compliance tensor S = Q⁻¹ có thể cung cấp độ chính xác cao hơn trong 
+    các trường hợp yêu cầu tính auxetic đặc biệt kỹ lưỡng.
 
     Args:
         Q: Ten-xơ độ cứng đồng nhất hóa (3×3).

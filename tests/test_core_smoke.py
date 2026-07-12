@@ -244,34 +244,6 @@ class TestOC:
 class TestObjectives:
     """Smoke tests for objective functions."""
 
-    def test_first_objective(self):
-        from simp.objectives.first_obj import compute_first_objective
-        Q = np.array([[10.0, 2.0, 0.0],
-                      [2.0, 10.0, 0.0],
-                      [0.0, 0.0, 5.0]])
-        dQ = np.zeros((3, 3, 4, 4))
-        dQ[0, 1, :, :] = 0.1
-        dQ[0, 0, :, :] = 0.05
-        dQ[1, 1, :, :] = 0.05
-
-        c, dc = compute_first_objective(Q, dQ, iteration=1, beta=0.8)
-        assert isinstance(c, float)
-        assert dc.shape == (4, 4)
-        # c = Q12 - 0.8^1 * (Q11 + Q22) = 2 - 0.8*20 = -14
-        assert abs(c - (2.0 - 0.8 * 20.0)) < 1e-10
-
-    def test_second_objective(self):
-        from simp.objectives.second_obj import compute_second_objective
-        Q = np.array([[10.0, 2.0, 0.0],
-                      [2.0, 10.0, 0.0],
-                      [0.0, 0.0, 5.0]])
-        dQ = np.zeros((3, 3, 4, 4))
-        dQ[0, 1, :, :] = 0.1
-
-        c, dc = compute_second_objective(Q, dQ, iteration=1, volfrac=0.4, E0=199.0)
-        assert isinstance(c, float)
-        assert dc.shape == (4, 4)
-
     def test_auxetic_objective(self):
         from simp.objectives.auxetic import compute_auxetic_q12_objective
         Q = np.array([[10.0, -2.0, 0.0],   # Q12 < 0 → auxetic
@@ -401,7 +373,7 @@ class TestRunner:
         assert 'converged' in result
         assert 'history' in result
 
-    @pytest.mark.parametrize("objective", ['first', 'second', 'auxetic'])
+    @pytest.mark.parametrize("objective", ['auxetic'])
     def test_run_simp_objectives(self, objective):
         """Run SIMP with each objective type on tiny mesh."""
         from simp.runner import run_simp

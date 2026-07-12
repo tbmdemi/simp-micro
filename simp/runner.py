@@ -22,8 +22,6 @@ from .core.solver import solve_fe
 from .core.oc import oc_update
 from .core.convergence import ConvergenceChecker
 from .homogenization.compute import compute_homogenized_tensor
-from .objectives.first_obj import compute_first_objective
-from .objectives.second_obj import compute_second_objective
 from .objectives.auxetic import compute_auxetic_q12_objective
 from .io.logger import save_csv
 
@@ -42,13 +40,13 @@ def run_simp(params: dict) -> dict:
     """Chạy vòng lặp tối ưu hóa hình dạng SIMP.
 
     Args:
-        params: Từ điển tham số với các key:
-            nelx, nely, volfrac, penal, rmin, ft,
-            E0, Emin, nu, move, max_iter,
-            tol_change, tol_obj, window_size,
-            seed (tên seed), objective ('first'|'second'|'auxetic'),
-            void_size_frac, rotation_deg, beta, beta_second,
-            output_dir, save_every, scale_factor.
+    params: Từ điển tham số với các key:
+        nelx, nely, volfrac, penal, rmin, ft,
+        E0, Emin, nu, move, max_iter,
+        tol_change, tol_obj, window_size,
+        seed (tên seed), objective ('auxetic'),
+        void_size_frac, rotation_deg, beta,
+        output_dir, save_every, scale_factor.
 
     Returns:
         Từ điển kết quả:
@@ -84,9 +82,9 @@ def run_simp(params: dict) -> dict:
     obj_type    = params.get('objective', 'auxetic')
     void_size_frac = params.get('void_size_frac', 0.4)
     rotation_deg   = params.get('rotation_deg', 0.0)
-    beta       = params.get('beta', 0.8)          # Khớp MATLAB First_Obj
-    beta_second = params.get('beta_second', 100.0)  # Khớp MATLAB Second_Obj
-    rho0 = params.get('rho0', 1.0)  # Hệ số mật độ (MATLAB Second_Obj: 7850)
+    # beta=1.0 used for auxetic (avoids over-penalty from higher beta values)
+    beta = params.get('beta', 1.0)
+    rho0 = params.get('rho0', 1.0)
     save_every = params.get('save_every', 1)
     scale_factor = params.get('scale_factor', 1)
 
@@ -171,19 +169,10 @@ def run_simp(params: dict) -> dict:
             )
 
             # Hàm mục tiêu
-            if obj_type == 'first':
-                c, dc = compute_first_objective(Q, dQ, loop, beta)
-            elif obj_type == 'second':
-                c, dc = compute_second_objective(Q, dQ, loop, volfrac, E0, beta_second)
-            else:  # auxetic - dùng beta=1.0 (không phải beta_second=100) để tránh over-penalty
-                c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=1.0)
+            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=beta)
 
-            # Chuyển đổi bài toán maximize thành minimize cho OC update
-            # OC update thực hiện: x * (-dc/(dv*lmid)) -> cần dc âm khi objective tăng theo x
-            # Vì các hàm mục tiêu first và second được thiết kế để maximize, ta đổi dấu để biến thành minimize
-            if obj_type in ('first', 'second'):
-                c = -c
-                dc = -dc
+            # OC update performs: x * (-dc/(dv*lmid)) -> works natively for
+            # minimization. Auxetic objective is already designed as minimization.
 
             # Kiểm tra nan
             if math.isnan(c) or np.isnan(np.sum(xPhys)):
@@ -226,22 +215,7 @@ def run_simp(params: dict) -> dict:
             dv = apply_filter(dv, H, Hs)
 
         # OC
-        # Với First_Obj, thêm ràng buộc stiffness Q>=delta (giống MATLAB)
-        # Và dùng unfiltered xPhys cho FE kế tiếp (giống MATLAB First_Obj)
-        if obj_type == 'first':
-            delta_first = 0.1 * volfrac * E0  # xi=0.1, Vmax=volfrac (MATLAB)
-            xnew, _ = oc_update(
-                x, dc, dv, volfrac, move, H, Hs, ft,
-                Q=Q, delta=delta_first,
-            )
-            # MATLAB First_Obj: xPhys = xnew (unfiltered cho FE kế tiếp)
-            if ft == 2:
-                xPhys_flat = H @ xnew.flatten('F') / Hs
-                xPhys = np.reshape(xPhys_flat, (nely, nelx), order='F')
-            else:
-                xPhys = xnew.copy()
-        else:
-            xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
+        xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
         change = np.max(np.abs(xnew - x))
         x = xnew
 

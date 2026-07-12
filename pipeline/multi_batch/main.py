@@ -111,9 +111,9 @@ def parse_args() -> argparse.Namespace:
         '--objectives',
         type=str,
         nargs='+',
-        choices=['auxetic', 'first', 'second'],
+        choices=['auxetic'],
         default=None,
-        help='Objectives for the batch (default: auxetic + first).',
+        help='Objectives for the batch (default: auxetic).',
     )
 
     return parser.parse_args()
@@ -307,7 +307,7 @@ def main() -> None:
     seeds = ['circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular',
              'nine_circle', 'four_circle', 'grid_circular_voids',
              'small_square_cross', 'circle_half_quarter']
-    objectives = ['auxetic', 'first', 'second']
+    objectives = ['auxetic']
 
     # ── Step 3: Decision loop ──
     decision_log_path = output_root / 'decision_log.json'

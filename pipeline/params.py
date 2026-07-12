@@ -14,8 +14,6 @@ PARAM_SPACE: Dict[str, Tuple[float, float]] = {
     'move':          (0.05, 0.3),
     'void_size_frac': (0.15, 0.45),
     'rotation_deg':   (0.0, 90.0),
-    'beta':          (0.3, 1.5),     # chỉ dùng cho 'first'
-    'beta_second':   (0.5, 2.5),     # chỉ dùng cho 'second'
 }
 
 # Tham số cố định (không thay đổi trong screening)
@@ -35,22 +33,16 @@ FIXED_PARAMS = {
 }
 
 
-def get_active_params(objective: str) -> List[str]:
-    """Trả về danh sách tham số được vary cho từng mục tiêu.
+def get_active_params(objective: str = 'auxetic') -> List[str]:
+    """Trả về danh sách tham số được vary.
 
     Args:
-        objective: 'auxetic', 'first', hoặc 'second'.
+        objective: (unused, kept for backward compatibility)
 
     Returns:
         Danh sách tên tham số.
     """
-    base = ['volfrac', 'penal', 'rmin', 'move', 'void_size_frac', 'rotation_deg']
-    if objective == 'first':
-        return base + ['beta']
-    elif objective == 'second':
-        return base + ['beta_second']
-    else:  # auxetic
-        return base
+    return ['volfrac', 'penal', 'rmin', 'move', 'void_size_frac', 'rotation_deg']
 
 
 def get_param_bounds(objective: str) -> List[Tuple[float, float]]:
@@ -71,4 +63,4 @@ SEEDS: List[str] = [
     'circle_half_quarter',
 ]
 
-OBJECTIVES: List[str] = ['auxetic', 'first', 'second']
+OBJECTIVES: List[str] = ['auxetic']

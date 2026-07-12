@@ -62,8 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
         help='Output HTML file path',
     )
     report_parser.add_argument(
-        '--objective', type=str, choices=['first', 'second', 'auxetic'], default='first',
-        help='Objective function type',
+        '--objective', type=str, choices=['auxetic'], default='auxetic',
+        help='Objective function type (chỉ hỗ trợ auxetic)',
     )
     report_parser.add_argument(
         '--title', type=str, default='SIMP Analysis Report',

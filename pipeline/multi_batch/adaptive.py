@@ -251,7 +251,7 @@ def decide_next_action(
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
-            for o in ['auxetic', 'first', 'second']:
+            for o in ['auxetic']:
                 if o not in expanded_objectives:
                     expanded_objectives.append(o)
                     break
@@ -288,7 +288,7 @@ def decide_next_action(
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
-            for o in ['auxetic', 'first', 'second']:
+            for o in ['auxetic']:
                 if o not in expanded_objectives:
                     expanded_objectives.append(o)
                     break

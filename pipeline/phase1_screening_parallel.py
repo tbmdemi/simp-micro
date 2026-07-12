@@ -12,7 +12,6 @@ Cải tiến:
 Usage:
     python phase1_screening_parallel.py --objective auxetic --seed circle --workers 4
     python phase1_screening_parallel.py --all --workers auto
-    python phase1_screening_parallel.py --objective first --n_samples 100 --workers 8 --strategy async
 """
 
 import argparse

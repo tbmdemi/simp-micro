@@ -47,8 +47,8 @@ This codebase is a Python reimplementation of original MATLAB reference code and
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Core SIMP Engine | ✅ Stable | 10 seed types, 3 objectives, PBC, homogenization |
-| Phase 1 Screening (LHS) | ✅ Complete | 30 combos (10 seeds × 3 objectives) × 50 samples run |
+| Core SIMP Engine | ✅ Stable | 10 seed types, 1 objective (auxetic), PBC, homogenization |
+| Phase 1 Screening (LHS) | ✅ Complete | 10 seeds × auxetic only: 10 combos × 50 samples run |
 | Phase 2 Parameter Tuning | 🟡 Implemented | `differential_evolution`, SHGO, basinhopping, L-BFGS-B |
 | Multi-Batch Adaptive Pipeline | 🟡 Implemented | Sobol/LHS + coverage analysis + adaptive decision logic, not yet run in production |
 | Unit Tests | 🟡 Partial | Coverage: convergence, logger, config, CLI, dataset smoke tests |
@@ -81,13 +81,13 @@ python -m simp.run
 ### CLI Parameter Overrides
 
 ```bash
-python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal
 ```
 
 If the package is installed in editable mode, the same options are available via the console script:
 
 ```bash
-simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal --objective second
+simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal
 ```
 
 ### Full CLI Example
@@ -98,10 +98,9 @@ python -m simp.main \
   --volfrac 0.35 \
   --penal 4.0 \
   --seed hexagonal \
-  --objective second \
   --void_size_frac 0.5 \
   --save_every 5 \
-  --output_dir outputs/simp_hex_second
+  --output_dir outputs/simp_hex_auxetic
 ```
 
 Expected output:
@@ -144,9 +143,7 @@ Results are written to `outputs/simp_results_{seed}/`:
 │   │   └── isotropic.py           # Isotropic material: 4-node quad element stiffness (plane stress)
 │   │
 │   ├── objectives/
-│   │   ├── auxetic.py             # Minimise Q₁₂ (auxetic target)
-│   │   ├── first_obj.py           # Maximise Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
-│   │   └── second_obj.py          # Maximise Q₁₂ + stiffness penalty
+│   │   └── auxetic.py             # Minimise Q₁₂ (auxetic target)
 │   │
 │   ├── homogenization/
 │   │   └── compute.py             # Energy-based homogenisation: stiffness tensor Q + sensitivity dQ
@@ -215,9 +212,9 @@ Rotation (`--rotation_deg`) can be applied to any seed.
 
 ---
 
-## Objective Functions
+## Objective Function (Auxetic)
 
-### 1. Auxetic (default)
+The only available objective is the **auxetic** (negative Poisson's ratio) formulation:
 
 ```
 c = Q₁₂    (+ penalty if Q₁₁ < δ or Q₂₂ < δ)
@@ -225,29 +222,8 @@ c = Q₁₂    (+ penalty if Q₁₁ < δ or Q₂₂ < δ)
 ```
 
 - Directly minimises the shear-coupling term `Q₁₂` (negative → auxetic)
-- Stiffness penalty prevents structural collapse
-- **Use this for achieving ν₁₂ < 0**
-
-### 2. First Objective
-
-```
-c = Q₁₂ − β^loop · (Q₁₁ + Q₂₂)
-```
-
-- Maximises shear coupling while suppressing axial stiffness
-- `β^loop` decays over iterations, gradually relaxing the axial penalty
-- Smooth, stable convergence; useful for exploring the design space
-
-### 3. Second Objective
-
-```
-c = Q₁₂    (+ quadratic penalty if Q₁₁ < δ or Q₂₂ < δ)
-δ = 0.1 · volfrac · E₀
-```
-
-- Aggressively maximises `Q₁₂`
-- Penalty activates only when axial stiffness drops below threshold
-- May produce more extreme topologies
+- A stiffness penalty term activates when axial stiffness (`Q₁₁` or `Q₂₂`) falls below `δ`, preventing structural collapse
+- Previous `first` and `second` objective types have been removed — all optimisation now targets auxetic behaviour exclusively
 
 ---
 
@@ -263,7 +239,7 @@ Scans the 7-dimensional parameter space (`volfrac`, `penal`, `rmin`, `move`, `vo
 # Single combination
 python -m pipeline.phase1_screening_parallel --objective auxetic --seed hexagonal
 
-# Full sweep (30 combos)
+# Full sweep (10 seeds × auxetic)
 python -m pipeline.phase1_screening_parallel --all
 ```
 
@@ -309,11 +285,11 @@ python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 | `--tol_obj` | float | 0.05 | Convergence threshold for objective stability |
 | `--window_size` | int | 20 | Stable-iteration window for objective convergence |
 | `--seed` | str | hourglass | Initial seed pattern name |
-| `--objective` | str | auxetic | Objective: `first`, `second`, or `auxetic` |
+| `--objective` | str | auxetic | Objective (deprecated, only auxetic is supported) |
 | `--void_size_frac` | float | 0.4 | Void-size fraction for seed generation |
 | `--rotation_deg` | float | 0.0 | Seed rotation angle (degrees) |
-| `--beta` | float | 0.8 | Beta decay coefficient (first objective) |
-| `--beta_second` | float | 100.0 | Penalty weight (second objective) |
+| `--beta` | float | 0.8 | Beta decay coefficient |
+| `--beta_second` | float | 100.0 | Penalty weight (deprecated, kept for compatibility) |
 | `--save_every` | int | 1 | Save image every N iterations |
 | `--scale_factor` | int | 1 | PNG upscale factor |
 | `--output_dir` | str | auto | Output directory (default: `outputs/simp_results_{seed}`) |
@@ -407,7 +383,7 @@ The directory includes:
 
 | Path | Contents |
 |------|----------|
-| `outputs/pipeline/phase1/` | Phase 1 LHS screening: 30 combos × 50 samples, Spearman correlation analysis, refined parameters |
+| `outputs/pipeline/phase1/` | Phase 1 LHS screening: 10 combos × 50 samples, Spearman correlation analysis, refined parameters |
 | `outputs/simp_results_circle/` | Single-run example (circle/auxetic) |
 | `outputs/slide_images/` | 18 representative topology images for reports and presentations |
 | `outputs/figures/` | Spearman correlation heatmaps, bar plots, analysis charts |
@@ -443,7 +419,7 @@ The following critical issues were identified during an algorithm review (June 2
 
 | Bug | Impact | Fix |
 |-----|--------|-----|
-| **Objective sign for `first`/`second` objectives** | OC update moved in wrong direction for maximise-type objectives | Negate `c` and `dc` for `first`/`second` before OC update in `runner.py` |
+| **Objective sign (removed objectives)** | OC update direction for previous first/second objectives | Fixed by removing non-auxetic objectives entirely |
 | **`max` instead of `min` in `aggregate_correlations.py`** | Best-sample selection picked worst objective value | Changed `max(...)` → `min(...)` |
 | **Poisson-ratio formula sign** | `ν₁₂ = -Q₁₂/Q₂₂` produced positive ν₁₂ for auxetic designs | Fixed to `ν₁₂ = Q₁₂/Q₂₂` in commit `07914ea` |
 
