@@ -1,0 +1,54 @@
+{
+  "batch_id": 3,
+  "strategy": "design_df",
+  "n_samples": 400,
+  "n_total_tasks": 400,
+  "n_success": 400,
+  "n_converged": 400,
+  "n_workers": 4,
+  "elapsed_time": 1254.1,
+  "output_dir": "outputs/multi_batch/batch_3",
+  "best_per_combo": {
+    "circle/auxetic": {
+      "sample_id": 65,
+      "seed": "circle",
+      "objective": "auxetic",
+      "obj_value": 20.546515390272134,
+      "v12": 0.10743119288443186,
+      "v21": 0.10743119288443025
+    },
+    "cross_rectangular/auxetic": {
+      "sample_id": 133,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "obj_value": 21.349721297506562,
+      "v12": 0.15185607001855386,
+      "v21": 0.15185607001854823
+    },
+    "hexagonal/auxetic": {
+      "sample_id": 207,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "obj_value": 20.990904185978728,
+      "v12": 0.23077905564981413,
+      "v21": 0.23075256332738445
+    },
+    "hourglass/auxetic": {
+      "sample_id": 301,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "obj_value": 19.88851715937797,
+      "v12": 0.11001009002253243,
+      "v21": 0.11000553721049912
+    },
+    "square/auxetic": {
+      "sample_id": 362,
+      "seed": "square",
+      "objective": "auxetic",
+      "obj_value": 19.925340986142814,
+      "v12": 0.2540661736139411,
+      "v21": 0.2540661736247665
+    }
+  },
+  "timestamp": "2026-07-11T12:55:09.713018"
+}

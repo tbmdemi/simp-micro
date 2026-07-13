@@ -84,6 +84,7 @@ def run_simp(params: dict) -> dict:
     rotation_deg   = params.get('rotation_deg', 0.0)
     # beta=1.0 used for auxetic (avoids over-penalty from higher beta values)
     beta = params.get('beta', 1.0)
+    mu = params.get('mu', 0.0)
     rho0 = params.get('rho0', 1.0)
     save_every = params.get('save_every', 1)
     scale_factor = params.get('scale_factor', 1)
@@ -169,7 +170,7 @@ def run_simp(params: dict) -> dict:
             )
 
             # Hàm mục tiêu
-            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=beta)
+            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=beta, mu=mu)
 
             # OC update performs: x * (-dc/(dv*lmid)) -> works natively for
             # minimization. Auxetic objective is already designed as minimization.

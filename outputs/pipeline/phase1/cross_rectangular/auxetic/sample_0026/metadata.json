@@ -1,14 +1,14 @@
 {
-  "git_hash": "ddbe82c",
-  "timestamp": "2026-07-11T08:10:15",
+  "git_hash": "e6455de",
+  "timestamp": "2026-07-12T23:30:24",
   "version": "1.3.0",
   "params": {
-    "volfrac": 0.48775012972928794,
-    "penal": 1.8272461892246479,
-    "rmin": 2.427300538571312,
-    "move": 0.11615676254041173,
-    "void_size_frac": 0.32335355432426466,
-    "rotation_deg": 88.3511786787523,
+    "volfrac": 0.48625021621547987,
+    "penal": 1.3120769820410798,
+    "rmin": 1.2121675642855196,
+    "move": 0.12692793756735288,
+    "void_size_frac": 0.3889225905404411,
+    "rotation_deg": 87.25196446458718,
     "nelx": 50,
     "nely": 50,
     "ft": 2,
@@ -21,6 +21,7 @@
     "window_size": 20,
     "save_every": 9999,
     "scale_factor": 1,
+    "mu": 0.2,
     "seed": "cross_rectangular",
     "objective": "auxetic"
   }

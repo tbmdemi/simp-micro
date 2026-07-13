@@ -30,6 +30,7 @@ FIXED_PARAMS = {
     'window_size': 20,
     'save_every': 9999,   # không lưu ảnh trung gian (chỉ lưu vòng đầu & cuối)
     'scale_factor': 1,
+    'mu': 0.2,
 }
 
 

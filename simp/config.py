@@ -30,6 +30,7 @@ class SimpConfig:
     E0: float = 199.0
     Emin: float = 1e-9
     nu: float = 0.3
+    mu: float = 0.0
 
     def __post_init__(self) -> None:
         self.validate()
