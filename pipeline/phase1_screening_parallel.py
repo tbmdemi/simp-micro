@@ -513,7 +513,10 @@ def parse_args() -> argparse.Namespace:
         choices=['map', 'async'],
         help='Chiến lược Pool: "map" (sync) hay "async" (progress) (mặc định: async)',
     )
-    # The --all CLI option is removed, as we now focus only on the 'auxetic' objective
+    parser.add_argument(
+        '--all', action='store_true',
+        help='Chạy tất cả các seeds (ghi đè --seed nếu được chỉ định)',
+    )
     parser.add_argument(
         '--output', type=str, default='outputs/pipeline/phase1',
         help='Thư mục đầu ra gốc',
@@ -539,18 +542,29 @@ def main() -> None:
     print(f'  Workers: {n_workers}')
     print(f'  Strategy: {args.strategy}')
 
-    # The --all option has been removed; objective is fixed as 'auxetic'
     run_phase1_fn = (
         run_phase1_parallel_async if args.strategy == 'async'
         else run_phase1_parallel_map
     )
-    run_phase1_fn(
-        objective='auxetic',
-        seed_name=args.seed,
-        n_samples=args.n_samples,
-        n_workers=n_workers,
-        output_base=args.output,
-    )
+
+    if args.all:
+        print(f'[INFO] Running all seeds: {SEEDS}')
+        for seed in SEEDS:
+            run_phase1_fn(
+                objective='auxetic',
+                seed_name=seed,
+                n_samples=args.n_samples,
+                n_workers=n_workers,
+                output_base=args.output,
+            )
+    else:
+        run_phase1_fn(
+            objective='auxetic',
+            seed_name=args.seed,
+            n_samples=args.n_samples,
+            n_workers=n_workers,
+            output_base=args.output,
+        )
 
 
 if __name__ == '__main__':
