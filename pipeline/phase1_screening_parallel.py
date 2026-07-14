@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pipeline.params import (
     PARAM_SPACE, FIXED_PARAMS, get_active_params,
-    get_param_bounds, SEEDS, OBJECTIVES,
+    get_param_bounds, SEEDS,
 )
 from simp.runner import run_simp
 
@@ -254,8 +254,7 @@ def run_phase1_parallel_map(
     output_base: str = 'outputs/pipeline/phase1',
 ) -> Dict:
     """Chạy Phase 1 với Pool.map (đơn giản, nhưng chặn tới khi xong)."""
-    seed_dir = os.path.join(output_base, seed_name)
-    run_dir = os.path.join(seed_dir, objective)
+    run_dir = os.path.join(output_base, seed_name)
     os.makedirs(run_dir, exist_ok=True)
 
     print(f'\n{"="*60}')
@@ -367,8 +366,7 @@ def run_phase1_parallel_async(
     output_base: str = 'outputs/pipeline/phase1',
 ) -> Dict:
     """Chạy Phase 1 với Pool.imap_unordered (bất đồng bộ, thấy progress)."""
-    seed_dir = os.path.join(output_base, seed_name)
-    run_dir = os.path.join(seed_dir, objective)
+    run_dir = os.path.join(output_base, seed_name)
     os.makedirs(run_dir, exist_ok=True)
 
     print(f'\n{"="*60}')
@@ -488,51 +486,6 @@ def run_phase1_parallel_async(
     return summary
 
 
-def run_all_combinations_parallel(
-    n_samples: int = 30,
-    n_workers: int = 4,
-    strategy: str = 'async',
-) -> None:
-    """Chạy Phase 1 song song cho tất cả 30 combo."""
-    all_summaries = []
-    run_phase1_fn = (
-        run_phase1_parallel_async if strategy == 'async'
-        else run_phase1_parallel_map
-    )
-    
-    for obj in OBJECTIVES:
-        for seed in SEEDS:
-            summary = run_phase1_fn(
-                obj, seed,
-                n_samples=n_samples,
-                n_workers=n_workers,
-            )
-            all_summaries.append(summary)
-
-    # Ghi tổng hợp
-    output_dir = f'outputs/pipeline/phase1'
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, '_all_summaries_parallel.json')
-    
-    serializable = []
-    for s in all_summaries:
-        serializable.append({
-            'objective': s['objective'],
-            'seed': s['seed'],
-            'n_samples': s['n_samples'],
-            'n_success': s['n_success'],
-            'n_converged': s['n_converged'],
-            'n_valid_analysis': s['n_valid_analysis'],
-            'top_3_params': s['top_3_params'],
-            'best_obj_value': s['best_obj_value'],
-            'elapsed_time': s['elapsed_time'],
-            'n_workers': s['n_workers'],
-        })
-    with open(path, 'w') as f:
-        json.dump(serializable, f, indent=2)
-    print(f'\nTotal summary: {path}')
-
-
 # ──────────────────────────────────────────────
 #  CLI
 # ──────────────────────────────────────────────
@@ -541,11 +494,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='Phase 1: LHS Screening (PARALLEL) - tìm tham số ảnh hưởng nhất',
     )
-    parser.add_argument(
-        '--objective', type=str, default='auxetic',
-        choices=OBJECTIVES,
-        help='Mục tiêu tối ưu (mặc định: auxetic)',
-    )
+    # The --objective parameter has been removed; it is fixed as 'auxetic' throughout
     parser.add_argument(
         '--seed', type=str, default='circle',
         choices=SEEDS,
@@ -564,10 +513,7 @@ def parse_args() -> argparse.Namespace:
         choices=['map', 'async'],
         help='Chiến lược Pool: "map" (sync) hay "async" (progress) (mặc định: async)',
     )
-    parser.add_argument(
-        '--all', action='store_true',
-        help='Quét toàn bộ 30 combo (seed × objective)',
-    )
+    # The --all CLI option is removed, as we now focus only on the 'auxetic' objective
     parser.add_argument(
         '--output', type=str, default='outputs/pipeline/phase1',
         help='Thư mục đầu ra gốc',
@@ -593,24 +539,18 @@ def main() -> None:
     print(f'  Workers: {n_workers}')
     print(f'  Strategy: {args.strategy}')
 
-    if args.all:
-        run_all_combinations_parallel(
-            n_samples=args.n_samples,
-            n_workers=n_workers,
-            strategy=args.strategy,
-        )
-    else:
-        run_phase1_fn = (
-            run_phase1_parallel_async if args.strategy == 'async'
-            else run_phase1_parallel_map
-        )
-        run_phase1_fn(
-            objective=args.objective,
-            seed_name=args.seed,
-            n_samples=args.n_samples,
-            n_workers=n_workers,
-            output_base=args.output,
-        )
+    # The --all option has been removed; objective is fixed as 'auxetic'
+    run_phase1_fn = (
+        run_phase1_parallel_async if args.strategy == 'async'
+        else run_phase1_parallel_map
+    )
+    run_phase1_fn(
+        objective='auxetic',
+        seed_name=args.seed,
+        n_samples=args.n_samples,
+        n_workers=n_workers,
+        output_base=args.output,
+    )
 
 
 if __name__ == '__main__':

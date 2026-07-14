@@ -22,7 +22,7 @@ from .core.solver import solve_fe
 from .core.oc import oc_update
 from .core.convergence import ConvergenceChecker
 from .homogenization.compute import compute_homogenized_tensor
-from .objectives.auxetic import compute_auxetic_q12_objective
+from .objectives.auxetic import compute_auxetic_q12_objective, compute_nu12, compute_nu21
 from .io.logger import save_csv
 
 # Ánh xạ tên seed → hàm
@@ -194,12 +194,10 @@ def run_simp(params: dict) -> dict:
                 print('[STOP] Quá 5 lỗi liên tiếp, dừng pipeline')
                 break
 
-        # Hệ số Poisson: νᵢⱼ = Qᵢⱼ / Qⱼⱼ (từ compliance tensor S = Q⁻¹)
-        # Công thức đúng cho 2D orthotropic: ν₁₂ = Q₁₂ / Q₂₂
-        # (Sửa lỗi sign: trước đây dùng -Q₁₂/Q₂₂ dẫn đến sai dấu)
-        _eps = 1e-12
-        v12 = Q[0, 1] / (Q[1, 1] + _eps)
-        v21 = Q[1, 0] / (Q[0, 0] + _eps)
+        # Hệ số Poisson tính chính xác qua nghịch đảo ma trận đầy đủ (S = Q^-1),
+        # đúng cho cả trường hợp có rotation (Q13, Q23 != 0).
+        v12 = compute_nu12(Q)
+        v21 = compute_nu21(Q)
 
         # Kiểm tra hội tụ
         if conv_checker.should_stop(change, c, prev_obj, loop, max_iter):

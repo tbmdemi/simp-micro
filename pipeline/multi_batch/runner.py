@@ -20,8 +20,6 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from pipeline.multi_batch.params import BatchConfig, PipelineConfig
-from pipeline.multi_batch.sampling import generate_samples
 from simp.runner import run_simp
 
 # Default fixed parameters (override from config)
@@ -39,23 +37,6 @@ DEFAULT_FIXED: Dict[str, float] = {
     'save_every': 9999,
     'scale_factor': 1,
 }
-
-
-def _ensure_seed_selected(seed_name: str, angle: float) -> np.ndarray:
-    """Validate the seed function exists. This checks for imports early.
-
-    Args:
-        seed_name: One of the registered seed names.
-        angle: Rotation angle in degrees.
-
-    Returns:
-        Empty array on success; errors bubble up as ImportError.
-    """
-    # Trigger import to validate seed name
-    from simp.runner import SEED_MAP  # noqa: F811
-    if seed_name not in SEED_MAP:
-        raise ValueError(f"Unknown seed '{seed_name}'. Available: {list(SEED_MAP.keys())}")
-    return np.array([])
 
 
 def build_params_dict(
@@ -184,7 +165,7 @@ def run_batch_from_design(
         sample_values = {k: float(row[k]) for k in design.columns
                          if k not in ('seed', 'objective', 'batch_id')}
         sample_dir = os.path.join(
-            output_dir, seed_name, objective, f'sample_{sample_id:04d}'
+            output_dir, seed_name, f'sample_{sample_id:04d}'
         )
         params = build_params_dict(
             sample_values=sample_values,
@@ -268,156 +249,6 @@ def run_batch_from_design(
     return summary
 
 
-def run_batch(
-    batch_cfg: BatchConfig,
-    fixed: Dict[str, float],
-    active: Dict[str, Dict[str, List[float]]],
-    base_output_dir: str = 'outputs/pipeline',
-    n_workers: Optional[int] = None,
-) -> Dict:
-    """Run a single batch: sample generation → SIMP evaluation → save results.
-
-    Args:
-        batch_cfg: Batch configuration.
-        fixed: Fixed parameter dict.
-        active: Active parameter range dict.
-        base_output_dir: Base output directory.
-        n_workers: Number of parallel workers (None = cpu_count - 1).
-
-    Returns:
-        Summary dict with path, n_success, best_sample, top_results.
-    """
-    if n_workers is None:
-        n_workers = max(1, cpu_count() - 2)
-
-    output_dir = batch_cfg.get_output_dir(base_output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-
-    print(f'\n{"="*60}')
-    print(f'Batch {batch_cfg.batch_id}: {batch_cfg.strategy.upper()} '
-          f'({batch_cfg.n_samples} samples, {n_workers} workers)')
-    print(f'  Objectives: {batch_cfg.objectives}')
-    print(f'  Seeds: {batch_cfg.seeds}')
-    print(f'  Output: {output_dir}')
-    print(f'{"="*60}')
-
-    # ── 1. Generate samples ──
-    n_params = len(active)
-    samples_dict = generate_samples(
-        n=batch_cfg.n_samples,
-        active_params=active,
-        strategy=batch_cfg.strategy,
-        seed=batch_cfg.seed,
-    )
-    print(f'\n  Generated {batch_cfg.n_samples} samples ({n_params} active params)')
-
-    # ── 2. Build tasks (all combos: objective × seed × sample) ──
-    tasks: List[Tuple[Dict, int]] = []
-    sample_id = 0
-    for obj in batch_cfg.objectives:
-        for seed_name in batch_cfg.seeds:
-            for i in range(batch_cfg.n_samples):
-                sample_values = {k: v[i] for k, v in samples_dict.items()}
-                sample_dir = os.path.join(
-                    output_dir, seed_name, obj, f'sample_{i:04d}'
-                )
-                params = build_params_dict(
-                    sample_values=sample_values,
-                    fixed=fixed,
-                    seed_name=seed_name,
-                    objective=obj,
-                    output_dir=sample_dir,
-                )
-                tasks.append((params, sample_id))
-                sample_id += 1
-
-    total_tasks = len(tasks)
-    expected_tasks = (
-        len(batch_cfg.objectives) * len(batch_cfg.seeds) * batch_cfg.n_samples
-    )
-    print(f'  Total tasks: {total_tasks} '
-          f'({len(batch_cfg.objectives)} obj × {len(batch_cfg.seeds)} seeds × '
-          f'{batch_cfg.n_samples} samples)')
-
-    # ── 3. Run evaluations ──
-    t_start = time.time()
-    results: List[Optional[Dict]] = [None] * total_tasks
-    completed = 0
-
-    try:
-        with Pool(processes=n_workers) as pool:
-            for result in pool.imap_unordered(evaluate_single, tasks, chunksize=2):
-                completed += 1
-                sid = result['sample_id']
-                results[sid] = result
-
-                if completed % 10 == 0 or completed == total_tasks:
-                    n_ok = sum(1 for r in results if r is not None and r['success'])
-                    pct = 100.0 * completed / total_tasks
-                    elapsed = time.time() - t_start
-                    print(f'  [{completed}/{total_tasks} ({pct:.0f}%)] '
-                          f'success={n_ok} elapsed={elapsed:.0f}s')
-    except Exception as e:
-        print(f'\n  ⚠️  Pool failed: {e}')
-        print('  Switching to sequential fallback...')
-        results = [evaluate_single(t) for t in tasks]
-
-    elapsed_total = time.time() - t_start
-
-    # Fill any None results from imap_unordered edge cases
-    results = [r if r is not None else {'sample_id': i, 'success': False,
-                                        'error': 'no_result'}
-               for i, r in enumerate(results)]
-
-    # ── 4. Compute summary ──
-    n_success = sum(1 for r in results if r['success'])
-    n_converged = sum(1 for r in results if r['success'] and r.get('converged'))
-
-    # Best per (objective, seed)
-    best_per_combo: Dict[str, Dict] = {}
-    for r in results:
-        if r['success'] and r['obj_value'] is not None:
-            key = f"{r['seed']}/{r['objective']}"
-            if key not in best_per_combo or r['obj_value'] < best_per_combo[key]['obj_value']:
-                best_per_combo[key] = {
-                    'sample_id': r['sample_id'],
-                    'seed': r['seed'],
-                    'objective': r['objective'],
-                    'obj_value': float(r['obj_value']),
-                    'v12': float(r['v12']) if r['v12'] is not None else None,
-                    'v21': float(r['v21']) if r['v21'] is not None else None,
-                }
-
-    summary = {
-        'batch_id': batch_cfg.batch_id,
-        'strategy': batch_cfg.strategy,
-        'n_samples': batch_cfg.n_samples,
-        'n_total_tasks': total_tasks,
-        'n_success': n_success,
-        'n_converged': n_converged,
-        'n_workers': n_workers,
-        'elapsed_time': round(elapsed_total, 1),
-        'output_dir': output_dir,
-        'best_per_combo': best_per_combo,
-        'timestamp': datetime.now().isoformat(),
-    }
-
-    # ── 5. Save results ──
-    _save_all_results(results, summary, output_dir)
-
-    # Print summary
-    success_rate = 100.0 * n_success / total_tasks if total_tasks > 0 else 0
-    print(f'\n{"─"*60}')
-    print(f'Batch {batch_cfg.batch_id} Complete')
-    print(f'  Success:   {n_success}/{total_tasks} ({success_rate:.0f}%)')
-    print(f'  Converged: {n_converged}/{n_success}')
-    print(f'  Time:      {elapsed_total:.0f}s ({elapsed_total/60:.1f}min)')
-    print(f'  Output:    {output_dir}')
-    print(f'{"─"*60}')
-
-    return summary
-
-
 def _save_all_results(
     results: List[Dict],
     summary: Dict,
@@ -492,33 +323,3 @@ def _save_all_results(
     print(f'  → CSV:     {csv_path}')
 
 
-def run_pipeline(
-    config: PipelineConfig,
-    n_workers: Optional[int] = None,
-) -> List[Dict]:
-    """Run the full multi-batch pipeline sequentially.
-
-    Args:
-        config: PipelineConfig with batch definitions.
-        n_workers: Number of parallel workers per batch.
-
-    Returns:
-        List of summary dicts, one per batch.
-    """
-    summaries = []
-    for i, batch_cfg in enumerate(config.batches):
-        print(f'\n\n{"█"*60}')
-        print(f'Starting Batch {batch_cfg.batch_id} '
-              f'({i+1}/{len(config.batches)})')
-        print(f'{"█"*60}')
-
-        summary = run_batch(
-            batch_cfg=batch_cfg,
-            fixed=config.fixed,
-            active=config.active,
-            base_output_dir=config.base_output_dir,
-            n_workers=n_workers,
-        )
-        summaries.append(summary)
-
-    return summaries

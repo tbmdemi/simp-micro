@@ -66,6 +66,16 @@ def compute_nu12(Q: np.ndarray, rotation_tol: float = 1e-3) -> float:
 
     return float(nu12)
 
+def compute_nu21(Q: np.ndarray) -> float:
+    """Tính nu21 chính xác từ tensor Q (không giả định orthotropic).
+
+    nu21 = -S12 / S22  với S = Q^-1.
+    (Khác nu12 = -S12/S11 chỉ ở mẫu số: S22 thay vì S11.)
+    """
+    S = np.linalg.inv(Q)
+    nu21 = -S[0, 1] / S[1, 1]
+    return float(nu21)
+
 
 def compute_auxetic_q12_objective(
     Q: np.ndarray,
