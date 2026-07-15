@@ -8,7 +8,7 @@ theo một mẫu hình học cụ thể.
 Các mẫu có sẵn:
     - circle:              Lỗ tròn đơn.
     - square:              Lỗ vuông đơn.
-    - hourglass:           Hình đồng hồ cát.
+    - hourglass:           Hình đồng hồ cát (vùng lõm cục bộ trên nền đặc).
     - four_circle:         Bốn lỗ tròn.
     - hexagonal:           Lỗ lục giác.
     - nine_circle:         Chín lỗ tròn (lưới 3×3).
@@ -16,6 +16,9 @@ Các mẫu có sẵn:
     - grid_circular_voids: Lưới lỗ tròn.
     - small_square_cross:  Chữ thập vuông nhỏ.
     - circle_half_quarter: Lỗ tròn kết hợp 1/4 hình tròn.
+    - reentrant_bowtie:    Nền void, 4 thanh chéo góc reentrant (cơ chế
+                            gập-xoay auxetic chuẩn - Lakes 1987). Khác biệt
+                            với các seed trên: nền là VOID, không phải đặc.
 """
 
 from .circle import circle_seed
@@ -28,6 +31,7 @@ from .cross_rectangular import cross_rectangular_seed
 from .grid_circular_voids import grid_circular_voids_seed
 from .small_square_cross import small_square_cross_seed
 from .circle_half_quarter import circle_half_quarter_seed
+from .reentrant_bowtie import reentrant_bowtie_seed
 
 __all__ = [
     'circle_seed',
@@ -40,4 +44,5 @@ __all__ = [
     'grid_circular_voids_seed',
     'small_square_cross_seed',
     'circle_half_quarter_seed',
+    'reentrant_bowtie_seed',
 ]

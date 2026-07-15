@@ -18,6 +18,7 @@ def compute_homogenized_tensor(
     penal: float,
     E0: float,
     Emin: float,
+    rho0: float = 1.0,
 ):
     """Tính ten-xơ độ cứng đồng nhất hóa và đạo hàm của nó.
 
@@ -57,9 +58,9 @@ def compute_homogenized_tensor(
             Ue[i, :, j] = U[edofMat_0[i, :], j]
 
     # Tính độ cứng vật liệu cho mỗi phần tử (vector hóa)
-    # E(x) = Emin + x^penal * (E0 - Emin)
+    # E(x) = Emin + (rho0 * x^penal) * (E0 - Emin)
     x_flat = xPhys.flatten('F')
-    E_penal = Emin + x_flat ** penal * (E0 - Emin)
+    E_penal = Emin + (rho0 * x_flat ** penal) * (E0 - Emin)
 
     # Công thức đồng nhất hóa (khớp MATLAB):
     #   KE = E0 * KE_unit (đã được tính trong Material)
@@ -77,8 +78,8 @@ def compute_homogenized_tensor(
 
     # Tính đạo hàm dQ - dùng tổng displacement U (không fluctuation)
     # dQ_ij/dx_e = (1/|Ω|) * d(k_e)/dx_e * (Ue^i)^T * KE * (Ue^j)
-    # d(k_e)/dx = penal * x^(penal-1) * (E0 - Emin)
-    dk_e = penal * x_flat ** (penal - 1) * (E0 - Emin)
+    # d(k_e)/dx = rho0 * penal * x^(penal-1) * (E0 - Emin)
+    dk_e = rho0 * penal * x_flat ** (penal - 1) * (E0 - Emin)
     dQ_flat = np.einsum('e,emi,mn,enj->eij', dk_e, Ue, KE, Ue) / (nelx * nely)
     dQ = dQ_flat.transpose(1, 2, 0).reshape(3, 3, nely, nelx)
 

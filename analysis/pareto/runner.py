@@ -95,7 +95,7 @@ def run_all_pareto(
         from analysis.sensitivity.runner import find_csv_files
         # Use same CSV discovery logic
     if objectives is None:
-        objectives = ['auxetic', 'first', 'second']
+        objectives = ['auxetic']
 
     phase1_dir = Path('outputs/pipeline/phase1')
     if seeds is None:
@@ -106,8 +106,6 @@ def run_all_pareto(
     # Map objective → cột
     obj_map = {
         'auxetic': ['v12', 'auxetic_ratio'],
-        'first': ['first_obj', 'v12'],
-        'second': ['second_obj', 'v12'],
     }
 
     all_results: Dict = {}

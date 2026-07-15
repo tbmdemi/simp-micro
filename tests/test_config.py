@@ -16,7 +16,7 @@ class TestSimpConfig:
         assert cfg.nely == 100
         assert cfg.volfrac == 0.4
         assert cfg.penal == 3.0
-        assert cfg.objective_type == 'first'
+        assert cfg.objective_type == 'auxetic'
 
     def test_valid_config(self):
         """Test that valid parameters pass validation."""

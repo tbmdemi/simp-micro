@@ -106,3 +106,5 @@ environment.yaml
 *.tar.gz
 *.rar
 .tox/
+
+outputs/

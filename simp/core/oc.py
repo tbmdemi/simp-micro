@@ -15,19 +15,20 @@ def oc_update(
     dv: np.ndarray,
     volfrac: float,
     move: float,
-    H: csr_matrix,
-    Hs: np.ndarray,
+    H,
+    Hs,
     ft: int,
     Q: np.ndarray | None = None,
     delta: float | None = None,
+    use_sqrt: bool = False,
 ):
     """Cập nhật biến thiết kế dùng tiêu chí tối ưu (OC).
 
     Thực hiện cập nhật OC với tìm kiếm nhị phân trên hệ số Lagrange
     để thỏa mãn ràng buộc thể tích.
 
-    Hỗ trợ thêm ràng buộc stiffness (Q₁₁ ≥ δ, Q₂₂ ≥ δ) dùng cho First_Obj
-    giống MATLAB topK_Hourglass.m.
+    Hỗ trợ thêm ràng buộc stiffness (Q₁₁ ≥ δ, Q₂₂ ≥ δ) dùng cho auxetic objective
+    (giống MATLAB topK_Hourglass.m).
 
     Args:
         x: Mảng (nely, nelx) biến thiết kế hiện tại.
@@ -40,6 +41,9 @@ def oc_update(
         ft: Loại bộ lọc (1=độ nhạy, 2=mật độ).
         Q: Ten-xơ độ cứng đồng nhất hóa (3×3, optional). Dùng khi có ràng buộc stiffness.
         delta: Ngưỡng stiffness tối thiểu (optional). Yêu cầu Q nếu delta được cung cấp.
+        use_sqrt: Nếu True, dùng x * sqrt(-dc/(dv*lmid)) (Sigmund 2001 heuristic).
+                   Nếu False, dùng x * (-dc/(dv*lmid)) (MATLAB reference).
+                   Mặc định False để khớp MATLAB.
 
     Returns:
         Bộ (xnew, xPhys) với:
@@ -58,8 +62,14 @@ def oc_update(
     for _ in range(100):
         lmid = (l1 + l2) / 2
 
-        # Quy tắc cập nhật OC - khớp MATLAB (không sqrt)
-        # MATLAB: xnew = max(0, max(x-move, min(1, min(x+move, x.*(-dc./dv/lmid)))));
+        # Quy tắc cập nhật OC
+        # Hai chế độ:
+        #   use_sqrt=True:  x * sqrt(max(0, -dc/(dv*lmid)))  (Sigmund 2001)
+        #   use_sqrt=False: x * max(0, -dc/(dv*lmid))        (MATLAB reference)
+        # Mặc định False để khớp MATLAB.
+        ratio = np.maximum(0.0, -dc / (dv * lmid + 1e-15))
+        if use_sqrt:
+            ratio = np.sqrt(ratio)
         xnew = np.maximum(
             0.0,
             np.maximum(
@@ -68,7 +78,7 @@ def oc_update(
                     1.0,
                     np.minimum(
                         x + move,
-                        x * np.maximum(0.0, -dc / (dv * lmid + 1e-15)),
+                        x * ratio,
                     ),
                 ),
             ),

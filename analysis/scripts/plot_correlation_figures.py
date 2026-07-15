@@ -3,9 +3,7 @@ plot_correlation_figures.py
 ─────────────────────────────
 Xuất 5 PNG figures từ _all_correlations.json:
   1. heatmap_auxetic.png
-  2. heatmap_first.png
-  3. heatmap_second.png
-  4. barplot_importance.png
+  2.   3.   4. barplot_importance.png
   5. volcano_plot.png
 
 Usage:
@@ -36,10 +34,8 @@ PARAM_LABELS = {
 }
 OBJ_LABELS = {
     "auxetic": "Auxetic Ratio",
-    "first":   "1st Eigenfreq.",
-    "second":  "2nd Eigenfreq.",
 }
-OBJ_COLORS = {"auxetic": "#e05f4e", "first": "#4e8fe0", "second": "#5dba6a"}
+OBJ_COLORS = {"auxetic": "#e05f4e"}
 CMAP = "RdBu_r"
 NORM = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
 

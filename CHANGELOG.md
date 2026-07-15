@@ -5,6 +5,85 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-10
+
+### Fixed
+- **OC sqrt tranh cãi (Bug #1)**: Thêm tham số `use_sqrt=False` vào `oc_update()`. Mặc định `False` để khớp MATLAB (không sqrt). Khi cần Sigmund 2001 heuristic, có thể set `True`. Xem docs/summary.md và bug_reports.md.
+- **Symmetrize K (Bug #6)**: Thêm `K_global = (K_global + K_global.T) * 0.5` trong `solve_fe()` — giống MATLAB, tăng ổn định số học.
+- **xPhys unfiltered cho First_Obj (Bug #4)**: Runner.py nay dùng unfiltered `xPhys` từ OC update cho First_Obj, đúng với MATLAB behavior. Code cũ dùng filtered cho mọi objective.
+- **rho0 scaling (Bug #8)**: Thêm tham số `rho0` (mặc định 1.0) vào `solve_fe()`, `compute_homogenized_tensor()`, `compute_second_objective()`. MATLAB Second_Obj dùng `rho0=7850`, `E0=1` — Python giờ hỗ trợ đồng bộ.
+- **Error handling (R3)**: Thêm `try/except` trong vòng lặp chính của `run_simp()`. Khi lỗi xảy ra, gán objective lớn + gradient mạnh để OC tránh điểm đó. Tự động dừng nếu có 5 lỗi liên tiếp.
+- **Metadata reproducibility (R6)**: Thêm `metadata.json` vào mỗi output directory — lưu git hash, timestamp, version, params.
+
+### Changed
+- **`simp/core/oc.py`**: `oc_update()` signature thay đổi — thêm `use_sqrt=False`. Tham số mới, backward compatible.
+- **`simp/core/solver.py`**: `solve_fe()` signature thay đổi — thêm `rho0=1.0`. Backward compatible.
+- **`simp/homogenization/compute.py`**: `compute_homogenized_tensor()` signature thay đổi — thêm `rho0=1.0`. Backward compatible.
+- **`simp/runner.py`**: Thêm `rho0` vào params extraction.
+
+## [1.3.0] - 2026-07-10
+
+### Added
+- **`pipeline/multi_batch/`**: Multi-batch adaptive sampling pipeline — a complete module for intelligent, sequential design space exploration.
+
+  - **`params.py`**: Configuration layer with `BatchConfig` and `PipelineConfig` dataclasses, parameter management (fixed vs active), and JSON serialization.
+    - `SamplingStrategy` enum: `SOBOL`, `LHS`, `OPTIMIZED_LHS`, `RANDOM`
+    - `BatchMode` enum: `EXPLORE`, `REFINE`, `TARGETED`, `VALIDATE`
+    - `load_phase1_params()` — extract parameter ranges from Phase 1 summary JSON
+    - `prepare_output()` — create output directory structure with metadata
+
+  - **`sampling.py`**: Design generation engine supporting three strategies:
+    - **Sobol sequence** (`sobol`) — deterministic low-discrepancy sequence via SciPy, preferred for initial exploration
+    - **Latin Hypercube Sampling** (`lhs`) — stratified random sampling via pyDOE
+    - **Optimized LHS** (`optimized_lhs`) — LHS with SPSA-like pairwise correlation minimization
+    - Outputs a clean `pandas.DataFrame` with `param_ranges` columns + `seed`, `objective` columns for SIMP dispatch
+
+  - **`runner.py`**: Batch execution harness wrapping `run_single_simp`:
+    - Parallel execution via `concurrent.futures.ProcessPoolExecutor` (up to 4 workers default)
+    - Per-sample JSON result aggregation into batch-level summary
+    - Error tolerance: individual sample failures don't crash the batch
+    - Batch results saved as `batch_{id}_results.json` (list of `{sample_id, seed, objective, params, v12, v21, obj_value, success}`)
+
+  - **`coverage.py`**: N-dimensional coverage analysis engine:
+    - `coverage_report()` — discretise property space into ND bins, compute per-bin statistics
+    - `find_sparse_regions()` — identify bins with low sample density for targeted follow-up
+    - `compare_batches()` — measure coverage improvement between consecutive batches
+    - Tracks `v12`, `v21`, `obj_value` as property dimensions by default
+
+  - **`adaptive.py`**: Decision-making orchestrator that closes the loop:
+    - `decide_next_action()` — analyzes accumulated batch summaries against configurable thresholds
+    - **Stop**: if objective hasn't improved for N batches AND coverage is adequate
+    - **Expand**: if sparsity > 30% of property space → sample new seeds/objectives
+    - **Refine**: if sparsity < 10% but best objective still far from theoretical → narrow param bounds
+    - Returns structured `{'action', 'reason', 'next_config', 'coverage'}` dict
+
+  - **`visualize.py`**: HTML report generators for human-readable monitoring:
+    - `generate_coverage_html()` — interactive coverage grid with sparse region highlights
+    - `generate_batch_progression_html()` — side-by-side coverage comparison across batches
+
+  - **`main.py`**: CLI entry point orchestrating the full loop:
+    ```
+    python -m pipeline.multi_batch.main --phase1-summary <path> [options]
+    ```
+    - `--phase1-summary` — path to Phase 1 summary JSON or directory
+    - `--max-batches` — iteration limit (default: 5)
+    - `--n-batch1` — sample count for first batch (default: 120)
+    - `--strategy` — sampling strategy: `sobol`, `lhs`, `optimized_lhs`
+    - `--skip-run` — dry-run mode (mock results) for testing
+    - `--resume` — continue from a previous `decision_log.json`
+    - `--only-report` — regenerate HTML reports from existing results
+    - `--seeds` / `--objectives` — filter which seed shapes and objectives to include
+    - Generates `decision_log.json`, per-batch summaries, and HTML coverage reports
+
+### Changed
+- **`pipeline/params.py`**: Added `multi_batch` key to `REFINED_PARAMETERS_TEMPLATE` for cross-phase data handoff (active + fixed param metadata).
+
+### Technical highlights
+- **Zero new external dependencies**: uses only `scipy.stats.qmc`, `scipy.optimize`, `numpy`, `pandas` — all already in `requirements.txt`
+- **Backward compatible**: existing Phase 1, Phase 2 pipelines unaffected — `multi_batch/` is a standalone optional addition
+- **Easy extension**: new sampling strategies can be added by extending `generate_design()`; new decision heuristics by extending `decide_next_action()` — both accept pluggable callables
+- **All HTML reports self-contained**: single-file, interactive, no server needed
+
 ## [1.2.2] - 2026-06-15
 
 ### Fixed

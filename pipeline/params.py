@@ -8,49 +8,44 @@ from typing import Dict, Tuple, List
 #  Định nghĩa khoảng tham số (min, max)
 # ──────────────────────────────────────────────
 PARAM_SPACE: Dict[str, Tuple[float, float]] = {
-    'volfrac':       (0.2, 0.6),
-    'penal':         (1.0, 5.0),
-    'rmin':          (1.0, 6.0),
-    'move':          (0.05, 0.3),
-    'void_size_frac': (0.2, 0.7),
-    'rotation_deg':   (0.0, 90.0),
-    'beta':          (0.3, 1.5),     # chỉ dùng cho 'first'
-    'beta_second':   (0.5, 2.5),     # chỉ dùng cho 'second'
+    'volfrac':       (0.45, 0.70),   # thu hẹp, tập trung vào vùng cao
+    'penal':         (2.0, 5.0),     # giữ rộng để khảo sát
+    'rmin':          (1.0, 2.5),     # thu hẹp, tránh rmin cao
+    'move':          (0.05, 0.25),   # tinh chỉnh nhẹ
+    'void_size_frac': (0.25, 0.55),  # mở rộng lên cao hơn
+    # rotation_deg đã được cố định trong FIXED_PARAMS
 }
 
 # Tham số cố định (không thay đổi trong screening)
 FIXED_PARAMS = {
-    'nelx': 50,
-    'nely': 50,
+    'nelx': 80,           # tăng độ phân giải
+    'nely': 80,
     'ft': 2,
     'E0': 199.0,
     'Emin': 1e-9,
     'nu': 0.3,
-    'max_iter': 150,
+    'max_iter': 200,      # tăng lên 200 để hội tụ tốt hơn với lưới mịn
     'tol_change': 0.01,
     'tol_obj': 0.05,
     'window_size': 20,
-    'save_every': 9999,   # không lưu ảnh trung gian (chỉ lưu vòng đầu & cuối)
+    'save_every': 9999,   # không lưu ảnh trung gian
     'scale_factor': 1,
+    'mu': 0.3,
+    'beta': 3.0,          
+    'rotation_deg': 0.0,  
 }
 
 
-def get_active_params(objective: str) -> List[str]:
-    """Trả về danh sách tham số được vary cho từng mục tiêu.
+def get_active_params(objective: str = 'auxetic') -> List[str]:
+    """Trả về danh sách tham số được vary.
 
     Args:
-        objective: 'auxetic', 'first', hoặc 'second'.
+        objective: (unused, kept for backward compatibility)
 
     Returns:
         Danh sách tên tham số.
     """
-    base = ['volfrac', 'penal', 'rmin', 'move', 'void_size_frac', 'rotation_deg']
-    if objective == 'first':
-        return base + ['beta']
-    elif objective == 'second':
-        return base + ['beta_second']
-    else:  # auxetic
-        return base
+    return list(PARAM_SPACE.keys())
 
 
 def get_param_bounds(objective: str) -> List[Tuple[float, float]]:
@@ -70,5 +65,3 @@ SEEDS: List[str] = [
     'small_square_cross',
     'circle_half_quarter',
 ]
-
-OBJECTIVES: List[str] = ['auxetic', 'first', 'second']

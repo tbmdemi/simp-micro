@@ -1,0 +1,1166 @@
+<!--
+  Title:    Multi-Batch Adaptive Sampling Pipeline
+  Type:     Technical Showcase / Architecture Guide
+  Aesthetic: Engineering-light, developer-focused, cyan-accented technical documentation (bilingual VI/EN)
+  Fonts:    Space Mono + IBM Plex Sans
+  Generated: 2026-07-10
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Batch Adaptive Sampling Pipeline — SIMP</title>
+<meta name="description" content="Architecture deep-dive of the multi-batch adaptive sampling pipeline for SIMP topology optimization: sequential design space exploration with coverage analysis, adaptive decision-making, and self-contained HTML monitoring reports.">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --raised: #f0efeb;
+    --border: #d4d2cc;
+    --border-bright: #b8b5ad;
+    --accent: #059669;
+    --accent-dim: rgba(5, 150, 105, 0.08);
+    --accent2: #2563eb;
+    --accent2-dim: rgba(37, 99, 235, 0.08);
+    --warning: #d97706;
+    --warning-dim: rgba(217, 119, 6, 0.08);
+    --danger: #dc2626;
+    --danger-dim: rgba(220, 38, 38, 0.08);
+    --text: #171717;
+    --text2: #525252;
+    --text3: #a3a3a3;
+    --code-bg: #fafaf8;
+    --gap-sm: 8px;
+    --gap-md: 16px;
+    --gap-lg: 24px;
+    --gap-xl: 40px;
+    --gap-2xl: 64px;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --max-width: 1200px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  h1 { font-size: clamp(2rem, 5vw, 3rem); }
+  h2 { font-size: clamp(1.3rem, 3vw, 1.75rem); margin-bottom: var(--gap-md); }
+  h3 { font-size: 1.15rem; margin-bottom: var(--gap-sm); }
+  h4 { font-size: 1rem; }
+
+  p { margin-bottom: var(--gap-md); max-width: 70ch; color: var(--text2); }
+
+  p.vi {
+    font-style: italic;
+    color: var(--text3);
+    font-size: 0.95rem;
+    margin-bottom: var(--gap-md);
+    max-width: 70ch;
+  }
+
+  p.vi::before {
+    content: '🇻🇳 ';
+    font-style: normal;
+  }
+
+  a { color: var(--accent); text-decoration: none; transition: color 0.2s ease; }
+  a:hover { color: var(--accent2); }
+
+  code {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85em;
+    background: var(--raised);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  pre {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--gap-md);
+    overflow-x: auto;
+    color: var(--text);
+    margin-bottom: var(--gap-md);
+  }
+
+  pre .kw { color: #d63384; }
+  pre .str { color: #0a7e3c; }
+  pre .cm { color: #888888; }
+  pre .fn { color: #0550ae; }
+  pre .num { color: #0550ae; }
+  pre .op { color: #d63384; }
+
+  .container { max-width: var(--max-width); margin: 0 auto; padding: 0 var(--gap-lg); }
+
+  /* ===== HERO ===== */
+  .hero {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: var(--gap-2xl) var(--gap-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 20%, rgba(5, 150, 105, 0.06), transparent),
+      radial-gradient(ellipse 50% 40% at 30% 80%, rgba(37, 99, 235, 0.06), transparent),
+      radial-gradient(ellipse 50% 40% at 70% 80%, rgba(5, 150, 105, 0.04), transparent);
+    pointer-events: none;
+  }
+
+  .hero-content { position: relative; z-index: 1; max-width: 800px; }
+
+  .hero-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 100px;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--gap-lg);
+  }
+
+  .hero h1 { margin-bottom: var(--gap-md); }
+  .hero h1 .highlight { color: var(--accent); }
+  .hero h1 .highlight2 { color: var(--accent2); }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--text2);
+    max-width: 600px;
+    margin: 0 auto var(--gap-lg);
+  }
+
+  .hero-sub-vi {
+    font-size: 0.95rem;
+    font-style: italic;
+    color: var(--text3);
+    max-width: 600px;
+    margin: 0 auto var(--gap-lg);
+  }
+
+  .hero-metrics {
+    display: flex;
+    gap: var(--gap-xl);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--gap-xl);
+  }
+
+  .hero-metric { text-align: center; }
+
+  .hero-metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .hero-metric-value .accent { color: var(--accent); }
+  .hero-metric-value .accent2 { color: var(--accent2); }
+  .hero-metric-value .warn { color: var(--warning); }
+
+  .hero-metric-label {
+    font-size: 0.8rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+  }
+
+  .hero-metric-label-vi {
+    font-size: 0.75rem;
+    color: var(--text3);
+    font-style: italic;
+    margin-top: 0;
+  }
+
+  /* ===== SCROLL INDICATOR ===== */
+  .scroll-indicator {
+    position: absolute;
+    bottom: var(--gap-xl);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--text3);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    animation: float 2s ease-in-out infinite;
+  }
+
+  .scroll-indicator .arrow {
+    width: 20px; height: 20px;
+    border-right: 2px solid var(--text3);
+    border-bottom: 2px solid var(--text3);
+    transform: rotate(45deg);
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ===== SECTION STYLES ===== */
+  section { padding: var(--gap-2xl) 0; }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: var(--gap-xl);
+  }
+
+  .section-header h2 { margin-bottom: var(--gap-sm); }
+  .section-header p { margin: 0 auto; color: var(--text2); }
+  .section-header p.vi { margin: 0 auto; }
+
+  /* ===== ARCHITECTURE DIAGRAM ===== */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--gap-lg);
+    margin-top: var(--gap-lg);
+  }
+
+  .arch-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--gap-lg);
+    border: 1px solid var(--border);
+    transition: border-color 0.3s ease, transform 0.3s ease;
+    position: relative;
+  }
+
+  .arch-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+
+  .arch-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    margin-bottom: var(--gap-md);
+  }
+
+  .arch-card-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+  }
+
+  .arch-card-icon.cyan { background: var(--accent-dim); color: var(--accent); }
+  .arch-card-icon.blue { background: var(--accent2-dim); color: var(--accent2); }
+  .arch-card-icon.warn { background: var(--warning-dim); color: var(--warning); }
+
+  .arch-card h3 { font-size: 0.95rem; margin-bottom: 0; }
+
+  .arch-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .arch-card ul li {
+    padding: 3px 0;
+    color: var(--text2);
+    font-size: 0.85rem;
+  }
+
+  .arch-card ul li::before {
+    content: '→ ';
+    color: var(--accent);
+  }
+
+  .arch-card .file-path {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text3);
+    background: var(--raised);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: var(--gap-sm);
+  }
+
+  /* ===== FLOW VISUALIZATION ===== */
+  .flow-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gap-md);
+    padding: var(--gap-xl);
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    margin-top: var(--gap-lg);
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .flow-node {
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--raised);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-align: center;
+    min-width: 120px;
+    transition: border-color 0.3s ease;
+  }
+
+  .flow-node:hover { border-color: var(--accent); }
+
+  .flow-node.start { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .flow-node.decision { border-color: var(--warning); background: var(--warning-dim); color: var(--warning); }
+  .flow-node.action { border-color: var(--accent2); background: var(--accent2-dim); color: var(--accent2); }
+  .flow-node.end { border-color: var(--danger); background: var(--danger-dim); color: var(--danger); }
+
+  .flow-arrow {
+    color: var(--text3);
+    font-size: 1.2rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .flow-label {
+    font-size: 0.7rem;
+    color: var(--text3);
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .flow-sub {
+    display: flex;
+    gap: var(--gap-md);
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-left: var(--gap-xl);
+    border-left: 2px dashed var(--border);
+    margin-left: var(--gap-xl);
+  }
+
+  /* ===== MODULE CONTENT ===== */
+  .module-deep {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: var(--gap-lg);
+    margin-top: var(--gap-lg);
+  }
+
+  .module-deep h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    margin-bottom: var(--gap-md);
+  }
+
+  .module-deep h3 .tag {
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .tag.cyan { background: var(--accent-dim); color: var(--accent); }
+  .tag.blue { background: var(--accent2-dim); color: var(--accent2); }
+  .tag.warn { background: var(--warning-dim); color: var(--warning); }
+
+  .module-deep ul {
+    list-style: none;
+    padding: 0;
+    margin-bottom: var(--gap-md);
+  }
+
+  .module-deep ul li {
+    padding: 3px 0;
+    color: var(--text2);
+    font-size: 0.9rem;
+  }
+
+  .module-deep ul li::before {
+    content: '▸ ';
+    color: var(--accent);
+  }
+
+  .module-deep strong { color: var(--text); }
+
+  /* ===== CLI REFERENCE ===== */
+  .cli-ref {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    padding: var(--gap-lg);
+    margin-top: var(--gap-lg);
+  }
+
+  .cli-ref table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .cli-ref th {
+    text-align: left;
+    padding: 10px var(--gap-sm);
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    color: var(--text3);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .cli-ref td {
+    padding: 8px var(--gap-sm);
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+  }
+
+  .cli-ref td:first-child { font-family: 'Space Mono', monospace; color: var(--accent); }
+  .cli-ref tr:hover td { background: var(--raised); }
+
+  /* ===== DECISION TABLE ===== */
+  .decision-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--gap-lg);
+    margin-top: var(--gap-lg);
+  }
+
+  .decision-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: var(--gap-lg);
+    border: 1px solid var(--border);
+    transition: border-color 0.3s ease;
+  }
+
+  .decision-card:hover { border-color: var(--accent); }
+
+  .decision-card h4 {
+    font-size: 0.9rem;
+    margin-bottom: var(--gap-sm);
+  }
+
+  .decision-card .condition {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent2);
+    background: var(--accent2-dim);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: var(--gap-sm);
+  }
+
+  .decision-card p {
+    font-size: 0.85rem;
+    color: var(--text2);
+  }
+
+  /* ===== HIGHLIGHTS ===== */
+  .highlight-box {
+    background: var(--raised);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: var(--gap-md) var(--gap-lg);
+    margin: var(--gap-lg) 0;
+  }
+
+  .highlight-box.warn { border-left-color: var(--warning); }
+  .highlight-box.blue { border-left-color: var(--accent2); }
+
+  .highlight-box p { margin-bottom: 0; font-size: 0.9rem; }
+
+  /* ===== FOOTER ===== */
+  footer {
+    text-align: center;
+    padding: var(--gap-xl) var(--gap-lg);
+    border-top: 1px solid var(--border);
+    color: var(--text3);
+    font-size: 0.8rem;
+  }
+
+  /* ===== FADE-IN ANIMATION ===== */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+    .fade-in { opacity: 1; transform: none; }
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .hero-metrics { gap: var(--gap-lg); }
+    .hero-metric-value { font-size: 1.6rem; }
+    .flow-row { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+    .cli-ref table { font-size: 0.75rem; }
+    .cli-ref td, .cli-ref th { padding: 6px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-content">
+    <span class="hero-badge">pipeline/multi_batch/ — v1.3.0</span>
+    <h1>Multi-Batch<br><span class="highlight">Adaptive</span> <span class="highlight2">Sampling</span></h1>
+    <p class="hero-sub">Intelligent, sequential design space exploration for SIMP topology optimization. Close the loop between generation & analysis.</p>
+    <p class="hero-sub-vi">Khám phá không gian thiết kế tuần tự thông minh cho tối ưu hóa topo SIMP. Kết nối vòng lặp giữa sinh thiết kế và phân tích.</p>
+    <div class="hero-metrics">
+      <div class="hero-metric">
+        <div class="hero-metric-value"><span class="accent">7</span></div>
+        <div class="hero-metric-label">Module Files</div>
+        <div class="hero-metric-label-vi">Tập tin module</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value"><span class="accent2">3</span></div>
+        <div class="hero-metric-label">Sampling Strategies</div>
+        <div class="hero-metric-label-vi">Chiến lược lấy mẫu</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value"><span class="warn">4</span></div>
+        <div class="hero-metric-label">Decision Modes</div>
+        <div class="hero-metric-label-vi">Chế độ quyết định</div>
+      </div>
+      <div class="hero-metric">
+        <div class="hero-metric-value"><span class="accent">~1.2k</span></div>
+        <div class="hero-metric-label">Lines of Code</div>
+        <div class="hero-metric-label-vi">Dòng mã nguồn</div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-indicator">
+    scroll / cuộn<div class="arrow"></div>
+  </div>
+</section>
+
+<div class="container">
+
+<!-- ===== OVERVIEW ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>What & Why</h2>
+    <p>A self-contained sub-pipeline that replaces one-shot design with iterative, coverage-driven exploration.</p>
+    <p class="vi">Một quy trình con độc lập, thay thế thiết kế một-lần bằng khám phá lặp theo vùng phủ.</p>
+  </div>
+
+  <p>Phase 1 screens a coarse grid of seed × objective × parameter combos. It tells you <em>what works</em> — but it cannot tell you <em>what you missed</em>. The multi-batch adaptive pipeline solves this by operating in sequential batches:</p>
+  <p class="vi">Pha 1 sàng lọc một lưới thô các tổ hợp seed × objective × tham số. Nó cho bạn biết <em>cái gì hiệu quả</em> — nhưng không thể cho biết <em>bạn đã bỏ sót gì</em>. Quy trình thích ứng đa batch giải quyết điều này bằng cách vận hành theo các batch tuần tự:</p>
+
+  <div class="highlight-box">
+    <p><strong>Batch 1</strong> — Sobol / LHS space-filling design across the full parameter domain (120 samples).<br>
+    <strong>Batch 2+</strong> — Coverage analysis identifies under-explored regions; <code>decide_next_action()</code> chooses to <strong>expand</strong>, <strong>refine</strong>, or <strong>stop</strong>.</p>
+  </div>
+
+  <p>Each batch runs SIMP in parallel (4 workers), aggregates results, generates self-contained HTML coverage reports, and logs every decision. The loop continues until the property space is adequately sampled or improvement plateaus.</p>
+  <p class="vi">Mỗi batch chạy SIMP song song (4 worker), tổng hợp kết quả, tạo báo cáo vùng phủ HTML độc lập, và ghi nhật ký mọi quyết định. Vòng lặp tiếp tục cho đến khi không gian thuộc tính được lấy mẫu đầy đủ hoặc cải thiện đạt đến ngưỡng bão hòa.</p>
+</section>
+
+<!-- ===== ARCHITECTURE ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Architecture / Kiến trúc</h2>
+    <p>Seven modules, one responsibility each, no circular dependencies.</p>
+    <p class="vi">Bảy module, mỗi module một trách nhiệm, không có phụ thuộc vòng tròn.</p>
+  </div>
+
+  <div class="arch-grid">
+    <div class="arch-card">
+      <span class="file-path">params.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon cyan">C</div>
+        <h3>Configuration / Cấu hình</h3>
+      </div>
+      <ul>
+        <li><code>BatchConfig</code> dataclass</li>
+        <li><code>PipelineConfig</code> dataclass</li>
+        <li><code>SamplingStrategy</code> enum</li>
+        <li><code>BatchMode</code> enum</li>
+        <li><code>load_phase1_params()</code></li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">sampling.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon blue">S</div>
+        <h3>Design Generation / Sinh thiết kế</h3>
+      </div>
+      <ul>
+        <li>Sobol low-discrepancy</li>
+        <li>Latin Hypercube (LHS)</li>
+        <li>Optimized LHS</li>
+        <li><code>pandas.DataFrame</code> output</li>
+        <li>Seed × objective dispatch</li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">runner.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon cyan">R</div>
+        <h3>Batch Execution / Thực thi batch</h3>
+      </div>
+      <ul>
+        <li><code>ProcessPoolExecutor</code> (4 workers)</li>
+        <li>Per-sample SIMP dispatch</li>
+        <li>Error-tolerant aggregation</li>
+        <li>JSON result persistence</li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">coverage.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon warn">C</div>
+        <h3>Coverage Analysis / Phân tích vùng phủ</h3>
+      </div>
+      <ul>
+        <li>ND bin discretisation</li>
+        <li><code>coverage_report()</code></li>
+        <li><code>find_sparse_regions()</code></li>
+        <li><code>compare_batches()</code></li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">adaptive.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon blue">A</div>
+        <h3>Decision Engine / Cơ chế quyết định</h3>
+      </div>
+      <ul>
+        <li><code>decide_next_action()</code></li>
+        <li>Stop / Expand / Refine</li>
+        <li>Configurable thresholds</li>
+        <li>BatchConfig generation</li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">visualize.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon cyan">V</div>
+        <h3>HTML Reports / Báo cáo HTML</h3>
+      </div>
+      <ul>
+        <li>Self-contained single-file</li>
+        <li>Coverage heatmap grids</li>
+        <li>Batch progression</li>
+        <li>Sparse region highlights</li>
+      </ul>
+    </div>
+
+    <div class="arch-card">
+      <span class="file-path">main.py</span>
+      <div class="arch-card-header">
+        <div class="arch-card-icon warn">M</div>
+        <h3>CLI Orchestrator / Điều phối CLI</h3>
+      </div>
+      <ul>
+        <li>Full loop orchestration</li>
+        <li>Decision log persistence</li>
+        <li>Resume / dry-run / only-report</li>
+        <li>Mock batch mode for testing</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DATA FLOW ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Data Flow / Luồng dữ liệu</h2>
+    <p>One cycle of the adaptive loop — from Phase 1 summary to decision.</p>
+    <p class="vi">Một chu kỳ của vòng lặp thích ứng — từ tổng kết Pha 1 đến quyết định.</p>
+  </div>
+
+  <div class="flow-diagram">
+    <div class="flow-row">
+      <div class="flow-node start">Phase 1<br><small>refined_parameters.json</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">Generate<br>Design<br><small>Sinh thiết kế</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">Run SIMP<br><small>parallel × 4</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node">Aggregate<br>Results<br><small>Tổng hợp kết quả</small></div>
+    </div>
+
+    <div class="flow-row">
+      <span class="flow-arrow" style="transform: rotate(90deg);">↓</span>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-node decision">Coverage<br>Analysis<br><small>Phân tích vùng phủ</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node decision">Decide<br>Next Action<br><small>Quyết định tiếp theo</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node action">Expand<br><small>Mở rộng</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-node start" style="border-color: var(--warning);">Next Batch<br><small>Batch tiếp theo</small></div>
+    </div>
+
+    <div class="flow-row">
+      <div class="flow-sub">
+        <div class="flow-node action">Refine<br><small>Tinh chỉnh</small></div>
+        <div class="flow-node end">Stop<br><small>Dừng</small></div>
+      </div>
+    </div>
+
+    <div class="flow-label">HTML reports generated at every step / Báo cáo HTML được tạo ở mỗi bước</div>
+  </div>
+
+  <div class="highlight-box blue">
+    <p><strong>Key insight:</strong> The loop is <em>stateless by design</em>. Everything needed to decide the next batch is persisted as JSON — decision logs, batch summaries, coverage reports. You can resume from any point, or run <code>--only-report</code> to regenerate visualisations from historical data.</p>
+  </div>
+</section>
+
+<!-- ===== DEEP DIVE: SAMPLING ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Sampling Strategies / Chiến lược lấy mẫu</h2>
+    <p>Three space-filling designs, each with distinct trade-offs.</p>
+    <p class="vi">Ba thiết kế lấp đầy không gian, mỗi loại có sự đánh đổi riêng.</p>
+  </div>
+
+  <div class="module-deep">
+    <h3><span class="tag cyan">Sobol</span> Deterministic Low-Discrepancy / Độ lệch thấp xác định</h3>
+    <p>Uses <code>scipy.stats.qmc.Sobol</code> to generate a sequence that covers the hypercube uniformly. Every run with the same seed produces identical designs — critical for reproducibility.</p>
+    <p class="vi">Sử dụng <code>scipy.stats.qmc.Sobol</code> để tạo một chuỗi bao phủ siêu khối lập phương đồng đều. Mỗi lần chạy với cùng seed tạo ra các thiết kế giống hệt nhau — rất quan trọng cho khả năng tái lập.</p>
+    <pre><span class="kw">from</span> scipy.stats.qmc <span class="kw">import</span> Sobol
+sampler = Sobol(d=n_params, scramble=True, seed=42)
+sample = sampler.random(n=n_samples)
+<span class="cm"># Scale to param ranges → DataFrame with seed/objective columns</span></pre>
+    <ul>
+      <li><strong>Best for / Tốt nhất cho</strong> — Batch 1 initial exploration, when you want deterministic results / khám phá ban đầu batch 1, khi cần kết quả xác định</li>
+      <li><strong>Drawback / Hạn chế</strong> — Can align with periodic structure in some objectives / có thể căn chỉnh với cấu trúc tuần hoàn trong một số mục tiêu</li>
+      <li><strong>Default / Mặc định</strong> — Yes, used as the default strategy / có, được dùng làm chiến lược mặc định</li>
+    </ul>
+  </div>
+
+  <div class="module-deep">
+    <h3><span class="tag blue">LHS</span> Latin Hypercube Sampling</h3>
+    <p>Stratified random sampling via <code>pyDOE.lhs</code> (or a built-in fallback). Divides each dimension into <code>n</code> equally-probable intervals and places one sample per interval.</p>
+    <p class="vi">Lấy mẫu ngẫu nhiên phân tầng qua <code>pyDOE.lhs</code> (hoặc fallback tích hợp sẵn). Chia mỗi chiều thành <code>n</code> khoảng có xác suất bằng nhau và đặt một mẫu vào mỗi khoảng.</p>
+    <pre><span class="kw">from</span> pyDOE <span class="kw">import</span> lhs
+design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin'</span>)
+<span class="cm"># Randomised, non-deterministic by default / Ngẫu nhiên, không xác định theo mặc định</span></pre>
+    <ul>
+      <li><strong>Best for / Tốt nhất cho</strong> — Stochastic robustness testing, when you want randomness / kiểm tra độ bền vững ngẫu nhiên, khi bạn muốn tính ngẫu nhiên</li>
+      <li><strong>Drawback / Hạn chế</strong> — Can leave larger gaps than Sobol in low dimensions / có thể để lại khoảng trống lớn hơn Sobol ở chiều thấp</li>
+      <li><strong>pyDOE required / Yêu cầu pyDOE</strong> — Optional dependency; fallback uses <code>numpy.random.uniform</code> / phụ thuộc tùy chọn; fallback dùng <code>numpy.random.uniform</code></li>
+    </ul>
+  </div>
+
+  <div class="module-deep">
+    <h3><span class="tag warn">Optimized LHS</span> Correlation-Minimized LHS / LHS tối thiểu tương quan</h3>
+    <p>Generates multiple LHS candidates and selects the one with minimum pairwise column correlation (SPSA-like heuristic). Produces better space-filling at the cost of computation.</p>
+    <p class="vi">Tạo nhiều ứng viên LHS và chọn ứng viên có tương quan cột tối thiểu (heuristic dạng SPSA). Tạo ra sự lấp đầy không gian tốt hơn nhưng tốn nhiều chi phí tính toán hơn.</p>
+    <pre><span class="kw">def</span> <span class="fn">optimized_lhs</span>(n_params, n_samples, n_trials=<span class="num">20</span>):
+    best_corr = <span class="num">1.0</span>
+    <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(n_trials):
+        candidate = lhs(n_params, n_samples)
+        corr = np.<span class="fn">mean</span>(np.<span class="fn">abs</span>(np.<span class="fn">corrcoef</span>(candidate, rowvar=<span class="num">False</span>)))
+        <span class="kw">if</span> corr < best_corr: best = candidate
+    <span class="kw">return</span> best</pre>
+    <ul>
+      <li><strong>Best for / Tốt nhất cho</strong> — High-dimensional parameter spaces (>5 params) / không gian tham số nhiều chiều (>5 tham số)</li>
+      <li><strong>Drawback / Hạn chế</strong> — Slower to generate, not deterministic / chậm hơn để tạo, không xác định</li>
+      <li><strong>Used when / Dùng khi</strong> — <code>--strategy optimized_lhs</code></li>
+    </ul>
+  </div>
+
+  <div class="highlight-box">
+    <p><strong>Design output format:</strong> A <code>pandas.DataFrame</code> with columns for each active parameter (<code>volfrac</code>, <code>void_size_frac</code>, …) plus <code>seed</code> (shape name) and <code>objective</code> (auxetic/first/second). This is the contract that <code>runner.py</code> expects.</p>
+  </div>
+</section>
+
+<!-- ===== DEEP DIVE: COVERAGE ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Coverage Analysis / Phân tích vùng phủ</h2>
+    <p>How we measure design space exploration completeness.</p>
+    <p class="vi">Cách chúng tôi đo lường mức độ khám phá không gian thiết kế.</p>
+  </div>
+
+  <div class="module-deep">
+    <p>The coverage engine operates on the <strong>property space</strong> — not the parameter space. It discretises <code>v12</code>, <code>v21</code>, and <code>obj_value</code> into an ND grid and counts how many bins contain at least one sample.</p>
+    <p class="vi">Cơ chế vùng phủ hoạt động trên <strong>không gian thuộc tính</strong> — không phải không gian tham số. Nó lượng tử hóa <code>v12</code>, <code>v21</code> và <code>obj_value</code> thành một lưới đa chiều và đếm số lượng bin có ít nhất một mẫu.</p>
+
+    <pre><span class="kw">def</span> <span class="fn">coverage_report</span>(results, dims=(<span class="str">'v12'</span>, <span class="str">'v21'</span>, <span class="str">'obj_value'</span>), n_bins=<span class="num">10</span>):
+    <span class="cm">"""Bin each property dimension → count samples per bin → report sparsity."""</span>
+    grid = np.<span class="fn">zeros</span>([n_bins] * len(dims))
+    <span class="kw">for</span> r <span class="kw">in</span> results:
+        coords = <span class="fn">tuple</span>(np.<span class="fn">digitize</span>(r[d], bins[i]) <span class="kw">for</span> i, d <span class="kw">in</span> <span class="fn">enumerate</span>(dims))
+        grid[coords] += <span class="num">1</span>
+    sparsity = np.<span class="fn">mean</span>(grid == <span class="num">0</span>)
+    <span class="kw">return</span> {<span class="str">'coverage_pct'</span>: (<span class="num">1</span> - sparsity) * <span class="num">100</span>, <span class="str">'grid'</span>: grid}</pre>
+
+    <ul>
+      <li><strong><code>coverage_report()</code></strong> — Returns coverage percentage, per-bin counts, and sparsity statistics / trả về tỷ lệ vùng phủ, số lượng mỗi bin và thống kê độ thưa</li>
+      <li><strong><code>find_sparse_regions()</code></strong> — Returns list of bin coordinates with < N samples (configurable threshold) / trả về danh sách tọa độ bin có < N mẫu (ngưỡng cấu hình được)</li>
+      <li><strong><code>compare_batches()</code></strong> — Reports how many new bins each batch added (coverage improvement) / báo cáo số lượng bin mới mỗi batch thêm vào (cải thiện vùng phủ)</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===== DEEP DIVE: DECISION ENGINE ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Decision Logic / Logic quyết định</h2>
+    <p>Three possible actions, determined by coverage metrics and convergence history.</p>
+    <p class="vi">Ba hành động có thể, được xác định bởi các chỉ số vùng phủ và lịch sử hội tụ.</p>
+  </div>
+
+  <div class="decision-grid">
+    <div class="decision-card">
+      <h4>🛑 Stop / Dừng</h4>
+      <div class="condition">condition: no_improvement ≥ 2 batches</div>
+      <p>Objective has not improved for 2+ consecutive batches <strong>and</strong> coverage is adequate (< 15% sparsity). Time to consolidate and report.</p>
+      <p class="vi">Mục tiêu không cải thiện sau 2+ batch liên tiếp <strong>và</strong> vùng phủ đầy đủ (độ thưa < 15%). Đã đến lúc tổng hợp và báo cáo.</p>
+    </div>
+
+    <div class="decision-card">
+      <h4>🚀 Expand / Mở rộng</h4>
+      <div class="condition">condition: sparsity > 30%</div>
+      <p>Large regions of the property space remain unexplored. The next batch adds new seed shapes or objectives, or uses a broader sampling strategy.</p>
+      <p class="vi">Vùng rộng lớn của không gian thuộc tính vẫn chưa được khám phá. Batch tiếp theo thêm các shape seed hoặc objective mới, hoặc sử dụng chiến lược lấy mẫu rộng hơn.</p>
+    </div>
+
+    <div class="decision-card">
+      <h4>🎯 Refine / Tinh chỉnh</h4>
+      <div class="condition">condition: sparsity < 10% & best_obj far</div>
+      <p>The property space is well-covered but the best objective is still far from theoretical limits. The next batch narrows parameter bounds around the best-known region and uses a denser local design.</p>
+      <p class="vi">Không gian thuộc tính được phủ tốt nhưng objective tốt nhất vẫn còn xa giới hạn lý thuyết. Batch tiếp theo thu hẹp ranh giới tham số quanh vùng được biết đến tốt nhất và sử dụng thiết kế cục bộ dày đặc hơn.</p>
+    </div>
+  </div>
+
+  <div class="highlight-box warn" style="margin-top: var(--gap-lg);">
+    <p><strong>Decision thresholds are configurable:</strong> <code>sparsity_expand_threshold</code>, <code>sparsity_refine_threshold</code>, <code>improvement_patience</code>. Tune them via the <code>decide_next_action()</code> function signature — no subclassing needed.</p>
+  </div>
+</section>
+
+<!-- ===== CLI REFERENCE ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>CLI Reference / Tham chiếu CLI</h2>
+    <p>Everything you need to run the pipeline from the terminal.</p>
+    <p class="vi">Mọi thứ bạn cần để chạy pipeline từ terminal.</p>
+  </div>
+
+  <div class="cli-ref">
+    <table>
+      <thead>
+        <tr>
+          <th>Flag / Cờ</th>
+          <th>Default / Mặc định</th>
+          <th>Description / Mô tả</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>--phase1-summary</td>
+          <td>(required / bắt buộc)</td>
+          <td>Path to Phase 1 summary JSON or directory containing summary files / Đường dẫn đến JSON tổng kết Phase 1 hoặc thư mục chứa file tổng kết</td>
+        </tr>
+        <tr>
+          <td>--max-batches</td>
+          <td>5</td>
+          <td>Maximum number of adaptive batches to run / Số lượng batch thích ứng tối đa</td>
+        </tr>
+        <tr>
+          <td>--n-batch1</td>
+          <td>120</td>
+          <td>Number of samples in the first (exploratory) batch / Số lượng mẫu trong batch đầu tiên (khám phá)</td>
+        </tr>
+        <tr>
+          <td>--strategy</td>
+          <td>sobol</td>
+          <td>Sampling strategy: sobol | lhs | optimized_lhs / Chiến lược lấy mẫu</td>
+        </tr>
+        <tr>
+          <td>--output-root</td>
+          <td>outputs/multi_batch</td>
+          <td>Root directory for batch outputs and reports / Thư mục gốc cho đầu ra và báo cáo batch</td>
+        </tr>
+        <tr>
+          <td>--skip-run</td>
+          <td>false</td>
+          <td>Dry-run: skip SIMP execution, generate mock results (for testing) / Chạy thử: bỏ qua SIMP, tạo kết quả giả (để kiểm thử)</td>
+        </tr>
+        <tr>
+          <td>--resume</td>
+          <td>—</td>
+          <td>Path to a prior decision_log.json to resume from / Đường dẫn đến decision_log.json trước đó để tiếp tục</td>
+        </tr>
+        <tr>
+          <td>--only-report</td>
+          <td>false</td>
+          <td>Regenerate HTML reports from existing results without running new batches / Tái tạo báo cáo HTML từ kết quả hiện có mà không chạy batch mới</td>
+        </tr>
+        <tr>
+          <td>--seeds</td>
+          <td>first 5</td>
+          <td>Filter: specific seed shapes to include / Lọc: các shape seed cụ thể</td>
+        </tr>
+        <tr>
+          <td>--objectives</td>
+          <td>auxetic + first</td>
+          <td>Filter: specific objectives to include / Lọc: các objective cụ thể</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight-box" style="margin-top: var(--gap-lg);">
+    <p><strong>Typical usage / Sử dụng điển hình:</strong><br>
+    <code>python -m pipeline.multi_batch.main \</code><br>
+    <code>  --phase1-summary outputs/pipeline/phase1/refined_parameters.json \</code><br>
+    <code>  --max-batches 4 --n-batch1 100 --strategy sobol</code></p>
+  </div>
+</section>
+
+<!-- ===== DESIGN DECISIONS ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Why This Way? / Tại sao làm theo cách này?</h2>
+    <p>Technical decisions that shaped the module.</p>
+    <p class="vi">Các quyết định kỹ thuật đã định hình module.</p>
+  </div>
+
+  <div class="module-deep">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--gap-lg);">
+      <div>
+        <h4>Stateless persistence / Bền vững không trạng thái</h4>
+        <p>Every batch writes its summary, results, params, and design as separate JSON/CSV files. No database, no global state — just a directory tree you can inspect, diff, and resume from.</p>
+        <p class="vi">Mỗi batch ghi summary, kết quả, tham số và thiết kế thành các file JSON/CSV riêng biệt. Không database, không trạng thái toàn cục — chỉ một cây thư mục bạn có thể kiểm tra, so sánh và tiếp tục.</p>
+      </div>
+      <div>
+        <h4>Mock-mode for development / Chế độ giả lập cho phát triển</h4>
+        <p><code>--skip-run</code> generates realistic mock results (uniform random in property space with ~10% failure rate). This lets you test the full decision loop without running SIMP.</p>
+        <p class="vi"><code>--skip-run</code> tạo kết quả giả thực tế (ngẫu nhiên đồng đều trong không gian thuộc tính với tỷ lệ thất bại ~10%). Điều này cho phép bạn kiểm tra toàn bộ vòng lặp quyết định mà không cần chạy SIMP.</p>
+      </div>
+      <div>
+        <h4>Zero new dependencies / Không phụ thuộc mới</h4>
+        <p>The module uses only <code>scipy</code>, <code>numpy</code>, <code>pandas</code> — all already in <code>requirements.txt</code>. <code>pyDOE</code> for LHS is an optional import; a pure-numpy fallback is provided.</p>
+        <p class="vi">Module chỉ sử dụng <code>scipy</code>, <code>numpy</code>, <code>pandas</code> — tất cả đã có trong <code>requirements.txt</code>. <code>pyDOE</code> cho LHS là import tùy chọn; fallback bằng numpy thuần được cung cấp.</p>
+      </div>
+      <div>
+        <h4>Property-space coverage / Vùng phủ không gian thuộc tính</h4>
+        <p>We analyze coverage in <em>property space</em> (v12, v21, obj) — not parameter space. This is deliberate: it tells you if you're discovering genuinely different designs, not just different inputs.</p>
+        <p class="vi">Chúng tôi phân tích vùng phủ trong <em>không gian thuộc tính</em> (v12, v21, obj) — không phải không gian tham số. Điều này có chủ ý: nó cho biết bạn có đang khám phá các thiết kế thực sự khác nhau hay không, chứ không chỉ các đầu vào khác nhau.</p>
+      </div>
+      <div>
+        <h4>Configurable decision thresholds / Ngưỡng quyết định cấu hình được</h4>
+        <p>All thresholds in <code>decide_next_action()</code> are keyword arguments with sensible defaults. No configuration file, no magic numbers — just Python that you can tune per experiment.</p>
+        <p class="vi">Tất cả ngưỡng trong <code>decide_next_action()</code> là đối số keyword với giá trị mặc định hợp lý. Không file cấu hình, không số ma thuật — chỉ Python mà bạn có thể tùy chỉnh cho từng thí nghiệm.</p>
+      </div>
+      <div>
+        <h4>Self-contained HTML reports / Báo cáo HTML độc lập</h4>
+        <p>Coverage reports and batch progression visualisations are single-file HTML pages — no server needed. Generated at every batch so you can monitor progress in real time.</p>
+        <p class="vi">Báo cáo vùng phủ và trực quan hóa tiến trình batch là các trang HTML đơn file — không cần server. Được tạo ở mỗi batch để bạn có thể theo dõi tiến trình theo thời gian thực.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== INTEGRATION WITH PHASE 1 ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Integration: Phase 1 to Multi-Batch / Tích hợp: Pha 1 vào Multi-Batch</h2>
+  </div>
+
+  <p>The multi-batch pipeline reads from <code>refined_parameters.json</code> (produced by <code>pipeline/params.py</code>):</p>
+  <p class="vi">Pipeline đa batch đọc từ <code>refined_parameters.json</code> (được tạo bởi <code>pipeline/params.py</code>):</p>
+
+  <pre style="max-height: 300px; overflow-y: auto;">
+{
+  <span class="str">"active_parameters"</span>: {
+    <span class="str">"volfrac"</span>: { <span class="str">"range"</span>: [<span class="num">0.3</span>, <span class="num">0.7</span>] },
+    <span class="str">"void_size_frac"</span>: { <span class="str">"range"</span>: [<span class="num">0.1</span>, <span class="num">0.4</span>] }
+  },
+  <span class="str">"fixed_parameters"</span>: {
+    <span class="str">"rmin"</span>: <span class="num">1.5</span>,
+    <span class="str">"move"</span>: <span class="num">0.2</span>,
+    <span class="str">"penal"</span>: <span class="num">3.0</span>
+  },
+  <span class="str">"multi_batch"</span>: {
+    <span class="str">"sampling_strategies"</span>: [<span class="str">"sobol"</span>, <span class="str">"lhs"</span>, <span class="str">"optimized_lhs"</span>],
+    <span class="str">"n_batch1_default"</span>: <span class="num">120</span>,
+    <span class="str">"max_batches_default"</span>: <span class="num">5</span>,
+    <span class="str">"decision_thresholds"</span>: {
+      <span class="str">"sparsity_expand"</span>: <span class="num">0.30</span>,
+      <span class="str">"sparsity_refine"</span>: <span class="num">0.10</span>,
+      <span class="str">"improvement_patience"</span>: <span class="num">2</span>
+    }
+  }
+}</pre>
+
+  <div class="highlight-box blue">
+    <p><strong>No migration needed.</strong> If you have a Phase 1 summary with <code>active_parameters</code> and <code>ranges</code>, it works. The <code>multi_batch</code> key in <code>REFINED_PARAMETERS_TEMPLATE</code> is a convenience addition — the pipeline can also parse plain <code>parameters</code> dicts from any JSON summary file.</p>
+  </div>
+</section>
+
+<!-- ===== FILE TREE ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>File Tree / Cấu trúc thư mục</h2>
+  </div>
+
+  <pre>
+pipeline/
+└── multi_batch/
+    ├── __init__.py          # Module exports / Xuất module
+    ├── params.py            # BatchConfig, PipelineConfig, enums, load_phase1_params
+    ├── sampling.py          # generate_design — Sobol, LHS, Optimized LHS
+    ├── runner.py            # run_batch_from_design — parallel SIMP execution / thực thi SIMP song song
+    ├── coverage.py          # coverage_report, find_sparse_regions, compare_batches
+    ├── adaptive.py           # decide_next_action — the decision orchestrator / điều phối quyết định
+    ├── visualize.py         # generate_coverage_html, generate_batch_progression_html
+    └── main.py              # CLI entry point, decision loop, mock runner / điểm vào CLI, vòng lặp quyết định</pre>
+</section>
+
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <p><strong>Multi-Batch Adaptive Sampling</strong> — SIMP Pipeline v1.3.0<br>
+    Built with NumPy · SciPy · Pandas · Matplotlib · Chart.js<br>
+    <span style="color: var(--text3);">Single-file HTML guide — no server required / Hướng dẫn HTML đơn file — không cần server</span></p>
+  </div>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // Fade-in on scroll
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.10,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Animated counting in hero metrics
+  const animateCount = (el, target, suffix = '') => {
+    const duration = 1000;
+    const start = performance.now();
+    const startVal = 0;
+
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.floor(startVal + (target - startVal) * eased);
+      el.textContent = current + suffix;
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  };
+
+  // Trigger counting when hero is visible
+  const heroObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const metrics = document.querySelectorAll('.hero-metric-value');
+        if (metrics.length >= 4) {
+          animateCount(metrics[0], 7);
+          animateCount(metrics[1], 3);
+          animateCount(metrics[2], 4);
+          animateCount(metrics[3], 1.2, 'k');
+        }
+        heroObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  const hero = document.querySelector('.hero');
+  if (hero) heroObserver.observe(hero);
+})();
+</script>
+
+</body>
+</html>

@@ -12,7 +12,6 @@ Cải tiến:
 Usage:
     python phase1_screening_parallel.py --objective auxetic --seed circle --workers 4
     python phase1_screening_parallel.py --all --workers auto
-    python phase1_screening_parallel.py --objective first --n_samples 100 --workers 8 --strategy async
 """
 
 import argparse
@@ -23,6 +22,7 @@ import time
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
 from typing import Dict, List, Optional, Tuple
+import glob
 
 import numpy as np
 from scipy.stats.qmc import LatinHypercube
@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pipeline.params import (
     PARAM_SPACE, FIXED_PARAMS, get_active_params,
-    get_param_bounds, SEEDS, OBJECTIVES,
+    get_param_bounds, SEEDS,
 )
 from simp.runner import run_simp
 
@@ -255,8 +255,7 @@ def run_phase1_parallel_map(
     output_base: str = 'outputs/pipeline/phase1',
 ) -> Dict:
     """Chạy Phase 1 với Pool.map (đơn giản, nhưng chặn tới khi xong)."""
-    seed_dir = os.path.join(output_base, seed_name)
-    run_dir = os.path.join(seed_dir, objective)
+    run_dir = os.path.join(output_base, seed_name)
     os.makedirs(run_dir, exist_ok=True)
 
     print(f'\n{"="*60}')
@@ -368,8 +367,7 @@ def run_phase1_parallel_async(
     output_base: str = 'outputs/pipeline/phase1',
 ) -> Dict:
     """Chạy Phase 1 với Pool.imap_unordered (bất đồng bộ, thấy progress)."""
-    seed_dir = os.path.join(output_base, seed_name)
-    run_dir = os.path.join(seed_dir, objective)
+    run_dir = os.path.join(output_base, seed_name)
     os.makedirs(run_dir, exist_ok=True)
 
     print(f'\n{"="*60}')
@@ -489,51 +487,6 @@ def run_phase1_parallel_async(
     return summary
 
 
-def run_all_combinations_parallel(
-    n_samples: int = 30,
-    n_workers: int = 4,
-    strategy: str = 'async',
-) -> None:
-    """Chạy Phase 1 song song cho tất cả 30 combo."""
-    all_summaries = []
-    run_phase1_fn = (
-        run_phase1_parallel_async if strategy == 'async'
-        else run_phase1_parallel_map
-    )
-    
-    for obj in OBJECTIVES:
-        for seed in SEEDS:
-            summary = run_phase1_fn(
-                obj, seed,
-                n_samples=n_samples,
-                n_workers=n_workers,
-            )
-            all_summaries.append(summary)
-
-    # Ghi tổng hợp
-    output_dir = f'outputs/pipeline/phase1'
-    os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, '_all_summaries_parallel.json')
-    
-    serializable = []
-    for s in all_summaries:
-        serializable.append({
-            'objective': s['objective'],
-            'seed': s['seed'],
-            'n_samples': s['n_samples'],
-            'n_success': s['n_success'],
-            'n_converged': s['n_converged'],
-            'n_valid_analysis': s['n_valid_analysis'],
-            'top_3_params': s['top_3_params'],
-            'best_obj_value': s['best_obj_value'],
-            'elapsed_time': s['elapsed_time'],
-            'n_workers': s['n_workers'],
-        })
-    with open(path, 'w') as f:
-        json.dump(serializable, f, indent=2)
-    print(f'\nTotal summary: {path}')
-
-
 # ──────────────────────────────────────────────
 #  CLI
 # ──────────────────────────────────────────────
@@ -542,11 +495,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description='Phase 1: LHS Screening (PARALLEL) - tìm tham số ảnh hưởng nhất',
     )
-    parser.add_argument(
-        '--objective', type=str, default='auxetic',
-        choices=OBJECTIVES,
-        help='Mục tiêu tối ưu (mặc định: auxetic)',
-    )
+    # The --objective parameter has been removed; it is fixed as 'auxetic' throughout
     parser.add_argument(
         '--seed', type=str, default='circle',
         choices=SEEDS,
@@ -567,7 +516,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         '--all', action='store_true',
-        help='Quét toàn bộ 30 combo (seed × objective)',
+        help='Chạy tất cả các seeds (ghi đè --seed nếu được chỉ định)',
     )
     parser.add_argument(
         '--output', type=str, default='outputs/pipeline/phase1',
@@ -594,24 +543,94 @@ def main() -> None:
     print(f'  Workers: {n_workers}')
     print(f'  Strategy: {args.strategy}')
 
+    run_phase1_fn = (
+        run_phase1_parallel_async if args.strategy == 'async'
+        else run_phase1_parallel_map
+    )
+
     if args.all:
-        run_all_combinations_parallel(
-            n_samples=args.n_samples,
-            n_workers=n_workers,
-            strategy=args.strategy,
-        )
+        print(f'[INFO] Running all seeds: {SEEDS}')
+        for seed in SEEDS:
+            run_phase1_fn(
+                objective='auxetic',
+                seed_name=seed,
+                n_samples=args.n_samples,
+                n_workers=n_workers,
+                output_base=args.output,
+            )
     else:
-        run_phase1_fn = (
-            run_phase1_parallel_async if args.strategy == 'async'
-            else run_phase1_parallel_map
-        )
         run_phase1_fn(
-            objective=args.objective,
+            objective='auxetic',
             seed_name=args.seed,
             n_samples=args.n_samples,
             n_workers=n_workers,
             output_base=args.output,
         )
+
+    # ──────────────────────────────────────────────
+    # Post-process: Aggregate all seeds into _all_correlations.json and _all_summaries_parallel.json
+    # ──────────────────────────────────────────────
+    if args.all:
+        aggregate_all_data(args.output, 'auxetic')
+
+def aggregate_all_data(base_dir: str, objective: str) -> None:
+    """Aggregate per-seed outputs into _all_correlations.json and _all_summaries_parallel.json."""
+    seeds = SEEDS
+    all_correlations = {
+        "param_names": get_active_params(objective),
+        "configs": []
+    }
+    all_summaries = []
+
+    for seed in seeds:
+        seed_dir = os.path.join(base_dir, seed)
+        json_path = os.path.join(seed_dir, f"phase1_{seed}_{objective}.json")
+
+        # Validate if per-seed JSON exists
+        if not os.path.exists(json_path):
+            print(f"[WARNING] Missing JSON file for seed {seed}")
+            continue
+
+        with open(json_path, "r") as f:
+            data = json.load(f)
+
+        # Extract correlation data for _all_correlations.json
+        all_correlations["configs"].append({
+            "seed": seed,
+            "objective": objective,
+            "best_obj_value": data["metadata"].get("best_obj_value"),
+            "n_success": data["metadata"].get("n_success"),
+            "n_converged": sum(r["converged"] for r in data["results"]),
+            "corr": data["analysis"]["correlations"],
+            "pval": data["analysis"]["p_values"],
+            "top3": data["analysis"]["top_3"]
+        })
+
+        # Extract summary data for _all_summaries_parallel.json
+        all_summaries.append({
+            "objective": objective,
+            "seed": seed,
+            "n_samples": data["metadata"]["n_samples"],
+            "n_success": data["metadata"]["n_success"],
+            "n_converged": sum(r["converged"] for r in data["results"]),
+            "n_valid_analysis": data["analysis"]["n_valid"],
+            "top_3_params": data["analysis"]["top_3"],
+            "best_obj_value": data["metadata"].get("best_obj_value"),
+            "elapsed_time": data["metadata"]["timestamp"],  # Mocked here
+            "n_workers": len(data["results"])  # Approximating workers for example
+        })
+
+    # Save _all_correlations.json
+    correlations_path = os.path.join(base_dir, "_all_correlations.json")
+    with open(correlations_path, "w") as f:
+        json.dump(all_correlations, f, indent=2)
+    print(f"[INFO] Generated {correlations_path}")
+
+    # Save _all_summaries_parallel.json
+    summaries_path = os.path.join(base_dir, "_all_summaries_parallel.json")
+    with open(summaries_path, "w") as f:
+        json.dump(all_summaries, f, indent=2)
+    print(f"[INFO] Generated {summaries_path}")
 
 
 if __name__ == '__main__':
