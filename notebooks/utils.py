@@ -58,11 +58,8 @@ def scan_phase1_samples(
         if not seed_dir.is_dir():
             continue
         seed_name = seed_dir.name
-        auxetic_dir = seed_dir / "auxetic"
-        if not auxetic_dir.exists():
-            continue
         # Each sample_XXXX directory
-        for sample_dir in sorted(auxetic_dir.iterdir()):
+        for sample_dir in sorted(seed_dir.iterdir()):
             if not sample_dir.is_dir():
                 continue
             sample_id_str = sample_dir.name  # e.g. "sample_0000"

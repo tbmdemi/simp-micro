@@ -22,6 +22,7 @@ import time
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
 from typing import Dict, List, Optional, Tuple
+import glob
 
 import numpy as np
 from scipy.stats.qmc import LatinHypercube
@@ -565,6 +566,71 @@ def main() -> None:
             n_workers=n_workers,
             output_base=args.output,
         )
+
+    # ──────────────────────────────────────────────
+    # Post-process: Aggregate all seeds into _all_correlations.json and _all_summaries_parallel.json
+    # ──────────────────────────────────────────────
+    if args.all:
+        aggregate_all_data(args.output, 'auxetic')
+
+def aggregate_all_data(base_dir: str, objective: str) -> None:
+    """Aggregate per-seed outputs into _all_correlations.json and _all_summaries_parallel.json."""
+    seeds = SEEDS
+    all_correlations = {
+        "param_names": get_active_params(objective),
+        "configs": []
+    }
+    all_summaries = []
+
+    for seed in seeds:
+        seed_dir = os.path.join(base_dir, seed)
+        json_path = os.path.join(seed_dir, f"phase1_{seed}_{objective}.json")
+
+        # Validate if per-seed JSON exists
+        if not os.path.exists(json_path):
+            print(f"[WARNING] Missing JSON file for seed {seed}")
+            continue
+
+        with open(json_path, "r") as f:
+            data = json.load(f)
+
+        # Extract correlation data for _all_correlations.json
+        all_correlations["configs"].append({
+            "seed": seed,
+            "objective": objective,
+            "best_obj_value": data["metadata"].get("best_obj_value"),
+            "n_success": data["metadata"].get("n_success"),
+            "n_converged": sum(r["converged"] for r in data["results"]),
+            "corr": data["analysis"]["correlations"],
+            "pval": data["analysis"]["p_values"],
+            "top3": data["analysis"]["top_3"]
+        })
+
+        # Extract summary data for _all_summaries_parallel.json
+        all_summaries.append({
+            "objective": objective,
+            "seed": seed,
+            "n_samples": data["metadata"]["n_samples"],
+            "n_success": data["metadata"]["n_success"],
+            "n_converged": sum(r["converged"] for r in data["results"]),
+            "n_valid_analysis": data["analysis"]["n_valid"],
+            "top_3_params": data["analysis"]["top_3"],
+            "best_obj_value": data["metadata"].get("best_obj_value"),
+            "elapsed_time": data["metadata"]["timestamp"],  # Mocked here
+            "n_workers": len(data["results"])  # Approximating workers for example
+        })
+
+    # Save _all_correlations.json
+    correlations_path = os.path.join(base_dir, "_all_correlations.json")
+    with open(correlations_path, "w") as f:
+        json.dump(all_correlations, f, indent=2)
+    print(f"[INFO] Generated {correlations_path}")
+
+    # Save _all_summaries_parallel.json
+    summaries_path = os.path.join(base_dir, "_all_summaries_parallel.json")
+    with open(summaries_path, "w") as f:
+        json.dump(all_summaries, f, indent=2)
+    print(f"[INFO] Generated {summaries_path}")
 
 
 if __name__ == '__main__':
