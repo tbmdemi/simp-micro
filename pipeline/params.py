@@ -30,7 +30,7 @@ FIXED_PARAMS = {
     'window_size': 20,
     'save_every': 9999,   # không lưu ảnh trung gian
     'scale_factor': 1,
-    'mu': 0.3,
+    'mu': 0.0,
     'beta': 3.0,          
     'rotation_deg': 0.0,  
 }
@@ -64,4 +64,5 @@ SEEDS: List[str] = [
     'grid_circular_voids',
     'small_square_cross',
     'circle_half_quarter',
+    'reentrant_bowtie',
 ]
