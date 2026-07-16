@@ -523,18 +523,120 @@
         }
       },
       "timestamp": "2026-07-16T18:55:25.902747"
+    },
+    {
+      "batch_id": 7,
+      "strategy": "design_df",
+      "n_samples": 1056,
+      "n_total_tasks": 1056,
+      "n_success": 1056,
+      "n_converged": 1056,
+      "n_workers": 10,
+      "elapsed_time": 2228.8,
+      "output_dir": "outputs/multi_batch/batch_7",
+      "best_per_combo": {
+        "circle/auxetic": {
+          "sample_id": 94,
+          "seed": "circle",
+          "objective": "auxetic",
+          "obj_value": 0.3686344719035505,
+          "v12": -0.5413204365552563,
+          "v21": -0.5484229058076848
+        },
+        "circle_half_quarter/auxetic": {
+          "sample_id": 180,
+          "seed": "circle_half_quarter",
+          "objective": "auxetic",
+          "obj_value": 0.3651374771342,
+          "v12": -0.4707623876600841,
+          "v21": -0.47079614480037735
+        },
+        "cross_rectangular/auxetic": {
+          "sample_id": 244,
+          "seed": "cross_rectangular",
+          "objective": "auxetic",
+          "obj_value": 0.5940636197547695,
+          "v12": -0.6211573074056166,
+          "v21": -0.6154807921872589
+        },
+        "four_circle/auxetic": {
+          "sample_id": 341,
+          "seed": "four_circle",
+          "objective": "auxetic",
+          "obj_value": 0.5490336851116363,
+          "v12": -0.5225870622197725,
+          "v21": -0.5705344664472741
+        },
+        "grid_circular_voids/auxetic": {
+          "sample_id": 422,
+          "seed": "grid_circular_voids",
+          "objective": "auxetic",
+          "obj_value": 0.22426363929030724,
+          "v12": -0.52132383873042,
+          "v21": -0.5225259942196531
+        },
+        "hexagonal/auxetic": {
+          "sample_id": 517,
+          "seed": "hexagonal",
+          "objective": "auxetic",
+          "obj_value": 1.3709339067639321,
+          "v12": -0.5022904062309823,
+          "v21": -0.5482102279651935
+        },
+        "hourglass/auxetic": {
+          "sample_id": 578,
+          "seed": "hourglass",
+          "objective": "auxetic",
+          "obj_value": 1.6837185076145311,
+          "v12": -0.390978618650776,
+          "v21": -0.2683760464549875
+        },
+        "nine_circle/auxetic": {
+          "sample_id": 673,
+          "seed": "nine_circle",
+          "objective": "auxetic",
+          "obj_value": 0.29967628385296563,
+          "v12": -0.5245621299860859,
+          "v21": -0.49930383153111957
+        },
+        "reentrant_bowtie/auxetic": {
+          "sample_id": 837,
+          "seed": "reentrant_bowtie",
+          "objective": "auxetic",
+          "obj_value": 1.6304464293568992,
+          "v12": -0.24135693725971422,
+          "v21": -0.19986940111013946
+        },
+        "small_square_cross/auxetic": {
+          "sample_id": 890,
+          "seed": "small_square_cross",
+          "objective": "auxetic",
+          "obj_value": 1.512022964503938,
+          "v12": -0.5601168710472441,
+          "v21": -0.5893149235551376
+        },
+        "square/auxetic": {
+          "sample_id": 1041,
+          "seed": "square",
+          "objective": "auxetic",
+          "obj_value": 0.18738332099363397,
+          "v12": -0.5573947096393767,
+          "v21": -0.5238101253904388
+        }
+      },
+      "timestamp": "2026-07-16T19:36:13.290769"
     }
   ],
   "coverage": {
-    "n_valid": 5808,
-    "n_total": 5808,
+    "n_valid": 6864,
+    "n_total": 6864,
     "success_rate_pct": 100.0,
-    "spatial_coverage_pct": 21.1,
+    "spatial_coverage_pct": 22.3,
     "spatial_coverage_detail": {
       "n_bins_per_dim": 8,
       "n_dims": 3,
       "n_bins_total": 512,
-      "n_bins_occupied": 108,
+      "n_bins_occupied": 114,
       "dim_coverage": {
         "v12": 1.0,
         "v21": 1.0,
@@ -550,20 +652,20 @@
       "v12": {
         "min": -0.7521777024670644,
         "max": 0.37035875285543596,
-        "mean": -0.20481397510472477,
-        "std": 0.17866201421590489
+        "mean": -0.21160085312307547,
+        "std": 0.18004945737625105
       },
       "v21": {
         "min": -0.6772607918423099,
         "max": 0.30000000000001137,
-        "mean": -0.20494798985720433,
-        "std": 0.17840834598548858
+        "mean": -0.21186617942492414,
+        "std": 0.17997382354956734
       },
       "obj_value": {
         "min": -0.01771781993963184,
         "max": 2.000000000001105,
-        "mean": 0.8717884343350769,
-        "std": 0.39175217855494515
+        "mean": 0.8604862112894041,
+        "std": 0.397149777118806
       }
     },
     "sparsity": {
@@ -668,9 +770,9 @@
     },
     "interpretation": "LOW spatial coverage \u2014 property space is poorly explored",
     "correlations": {
-      "v12_vs_v21": 0.9895109373871173,
-      "v12_vs_obj_value": 0.7283551303376284,
-      "v21_vs_obj_value": 0.7273385574816355
+      "v12_vs_v21": 0.9897600572741855,
+      "v12_vs_obj_value": 0.7329577747503168,
+      "v21_vs_obj_value": 0.7302206940817964
     }
   },
   "sparse_regions": [
@@ -770,5 +872,5 @@
       "density": 0.0
     }
   ],
-  "last_batch_id": 6
+  "last_batch_id": 7
 }
