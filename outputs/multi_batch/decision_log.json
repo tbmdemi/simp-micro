@@ -421,18 +421,120 @@
         }
       },
       "timestamp": "2026-07-16T18:10:13.809943"
+    },
+    {
+      "batch_id": 6,
+      "strategy": "design_df",
+      "n_samples": 1045,
+      "n_total_tasks": 1045,
+      "n_success": 1045,
+      "n_converged": 1045,
+      "n_workers": 10,
+      "elapsed_time": 2172.3,
+      "output_dir": "outputs/multi_batch/batch_6",
+      "best_per_combo": {
+        "circle/auxetic": {
+          "sample_id": 0,
+          "seed": "circle",
+          "objective": "auxetic",
+          "obj_value": 0.4370091223173175,
+          "v12": -0.6489705989194355,
+          "v21": -0.6226235166174425
+        },
+        "circle_half_quarter/auxetic": {
+          "sample_id": 167,
+          "seed": "circle_half_quarter",
+          "objective": "auxetic",
+          "obj_value": 0.3869964872584951,
+          "v12": -0.4415082238260883,
+          "v21": -0.4328935462685384
+        },
+        "cross_rectangular/auxetic": {
+          "sample_id": 280,
+          "seed": "cross_rectangular",
+          "objective": "auxetic",
+          "obj_value": 0.28801343524138945,
+          "v12": -0.531341788432769,
+          "v21": -0.5347333845412341
+        },
+        "four_circle/auxetic": {
+          "sample_id": 309,
+          "seed": "four_circle",
+          "objective": "auxetic",
+          "obj_value": 0.8093342475157922,
+          "v12": -0.5435236845849067,
+          "v21": -0.5144070358270371
+        },
+        "grid_circular_voids/auxetic": {
+          "sample_id": 409,
+          "seed": "grid_circular_voids",
+          "objective": "auxetic",
+          "obj_value": 0.3018278754664291,
+          "v12": -0.5580886096420558,
+          "v21": -0.5647319004554455
+        },
+        "hexagonal/auxetic": {
+          "sample_id": 484,
+          "seed": "hexagonal",
+          "objective": "auxetic",
+          "obj_value": 1.3450590414248038,
+          "v12": -0.37166392544807386,
+          "v21": -0.35910961579740913
+        },
+        "hourglass/auxetic": {
+          "sample_id": 624,
+          "seed": "hourglass",
+          "objective": "auxetic",
+          "obj_value": 1.0646113411880267,
+          "v12": -0.49648107659907276,
+          "v21": -0.3555489529598858
+        },
+        "nine_circle/auxetic": {
+          "sample_id": 723,
+          "seed": "nine_circle",
+          "objective": "auxetic",
+          "obj_value": 0.42007913925706164,
+          "v12": -0.548580879863492,
+          "v21": -0.5473833285765587
+        },
+        "reentrant_bowtie/auxetic": {
+          "sample_id": 809,
+          "seed": "reentrant_bowtie",
+          "objective": "auxetic",
+          "obj_value": 1.3818165364116761,
+          "v12": -0.44803046546801045,
+          "v21": -0.22094160024338574
+        },
+        "small_square_cross/auxetic": {
+          "sample_id": 859,
+          "seed": "small_square_cross",
+          "objective": "auxetic",
+          "obj_value": 0.3086696796150472,
+          "v12": -0.5334627632911348,
+          "v21": -0.5267864170850286
+        },
+        "square/auxetic": {
+          "sample_id": 990,
+          "seed": "square",
+          "objective": "auxetic",
+          "obj_value": 0.7416788817665793,
+          "v12": -0.6228371118175386,
+          "v21": -0.6125169209720821
+        }
+      },
+      "timestamp": "2026-07-16T18:55:25.902747"
     }
   ],
   "coverage": {
-    "n_valid": 4763,
-    "n_total": 4763,
+    "n_valid": 5808,
+    "n_total": 5808,
     "success_rate_pct": 100.0,
-    "spatial_coverage_pct": 19.7,
+    "spatial_coverage_pct": 21.1,
     "spatial_coverage_detail": {
       "n_bins_per_dim": 8,
       "n_dims": 3,
       "n_bins_total": 512,
-      "n_bins_occupied": 101,
+      "n_bins_occupied": 108,
       "dim_coverage": {
         "v12": 1.0,
         "v21": 1.0,
@@ -448,20 +550,20 @@
       "v12": {
         "min": -0.7521777024670644,
         "max": 0.37035875285543596,
-        "mean": -0.19533465897261823,
-        "std": 0.17727793380292092
+        "mean": -0.20481397510472477,
+        "std": 0.17866201421590489
       },
       "v21": {
         "min": -0.6772607918423099,
         "max": 0.30000000000001137,
-        "mean": -0.19523878172257594,
-        "std": 0.17690556885822165
+        "mean": -0.20494798985720433,
+        "std": 0.17840834598548858
       },
       "obj_value": {
-        "min": -0.01708524999112082,
+        "min": -0.01771781993963184,
         "max": 2.000000000001105,
-        "mean": 0.8875105477097176,
-        "std": 0.39038652419407344
+        "mean": 0.8717884343350769,
+        "std": 0.39175217855494515
       }
     },
     "sparsity": {
@@ -566,9 +668,9 @@
     },
     "interpretation": "LOW spatial coverage \u2014 property space is poorly explored",
     "correlations": {
-      "v12_vs_v21": 0.990412821123668,
-      "v12_vs_obj_value": 0.7220615136026963,
-      "v21_vs_obj_value": 0.7232987989773171
+      "v12_vs_v21": 0.9895109373871173,
+      "v12_vs_obj_value": 0.7283551303376284,
+      "v21_vs_obj_value": 0.7273385574816355
     }
   },
   "sparse_regions": [
@@ -668,5 +770,5 @@
       "density": 0.0
     }
   ],
-  "last_batch_id": 5
+  "last_batch_id": 6
 }
