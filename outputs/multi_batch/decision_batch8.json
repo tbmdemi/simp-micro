@@ -1,0 +1,245 @@
+{
+  "batch_id": 8,
+  "action": "refine",
+  "reason": "Coverage adequate, objective improving. Refining: narrowed 5 parameter range(s). Also targeting 16 samples at 3 sparse region(s).",
+  "decision_detail": {
+    "n_batches_completed": 7,
+    "n_valid_results": 6864,
+    "best_objective_progress": {
+      "values": [
+        -0.611660988912416,
+        -0.5187780423454852,
+        -0.565001705676686,
+        -0.6050656548742802,
+        -0.7521777024670644,
+        -0.6489705989194355,
+        -0.6211573074056166
+      ],
+      "relative_improvements": [
+        -0.151853638290852,
+        0.08910104044152599,
+        0.07090943052925981,
+        0.24313402422973576,
+        -0.1372110648974575,
+        -0.04285755249949581
+      ],
+      "n_batches_no_improvement": 2,
+      "overall_improving": true
+    },
+    "coverage": {
+      "n_sparse_regions": 5,
+      "total_bins": 27,
+      "sparsity_fraction": 0.1852
+    },
+    "action": "refine",
+    "reason": "Coverage adequate, objective improving. Refining: narrowed 5 parameter range(s). Also targeting 16 samples at 3 sparse region(s).",
+    "next_config": {
+      "batch_id": 8,
+      "n_samples": 96,
+      "strategy": "optimized_lhs",
+      "mode": "refine",
+      "seed": null,
+      "objectives": [
+        "auxetic"
+      ],
+      "seeds": [
+        "circle",
+        "circle_half_quarter",
+        "cross_rectangular",
+        "four_circle",
+        "grid_circular_voids",
+        "hexagonal",
+        "hourglass",
+        "nine_circle",
+        "reentrant_bowtie",
+        "small_square_cross",
+        "square"
+      ],
+      "param_ranges": {
+        "volfrac": [
+          0.49980250000000004,
+          0.58491925
+        ],
+        "penal": [
+          2.56433175,
+          3.658632
+        ],
+        "rmin": [
+          1.05755775,
+          1.24652425
+        ],
+        "move": [
+          0.0747135,
+          0.14423875
+        ],
+        "void_size_frac": [
+          0.283641,
+          0.381436
+        ]
+      },
+      "output_dir": ""
+    },
+    "sparse_targeted_params": [
+      {
+        "volfrac": 0.5720157855430292,
+        "penal": 2.7298680375795414,
+        "rmin": 1.0876064533140342,
+        "move": 0.12980023238470123,
+        "void_size_frac": 0.3515724728002373,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.5694237015704747,
+        "penal": 2.2291155977482093,
+        "rmin": 1.1797421054447323,
+        "move": 0.12683010924149574,
+        "void_size_frac": 0.31764950879082743,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.5460596246292246,
+        "penal": 2.587595612816855,
+        "rmin": 1.0,
+        "move": 0.12488887135569132,
+        "void_size_frac": 0.336417413574824,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.5601201145407856,
+        "penal": 2.6225763873084014,
+        "rmin": 1.0,
+        "move": 0.11725616573802566,
+        "void_size_frac": 0.33112539909505384,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.5723223038356373,
+        "penal": 2.7661673287648747,
+        "rmin": 1.0724239469636265,
+        "move": 0.11278267017327405,
+        "void_size_frac": 0.3379063010671381,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.5608399152951639,
+        "penal": 2.695573796923021,
+        "rmin": 1.0,
+        "move": 0.09852000238977371,
+        "void_size_frac": 0.3226548172928975,
+        "_source": "near sparse region",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": -0.06647279694085911
+      },
+      {
+        "volfrac": 0.4797426986965633,
+        "penal": 3.6740572215696585,
+        "rmin": 2.0702519994560102,
+        "move": 0.22551623178899932,
+        "void_size_frac": 0.3440111014112246,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5582987661413742,
+        "penal": 3.625111584053025,
+        "rmin": 1.9329739048162002,
+        "move": 0.12477114294263486,
+        "void_size_frac": 0.502716871430321,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.4512761549262766,
+        "penal": 2.4707751409077705,
+        "rmin": 1.0018988178259636,
+        "move": 0.12851167805000036,
+        "void_size_frac": 0.33516924441871904,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.533138404404646,
+        "penal": 2.044070890679115,
+        "rmin": 1.9199038335494834,
+        "move": 0.14288808054567675,
+        "void_size_frac": 0.26786732823258114,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5810706806000837,
+        "penal": 4.818411018396482,
+        "rmin": 1.873235049324821,
+        "move": 0.061402448517164324,
+        "void_size_frac": 0.3179587299695327,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.6118606455517519,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5198175393319419,
+        "penal": 4.232259436616108,
+        "rmin": 1.5976567296139084,
+        "move": 0.20869609965531072,
+        "void_size_frac": 0.3383668912501253,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.33122653172112676,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5630788353125747,
+        "penal": 3.7200439401764123,
+        "rmin": 1.4466691924974329,
+        "move": 0.1687120345919964,
+        "void_size_frac": 0.36211151077439496,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.33122653172112676,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5078371810891431,
+        "penal": 4.021029039547333,
+        "rmin": 1.4056080343429052,
+        "move": 0.09007911147844168,
+        "void_size_frac": 0.5000239353442802,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.33122653172112676,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5189296225294726,
+        "penal": 4.59682056345288,
+        "rmin": 2.342751051507887,
+        "move": 0.10880146882178046,
+        "void_size_frac": 0.4091857647255555,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.33122653172112676,
+        "_target_v21": 0.1778424010197212
+      },
+      {
+        "volfrac": 0.5200975247054578,
+        "penal": 3.8512880865555292,
+        "rmin": 2.3413456055261137,
+        "move": 0.2304430967373164,
+        "void_size_frac": 0.4945163934907667,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.33122653172112676,
+        "_target_v21": 0.1778424010197212
+      }
+    ]
+  }
+}

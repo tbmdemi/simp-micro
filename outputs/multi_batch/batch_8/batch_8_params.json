@@ -1,0 +1,44 @@
+{
+  "batch_id": 8,
+  "n_samples": 96,
+  "strategy": "optimized_lhs",
+  "mode": "refine",
+  "objectives": [
+    "auxetic"
+  ],
+  "seeds": [
+    "circle",
+    "circle_half_quarter",
+    "cross_rectangular",
+    "four_circle",
+    "grid_circular_voids",
+    "hexagonal",
+    "hourglass",
+    "nine_circle",
+    "reentrant_bowtie",
+    "small_square_cross",
+    "square"
+  ],
+  "param_ranges": {
+    "volfrac": [
+      0.49980250000000004,
+      0.58491925
+    ],
+    "penal": [
+      2.56433175,
+      3.658632
+    ],
+    "rmin": [
+      1.05755775,
+      1.24652425
+    ],
+    "move": [
+      0.0747135,
+      0.14423875
+    ],
+    "void_size_frac": [
+      0.283641,
+      0.381436
+    ]
+  }
+}
