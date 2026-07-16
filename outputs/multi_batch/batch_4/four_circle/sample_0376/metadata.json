@@ -1,0 +1,27 @@
+{
+  "git_hash": "5a604394",
+  "timestamp": "2026-07-16T17:07:57",
+  "version": "1.4.0",
+  "params": {
+    "nelx": 50,
+    "nely": 50,
+    "ft": 2,
+    "E0": 199.0,
+    "Emin": 1e-09,
+    "nu": 0.3,
+    "max_iter": 150,
+    "tol_change": 0.01,
+    "tol_obj": 0.05,
+    "window_size": 20,
+    "save_every": 9999,
+    "scale_factor": 1,
+    "verbose": false,
+    "volfrac": 0.530304,
+    "penal": 2.567138,
+    "rmin": 1.479302,
+    "move": 0.174339,
+    "void_size_frac": 0.346326,
+    "seed": "four_circle",
+    "objective": "auxetic"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "batch_id": 5,
+  "strategy": "design_df",
+  "n_samples": 1067,
+  "n_total_tasks": 1067,
+  "n_success": 1067,
+  "n_converged": 1067,
+  "n_workers": 10,
+  "elapsed_time": 2251.7,
+  "output_dir": "outputs/multi_batch/batch_5",
+  "best_per_combo": {
+    "circle/auxetic": {
+      "sample_id": 31,
+      "seed": "circle",
+      "objective": "auxetic",
+      "obj_value": 0.3004441405326703,
+      "v12": -0.5626643668073149,
+      "v21": -0.557632296646396
+    },
+    "circle_half_quarter/auxetic": {
+      "sample_id": 99,
+      "seed": "circle_half_quarter",
+      "objective": "auxetic",
+      "obj_value": 0.5507465897814502,
+      "v12": -0.44861556212049764,
+      "v21": -0.4878493554811649
+    },
+    "cross_rectangular/auxetic": {
+      "sample_id": 227,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "obj_value": 0.34819256237808516,
+      "v12": -0.6391715718628325,
+      "v21": -0.6772607918423099
+    },
+    "four_circle/auxetic": {
+      "sample_id": 354,
+      "seed": "four_circle",
+      "objective": "auxetic",
+      "obj_value": 1.6385474643769489,
+      "v12": -0.5917627136579516,
+      "v21": -0.6145947346387357
+    },
+    "grid_circular_voids/auxetic": {
+      "sample_id": 457,
+      "seed": "grid_circular_voids",
+      "objective": "auxetic",
+      "obj_value": 0.26055716228601333,
+      "v12": -0.550021610128854,
+      "v21": -0.5266389514757838
+    },
+    "hexagonal/auxetic": {
+      "sample_id": 537,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "obj_value": 1.6531547909423654,
+      "v12": -0.54680811469328,
+      "v21": -0.6354546211829135
+    },
+    "hourglass/auxetic": {
+      "sample_id": 652,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "obj_value": 1.435210951701973,
+      "v12": -0.4802445349434854,
+      "v21": -0.27568753483946706
+    },
+    "nine_circle/auxetic": {
+      "sample_id": 680,
+      "seed": "nine_circle",
+      "objective": "auxetic",
+      "obj_value": 0.611937813398385,
+      "v12": -0.529249099691177,
+      "v21": -0.5326241036145333
+    },
+    "reentrant_bowtie/auxetic": {
+      "sample_id": 805,
+      "seed": "reentrant_bowtie",
+      "objective": "auxetic",
+      "obj_value": 1.377839174353073,
+      "v12": -0.30122230012210627,
+      "v21": -0.32619477603529623
+    },
+    "small_square_cross/auxetic": {
+      "sample_id": 969,
+      "seed": "small_square_cross",
+      "objective": "auxetic",
+      "obj_value": 0.7306822644899759,
+      "v12": -0.5291980578178073,
+      "v21": -0.5532386277811576
+    },
+    "square/auxetic": {
+      "sample_id": 976,
+      "seed": "square",
+      "objective": "auxetic",
+      "obj_value": 0.8672720765815999,
+      "v12": -0.7521777024670644,
+      "v21": -0.6057687245074653
+    }
+  },
+  "timestamp": "2026-07-16T18:10:13.809943"
+}
