@@ -9,7 +9,7 @@ import logging
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix
-from scipy.sparse.linalg import spsolve, cg, LinearOperator
+from scipy.sparse.linalg import spsolve, splu, cg, LinearOperator
 
 # Hằng số local cho eps (tránh magic number)
 _EPS_SOLVER = 1e-9
@@ -122,25 +122,23 @@ def solve_fe(
     K_pbc_free = K_pbc[free_dofs, :][:, free_dofs]
     F_free = F[free_dofs, :]
 
-    # Giải cho mỗi trường hợp tải
+    # Giải cho mỗi trường hợp tải — factorize LU MỘT LẦN (K_pbc_free giống
+    # nhau cho cả 3 case, chỉ RHS khác) thay vì spsolve() riêng lẻ 3 lần
+    # (mỗi lần tự phân rã LU lại từ đầu → lãng phí ~3x chi phí factorization).
     U_reduced_free = np.zeros((len(free_dofs), n_cases))
+    try:
+        lu = splu(K_pbc_free.tocsc())
+        U_reduced_free = lu.solve(F_free)
 
-    for i in range(n_cases):
-        try:
-            U_reduced_free[:, i] = spsolve(K_pbc_free, F_free[:, i])
-            
-            # Kiểm tra độ ổn định: nếu chuẩn của U quá lớn, ma trận có thể gần suy biến
-            if np.linalg.norm(U_reduced_free[:, i]) > 1e6:
-                raise np.linalg.LinAlgError("Matrix is nearly singular (large displacement detected)")
-                
-        except Exception:
-            # Fallback: Sử dụng Conjugate Gradient với tiền điều kiện Jacobi đơn giản
-            
-            # Tiền điều kiện Jacobi: M = diag(K)^{-1}
-            diag_K = K_pbc_free.diagonal()
-            diag_K[diag_K == 0] = _EPS_SOLVER # Tránh chia cho 0
-            M_inv = LinearOperator((K_pbc_free.shape), matvec=lambda x: x / diag_K)
-            
+        if np.any(np.linalg.norm(U_reduced_free, axis=0) > 1e6):
+            raise np.linalg.LinAlgError("Matrix is nearly singular (large displacement detected)")
+
+    except Exception:
+        diag_K = K_pbc_free.diagonal()
+        diag_K[diag_K == 0] = _EPS_SOLVER
+        M_inv = LinearOperator((K_pbc_free.shape), matvec=lambda x: x / diag_K)
+
+        for i in range(n_cases):
             U_reduced_free[:, i], info = cg(K_pbc_free, F_free[:, i], tol=1e-6, maxiter=10000, M=M_inv)
             if info > 0:
                 logging.getLogger(__name__).warning("CG failed to converge for case %d after %d iterations", i, info)
