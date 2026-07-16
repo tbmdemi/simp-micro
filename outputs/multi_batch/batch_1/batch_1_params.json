@@ -1,32 +1,44 @@
 {
   "batch_id": 1,
-  "n_samples": 100,
+  "n_samples": 120,
   "strategy": "sobol",
   "mode": "explore",
   "objectives": [
-    "auxetic",
-    "first"
+    "auxetic"
   ],
   "seeds": [
     "circle",
-    "square",
-    "hourglass",
-    "hexagonal",
+    "circle_half_quarter",
     "cross_rectangular",
-    "nine_circle",
     "four_circle",
     "grid_circular_voids",
+    "hexagonal",
+    "hourglass",
+    "nine_circle",
+    "reentrant_bowtie",
     "small_square_cross",
-    "circle_half_quarter"
+    "square"
   ],
   "param_ranges": {
     "volfrac": [
-      0.3,
+      0.45,
       0.7
     ],
+    "penal": [
+      2.0,
+      5.0
+    ],
+    "rmin": [
+      1.0,
+      2.5
+    ],
+    "move": [
+      0.05,
+      0.25
+    ],
     "void_size_frac": [
-      0.1,
-      0.4
+      0.25,
+      0.55
     ]
   }
 }

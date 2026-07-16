@@ -125,8 +125,8 @@ def decide_next_action(
     best_objs = []
     for s in summaries:
         best_v = s.get('best_per_combo', {})
-        vals = [v.get('obj_value', float('inf')) for v in best_v.values()
-                if v.get('obj_value') is not None]
+        vals = [v.get('v12', float('inf')) for v in best_v.values()
+                if v.get('v12') is not None]
         if vals:
             best_objs.append(min(vals))
 
@@ -458,7 +458,7 @@ def _narrow_params(
         Dict with same structure as current_active but narrower ranges.
     """
     valid = [r for r in all_results
-             if r.get('success') and r.get('obj_value') is not None]
+         if r.get('success') and r.get('v12') is not None]
     if len(valid) < 10:
         return deepcopy(current_active)
 
@@ -481,7 +481,7 @@ def _narrow_params(
         lo_pct, hi_pct = 15, 85
 
     # Sort by objective (lower = better)
-    sorted_results = sorted(valid, key=lambda x: x['obj_value'])
+    sorted_results = sorted(valid, key=lambda x: x['v12'])
     n_best = max(5, int(len(sorted_results) * quantile))
     best = sorted_results[:n_best]
 

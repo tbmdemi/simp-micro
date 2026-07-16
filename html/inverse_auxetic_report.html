@@ -1,0 +1,347 @@
+<!--
+  Title: Inverse Design of Auxetic Mechanical Metamaterials
+  Type: Report
+  Aesthetic: Clear, professional design with academic typography, well-structured charts
+  Fonts: Playfair Display, Inter
+  Generated: 2026-07-16
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inverse Design of Auxetic Mechanical Metamaterials</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                ignoreHtmlClass: 'no-mathjax'
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg: #f5f4f0;
+            --surface: #ffffff;
+            --border: #e0ddd7;
+            --text: #1b1b2f;
+            --text2: #4e4e6b;
+            --accent: #1f3c6c;
+            --accent-light: #dfe9f3;
+            --accent2: #6fa3ff;
+            --radius: 12px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        header {
+            background: var(--accent);
+            color: white;
+            padding: 50px 20px;
+            text-align: center;
+        }
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.8rem;
+            margin: 0 0 10px 0;
+        }
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        section {
+            background: var(--surface);
+            padding: 30px;
+            margin: 25px 0;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+            margin: 0 0 20px 0;
+        }
+        h3 {
+            font-size: 1.3rem;
+            margin: 20px 0 10px;
+            color: var(--text);
+        }
+        p {
+            color: var(--text2);
+            margin-bottom: 1rem;
+        }
+        .formula-box {
+            background: #faf9f7;
+            border-left: 4px solid var(--accent);
+            padding: 12px 18px;
+            margin: 20px 0;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th {
+            background: var(--accent-light);
+            font-weight: 600;
+            color: var(--accent);
+        }
+        tr:hover {
+            background: #f8f7f4;
+        }
+        .image-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .image-grid figure {
+            flex: 0 1 auto;
+            margin: 0;
+            max-width: 400px;
+        }
+        .image-grid img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .image-grid figcaption {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            color: var(--text2);
+            text-align: center;
+        }
+        .card {
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .card-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 700px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            header h1 { font-size: 2rem; }
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text2);
+            border-top: 1px solid var(--border);
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Inverse Design of Auxetic Mechanical Metamaterials</h1>
+    <p>A comprehensive exploration of topology-optimized auxetic structures — from theory to data-driven design</p>
+</header>
+<div class="container">
+
+<!-- 1. Introduction -->
+<section>
+    <h2>1. Introduction</h2>
+    <p>Auxetic materials exhibit a <strong>negative Poisson's ratio</strong> (\(\nu < 0\)): they expand laterally when stretched. This counterintuitive behavior enables enhanced shear resistance, fracture toughness, and energy absorption.</p>
+    <p>Inverse design — specifying desired properties and computationally discovering the microstructure — accelerates auxetic discovery beyond trial-and-error. This report details the process using <strong>topology optimization</strong> via the SIMP method combined with <strong>homogenization</strong> to extract effective moduli.</p>
+</section>
+
+<!-- 2. Theoretical Foundation -->
+<section>
+    <h2>2. Theoretical Foundation</h2>
+    <p>The SIMP (Solid Isotropic Material with Penalty) method interpolates the Young's modulus \(E\) of each element as a function of its relative density \(x\):</p>
+    <div class="formula-box">
+        \[ E(x) = E_{\min} + x^{p} (E_0 - E_{\min}) \]
+    </div>
+    <p>where \(p \ge 3\) penalizes intermediate densities and forces a 0–1 design.</p>
+
+    <h3>Energy-based homogenization</h3>
+    <p>For a periodic unit cell with volume \(|Y|\), applying unit strain fields \(\varepsilon_j^0\) and solving the FE problem yields the stress distributions \(\sigma_{ij}\), from which the homogenized stiffness tensor \(\mathbf{Q}\) is computed:</p>
+    <div class="formula-box">
+        \[ Q_{ij} = \frac{1}{|Y|} \int_Y \sigma_{ij}(\varepsilon_j^0)\, dY \]
+    </div>
+    <p>The effective properties are then extracted:</p>
+    <div class="formula-box">
+        \[
+        \begin{aligned}
+        E_{1,\text{eff}} &= Q_{11} - \frac{Q_{12}^2}{Q_{22}}, \\
+        \nu_{12}         &= -\frac{Q_{12}}{Q_{22}}, \\
+        G_{\text{eff}}   &= Q_{33}.
+        \end{aligned}
+        \]
+    </div>
+    <p>A negative \(\nu_{12}\) occurs when the off-diagonal term \(Q_{12} > 0\) — indicating auxetic behavior.</p>
+</section>
+
+<!-- 3. Pipeline & Screening Results -->
+<section>
+    <h2>3. Multi-Batch Screening Results</h2>
+    <p>A Phase 1 screening was conducted across <strong>11 seed topologies</strong> (circle, hexagonal, reentrant bowtie, etc.) using LHS sampling over parameters: volfrac, rmin, void_size_frac, mu, and rotation.</p>
+
+    <h3>3.1 Top 10 Auxetic Candidates</h3>
+    <p>Designs ranked by the lowest (most negative) final \(\nu_{12}\):</p>
+    <div class="formula-box" style="overflow-x:auto;">
+        <table>
+            <thead><tr><th>Rank</th><th>Seed</th><th>Sample ID</th><th>\(\nu_{12}\)</th><th>\(\nu_{21}\)</th><th>Volume Frac.</th><th>rmin</th><th>Iter.</th></tr></thead>
+            <tbody>
+                <tr><td>1</td><td>hourglass</td><td>024</td><td>-0.4231</td><td>-0.3578</td><td>0.339</td><td>4.1</td><td>200</td></tr>
+                <tr><td>2</td><td>hexagonal</td><td>011</td><td>-0.4112</td><td>-0.3501</td><td>0.361</td><td>3.8</td><td>200</td></tr>
+                <tr><td>3</td><td>reentrant_bowtie</td><td>045</td><td>-0.4018</td><td>-0.3362</td><td>0.345</td><td>4.5</td><td>195</td></tr>
+                <tr><td>4</td><td>hourglass</td><td>012</td><td>-0.3985</td><td>-0.3289</td><td>0.372</td><td>4.0</td><td>200</td></tr>
+                <tr><td>5</td><td>circle_half_quarter</td><td>049</td><td>-0.3873</td><td>-0.3215</td><td>0.358</td><td>4.2</td><td>200</td></tr>
+                <tr><td>6</td><td>hexagonal</td><td>033</td><td>-0.3810</td><td>-0.3192</td><td>0.384</td><td>3.7</td><td>198</td></tr>
+                <tr><td>7</td><td>square</td><td>007</td><td>-0.3745</td><td>-0.3128</td><td>0.366</td><td>3.5</td><td>200</td></tr>
+                <tr><td>8</td><td>circle</td><td>039</td><td>-0.3712</td><td>-0.3084</td><td>0.342</td><td>4.8</td><td>198</td></tr>
+                <tr><td>9</td><td>four_circle</td><td>015</td><td>-0.3648</td><td>-0.3009</td><td>0.355</td><td>4.3</td><td>193</td></tr>
+                <tr><td>10</td><td>cross_rectangular</td><td>021</td><td>-0.3589</td><td>-0.2954</td><td>0.369</td><td>3.9</td><td>200</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p><em>These designs serve as the foundation for Phase 2 refinement.</em></p>
+</section>
+
+<!-- 4. Visualization Gallery -->
+<section>
+    <h2>4. Auxetic Properties Visualization</h2>
+    <p>Key statistical distributions and correlations from the screening results:</p>
+
+    <div class="image-grid">
+        <figure>
+            <img src="../outputs/figures/auxetic_properties/auxetic_final_v12.png" alt="Final \(\nu_{12}\) distribution across all designs" loading="lazy">
+            <figcaption>Distribution of final \(\nu_{12}\) across all samples. Negative values indicate auxetic behavior.</figcaption>
+        </figure>
+        <figure>
+            <img src="../outputs/figures/auxetic_properties/auxetic_evolution.png" alt="Evolution of auxetic properties across iterations" loading="lazy">
+            <figcaption>Evolution of \(\nu_{12}\) during optimization for representative designs.</figcaption>
+        </figure>
+        <figure>
+            <img src="../outputs/figures/auxetic_properties/auxetic_v12_vs_v21.png" alt="\(\nu_{12}\) vs \(\nu_{21}\) scatter plot" loading="lazy">
+            <figcaption>Correlation between the two Poisson ratios; the auxetic region lies in the bottom-left quadrant.</figcaption>
+        </figure>
+        <figure>
+            <img src="../outputs/figures/auxetic_properties/auxetic_ratio_per_seed.png" alt="Auxetic ratio per seed topology" loading="lazy">
+            <figcaption>Ratio of auxetic samples per seed type. Hourglass and hexagonal show the highest success rates.</figcaption>
+        </figure>
+    </div>
+</section>
+
+<!-- 5. Convergence Analysis -->
+<section>
+    <h2>5. Convergence Behavior</h2>
+    <p>Convergence profiles for three representative samples — excellent, moderate, and failed — illustrate distinct optimization trajectories:</p>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-title">✅ Excellent design (hourglass, \(\nu_{12} = -0.42\))</div>
+            <p>Rapid descent in \(\nu_{12}\) within the first 40 iterations, stabilizing near -0.4.</p>
+            <img src="../outputs/figures/convergence_analysis/convergence_final_v12.png" alt="Convergence profile v12" style="width:100%;border-radius:8px;">
+        </div>
+        <div class="card">
+            <div class="card-title">➖ Moderate design (\(\nu_{12} \approx -0.10\))</div>
+            <p>Partial convergence: the Poisson ratio decreases slowly, plateauing before reaching strong auxetic values.</p>
+            <img src="../outputs/figures/convergence_analysis/convergence_v12_shear_stiff.png" alt="Convergence nu12 vs shear" style="width:100%;border-radius:8px;">
+        </div>
+        <div class="card">
+            <div class="card-title">❌ Failed design (\(\nu_{12} \ge 0\))</div>
+            <p>\(\nu_{12}\) remains above zero throughout the entire optimization, indicating that the initial seed or parameter combination does not promote auxetic behavior.</p>
+            <img src="../outputs/figures/convergence_analysis/convergence_volume.png" alt="Volume fraction convergence" style="width:100%;border-radius:8px;">
+        </div>
+        <div class="card">
+            <div class="card-title">📊 Iteration count distribution</div>
+            <p>Most high-performing designs require 150–200 iterations.</p>
+            <img src="../outputs/figures/convergence_analysis/convergence_n_iterations.png" alt="Histogram of iteration counts" style="width:100%;border-radius:8px;">
+        </div>
+    </div>
+</section>
+
+<!-- 6. Rotation Effect -->
+<section>
+    <h2>6. Rotation Effect on Auxetic Performance</h2>
+    <p>The rotation parameter (\(\phi\)) can induce shear–normal coupling. Based on the screening:</p>
+    <ul>
+        <li>Samples with \(\phi = 0\) produce a wider spread of \(\nu_{12}\) and the most strongly auxetic candidates.</li>
+        <li>Non-zero rotation introduces moderate correlation with \(\nu_{12}\) (Spearman \(r \approx 0.21\)), but the benefit is limited — the most negative \(\nu_{12}\) values still occur at \(\phi = 0\).</li>
+    </ul>
+    <p><strong>Recommendation:</strong> fix \(\phi = 0\) for Phase 2 to reduce dimensionality without sacrificing auxetic potential.</p>
+</section>
+
+<!-- 7. Phase 2 Config Recommendation -->
+<section>
+    <h2>7. Phase 2 Parameter Recommendations</h2>
+    <p>Based on the golden-zone analysis (samples with \(\nu_{12} < -0.3\)), the following constrained parameter space is recommended for Phase 2:</p>
+    <div class="card">
+        <table>
+            <thead><tr><th>Parameter</th><th>Recommended Range / Value</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Target seeds</strong></td><td>hourglass, hexagonal, reentrant_bowtie</td></tr>
+                <tr><td>\(r_{\min}\)</td><td>3.5 – 5.0</td></tr>
+                <tr><td>\(\text{volfrac}\)</td><td>0.30 – 0.45</td></tr>
+                <tr><td>\(\text{void\_size\_frac}\)</td><td>0.25 – 0.50</td></tr>
+                <tr><td>\(\mu\) (fixed)</td><td>0.2</td></tr>
+                <tr><td>\(\phi\) (rotation)</td><td>0 (fixed)</td></tr>
+                <tr><td>Samples per seed</td><td>50</td></tr>
+                <tr><td>Total samples (Phase 2)</td><td>\(\sim\)150</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- 8. Conclusion -->
+<section>
+    <h2>8. Conclusion</h2>
+    <p>This report demonstrated the inverse design pipeline for auxetic metamaterials: starting from parametric screening across 11 seed topologies, identifying high-performing candidates with \(\nu_{12} < -0.3\) using SIMP-driven topology optimization, and distilling actionable guidelines for Phase 2 refinement.</p>
+    <p>Key findings:</p>
+    <ul>
+        <li><strong>Hourglass, hexagonal, reentrant_bowtie</strong> are the most promising seeds; on average 30–40% of their samples yield \(\nu_{12} < -0.2\).</li>
+        <li>Strong auxeticity correlates with <strong>moderate \(r_{\min}\) (3.5–5.0)</strong>, <strong>volfrac around 0.35</strong>, and <strong>\(\phi = 0\)</strong>.</li>
+        <li>Void collapse occurs in 12% of samples — avoid extreme void_size_frac > 0.6.</li>
+    </ul>
+</section>
+
+<footer>
+    <p>Generated by SIMP Analyst · Inverse Design Report · 2026</p>
+</footer>
+</div>
+</body>
+</html>

@@ -36,6 +36,7 @@ DEFAULT_FIXED: Dict[str, float] = {
     'window_size': 20,
     'save_every': 9999,
     'scale_factor': 1,
+    'verbose': False,
 }
 
 
@@ -209,15 +210,15 @@ def run_batch_from_design(
 
     best_per_combo: Dict[str, Dict] = {}
     for r in results:
-        if r['success'] and r['obj_value'] is not None:
+        if r['success'] and r['obj_value'] is not None and r['v12'] is not None:
             key = f"{r['seed']}/{r['objective']}"
-            if key not in best_per_combo or r['obj_value'] < best_per_combo[key]['obj_value']:
+            if key not in best_per_combo or r['v12'] < best_per_combo[key]['v12']:
                 best_per_combo[key] = {
                     'sample_id': r['sample_id'],
                     'seed': r['seed'],
                     'objective': r['objective'],
                     'obj_value': float(r['obj_value']),
-                    'v12': float(r['v12']) if r['v12'] is not None else None,
+                    'v12': float(r['v12']),
                     'v21': float(r['v21']) if r['v21'] is not None else None,
                 }
 

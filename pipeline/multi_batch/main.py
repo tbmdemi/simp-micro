@@ -258,7 +258,11 @@ def main() -> None:
             refined = json.load(f)
         if 'active_parameters' in refined:
             for pname, prange in refined['active_parameters'].items():
-                if isinstance(prange, (list, tuple)) and len(prange) == 2:
+                if isinstance(prange, dict) and 'range' in prange:
+                    r = prange['range']
+                    if len(r) == 2:
+                        active_params_meta[pname] = {'range': list(r)}
+                elif isinstance(prange, (list, tuple)) and len(prange) == 2:
                     active_params_meta[pname] = {'range': list(prange)}
         if 'fixed_parameters' in refined:
             fixed_params.update(refined['fixed_parameters'])
@@ -306,7 +310,7 @@ def main() -> None:
     # Seeds & objectives
     seeds = ['circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular',
              'nine_circle', 'four_circle', 'grid_circular_voids',
-             'small_square_cross', 'circle_half_quarter']
+             'small_square_cross', 'circle_half_quarter', 'reentrant_bowtie']
     objectives = ['auxetic']
 
     # ── Step 3: Decision loop ──
@@ -519,7 +523,7 @@ def main() -> None:
         sparse_regions = find_sparse_regions(all_results)
         cov = coverage_report(all_results)
 
-        print(f"  Coverage: {cov.get('coverage_pct', 0):.1f}% valid")
+        print(f"  Coverage: {cov.get('spatial_coverage_pct', 0):.1f}% valid")
         print(f"  Sparse regions: {cov.get('sparsity', {}).get('n_sparse_regions', 0)}")
 
         # ── Step 3e: Generate visual reports ──

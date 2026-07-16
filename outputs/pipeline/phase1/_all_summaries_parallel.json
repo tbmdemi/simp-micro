@@ -1,0 +1,310 @@
+[
+  {
+    "objective": "auxetic",
+    "seed": "circle",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.7006482593037214,
+        "p": 1.4725473075592266e-08
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.508859543817527,
+        "p": 0.00016100767862654793
+      },
+      {
+        "name": "penal",
+        "r": 0.3327250900360144,
+        "p": 0.018229777493733567
+      }
+    ],
+    "best_obj_value": 4.078940417208511,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "circle_half_quarter",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "void_size_frac",
+        "r": 0.8520048019207683,
+        "p": 4.312675022358901e-15
+      },
+      {
+        "name": "volfrac",
+        "r": 0.36921968787515,
+        "p": 0.008322542071058184
+      },
+      {
+        "name": "move",
+        "r": 0.10770708283313324,
+        "p": 0.4565675215331527
+      }
+    ],
+    "best_obj_value": 4.203386375816287,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "cross_rectangular",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.6228571428571428,
+        "p": 1.3637716987739963e-06
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.558703481392557,
+        "p": 2.4790563035399413e-05
+      },
+      {
+        "name": "rmin",
+        "r": 0.33685474189675874,
+        "p": 0.016754630881276683
+      }
+    ],
+    "best_obj_value": 4.102391702131717,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "four_circle",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.63812725090036,
+        "p": 6.193979409601239e-07
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.5129891956782713,
+        "p": 0.0001393942883938449
+      },
+      {
+        "name": "penal",
+        "r": 0.3679711884753902,
+        "p": 0.00856137851372192
+      }
+    ],
+    "best_obj_value": 4.1201873437394125,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "grid_circular_voids",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.6200720288115247,
+        "p": 1.5678252684712983e-06
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.5175030012004801,
+        "p": 0.00011882169881548331
+      },
+      {
+        "name": "move",
+        "r": -0.3137094837935174,
+        "p": 0.02652151203419169
+      }
+    ],
+    "best_obj_value": 4.162059557375756,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "hexagonal",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "void_size_frac",
+        "r": -0.5090516206482593,
+        "p": 0.0001599383508195861
+      },
+      {
+        "name": "volfrac",
+        "r": -0.36662665066026406,
+        "p": 0.008825199405985383
+      },
+      {
+        "name": "move",
+        "r": -0.3168787515006002,
+        "p": 0.02495326971572695
+      }
+    ],
+    "best_obj_value": 4.120206423883538,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "hourglass",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "rmin",
+        "r": 0.7225450180072028,
+        "p": 3.1425135886675917e-09
+      },
+      {
+        "name": "move",
+        "r": -0.4043697478991596,
+        "p": 0.003585279787399804
+      },
+      {
+        "name": "volfrac",
+        "r": -0.32984393757503,
+        "p": 0.019322931803632874
+      }
+    ],
+    "best_obj_value": 4.099758102311933,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "nine_circle",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.6165186074429772,
+        "p": 1.8694402267518644e-06
+      },
+      {
+        "name": "penal",
+        "r": 0.44969987995198074,
+        "p": 0.0010514912647768822
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.4032172869147658,
+        "p": 0.0036909696743877497
+      }
+    ],
+    "best_obj_value": 4.162630875722249,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "reentrant_bowtie",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": 0.3572148859543817,
+        "p": 0.010876626008250952
+      },
+      {
+        "name": "rmin",
+        "r": 0.2026890756302521,
+        "p": 0.15804448510263291
+      },
+      {
+        "name": "void_size_frac",
+        "r": 0.18578631452581032,
+        "p": 0.1964402341388476
+      }
+    ],
+    "best_obj_value": 4.131857857139159,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "small_square_cross",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.6281392557022808,
+        "p": 1.0429410664662443e-06
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.505018007202881,
+        "p": 0.00018380886410839623
+      },
+      {
+        "name": "penal",
+        "r": 0.31198079231692677,
+        "p": 0.027411109705115757
+      }
+    ],
+    "best_obj_value": 4.087793473987194,
+    "elapsed_time": null,
+    "n_workers": null
+  },
+  {
+    "objective": "auxetic",
+    "seed": "square",
+    "n_samples": 50,
+    "n_success": 50,
+    "n_converged": 50,
+    "n_valid_analysis": 50,
+    "top_3_params": [
+      {
+        "name": "volfrac",
+        "r": -0.6560864345738295,
+        "p": 2.3122224524576824e-07
+      },
+      {
+        "name": "void_size_frac",
+        "r": -0.5647539015606242,
+        "p": 1.9346026629677576e-05
+      },
+      {
+        "name": "penal",
+        "r": 0.36672268907563016,
+        "p": 0.008806124605293031
+      }
+    ],
+    "best_obj_value": 4.060220240877686,
+    "elapsed_time": null,
+    "n_workers": null
+  }
+]
