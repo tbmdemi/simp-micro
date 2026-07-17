@@ -41,6 +41,7 @@ simp_result_*/
 
 # --- Scientific data files (auto-generated) ---
 *.npy
+*.npz
 *.h5
 *.pkl
 *.mat
@@ -48,6 +49,14 @@ simp_result_*/
 *.vtu
 *.xdmf
 *.mesh
+
+# --- Generated pipeline outputs (large, regenerable via scripts) ---
+# NOTE: outputs/multi_batch/, outputs/figures/, outputs/pipeline/ are already
+# tracked in git history intentionally - do NOT blanket-ignore outputs/.
+# Only the Phase 3 dataset-build outputs are ignored here (regenerate via
+# pipeline/phase3_dataset/*.py).
+outputs/phase3/*.npz
+outputs/phase3/manifest.csv
 
 # --- LaTeX build artifacts ---
 *.aux
@@ -106,5 +115,3 @@ environment.yaml
 *.tar.gz
 *.rar
 .tox/
-
-outputs/

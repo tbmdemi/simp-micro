@@ -136,57 +136,42 @@ def _build_pipeline_config(
     summaries: List[Dict],
     batch_configs: List[BatchConfig],
     active_params_meta: Optional[Dict[str, Dict]] = None,
+    active_seeds: Optional[List[str]] = None,
+    active_objectives: Optional[List[str]] = None,
 ) -> Dict:
-    """Build a minimal PipelineConfig-like dict from summaries and configs.
-
-    This is used by decide_next_action which expects a config object
-    with attributes: active, active_seeds, active_objectives, batches.
-
-    Args:
-        summaries: List of batch summary dicts.
-        batch_configs: List of BatchConfig for reference.
-        active_params_meta: Pre-extracted active param metadata
-            (avoids re-parsing refined_parameters.json).
-
-    Returns:
-        A simple Dict with those keys.
-    """
-    # Collect all used seeds and objectives
-    all_seeds = set()
-    all_objectives = set()
+    """Build a minimal PipelineConfig-like dict from summaries and configs."""
+    all_seeds = set(active_seeds) if active_seeds else set()
+    all_objectives = set(active_objectives) if active_objectives else set()
     all_active: Dict[str, Dict] = {}
 
-    # Use pre-extracted active_params_meta if provided
     if active_params_meta:
         for pname, pdef in active_params_meta.items():
             r = pdef.get('range', pdef.get('bounds', []))
             if len(r) == 2:
                 all_active[pname] = {'range': list(r)}
     else:
-        # Fall back to parsing summaries
         for s in summaries:
-            # Try refined_parameters.json format first
             for key in ('active_parameters', 'parameters'):
                 params = s.get(key, {})
                 if not isinstance(params, dict):
                     continue
                 for pname, pdef in params.items():
                     if isinstance(pdef, dict) and 'range' in pdef:
-                        all_active[pname] = {
-                            'range': list(pdef['range']),
-                        }
+                        all_active[pname] = {'range': list(pdef['range'])}
                 if all_active:
                     break
 
-        combos = s.get('combinations', []) or s.get('best_per_combo', [])
-        if isinstance(combos, dict):
-            for key in combos:
-                parts = key.split('_')
-                if len(parts) >= 2:
-                    all_seeds.add(parts[0])
-                    all_objectives.add(parts[1])
+        if not all_seeds:
+            for s in summaries:
+                combos = s.get('combinations', []) or s.get('best_per_combo', [])
+                if isinstance(combos, dict):
+                    for key in combos:
+                        seed_part, _, obj_part = key.partition('/')
+                        if seed_part:
+                            all_seeds.add(seed_part)
+                        if obj_part:
+                            all_objectives.add(obj_part)
 
-    # If still empty, fatal error
     if not all_active:
         raise ValueError(
             "FATAL: _build_pipeline_config could not extract active params.\n"
@@ -253,15 +238,25 @@ def main() -> None:
 
     # Load refined_parameters.json directly for active/fixed params
     refined_path = Path(args.phase1_summary) / 'refined_parameters.json'
+    refined_seeds: List[str] = []
+    refined_objectives: List[str] = []
     if refined_path.exists():
         with open(refined_path) as f:
             refined = json.load(f)
         if 'active_parameters' in refined:
             for pname, prange in refined['active_parameters'].items():
-                if isinstance(prange, (list, tuple)) and len(prange) == 2:
+                if isinstance(prange, dict) and 'range' in prange:
+                    r = prange['range']
+                    if len(r) == 2:
+                        active_params_meta[pname] = {'range': list(r)}
+                elif isinstance(prange, (list, tuple)) and len(prange) == 2:
                     active_params_meta[pname] = {'range': list(prange)}
         if 'fixed_parameters' in refined:
             fixed_params.update(refined['fixed_parameters'])
+        if 'active_seeds' in refined:
+            refined_seeds = list(refined['active_seeds'])
+        if 'active_objectives' in refined:
+            refined_objectives = list(refined['active_objectives'])
 
     for s in summaries:
         if 'active_parameters' in s and 'fixed_parameters' in s:
@@ -303,11 +298,14 @@ def main() -> None:
     if fixed_params:
         print(f"Fixed parameters: {fixed_params}")
 
-    # Seeds & objectives
-    seeds = ['circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular',
-             'nine_circle', 'four_circle', 'grid_circular_voids',
-             'small_square_cross', 'circle_half_quarter']
-    objectives = ['auxetic']
+    # Seeds & objectives — ưu tiên refined_parameters.json (nguồn thật từ
+    # Phase 1); hardcode chỉ là fallback cuối cùng nếu thiếu field.
+    seeds = refined_seeds or [
+        'circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular',
+        'nine_circle', 'four_circle', 'grid_circular_voids',
+        'small_square_cross', 'circle_half_quarter', 'reentrant_bowtie',
+    ]
+    objectives = refined_objectives or ['auxetic']
 
     # ── Step 3: Decision loop ──
     decision_log_path = output_root / 'decision_log.json'
@@ -338,14 +336,22 @@ def main() -> None:
     # Track narrowed parameter ranges across iterations (Issue #1 fix)
     effective_param_ranges: Dict[str, Tuple[float, float]] = dict(param_ranges)
 
+    # Định nghĩa vis_dir TRƯỚC vòng lặp — tránh UnboundLocalError khi dừng
+    # ngay ở vòng lặp đầu (trước khi batch nào chạy xong).
+    vis_dir = output_root / 'reports'
+    vis_dir.mkdir(parents=True, exist_ok=True)
+
     for batch_idx in range(n_to_run):
         batch_id = current_batch_id + batch_idx
         print(f"\n{'='*60}")
         print(f"  BATCH {batch_id} / up to {args.max_batches}")
         print(f"{'='*60}")
 
-        # Build config for this batch
-        if batch_id == 1:
+        # Build config for this batch. batch_id==1 always uses CLI args
+        # directly. Với batch_id>1, nếu --seeds được truyền tay, ép dùng
+        # batch thủ công (bỏ qua decide_next_action) — để backfill seed
+        # còn thiếu mà không bị engine tự ý dừng/refine đè lên.
+        if batch_id == 1 or args.seeds is not None:
             strat = strategy_map.get(args.strategy, SamplingStrategy.SOBOL)
             batch_seeds = args.seeds if args.seeds is not None else seeds[:5]
             batch_objectives = args.objectives if args.objectives is not None else objectives[:2]
@@ -358,6 +364,8 @@ def main() -> None:
                 seeds=batch_seeds,
                 param_ranges=effective_param_ranges,
             )
+            if batch_id != 1:
+                print("  (Forced batch: --seeds provided explicitly, bypassing adaptive decision engine)")
         else:
             # Use decide_next_action to determine next config
             # Build a simple PipelineConfig-like dict
@@ -365,6 +373,8 @@ def main() -> None:
                 batch_summaries,
                 [batch_config],  # type: ignore  # noqa: F821 — only used for ref
                 active_params_meta=active_params_meta,
+                active_seeds=seeds,
+                active_objectives=objectives,
             )
 
             # Always pass effective_param_ranges so that refinement operates on
@@ -519,7 +529,7 @@ def main() -> None:
         sparse_regions = find_sparse_regions(all_results)
         cov = coverage_report(all_results)
 
-        print(f"  Coverage: {cov.get('coverage_pct', 0):.1f}% valid")
+        print(f"  Coverage: {cov.get('spatial_coverage_pct', 0):.1f}% valid")
         print(f"  Sparse regions: {cov.get('sparsity', {}).get('n_sparse_regions', 0)}")
 
         # ── Step 3e: Generate visual reports ──

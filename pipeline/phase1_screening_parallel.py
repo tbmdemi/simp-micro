@@ -179,8 +179,18 @@ def analyze_correlation(results: List[Dict], objective: str) -> Dict:
 # ──────────────────────────────────────────────
 
 def save_results(results: List[Dict], analysis: Dict, output_dir: str,
-                 objective: str, seed_name: str) -> None:
-    """Lưu kết quả chi tiết ra CSV và JSON."""
+                 objective: str, seed_name: str,
+                 best_obj_value: Optional[float] = None,
+                 elapsed_time: Optional[float] = None,
+                 n_workers: Optional[int] = None) -> None:
+    """Lưu kết quả chi tiết ra CSV và JSON.
+
+    Args:
+        best_obj_value: Giá trị objective tốt nhất tìm được (từ summary,
+            None nếu chưa có mẫu thành công nào).
+        elapsed_time: Tổng thời gian chạy (giây) — KHÔNG phải timestamp.
+        n_workers: Số worker song song đã dùng.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     # CSV
@@ -227,6 +237,9 @@ def save_results(results: List[Dict], analysis: Dict, output_dir: str,
             'timestamp': datetime.now().isoformat(),
             'n_samples': len(results),
             'n_success': sum(1 for r in results if r['success']),
+            'best_obj_value': best_obj_value,
+            'elapsed_time': elapsed_time,
+            'n_workers': n_workers,
         },
         'analysis': {
             'param_names': analysis['param_names'],
@@ -339,7 +352,10 @@ def run_phase1_parallel_map(
     }
 
     # 6. Lưu kết quả
-    save_results(results, analysis, run_dir, objective, seed_name)
+    save_results(results, analysis, run_dir, objective, seed_name,
+                 best_obj_value=summary['best_obj_value'],
+                 elapsed_time=elapsed_total,
+                 n_workers=n_workers)
 
     # In summary
     print(f'\n{"─"*60}')
@@ -467,7 +483,10 @@ def run_phase1_parallel_async(
     }
 
     # 5. Lưu kết quả
-    save_results(results, analysis, run_dir, objective, seed_name)
+    save_results(results, analysis, run_dir, objective, seed_name,
+                 best_obj_value=summary['best_obj_value'],
+                 elapsed_time=elapsed_total,
+                 n_workers=n_workers)
 
     # In summary
     print(f'\n{"─"*60}')
@@ -574,63 +593,23 @@ def main() -> None:
         aggregate_all_data(args.output, 'auxetic')
 
 def aggregate_all_data(base_dir: str, objective: str) -> None:
-    """Aggregate per-seed outputs into _all_correlations.json and _all_summaries_parallel.json."""
-    seeds = SEEDS
-    all_correlations = {
-        "param_names": get_active_params(objective),
-        "configs": []
-    }
-    all_summaries = []
+    """Aggregate per-seed outputs into _all_correlations.json and _all_summaries_parallel.json.
 
-    for seed in seeds:
-        seed_dir = os.path.join(base_dir, seed)
-        json_path = os.path.join(seed_dir, f"phase1_{seed}_{objective}.json")
+    Đây chỉ là wrapper mỏng gọi vào pipeline/phase1_analyst.py — nguồn logic
+    aggregation DUY NHẤT trong repo. Trước đây hàm này có bản implementation
+    riêng, tách biệt hoàn toàn với phase1_analyst.py, dẫn tới 2 hệ quả:
+      1. Dùng Pearson vs Spearman khác nhau giữa 2 script (đã hợp nhất về
+         Spearman trong phase1_analyst.py).
+      2. Hàm này chỉ quét đúng list `SEEDS` cứng trong pipeline/params.py —
+         seed nào chạy ngoài danh sách đó (hoặc thêm muộn) sẽ bị bỏ sót âm
+         thầm. phase1_analyst.py tự động discover thư mục seed trên đĩa nên
+         không có rủi ro này.
 
-        # Validate if per-seed JSON exists
-        if not os.path.exists(json_path):
-            print(f"[WARNING] Missing JSON file for seed {seed}")
-            continue
-
-        with open(json_path, "r") as f:
-            data = json.load(f)
-
-        # Extract correlation data for _all_correlations.json
-        all_correlations["configs"].append({
-            "seed": seed,
-            "objective": objective,
-            "best_obj_value": data["metadata"].get("best_obj_value"),
-            "n_success": data["metadata"].get("n_success"),
-            "n_converged": sum(r["converged"] for r in data["results"]),
-            "corr": data["analysis"]["correlations"],
-            "pval": data["analysis"]["p_values"],
-            "top3": data["analysis"]["top_3"]
-        })
-
-        # Extract summary data for _all_summaries_parallel.json
-        all_summaries.append({
-            "objective": objective,
-            "seed": seed,
-            "n_samples": data["metadata"]["n_samples"],
-            "n_success": data["metadata"]["n_success"],
-            "n_converged": sum(r["converged"] for r in data["results"]),
-            "n_valid_analysis": data["analysis"]["n_valid"],
-            "top_3_params": data["analysis"]["top_3"],
-            "best_obj_value": data["metadata"].get("best_obj_value"),
-            "elapsed_time": data["metadata"]["timestamp"],  # Mocked here
-            "n_workers": len(data["results"])  # Approximating workers for example
-        })
-
-    # Save _all_correlations.json
-    correlations_path = os.path.join(base_dir, "_all_correlations.json")
-    with open(correlations_path, "w") as f:
-        json.dump(all_correlations, f, indent=2)
-    print(f"[INFO] Generated {correlations_path}")
-
-    # Save _all_summaries_parallel.json
-    summaries_path = os.path.join(base_dir, "_all_summaries_parallel.json")
-    with open(summaries_path, "w") as f:
-        json.dump(all_summaries, f, indent=2)
-    print(f"[INFO] Generated {summaries_path}")
+    `objective` hiện chưa dùng (phase1_analyst.py tự phát hiện objective từ
+    tên file/metadata) — giữ tham số để không phá vỡ chữ ký gọi hàm hiện có.
+    """
+    from pipeline.phase1_analyst import main as run_analyst
+    run_analyst(root_dir=base_dir)
 
 
 if __name__ == '__main__':

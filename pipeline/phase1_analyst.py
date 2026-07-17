@@ -2,7 +2,7 @@
 Phase 1 Analyst — Aggregation Script.
 
 Quét toàn bộ dữ liệu Phase 1 (outputs/pipeline/phase1/) và tạo hai file tổng hợp:
-  1. _all_correlations.json — chi tiết hệ số tương quan Pearson cho mỗi cặp (seed, objective)
+  1. _all_correlations.json — chi tiết hệ số tương quan Spearman cho mỗi cặp (seed, objective)
   2. _all_summaries_parallel.json — tóm tắt gọn, top 3 tham số, best obj, elapsed time...
 
 Luồng xử lý:
@@ -10,7 +10,7 @@ Luồng xử lý:
   2. Với mỗi seed, tìm file CS V tổng hợp phase1_{seed}_{objective}.csv
      (nếu không có, fallback đọc từ các thư mục sample_*)
   3. Đọc dữ liệu, phân tích param_names tự động
-  4. Tính Pearson correlation cho từng tham số với obj_value
+  4. Tính Spearman correlation cho từng tham số với obj_value
   5. Ghi hai file JSON đầu ra
 """
 
@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 
 # ──────────────────────────────────────────────
 #  Cấu hình
@@ -203,6 +203,37 @@ def load_data_from_csv(csv_path: str) -> Tuple[pd.DataFrame, List[str]]:
     return df_out, param_names
 
 
+def load_run_metadata(csv_path: str) -> Dict[str, Optional[float]]:
+    """Đọc elapsed_time / n_workers thật từ file JSON song hành với CSV.
+
+    CSV tổng hợp `phase1_{seed}_{objective}.csv` luôn đi kèm file JSON cùng
+    tên (`.json`) do `save_results()` trong phase1_screening_parallel.py ghi
+    ra. File JSON này chứa `metadata.elapsed_time` (tổng thời gian chạy,
+    đơn vị giây) và `metadata.n_workers` — không thể suy ra 2 giá trị này
+    một cách đáng tin cậy chỉ từ CSV, nên đọc trực tiếp từ JSON nếu có.
+
+    Args:
+        csv_path: Đường dẫn file CSV tổng hợp.
+
+    Returns:
+        Dict {'elapsed_time': float | None, 'n_workers': int | None}.
+        Trả về None cho cả hai nếu không tìm thấy JSON song hành.
+    """
+    json_path = csv_path[:-len('.csv')] + '.json' if csv_path.endswith('.csv') else csv_path + '.json'
+    if not os.path.isfile(json_path):
+        return {'elapsed_time': None, 'n_workers': None}
+    try:
+        with open(json_path, 'r') as f:
+            data = json.load(f)
+        meta = data.get('metadata', {})
+        return {
+            'elapsed_time': meta.get('elapsed_time'),
+            'n_workers': meta.get('n_workers'),
+        }
+    except Exception:
+        return {'elapsed_time': None, 'n_workers': None}
+
+
 def load_data_from_samples(sample_dirs: List[str]) -> Tuple[pd.DataFrame, List[str]]:
     """Fallback: đọc dữ liệu từ sample_* directories.
 
@@ -322,7 +353,7 @@ def load_data(config: Dict[str, Any]) -> Tuple[pd.DataFrame, List[str], str, str
 
 
 # ──────────────────────────────────────────────
-#  Bước 4: Tính tương quan Pearson
+#  Bước 4: Tính tương quan Spearman
 # ──────────────────────────────────────────────
 
 def compute_correlations(
@@ -330,7 +361,11 @@ def compute_correlations(
     param_names: List[str],
     objective: str,
 ) -> Tuple[List[float], List[float], List[List[Any]], float, int]:
-    """Tính Pearson correlation giữa từng param và obj_value.
+    """Tính Spearman correlation giữa từng param và obj_value.
+
+    Dùng Spearman (rank-based) thay vì Pearson vì quan hệ giữa tham số SIMP
+    và obj_value không được giả định là tuyến tính — khớp với phương pháp
+    dùng trong pipeline/phase1_screening_parallel.py (nguồn dữ liệu thật).
 
     Args:
         df: DataFrame với cột 'obj_value' và các cột param
@@ -351,7 +386,7 @@ def compute_correlations(
     top_candidates: List[Tuple[str, float, float]] = []
 
     for p in param_names:
-        r, pv = pearsonr(df[p], df['obj_value'])
+        r, pv = spearmanr(df[p], df['obj_value'])
         corr_list.append(r)
         pval_list.append(pv)
         top_candidates.append((p, r, pv))
@@ -360,11 +395,10 @@ def compute_correlations(
     top_candidates.sort(key=lambda x: abs(x[1]), reverse=True)
     top3 = [[name, r, p] for name, r, p in top_candidates[:3]]
 
-    # Best obj_value: auxetic → max; first/second → min
-    if objective == 'auxetic':
-        best_obj_value = float(df['obj_value'].max())
-    else:
-        best_obj_value = float(df['obj_value'].min())
+    # Best obj_value: mọi objective hiện tại trong pipeline đều MINIMIZE.
+    # 'auxetic': c = Q12 - mu*(Q11+Q22) + penalty — Q12 càng âm càng tốt,
+    # nên "best" = giá trị NHỎ NHẤT, không phải lớn nhất.
+    best_obj_value = float(df['obj_value'].min())
 
     # Đảm bảo corr_list và pval_list là Python số thực (không phải numpy)
     corr_list = [float(v) for v in corr_list]
@@ -491,8 +525,8 @@ def build_and_write_outputs(
             'n_valid_analysis': cd['n_valid'],
             'top_3_params': top3_formatted,
             'best_obj_value': cd['best_obj_value'],
-            'elapsed_time': None,
-            'n_workers': None,
+            'elapsed_time': cd.get('elapsed_time'),
+            'n_workers': cd.get('n_workers'),
         })
 
     # ── Ghi file ──
@@ -566,6 +600,13 @@ def main(root_dir: str = 'outputs/pipeline/phase1') -> None:
             # Đếm success/converged
             n_samples, n_success, n_converged = count_success_converged(config)
 
+            # Đọc elapsed_time / n_workers thật (nếu có JSON song hành)
+            run_meta = (
+                load_run_metadata(config['csv_path'])
+                if 'csv_path' in config
+                else {'elapsed_time': None, 'n_workers': None}
+            )
+
             # Ghi nhận
             entry = {
                 'seed': seed,
@@ -579,6 +620,8 @@ def main(root_dir: str = 'outputs/pipeline/phase1') -> None:
                 'n_samples': n_samples,
                 'n_success': n_success,
                 'n_converged': n_converged,
+                'elapsed_time': run_meta['elapsed_time'],
+                'n_workers': run_meta['n_workers'],
             }
             results.append(entry)
 

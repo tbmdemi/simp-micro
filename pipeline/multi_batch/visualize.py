@@ -257,7 +257,7 @@ def generate_coverage_html(
         Path to generated HTML file.
     """
     xs, ys, cs, labels = _extract_scatter_data(
-        all_results, dim_x=dim_x, dim_y=dim_y, color_by='obj_value'
+        all_results, dim_x=dim_x, dim_y=dim_y, color_by='v12'
     )
 
     html = _build_html_plot(

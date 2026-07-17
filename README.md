@@ -1,25 +1,24 @@
 # SIMP Analyst
 
-**Topology Optimization for Periodic Material Microstructure Design**
+**Topology Optimization for Auxetic Metamaterial Microstructure Design**
 
 [![Python](https://img.shields.io/badge/python-%3E%3D3.10-blue)](#)
 [![License](https://img.shields.io/badge/license-MIT-green)](#)
 [![Version](https://img.shields.io/badge/version-1.4.0-blueviolet)](simp/__init__.py)
+[![Branch](https://img.shields.io/badge/branch-OnlyAuxetic-orange)](#)
 
 ---
 
 ## Overview
 
-**SIMP Analyst** implements the **Solid Isotropic Material with Penalization (SIMP)** method for topology optimization of periodic unit-cell microstructures with targeted mechanical properties - primarily **auxetic behaviour** (negative Poisson's ratio).
-
-The optimization pipeline follows a standard SIMP loop:
+**SIMP Analyst** implements the **Solid Isotropic Material with Penalization (SIMP)** method for topology optimization of periodic unit-cell microstructures, targeting **auxetic behaviour** (negative Poisson's ratio). The project's end goal is **inverse design**: given a target Poisson ratio, generate a microstructure geometry that achieves it, using a conditional generative model (cVAE) trained on a surrogate-augmented dataset produced by this SIMP engine.
 
 ```
 Seed Generation → FE Analysis → Homogenization → Objective & Sensitivity →
-Sensitivity/Density Filtering → OC Update → Convergence Check → Repeat
+Density/Sensitivity Filtering → OC Update → Convergence Check → Repeat
 ```
 
-This codebase is a Python reimplementation of original MATLAB reference code and provides a complete, modular, and extensible framework for computational material design.
+This codebase is a Python reimplementation of the classic 88-line/99-line SIMP MATLAB codes, extended with periodic boundary conditions, energy-based homogenization, and an adaptive multi-batch DOE (Design of Experiments) pipeline for large-scale dataset generation.
 
 ---
 
@@ -29,15 +28,15 @@ This codebase is a Python reimplementation of original MATLAB reference code and
 - [Getting Started](#getting-started)
 - [Package Structure](#package-structure)
 - [Available Seeds](#available-seeds)
-- [Objective Functions](#objective-functions)
-- [Pipeline: Screening & Adaptive Sampling](#pipeline-screening--adaptive-sampling)
+- [Objective Function](#objective-function-auxetic)
+- [Pipeline: Screening → Multi-Batch DOE → Dataset](#pipeline-screening--multi-batch-doe--dataset)
 - [CLI Reference](#cli-reference)
 - [Programmatic Usage](#programmatic-usage)
 - [Output Files](#output-files)
 - [Convergence Criteria](#convergence-criteria)
-- [Output Data (Google Drive)](#output-data-google-drive)
 - [Tests](#tests)
 - [Key Bugfixes](#key-bugfixes)
+- [Documentation](#documentation)
 - [References](#references)
 - [License](#license)
 
@@ -45,14 +44,20 @@ This codebase is a Python reimplementation of original MATLAB reference code and
 
 ## Project Status
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| Core SIMP Engine | ✅ Stable | 10 seed types, 1 objective (auxetic), PBC, homogenization |
-| Phase 1 Screening (LHS) | ✅ Complete | 10 seeds × auxetic only: 10 combos × 50 samples run |
-| Phase 2 Parameter Tuning | 🟡 Implemented | `differential_evolution`, SHGO, basinhopping, L-BFGS-B |
-| Multi-Batch Adaptive Pipeline | 🟡 Implemented | Sobol/LHS + coverage analysis + adaptive decision logic, not yet run in production |
-| Unit Tests | 🟡 Partial | Coverage: convergence, logger, config, CLI, dataset smoke tests |
-| Performance Optimisation | 🟡 Pending | Seed generators and density filter still use nested loops; vectorisation planned |
+8-phase inverse-design roadmap. Phases 1-3 complete and validated on real data; Phase 4 onward in progress.
+
+| Phase | Component | Status | Notes |
+|-------|-----------|--------|-------|
+| 0 | Core SIMP Engine | ✅ Stable | 11 seed types, auxetic objective, PBC, energy-based homogenization |
+| 1 | LHS Screening | ✅ Complete | Initial run produced **0 auxetic samples** — root-caused to a Poisson-ratio formula error under rotation and an FE displacement bug; both fixed (see [Key Bugfixes](#key-bugfixes)) |
+| 2 | Multi-Batch Adaptive DOE | ✅ Complete | **8/8 batches**, 7,920 samples, **82.1% auxetic**, best ν₁₂ = −0.807. Adaptive pipeline auto-stopped after 2 consecutive batches with no objective improvement |
+| 3 | Dataset Build (density fields + targets) | ✅ Complete | 7,920 samples → 64×64 density fields, outlier-filtered, seed-stratified 70/15/15 split, physics-aware symmetry augmentation (train: 33,120 samples) |
+| 4 | CNN Surrogate Model | ⬜ Not started | Predict (ν₁₂, ν₂₁, volfrac) from density field |
+| 5 | Conditional VAE | ⬜ Not started | Inverse design: target Poisson ratio → generated geometry |
+| 6 | cGAN / Conditional Diffusion (optional upgrade) | ⬜ Not started | |
+| 7-8 | Validation, deployment | ⬜ Not started | |
+
+> Detailed phase breakdown (2.1-2.9, 3.1-3.6, etc.) tracked in the project workflow dashboard (see [Documentation](#documentation)).
 
 ---
 
@@ -63,18 +68,16 @@ This codebase is a Python reimplementation of original MATLAB reference code and
 - **Python** ≥ 3.10
 - **numpy** ≥ 1.24
 - **scipy** ≥ 1.10
-- **matplotlib** ≥ 3.7 (PNG output; optional but recommended)
-
-Install dependencies:
+- **matplotlib** ≥ 3.7 (PNG output)
+- **pandas**, **scikit-learn**, **Pillow** (dataset pipeline, `pipeline/phase3_dataset/`)
 
 ```bash
-pip install numpy scipy matplotlib
+pip install numpy scipy matplotlib pandas scikit-learn pillow
 ```
 
-### Quick Start
+### Quick Start — single SIMP run
 
 ```bash
-# Run with default parameters (100×100 mesh, hourglass seed, auxetic objective)
 python -m simp.run
 ```
 
@@ -84,23 +87,10 @@ python -m simp.run
 python -m simp.main --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal
 ```
 
-If the package is installed in editable mode, the same options are available via the console script:
+If installed in editable mode:
 
 ```bash
 simp --nelx 80 --nely 60 --volfrac 0.35 --seed hexagonal
-```
-
-### Full CLI Example
-
-```bash
-python -m simp.main \
-  --nelx 80 --nely 60 \
-  --volfrac 0.35 \
-  --penal 4.0 \
-  --seed hexagonal \
-  --void_size_frac 0.5 \
-  --save_every 5 \
-  --output_dir outputs/simp_hex_auxetic
 ```
 
 Expected output:
@@ -116,8 +106,22 @@ Hoàn thành 134 loops (45.2s)
 ```
 
 Results are written to `outputs/simp_results_{seed}/`:
-- `iteration_XXXXX.png` - density field images (grayscale: black = solid, white = void)
-- `iteration_data.csv` - convergence history (Poisson ratio, objective, volume fraction)
+- `iteration_XXXXX.png` — density field images (black = solid, white = void)
+- `iteration_data.csv` — convergence history (ν₁₂, ν₂₁, objective, volume fraction)
+
+### Quick Start — full dataset pipeline (Phase 2 → Phase 3)
+
+```bash
+# Phase 2: run/extend the adaptive multi-batch DOE (see pipeline/multi_batch/)
+python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
+
+# Phase 3: build the ML-ready dataset from completed batches
+python3 pipeline/phase3_dataset/scan_dataset.py
+python3 pipeline/phase3_dataset/build_npz.py --resolution 64
+python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
+```
+
+Output: `outputs/phase3/{train,val,test}.npz` — see [Dataset Build (Phase 3)](#3-dataset-build-density-fields--targets) below.
 
 ---
 
@@ -125,88 +129,79 @@ Results are written to `outputs/simp_results_{seed}/`:
 
 ```
 ├── simp/                          # Core SIMP package (v1.4.0)
-│   ├── __init__.py
 │   ├── run.py                     # Default entry point (hourglass, auxetic)
 │   ├── main.py                    # CLI entry point with argparse
 │   ├── runner.py                  # Optimisation loop orchestrator
 │   ├── config.py                  # SimpConfig dataclass (alternative interface)
 │   │
-│   ├── core/                      # Core SIMP algorithms
-│   │   ├── fem.py                 # FE mesh: node numbering, DOF mapping, sparse index vectors
+│   ├── core/
+│   │   ├── fem.py                 # FE mesh, DOF mapping, sparse index vectors
 │   │   ├── filter.py              # Cone-shaped density/sensitivity filter
 │   │   ├── pbc.py                 # Periodic Boundary Conditions (null-space projection)
 │   │   ├── solver.py              # Sparse FE solver with PBC (LU + CG fallback)
 │   │   ├── oc.py                  # Optimality Criteria update (bisection on λ)
 │   │   └── convergence.py         # Multi-criterion convergence detection
 │   │
-│   ├── materials/
-│   │   └── isotropic.py           # Isotropic material: 4-node quad element stiffness (plane stress)
+│   ├── materials/isotropic.py     # Isotropic material: 4-node quad element stiffness
+│   ├── objectives/auxetic.py      # Minimise Q₁₂ − μ(Q₁₁+Q₂₂) + stiffness penalty (μ=0 by default, see notes)
+│   ├── homogenization/compute.py  # Energy-based homogenisation: Q, dQ (uses U_total = U0 + χ)
 │   │
-│   ├── objectives/
-│   │   └── auxetic.py             # Minimise Q₁₂ (auxetic target)
-│   │
-│   ├── homogenization/
-│   │   └── compute.py             # Energy-based homogenisation: stiffness tensor Q + sensitivity dQ
-│   │
-│   ├── seeds/                     # 10 initial void-pattern generators
-│   │   ├── circle.py
-│   │   ├── square.py
-│   │   ├── hourglass.py
-│   │   ├── four_circle.py
-│   │   ├── hexagonal.py
-│   │   ├── nine_circle.py
-│   │   ├── cross_rectangular.py
-│   │   ├── grid_circular_voids.py
-│   │   ├── small_square_cross.py
-│   │   └── circle_half_quarter.py
+│   ├── seeds/                     # 11 initial void-pattern generators
+│   │   ├── circle.py, square.py, hourglass.py, four_circle.py, hexagonal.py,
+│   │   ├── nine_circle.py, cross_rectangular.py, grid_circular_voids.py,
+│   │   ├── small_square_cross.py, circle_half_quarter.py
+│   │   └── reentrant_bowtie.py    # newest seed, hardest to make auxetic (48.6% success rate)
 │   │
 │   └── io/
 │       ├── logger.py              # CSV logging (iteration, ν₁₂, ν₂₁, objective, volume)
-│       └── visualizer.py          # Density-field PNG export
+│       └── visualizer.py          # Density-field PNG export (matplotlib imshow, gray, no axes)
 │
-├── pipeline/                      # Screening & tuning pipelines
-│   ├── params.py                  # Parameter space definitions (LHS ranges, fixed params)
-│   ├── phase1_screening_parallel.py  # Phase 1: LHS screening with multiprocessing
-│   ├── phase2_tuning.py           # Phase 2: derivative-free optimisation tuning
-│   ├── REVIEW_ALGORITHMS_VI.md    # Algorithm review report (in Vietnamese)
+├── pipeline/
+│   ├── params.py                          # Parameter space definitions
+│   ├── phase1_screening_parallel.py       # Phase 1: LHS screening with multiprocessing
+│   ├── phase1_refine_params.py            # Post-screening parameter range refinement
 │   │
-│   └── multi_batch/               # Adaptive multi-batch pipeline
-│       ├── params.py              # BatchConfig, PipelineConfig, enums
-│       ├── sampling.py            # Sobol, LHS, Optimised LHS strategies
-│       ├── runner.py              # Batch execution with multiprocessing Pool
-│       ├── adaptive.py            # Decision logic: stop / refine / expand
-│       ├── coverage.py            # KDE density, sparse-region detection
-│       └── visualize.py           # Standalone HTML scatter + contour reports
+│   ├── multi_batch/                       # Phase 2: adaptive multi-batch DOE
+│   │   ├── params.py                      # BatchConfig, PipelineConfig, enums
+│   │   ├── sampling.py                    # Sobol / LHS / Optimised LHS strategies
+│   │   ├── runner.py                      # Batch execution with multiprocessing Pool
+│   │   ├── adaptive.py                    # Decision logic: refine / expand / stop
+│   │   ├── coverage.py                    # KDE density + sparse-region detection
+│   │   └── visualize.py                   # Standalone HTML batch-progression reports
+│   │
+│   └── phase3_dataset/                    # Phase 3: ML dataset construction
+│       ├── scan_dataset.py                # Batch results -> manifest.csv (image path + targets)
+│       ├── build_npz.py                   # Resize density PNGs, normalize -> dataset_{res}.npz
+│       ├── augment_symmetry.py            # Physics-aware rotation/flip augmentation
+│       └── finalize_dataset.py            # Outlier filter + stratified split -> train/val/test.npz
 │
-├── tests/                         # PyTest test suite
-│   ├── test_cli.py
-│   ├── test_config.py
-│   ├── test_convergence.py
-│   ├── test_core_smoke.py
-│   ├── test_dataset.py
-│   └── test_logger.py
-│
-├── outputs/                       # ⚠️ Not tracked in git - see section below
-│
-└── README.md                      # This file
+├── analysis/                      # Sensitivity analysis, Pareto fronts, dataset QC notebooks support
+├── notebooks/                     # Jupyter notebooks: data loading, sensitivity, design recommendation
+├── html/                          # Dashboards, guides, and reports (see html/index.html)
+├── tests/                         # PyTest suite
+├── outputs/                       # Generated data (see .gitignore — large .npz/.png not committed)
+└── README.md
 ```
 
 ---
 
 ## Available Seeds
 
-| Seed | Description | Preview |
-|------|-------------|---------|
-| `circle` | Single circular void at centre | ⬤ |
-| `square` | Single square void at centre | ◼ |
-| `hourglass` | Two triangular voids (hourglass shape) | ⌛ |
-| `four_circle` | Four circular voids, symmetric | ◉ ◉ |
-| `hexagonal` | Single hexagonal void | ⬡ |
-| `nine_circle` | 3×3 grid of circular voids | 9× ◯ |
-| `cross_rectangular` | Cross-shaped void | ✚ |
-| `grid_circular_voids` | N×N uniform grid of circular voids | ◯◯◯ |
-| `small_square_cross` | Small square cross at centre | ┼ |
-| `circle_half_quarter` | Centre circle + four quarter-circles at corners | ⊙ |
+| Seed | Description | Auxetic success rate* |
+|------|-------------|------------------------|
+| `circle` | Single circular void at centre | 93.8% |
+| `square` | Single square void at centre | 94.0% |
+| `hourglass` | Two triangular voids | 67.8% |
+| `four_circle` | Four circular voids, symmetric | 87.9% |
+| `hexagonal` | Single hexagonal void | 64.4% |
+| `nine_circle` | 3×3 grid of circular voids | 98.9% |
+| `cross_rectangular` | Cross-shaped void | 93.3% |
+| `grid_circular_voids` | N×N uniform grid of circular voids | 99.4% |
+| `small_square_cross` | Small square cross at centre | 93.1% |
+| `circle_half_quarter` | Centre circle + four quarter-circles at corners | 61.7% |
+| `reentrant_bowtie` | Bowtie-shaped void (re-entrant geometry) — newest seed | 48.6% |
+
+\* Fraction of samples with both ν₁₂ < 0 and ν₂₁ < 0, measured across all 7,920 samples of the completed multi-batch DOE (Phase 2). `reentrant_bowtie` and `hexagonal` are the hardest geometries to push auxetic and are good candidates for further parameter refinement.
 
 Rotation (`--rotation_deg`) can be applied to any seed.
 
@@ -214,55 +209,66 @@ Rotation (`--rotation_deg`) can be applied to any seed.
 
 ## Objective Function (Auxetic)
 
-The only available objective is the **auxetic** (negative Poisson's ratio) formulation:
-
 ```
-c = Q₁₂    (+ penalty if Q₁₁ < δ or Q₂₂ < δ)
-δ = 0.1 · volfrac · E₀
+c = Q₁₂ − μ·(Q₁₁ + Q₂₂) + penalty_terms
+penalty: activates when Q₁₁ or Q₂₂ < δ = 0.1·volfrac·E₀, normalized by δ²
 ```
 
-- Directly minimises the shear-coupling term `Q₁₂` (negative → auxetic)
-- A stiffness penalty term activates when axial stiffness (`Q₁₁` or `Q₂₂`) falls below `δ`, preventing structural collapse
-- Previous `first` and `second` objective types have been removed — all optimisation now targets auxetic behaviour exclusively
+- `compute_nu12` / `compute_nu21` use the **full 3×3 compliance-matrix inverse** (`S = Q⁻¹`), not the orthotropic shortcut `ν₁₂ = Q₁₂/Q₂₂` — the shortcut breaks down whenever the unit cell is rotated (shear-normal coupling `Q₁₃, Q₂₃ ≠ 0`). This was the root cause of the Phase 1 zero-auxetic-samples bug (see [Key Bugfixes](#key-bugfixes)).
+- The `μ` term is intended to push `Q₁₂` further negative instead of stalling near zero, but the current formulation is **conceptually flawed** (pending redesign) — it is currently disabled by default (`mu=0.0`), which is the setting used for all 8 completed multi-batch DOE runs.
+- A stiffness penalty activates when `Q₁₁` or `Q₂₂` falls below `δ`, preventing structural collapse (void degenerate topologies still occur in ~0.4% of runs — filtered out in Phase 3).
 
 ---
 
-## Pipeline: Screening & Adaptive Sampling
+## Pipeline: Screening → Multi-Batch DOE → Dataset
 
-The project provides a phased approach to parameter exploration:
+### 1. LHS Screening (Phase 1)
 
-### Phase 1 - LHS Screening
-
-Scans the 7-dimensional parameter space (`volfrac`, `penal`, `rmin`, `move`, `void_size_frac`, `rotation_deg`, beta) using **Latin Hypercube Sampling** (50 samples per combination). Spearman rank correlation identifies the most influential parameters.
+Scans the parameter space (`volfrac`, `penal`, `rmin`, `move`, `void_size_frac`, `rotation_deg`) using Latin Hypercube Sampling.
 
 ```bash
-# Single combination
 python -m pipeline.phase1_screening_parallel --objective auxetic --seed hexagonal
-
-# Full sweep (10 seeds × auxetic)
-python -m pipeline.phase1_screening_parallel --all
+python -m pipeline.phase1_screening_parallel --all   # full sweep, all seeds
 ```
 
-The screening narrows the active parameter set from 7 to the 2–3 most influential dimensions (currently `volfrac` and `void_size_frac`).
+Sensitivity analysis (Spearman correlation) identified **`volfrac` as the dominant parameter** (r ≈ 0.87–0.96); `move`, `rmin`, `void_size_frac` were non-significant. The first screening run returned **zero auxetic samples**, traced to: (1) the orthotropic ν₁₂ shortcut breaking under rotation, (2) poorly-scaled penalty terms, (3) an FE displacement bug in homogenization (fluctuation field χ used as total displacement instead of `U_total = U0 + χ`).
 
-### Phase 2 - Derivative-Free Tuning
+### 2. Multi-Batch Adaptive DOE (Phase 2) — ✅ complete
 
-Uses `scipy.optimize` solvers (`differential_evolution`, SHGO, basinhopping, L-BFGS-B) to locate the global optimum within the reduced parameter space identified in Phase 1.
+Sequential batches, each guided by coverage analysis (KDE + sparse-region detection) of accumulated results. `adaptive.py` decides to **refine** (narrow parameter ranges + target sparse regions), **expand** (add seeds/objectives), or **stop**.
 
-### Multi-Batch Adaptive Pipeline
-
-An advanced adaptive-sampling pipeline that runs sequential batches, each guided by coverage analysis of the accumulated results:
-
-- **Batch 1:** Space-filling (Sobol sequence)
-- **Batch 2+:** Decision-driven - `adaptive.py` chooses to refine promising regions, expand to new seeds/objectives, or stop
-- **Coverage:** KDE density estimation + sparse-region detection
-- **Reports:** Standalone HTML pages with scatter plots, density contours, and per-batch progression
-
-```
+```bash
 python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 ```
 
-> **Note:** The multi-batch pipeline is implemented but has not yet been run in production.
+**Results (8 batches, 7,920 samples, 100% FE convergence):**
+
+| Batch | Strategy | n samples | Auxetic % | Best ν₁₂ |
+|-------|----------|-----------|-----------|----------|
+| 1 | Sobol (explore) | 1,320 | 74.9% | −0.612 |
+| 2 | Sobol (explore) | 600 | 79.7% | −0.519 |
+| 3 | Sobol (explore) | 720 | 71.8% | −0.565 |
+| 4 | Optimized LHS (refine) | 1,056 | 83.6% | −0.605 |
+| 5 | Optimized LHS (refine) | 1,067 | 85.7% | −0.752 |
+| 6 | Optimized LHS (refine) | 1,045 | 85.4% | −0.649 |
+| 7 | Optimized LHS (refine) | 1,056 | 85.3% | −0.621 |
+| 8 | Optimized LHS (refine) | 1,056 | 87.8% | **−0.807** |
+
+Parameter ranges converged from the initial `volfrac ∈ [0.45, 0.70]` down to `[0.50, 0.58]` by batch 8, consistent with Phase 1 sensitivity results. The pipeline auto-stopped after batch 8 following 2 consecutive batches with no objective improvement (`n_batches_no_improvement: 2` in `decision_batch8.json`) — parameter ranges had converged and sparsity had stabilized at ~18.5%.
+
+### 3. Dataset Build (Phase 3) — ✅ complete
+
+```bash
+python3 pipeline/phase3_dataset/scan_dataset.py       # -> outputs/phase3/manifest.csv
+python3 pipeline/phase3_dataset/build_npz.py --resolution 64   # -> dataset_64.npz
+python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/val/test.npz
+```
+
+- Density field PNGs (616×616, matplotlib `imshow` render of the raw 50×50 `xPhys` grid) resized to 64×64 via box-filter downsampling.
+- 33/7,920 samples (0.4%) dropped: degenerate topologies where `volfrac_achieved` collapsed outside `[0.05, 0.95]` despite `converged=True`.
+- **Train/val/test split: 70/15/15, stratified by seed geometry** (all 11 seeds represented proportionally in every split).
+- **Physics-aware symmetry augmentation** applied to train only: 90°/270° rotation swaps `ν₁₂ ↔ ν₂₁` (unit-cell axes exchange roles); 180° rotation and horizontal/vertical flips preserve `ν₁₂, ν₂₁`. Train set: 5,520 → 33,120 samples (×6).
+- Targets currently exported: `v12`, `v21`, `volfrac_achieved`. **Note:** the original roadmap's `f1, f2` properties are not yet computed by the homogenization module — only `ν₁₂`/`ν₂₁` exist today. Extending `compute_homogenized_tensor()` to output normalized stiffness (e.g. `E₁₁/E₀`, `E₂₂/E₀`) is required before `f1, f2` can be added as surrogate/cVAE targets.
 
 ---
 
@@ -270,29 +276,28 @@ python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--nelx` | int | 100 | Number of elements in x-direction |
-| `--nely` | int | 100 | Number of elements in y-direction |
+| `--nelx` | int | 100 | Elements in x-direction |
+| `--nely` | int | 100 | Elements in y-direction |
 | `--volfrac` | float | 0.4 | Target volume fraction |
 | `--penal` | float | 3.0 | SIMP penalisation factor |
-| `--rmin` | float | 3.0 | Filter radius (density/sensitivity) |
+| `--rmin` | float | 3.0 | Filter radius |
 | `--ft` | int | 2 | Filter type (1 = sensitivity, 2 = density) |
-| `--E0` | float | 199.0 | Young's modulus of solid material (GPa) |
-| `--Emin` | float | 1e-9 | Young's modulus of void material |
+| `--E0` | float | 199.0 | Young's modulus, solid |
+| `--Emin` | float | 1e-9 | Young's modulus, void |
 | `--nu` | float | 0.3 | Base-material Poisson ratio |
-| `--move` | float | 0.1 | Maximum change per OC update |
-| `--max_iter` | int | 200 | Maximum optimisation iterations |
-| `--tol_change` | float | 0.01 | Convergence threshold for design change |
-| `--tol_obj` | float | 0.05 | Convergence threshold for objective stability |
-| `--window_size` | int | 20 | Stable-iteration window for objective convergence |
-| `--seed` | str | hourglass | Initial seed pattern name |
-| `--objective` | str | auxetic | Objective (deprecated, only auxetic is supported) |
+| `--move` | float | 0.1 | Max OC update step |
+| `--max_iter` | int | 200 | Max iterations |
+| `--tol_change` | float | 0.01 | Design-change convergence threshold |
+| `--tol_obj` | float | 0.05 | Objective-stability convergence threshold |
+| `--window_size` | int | 20 | Stable-iteration window |
+| `--seed` | str | hourglass | Initial seed pattern (11 available, see above) |
+| `--objective` | str | auxetic | Only `auxetic` is supported |
 | `--void_size_frac` | float | 0.4 | Void-size fraction for seed generation |
-| `--rotation_deg` | float | 0.0 | Seed rotation angle (degrees) |
-| `--beta` | float | 0.8 | Beta decay coefficient |
-| `--beta_second` | float | 100.0 | Penalty weight (deprecated, kept for compatibility) |
+| `--rotation_deg` | float | 0.0 | Seed rotation angle |
+| `--beta` | float | 0.8 | Stiffness-penalty coefficient |
 | `--save_every` | int | 1 | Save image every N iterations |
 | `--scale_factor` | int | 1 | PNG upscale factor |
-| `--output_dir` | str | auto | Output directory (default: `outputs/simp_results_{seed}`) |
+| `--output_dir` | str | auto | Default: `outputs/simp_results_{seed}` |
 | `--quiet` | flag | false | Suppress final summary |
 
 ---
@@ -303,29 +308,17 @@ python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 from simp.runner import run_simp
 
 params = {
-    'nelx': 120,
-    'nely': 120,
-    'volfrac': 0.35,
-    'penal': 3.0,
-    'rmin': 2.5,
-    'seed': 'hexagonal',
-    'objective': 'auxetic',
-    'void_size_frac': 0.45,
-    'max_iter': 300,
-    'save_every': 5,
+    'nelx': 120, 'nely': 120, 'volfrac': 0.35, 'penal': 3.0, 'rmin': 2.5,
+    'seed': 'hexagonal', 'objective': 'auxetic', 'void_size_frac': 0.45,
+    'max_iter': 300, 'save_every': 5,
 }
-
 result = run_simp(params)
 
-print(f'Final Poisson ratio: ν₁₂ = {result["v12"]:.4f}, ν₂₁ = {result["v21"]:.4f}')
-print(f'Converged: {result["converged"]}')
-print(f'Iterations: {result["n_iters"]}')
-print(f'Output directory: {result["output_dir"]}')
+print(f'ν₁₂ = {result["v12"]:.4f}, ν₂₁ = {result["v21"]:.4f}, converged: {result["converged"]}')
 
-# Access results
-xPhys = result['xPhys']          # (nely, nelx) density field
-Q     = result['Q']              # 3×3 homogenised stiffness tensor
-history = result['history']      # dict with iteration, v12, v21, objective, volume
+xPhys = result['xPhys']      # (nely, nelx) density field
+Q = result['Q']              # 3×3 homogenised stiffness tensor
+history = result['history']  # dict: iteration, v12, v21, objective, volume
 ```
 
 ---
@@ -333,62 +326,31 @@ history = result['history']      # dict with iteration, v12, v21, objective, vol
 ## Output Files
 
 ### PNG Images (`iteration_XXXXX.png`)
-
-Grayscale density field at saved iterations:
-- **Black (0)** = void
-- **White (1)** = solid material
-- Zero-padded iteration numbers for animation assembly
+Grayscale density field — black (0) = void, white (1) = solid.
 
 ### CSV Data (`iteration_data.csv`)
 
 | Column | Description |
 |--------|-------------|
 | `Iteration` | Loop number |
-| `Poisson_v12` | ν₁₂ = Q₁₂ / Q₂₂ |
-| `Poisson_v21` | ν₂₁ = Q₁₂ / Q₁₁ |
+| `Poisson_v12` | ν₁₂, computed via full 3×3 compliance inverse |
+| `Poisson_v21` | ν₂₁, computed via full 3×3 compliance inverse |
 | `Objective` | Objective function value |
 | `Volume_Fraction` | Mean of `xPhys` |
 
 ### Metadata (`metadata.json`)
-
-Each run produces a JSON file containing:
-- `git_hash` - commit hash of the code that produced the result
-- `timestamp` - run start time
-- `version` - SIMP package version
-- `params` - full parameter set used
+`git_hash`, `timestamp`, `version`, full `params` used for the run.
 
 ---
 
 ## Convergence Criteria
 
-Optimisation stops when **any** of the following conditions is met:
+Stops when **any** condition is met:
+1. Design change < `tol_change`
+2. Objective stability — relative change < `tol_obj` for `window_size` consecutive iterations
+3. `max_iter` reached
 
-1. **Design change** < `tol_change` - maximum absolute density change between consecutive iterations
-2. **Objective stability** - relative objective change < `tol_obj` for `window_size` consecutive iterations
-3. **Maximum iterations** - `max_iter` reached
-
-A `ConvergenceChecker` class (in `simp/core/convergence.py`) handles all three criteria, with `min_iter` to prevent premature stopping.
-
----
-
-## Output Data (Google Drive)
-
-The `outputs/` directory contains all experimental results - raw iteration data, convergence logs, density-field images, screening reports, and slide images - and is **not tracked in this repository**.
-
-All outputs are available on Google Drive:
-
-📁 **[SIMP Analyst - Output Data](https://drive.google.com/drive/folders/1dZHKKWdp4mDRVEXAiOVGuguAr5QYCMBD?usp=sharing)**
-
-The directory includes:
-
-| Path | Contents |
-|------|----------|
-| `outputs/pipeline/phase1/` | Phase 1 LHS screening: 10 combos × 50 samples, Spearman correlation analysis, refined parameters |
-| `outputs/simp_results_circle/` | Single-run example (circle/auxetic) |
-| `outputs/slide_images/` | 18 representative topology images for reports and presentations |
-| `outputs/figures/` | Spearman correlation heatmaps, bar plots, analysis charts |
-
-To use these results locally, download the desired folder and place it under `outputs/` in the project root.
+Handled by `ConvergenceChecker` (`simp/core/convergence.py`), with `min_iter` to prevent premature stopping. Across the 7,920-sample multi-batch DOE, **FE convergence rate was 100%**.
 
 ---
 
@@ -397,8 +359,6 @@ To use these results locally, download the desired folder and place it under `ou
 ```bash
 pytest tests/ -v
 ```
-
-Current test coverage:
 
 | Module | Status |
 |--------|--------|
@@ -409,19 +369,29 @@ Current test coverage:
 | Dataset loading & auxetic classification | ✅ |
 | Logger CSV formatting | ✅ |
 
-> **Note:** Coverage for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, and `core/pbc.py` is still pending.
+> Coverage still pending for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`, and the new `pipeline/phase3_dataset/` scripts.
 
 ---
 
 ## Key Bugfixes
 
-The following critical issues were identified during an algorithm review (June 2026) and have been fixed:
-
 | Bug | Impact | Fix |
 |-----|--------|-----|
-| **Objective sign (removed objectives)** | OC update direction for previous first/second objectives | Fixed by removing non-auxetic objectives entirely |
-| **`max` instead of `min` in `aggregate_correlations.py`** | Best-sample selection picked worst objective value | Changed `max(...)` → `min(...)` |
-| **Poisson-ratio formula sign** | `ν₁₂ = -Q₁₂/Q₂₂` produced positive ν₁₂ for auxetic designs | Fixed to `ν₁₂ = Q₁₂/Q₂₂` in commit `07914ea` |
+| **FE displacement bug in homogenization** | Fluctuation field χ used directly as total displacement instead of `U_total = U0 + χ` — silently corrupted the homogenized tensor for every run | Fixed in `compute_homogenized_tensor()`: now uses `U_total = U0 + U` |
+| **ν₁₂ orthotropic-shortcut formula under rotation** | `ν₁₂ = Q₁₂/Q₂₂` is only valid when `Q₁₃ = Q₂₃ = 0`; broke down at `rotation_deg = 32.4°` and similar, causing **zero auxetic samples** in the initial Phase 1 screening | Rewrote `compute_nu12`/`compute_nu21` to use the full 3×3 compliance-matrix inverse (`S = Q⁻¹`) |
+| **`mu` penalty term in auxetic objective** | Intended to push `Q₁₂` further negative but conceptually flawed — can cause void collapse without reliably improving auxeticity | Disabled by default (`mu=0.0`); redesign pending |
+| **Objective sign (removed non-auxetic objectives)** | OC update direction was wrong for previously-supported `first`/`second` objectives | Removed those objective types entirely; only `auxetic` remains |
+| **`max` instead of `min` in `aggregate_correlations.py`** | Best-sample selection picked the *worst* objective value | Changed `max(...)` → `min(...)` |
+
+---
+
+## Documentation
+
+Additional dashboards, guides, and technical reports live under `html/` — see [`html/index.html`](html/index.html) for the full index. Note: some dashboard/report pages (`html/dashboards/`, `html/reports/`, `html/guides/`) reflect Phase 1 screening only and have **not yet been regenerated** against the completed Phase 2/3 results in this README. Treat their specific numbers as historical unless regenerated.
+
+- `pipeline/REVIEW_ALGORITHMS_VI.md` — algorithm review (Vietnamese)
+- `outputs/multi_batch/reports/batch_progression.html` — auto-generated Phase 2 batch progression report
+- `outputs/phase3/manifest.csv`, `split_report.json` — Phase 3 dataset build artifacts
 
 ---
 
@@ -436,7 +406,7 @@ The following critical issues were identified during an algorithm review (June 2
 
 ## License
 
-MIT - see [`simp/__init__.py`](simp/__init__.py).
+MIT — see [`simp/__init__.py`](simp/__init__.py).
 
 ---
 

@@ -1,0 +1,82 @@
+{
+  "fixed_parameters": {},
+  "active_parameters": {
+    "volfrac": {
+      "range": [
+        0.45,
+        0.7
+      ]
+    },
+    "penal": {
+      "range": [
+        2.0,
+        5.0
+      ]
+    },
+    "rmin": {
+      "range": [
+        1.0,
+        2.5
+      ]
+    },
+    "move": {
+      "range": [
+        0.05,
+        0.25
+      ]
+    },
+    "void_size_frac": {
+      "range": [
+        0.25,
+        0.55
+      ]
+    }
+  },
+  "active_seeds": [
+    "circle",
+    "circle_half_quarter",
+    "cross_rectangular",
+    "four_circle",
+    "grid_circular_voids",
+    "hexagonal",
+    "hourglass",
+    "nine_circle",
+    "reentrant_bowtie",
+    "small_square_cross",
+    "square"
+  ],
+  "active_objectives": [
+    "auxetic"
+  ],
+  "_decision_log": {
+    "volfrac": {
+      "active": true,
+      "min_pval": 1.4725473075592266e-08,
+      "seed": "circle"
+    },
+    "penal": {
+      "active": true,
+      "min_pval": 0.0010514912647768822,
+      "seed": "nine_circle"
+    },
+    "rmin": {
+      "active": true,
+      "min_pval": 3.1425135886675917e-09,
+      "seed": "hourglass"
+    },
+    "move": {
+      "active": true,
+      "min_pval": 0.003585279787399804,
+      "seed": "hourglass"
+    },
+    "void_size_frac": {
+      "active": true,
+      "min_pval": 4.312675022358901e-15,
+      "seed": "circle_half_quarter"
+    }
+  },
+  "_meta": {
+    "p_threshold": 0.1,
+    "source": "pipeline/phase1_refine_params.py"
+  }
+}

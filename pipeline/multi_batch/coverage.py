@@ -412,8 +412,8 @@ def recommend_new_samples(
             continue
 
         # Perturb parameters of nearby samples
-        weights = np.array([r.get('obj_value', 0) for r in near])
-        weights = np.maximum(-weights, 1e-10)  # Lower obj = better = higher weight
+        weights = np.array([r.get('v12', 0) for r in near])
+        weights = np.maximum(-weights, 1e-10)
         weights = weights / weights.sum()
 
         n_from_region = max(2, int(n_recommend / len(sparse_regions[:3])))

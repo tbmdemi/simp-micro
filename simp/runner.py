@@ -89,6 +89,7 @@ def run_simp(params: dict) -> dict:
     window_size = params.get('window_size', 20)
     seed_name = params.get('seed', 'circle')
     obj_type = params.get('objective', 'auxetic')
+    verbose = params.get('verbose', True)
     void_size_frac = params.get('void_size_frac', 0.4)
     rotation_deg = params.get('rotation_deg', 0.0)
     beta = params.get('beta', 1.0)
@@ -210,7 +211,7 @@ def run_simp(params: dict) -> dict:
         # Kiểm tra hội tụ
         if conv_checker.should_stop(change, c, prev_obj, loop, max_iter):
             converged = conv_checker.converged
-            if converged:
+            if converged and verbose:
                 print(f'[DONE] Hội tụ tại lần lặp {loop}')
             break
         prev_obj = c
@@ -237,7 +238,7 @@ def run_simp(params: dict) -> dict:
             save_density_image(xPhys, output_dir, loop, scale_factor)
 
         print(f'Loop:{loop:4d}  obj:{c:+.4e}  vol:{np.mean(xPhys):.3f}  '
-              f'chg:{change:.3f}  v12:{v12:.4f}  v21:{v21:.4f}')
+                f'chg:{change:.3f}  v12:{v12:.4f}  v21:{v21:.4f}') if verbose else None
 
         if hasattr(run_simp, '_err_count'):
             run_simp._err_count = 0

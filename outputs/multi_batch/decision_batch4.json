@@ -1,0 +1,237 @@
+{
+  "batch_id": 4,
+  "action": "refine",
+  "reason": "Coverage adequate, objective improving. Refining: narrowed 5 parameter range(s). Also targeting 16 samples at 3 sparse region(s).",
+  "decision_detail": {
+    "n_batches_completed": 3,
+    "n_valid_results": 2640,
+    "best_objective_progress": {
+      "values": [
+        -0.611660988912416,
+        -0.5187780423454852,
+        -0.565001705676686
+      ],
+      "relative_improvements": [
+        -0.151853638290852,
+        0.08910104044152599
+      ],
+      "n_batches_no_improvement": 0,
+      "overall_improving": false
+    },
+    "coverage": {
+      "n_sparse_regions": 5,
+      "total_bins": 27,
+      "sparsity_fraction": 0.1852
+    },
+    "action": "refine",
+    "reason": "Coverage adequate, objective improving. Refining: narrowed 5 parameter range(s). Also targeting 16 samples at 3 sparse region(s).",
+    "next_config": {
+      "batch_id": 4,
+      "n_samples": 96,
+      "strategy": "optimized_lhs",
+      "mode": "refine",
+      "seed": null,
+      "objectives": [
+        "auxetic"
+      ],
+      "seeds": [
+        "circle",
+        "circle_half_quarter",
+        "cross_rectangular",
+        "four_circle",
+        "grid_circular_voids",
+        "hexagonal",
+        "hourglass",
+        "nine_circle",
+        "reentrant_bowtie",
+        "small_square_cross",
+        "square"
+      ],
+      "param_ranges": {
+        "volfrac": [
+          0.48866750000000003,
+          0.647662
+        ],
+        "penal": [
+          2.474578,
+          4.410533
+        ],
+        "rmin": [
+          1.05627,
+          1.698599
+        ],
+        "move": [
+          0.0671455,
+          0.207073
+        ],
+        "void_size_frac": [
+          0.27628549999999996,
+          0.465834
+        ]
+      },
+      "output_dir": ""
+    },
+    "sparse_targeted_params": [
+      {
+        "volfrac": 0.48577286797880076,
+        "penal": 2.3318018400534775,
+        "rmin": 2.488190302580363,
+        "move": 0.08196606100734286,
+        "void_size_frac": 0.3461485793266622,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.44799103195110734,
+        "_target_v21": 0.15245082722646436
+      },
+      {
+        "volfrac": 0.4690191365526563,
+        "penal": 2.8722271145876173,
+        "rmin": 1.4192682539111414,
+        "move": 0.11188680232468147,
+        "void_size_frac": 0.30377249610001283,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.44799103195110734,
+        "_target_v21": 0.15245082722646436
+      },
+      {
+        "volfrac": 0.5269313825686773,
+        "penal": 4.541475636366171,
+        "rmin": 1.090944326415849,
+        "move": 0.09786376347372877,
+        "void_size_frac": 0.5213852132628508,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.44799103195110734,
+        "_target_v21": 0.15245082722646436
+      },
+      {
+        "volfrac": 0.5150458777466365,
+        "penal": 3.130483606765637,
+        "rmin": 1.0916942810589032,
+        "move": 0.11621688034416916,
+        "void_size_frac": 0.3868573580687978,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.44799103195110734,
+        "_target_v21": 0.15245082722646436
+      },
+      {
+        "volfrac": 0.6290668593306259,
+        "penal": 4.545350916829101,
+        "rmin": 1.2380860122138833,
+        "move": 0.2128802800616298,
+        "void_size_frac": 0.4701127548414154,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": -0.44799103195110734,
+        "_target_v21": 0.15245082722646436
+      },
+      {
+        "volfrac": 0.640255253871334,
+        "penal": 2.945996015675428,
+        "rmin": 1.5523744439075253,
+        "move": 0.12811572644417826,
+        "void_size_frac": 0.3785206177567366,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.43774586386772363
+      },
+      {
+        "volfrac": 0.67104734325226,
+        "penal": 3.737778921746969,
+        "rmin": 1.949599538135878,
+        "move": 0.24728934887889648,
+        "void_size_frac": 0.3223394023777097,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.43774586386772363
+      },
+      {
+        "volfrac": 0.6019170764984102,
+        "penal": 3.0461656847189054,
+        "rmin": 1.374727371737268,
+        "move": 0.11212627947658411,
+        "void_size_frac": 0.476057347512117,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.43774586386772363
+      },
+      {
+        "volfrac": 0.48406336032852415,
+        "penal": 4.515614627506727,
+        "rmin": 1.3566698188006334,
+        "move": 0.21459836493235956,
+        "void_size_frac": 0.5388215506205032,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.43774586386772363
+      },
+      {
+        "volfrac": 0.540221216578808,
+        "penal": 3.1858399018682673,
+        "rmin": 1.2199477578126525,
+        "move": 0.14785792617682214,
+        "void_size_frac": 0.3590860761250645,
+        "_source": "sparse region (no nearby)",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.43774586386772363
+      },
+      {
+        "volfrac": 0.6405775017768071,
+        "penal": 3.867366852282632,
+        "rmin": 1.0262128609540406,
+        "move": 0.2071946751457138,
+        "void_size_frac": 0.47465946787545954,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      },
+      {
+        "volfrac": 0.6038451227493898,
+        "penal": 3.039601001923362,
+        "rmin": 1.981979530169847,
+        "move": 0.1822963970790199,
+        "void_size_frac": 0.2669518391104103,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      },
+      {
+        "volfrac": 0.5922577163239671,
+        "penal": 2.744081499877532,
+        "rmin": 2.0202857395432,
+        "move": 0.16920614719199703,
+        "void_size_frac": 0.29091479378941926,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      },
+      {
+        "volfrac": 0.6374198687595989,
+        "penal": 4.019110504871355,
+        "rmin": 1.105904184350736,
+        "move": 0.21160958234232538,
+        "void_size_frac": 0.4593258565525802,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      },
+      {
+        "volfrac": 0.4749201878910578,
+        "penal": 2.202557025911118,
+        "rmin": 1.172377466556681,
+        "move": 0.051270291269310965,
+        "void_size_frac": 0.3699539701368412,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      },
+      {
+        "volfrac": 0.5803269648090456,
+        "penal": 4.988068166291864,
+        "rmin": 1.7275100916715456,
+        "move": 0.06322626246165577,
+        "void_size_frac": 0.47610273903941425,
+        "_source": "near sparse region",
+        "_target_v12": 0.2066887958941273,
+        "_target_v21": -0.14264751832062963
+      }
+    ]
+  }
+}
