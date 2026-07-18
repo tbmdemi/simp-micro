@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 #  Paths
 # ──────────────────────────────────────────────
-PHASE1_DIR = Path("../outputs/pipeline/phase1")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PHASE1_DIR = REPO_ROOT / "outputs" / "pipeline" / "phase1"
+PHASE3_DIR = REPO_ROOT / "outputs" / "phase3"
+PHASE4_DIR = REPO_ROOT / "outputs" / "phase4"
+PHASE5_DIR = REPO_ROOT / "outputs" / "phase5"
 SEEDS = [
     "circle", "square", "hourglass", "four_circle", "hexagonal",
     "nine_circle", "cross_rectangular", "grid_circular_voids",
@@ -127,6 +131,44 @@ def load_metadata(meta_path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def load_manifest_samples(manifest_path: Optional[Path] = None) -> pd.DataFrame:
+    """Load manifest-style phase outputs into a notebook-friendly DataFrame."""
+    if manifest_path is None:
+        manifest_path = PHASE3_DIR / "manifest.csv"
+    manifest_path = Path(manifest_path)
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    df = pd.read_csv(manifest_path)
+    if df.empty:
+        return df
+
+    rename_map = {
+        'v12': 'final_nu12',
+        'v21': 'final_nu21',
+        'volfrac_achieved': 'final_VF',
+        'obj_value': 'final_obj',
+        'volfrac': 'volfrac',
+        'penal': 'penal',
+        'rmin': 'rmin',
+        'move': 'move',
+        'void_size_frac': 'void_size_frac',
+    }
+    df = df.rename(columns=rename_map)
+    df['sample_path'] = df['image_path'].apply(lambda p: str(Path(p).parent) if pd.notna(p) else np.nan)
+    df['seed'] = df.get('seed', pd.Series([np.nan] * len(df)))
+    df['sample_id'] = df.get('sample_id', pd.Series([np.nan] * len(df)))
+    df['n_iter'] = 150
+    df['converged_flag'] = df.get('converged', False).fillna(False).astype(bool)
+    df['void_flag'] = (df['final_VF'] < VOID_THRESHOLD).fillna(False)
+    df['nu_valid_flag'] = (
+        df['final_nu12'].notna() & (NU_LOWER < df['final_nu12']) & (df['final_nu12'] < NU_UPPER)
+    )
+    df['rotation_deg'] = 0.0
+    df['mu'] = 0.0
+    return df
+
+
 def load_all_samples(
     phase1_dir: Optional[Path] = None,
     drop_void: bool = False,
@@ -147,65 +189,74 @@ def load_all_samples(
     Returns:
         pd.DataFrame with one row per sample.
     """
-    samples = scan_phase1_samples(phase1_dir)
-    rows = []
-    for s in samples:
-        last = load_sample_last_row(s["csv_path"])
-        meta = load_metadata(s["metadata_path"]) if s["metadata_path"] else None
+    if phase1_dir is not None and Path(phase1_dir).exists():
+        samples = scan_phase1_samples(phase1_dir)
+        rows = []
+        for s in samples:
+            last = load_sample_last_row(s["csv_path"])
+            meta = load_metadata(s["metadata_path"]) if s["metadata_path"] else None
 
-        row: Dict[str, Any] = {
-            "sample_path": str(s["sample_path"]),
-            "seed": s["seed"],
-            "sample_id": s["sample_id"],
-        }
+            row: Dict[str, Any] = {
+                "sample_path": str(s["sample_path"]),
+                "seed": s["seed"],
+                "sample_id": s["sample_id"],
+            }
 
-        # --- Last-row metrics ---
-        if last is not None:
-            row["final_nu12"] = last.get("Poisson_v12", np.nan)
-            row["final_nu21"] = last.get("Poisson_v21", np.nan)
-            row["final_obj"] = last.get("Objective", np.nan)
-            row["final_VF"] = last.get("Volume_Fraction", np.nan)
-            row["n_iter"] = int(last.get("Iteration", 0))
-        else:
-            row["final_nu12"] = np.nan
-            row["final_nu21"] = np.nan
-            row["final_obj"] = np.nan
-            row["final_VF"] = np.nan
-            row["n_iter"] = 0
+            # --- Last-row metrics ---
+            if last is not None:
+                row["final_nu12"] = last.get("Poisson_v12", np.nan)
+                row["final_nu21"] = last.get("Poisson_v21", np.nan)
+                row["final_obj"] = last.get("Objective", np.nan)
+                row["final_VF"] = last.get("Volume_Fraction", np.nan)
+                row["n_iter"] = int(last.get("Iteration", 0))
+            else:
+                row["final_nu12"] = np.nan
+                row["final_nu21"] = np.nan
+                row["final_obj"] = np.nan
+                row["final_VF"] = np.nan
+                row["n_iter"] = 0
 
-        # --- Flags ---
-        row["converged_flag"] = bool(
-            not np.isnan(row["n_iter"]) and row["n_iter"] < MAX_ITER - 1
-        )
-        row["void_flag"] = bool(
-            not np.isnan(row["final_VF"]) and row["final_VF"] < VOID_THRESHOLD
-        )
-        row["nu_valid_flag"] = bool(
-            not np.isnan(row["final_nu12"])
-            and NU_LOWER < row["final_nu12"] < NU_UPPER
-        )
+            # --- Flags ---
+            row["converged_flag"] = bool(
+                not np.isnan(row["n_iter"]) and row["n_iter"] < MAX_ITER - 1
+            )
+            row["void_flag"] = bool(
+                not np.isnan(row["final_VF"]) and row["final_VF"] < VOID_THRESHOLD
+            )
+            row["nu_valid_flag"] = bool(
+                not np.isnan(row["final_nu12"])
+                and NU_LOWER < row["final_nu12"] < NU_UPPER
+            )
 
-        # --- Parameters from metadata ---
-        if meta and "params" in meta:
-            params = meta["params"]
-            row["volfrac"] = params.get("volfrac", np.nan)
-            row["penal"] = params.get("penal", np.nan)
-            row["rmin"] = params.get("rmin", np.nan)
-            row["move"] = params.get("move", np.nan)
-            row["void_size_frac"] = params.get("void_size_frac", np.nan)
-            row["rotation_deg"] = params.get("rotation_deg", np.nan)
-            row["mu"] = params.get("mu", np.nan)
-        else:
-            for k in ("volfrac", "penal", "rmin", "move", "void_size_frac",
-                      "rotation_deg", "mu"):
-                row[k] = np.nan
+            # --- Parameters from metadata ---
+            if meta and "params" in meta:
+                params = meta["params"]
+                row["volfrac"] = params.get("volfrac", np.nan)
+                row["penal"] = params.get("penal", np.nan)
+                row["rmin"] = params.get("rmin", np.nan)
+                row["move"] = params.get("move", np.nan)
+                row["void_size_frac"] = params.get("void_size_frac", np.nan)
+                row["rotation_deg"] = params.get("rotation_deg", np.nan)
+                row["mu"] = params.get("mu", np.nan)
+            else:
+                for k in ("volfrac", "penal", "rmin", "move", "void_size_frac",
+                          "rotation_deg", "mu"):
+                    row[k] = np.nan
 
-        rows.append(row)
+            rows.append(row)
 
-    df = pd.DataFrame(rows)
-    if drop_void and not df.empty:
-        df = df[~df["void_flag"]].copy()
-    return df
+        df = pd.DataFrame(rows)
+        if drop_void and not df.empty:
+            df = df[~df["void_flag"]].copy()
+        return df
+
+    if PHASE3_DIR.exists() and (PHASE3_DIR / "manifest.csv").exists():
+        df = load_manifest_samples(PHASE3_DIR / "manifest.csv")
+        if drop_void and not df.empty:
+            df = df[~df["void_flag"]].copy()
+        return df
+
+    raise FileNotFoundError("No Phase 1 samples or manifest outputs found")
 
 
 # ──────────────────────────────────────────────
@@ -333,19 +384,26 @@ def plot_top10_grid(
 
     for i, (_, row) in enumerate(top10.iterrows()):
         ax = axes_flat[i]
-        sample_dir = Path(row["sample_path"])
-        # Find the last iteration image
-        images = sorted(sample_dir.glob("iteration_*.png"))
-        img_path = images[-1] if images else None
-        if img_path and img_path.exists():
-            from PIL import Image
-            img = Image.open(img_path)
-            ax.imshow(img, cmap="gray")
-        else:
-            ax.text(0.5, 0.5, "No image", ha="center", va="center",
+        sample_path = row.get("sample_path")
+        if sample_path is None:
+            ax.text(0.5, 0.5, "No image path", ha="center", va="center",
                     transform=ax.transAxes, fontsize=8)
+        else:
+            sample_dir = Path(str(sample_path))
+            # Find the last iteration image
+            images = sorted(sample_dir.glob("iteration_*.png"))
+            img_path = images[-1] if images else None
+            if img_path and img_path.exists():
+                from PIL import Image
+                img = Image.open(img_path)
+                ax.imshow(img, cmap="gray")
+            else:
+                ax.text(0.5, 0.5, "No image", ha="center", va="center",
+                        transform=ax.transAxes, fontsize=8)
+        seed = row.get("seed", "?")
+        nu12 = row.get("final_nu12", np.nan)
         ax.set_title(
-            f"{row['seed']} | nu={row['final_nu12']:.3f}",
+            f"{seed} | nu={nu12:.3f}",
             fontsize=9,
         )
         ax.axis("off")

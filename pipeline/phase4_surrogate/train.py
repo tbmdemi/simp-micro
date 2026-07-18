@@ -55,6 +55,11 @@ def run_epoch(model, loader, optimizer, device, train: bool):
             if train:
                 optimizer.zero_grad()
                 loss.backward()
+                # Gradient clipping: giới hạn norm gradient <= 1.0 để tránh
+                # bước cập nhật quá lớn gây val_loss dao động mạnh giữa các
+                # epoch (quan sát thấy ở lần train đầu: val_loss nhảy
+                # 0.0055 -> 0.030 -> 0.0068 dù train_loss giảm đều).
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             total_loss += loss.item()
@@ -68,7 +73,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=5e-4,
+                         help="LR ban đầu. Giảm từ 1e-3 xuống 5e-4 (mặc định mới) "
+                              "sau khi lần train đầu cho thấy val_loss dao động "
+                              "mạnh giữa các epoch với lr=1e-3.")
     parser.add_argument("--patience", type=int, default=10,
                          help="Số epoch chờ trước khi early-stop nếu val loss không cải thiện")
     parser.add_argument("--limit", type=int, default=None,

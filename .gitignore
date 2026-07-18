@@ -115,3 +115,5 @@ environment.yaml
 *.tar.gz
 *.rar
 .tox/
+
+*.pt

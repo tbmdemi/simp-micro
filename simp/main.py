@@ -43,11 +43,16 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def build_params(args: argparse.Namespace) -> dict[str, Any]:
-    params = default_params.copy()
+def _iter_cli_overrides(args: argparse.Namespace):
     for key, value in vars(args).items():
         if value is not None and key != 'quiet':
-            params[key] = value
+            yield key, value
+
+
+def build_params(args: argparse.Namespace) -> dict[str, Any]:
+    params = default_params.copy()
+    for key, value in _iter_cli_overrides(args):
+        params[key] = value
     return params
 
 

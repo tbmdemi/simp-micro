@@ -166,6 +166,32 @@ def classify_auxetic(
     return 'Conventional'
 
 
+def _build_rows_from_manifest(manifest_path: Path) -> List[Dict[str, object]]:
+    """Build rows from a manifest-style CSV produced by phase outputs."""
+    manifest_df = pd.read_csv(manifest_path)
+    rows = []
+    for _, row in manifest_df.iterrows():
+        shape_name = row.get('seed', manifest_path.stem)
+        sample_id = row.get('sample_id', '')
+        if pd.notna(sample_id):
+            shape_name = f"{shape_name}_sample_{int(sample_id)}"
+
+        classification = classify_auxetic(
+            float(row.get('v12', float('nan'))),
+            float(row.get('v21', float('nan'))),
+        )
+        rows.append({
+            'Shape': shape_name,
+            'Poisson_v12': float(row.get('v12', float('nan'))),
+            'Poisson_v21': float(row.get('v21', float('nan'))),
+            'Classification': classification,
+            'Objective': float(row.get('obj_value', float('nan'))),
+            'Volume': float(row.get('volfrac_achieved', float('nan'))),
+            'Iterations': int(row.get('iterations', 150)) if pd.notna(row.get('iterations')) else 150,
+        })
+    return rows
+
+
 def build_classification_table(
     data_dir: str,
     objective_type: str = 'auxetic',
@@ -174,9 +200,10 @@ def build_classification_table(
     Xây dựng bảng phân loại từ tất cả các thư mục kết quả SIMP.
 
     Quét các thư mục con trong `data_dir` để tìm file CSV và phân loại từng kết quả.
+    Nếu `data_dir` trỏ tới một file CSV manifest, hàm sẽ đọc trực tiếp từ file đó.
 
     Args:
-        data_dir (str): Thư mục gốc chứa các thư mục kết quả SIMP.
+        data_dir (str): Thư mục gốc chứa các thư mục kết quả SIMP hoặc file manifest.
         objective_type (str): 'auxetic' - dùng để lọc thư mục (chỉ hỗ trợ auxetic).
 
     Returns:
@@ -188,38 +215,53 @@ def build_classification_table(
         logger.warning('Không tìm thấy thư mục dữ liệu: %s', data_dir)
         return pd.DataFrame()
 
+    if data_path.is_file() and data_path.suffix.lower() == '.csv':
+        try:
+            rows = _build_rows_from_manifest(data_path)
+            result = pd.DataFrame(rows)
+            if not result.empty:
+                result = result.sort_values('Shape').reset_index(drop=True)
+            return result
+        except Exception as exc:  # pragma: no cover - defensive path
+            logger.warning('Không thể đọc manifest CSV %s: %s', data_path, exc)
+            return pd.DataFrame()
+
     rows = []
     # Tìm tất cả các file iteration_data.csv trong các thư mục con
     csv_files = list(data_path.rglob('iteration_data.csv'))
 
     if not csv_files:
-        logger.warning('Không tìm thấy file iteration_data.csv nào trong %s', data_dir)
-        return pd.DataFrame()
+        manifest_files = list(data_path.rglob('manifest.csv'))
+        if manifest_files:
+            rows = _build_rows_from_manifest(manifest_files[0])
+        else:
+            logger.warning('Không tìm thấy file iteration_data.csv nào trong %s', data_dir)
+            return pd.DataFrame()
+    else:
+        for csv_path in csv_files:
+            try:
+                df = load_iteration_data(str(csv_path))
+                metrics = compute_convergence_metrics(df)
 
-    for csv_path in csv_files:
-        try:
-            df = load_iteration_data(str(csv_path))
-            metrics = compute_convergence_metrics(df)
+                # Lấy tên hình dạng từ tên thư mục cha
+                shape_name = csv_path.parent.name
 
-            # Lấy tên hình dạng từ tên thư mục cha
-            shape_name = csv_path.parent.name
+                classification = classify_auxetic(
+                    metrics['final_v12'],
+                    metrics['final_v21'],
+                )
 
-            classification = classify_auxetic(
-                metrics['final_v12'],
-                metrics['final_v21'],
-            )
-
-            rows.append({
-                'Shape': shape_name,
-                'Poisson_v12': metrics['final_v12'],
-                'Poisson_v21': metrics['final_v21'],
-                'Classification': classification,
-                'Objective': metrics['final_objective'],
-                'Volume': metrics['final_volume'],
-                'Iterations': metrics['n_iters'],
-            })
-        except (FileNotFoundError, ValueError) as e:
-            logger.warning('Bỏ qua %s: %s', csv_path, e)
+                rows.append({
+                    'Shape': shape_name,
+                    'Poisson_v12': metrics['final_v12'],
+                    'Poisson_v21': metrics['final_v21'],
+                    'Classification': classification,
+                    'Objective': metrics['final_objective'],
+                    'Volume': metrics['final_volume'],
+                    'Iterations': metrics['n_iters'],
+                })
+            except (FileNotFoundError, ValueError) as e:
+                logger.warning('Bỏ qua %s: %s', csv_path, e)
 
     result = pd.DataFrame(rows)
     if not result.empty:
