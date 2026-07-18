@@ -102,12 +102,16 @@ def main() -> None:
 
     setup_logging(args.verbose)
 
-    if args.command == 'report':
-        _handle_report(args)
-    elif args.command == 'image-metrics':
-        _handle_image_metrics(args)
-    else:
+    command_handlers = {
+        'report': _handle_report,
+        'image-metrics': _handle_image_metrics,
+    }
+    handler = command_handlers.get(args.command)
+    if handler is None:
         parser.print_help()
+        return
+
+    handler(args)
 
 
 def _handle_report(args) -> None:

@@ -9,21 +9,21 @@
     "generated_by": "Notebook 3"
   },
   "seed_target": [
-    "cross_rectangular",
-    "hexagonal",
-    "hourglass"
+    "grid_circular_voids",
+    "nine_circle",
+    "four_circle"
   ],
   "rmin_range": [
-    1.1,
-    6.0
+    1.0,
+    2.5
   ],
   "volfrac_range": [
-    0.25,
-    0.64
+    0.45,
+    0.7
   ],
   "void_size_frac_range": [
-    0.16,
-    0.44
+    0.25,
+    0.55
   ],
   "fixed_params": {
     "mu": 0.2,
@@ -31,13 +31,13 @@
     "move": 0.2,
     "rotation_deg": 0
   },
-  "n_samples_per_seed": 50,
-  "total_samples": 150,
+  "n_samples_per_seed": 717,
+  "total_samples": 2151,
   "recommendations": {
     "focus_seeds": "Focus on top-performing seeds that consistently produce nu < -0.3",
-    "avoid_high_rmin": "rmin > 6.0 rarely produces auxetic behavior \u2014 cap the upper bound",
-    "volfrac_strategy": "Volfrac in [0.25, 0.64] gives best trade-off between auxeticity and material usage",
-    "void_size_frac_strategy": "void_size_frac around [0.16, 0.44] promotes void stability",
+    "avoid_high_rmin": "rmin > 2.5 rarely produces auxetic behavior \u2014 cap the upper bound",
+    "volfrac_strategy": "Volfrac in [0.45, 0.70] gives best trade-off between auxeticity and material usage",
+    "void_size_frac_strategy": "void_size_frac around [0.25, 0.55] promotes void stability",
     "rotation": "Fixed to 0 for Phase 2 to reduce parameter space (rotation shows limited benefit)",
     "mu": "Keep mu = 0.2 as it demonstrated good balance in Phase 1"
   }

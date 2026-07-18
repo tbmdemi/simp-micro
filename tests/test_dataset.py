@@ -11,6 +11,7 @@ from analysis.dataset import (
     load_iteration_data,
     compute_convergence_metrics,
     classify_auxetic,
+    build_classification_table,
 )
 
 
@@ -118,3 +119,33 @@ class TestClassifyAuxetic:
         """Test classification with custom threshold."""
         assert classify_auxetic(0.1, 0.3, threshold=0.2) == 'Auxetic'
         assert classify_auxetic(0.3, 0.4, threshold=0.2) == 'Conventional'
+
+
+def test_build_classification_table_from_manifest_csv(tmp_path):
+    """Manifest-style outputs should be accepted by build_classification_table."""
+    manifest_path = tmp_path / 'manifest.csv'
+    pd.DataFrame([
+        {
+            'batch': 1,
+            'seed': 'circle',
+            'sample_id': 0,
+            'image_path': 'outputs/multi_batch/batch_1/circle/sample_0000/iteration_00150.png',
+            'v12': -0.4,
+            'v21': -0.35,
+            'volfrac_achieved': 0.6,
+            'obj_value': 0.8,
+            'converged': True,
+            'volfrac': 0.6,
+            'penal': 3.0,
+            'rmin': 2.0,
+            'move': 0.1,
+            'void_size_frac': 0.4,
+        },
+    ]).to_csv(manifest_path, index=False)
+
+    df = build_classification_table(str(manifest_path))
+
+    assert not df.empty
+    assert list(df.columns)[:4] == ['Shape', 'Poisson_v12', 'Poisson_v21', 'Classification']
+    assert df.loc[0, 'Classification'] == 'Auxetic'
+    assert df.loc[0, 'Iterations'] == 150
