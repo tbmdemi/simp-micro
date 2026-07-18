@@ -53,7 +53,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, de
         bsz = image.size(0)
 
         with torch.set_grad_enabled(train):
-            recon, mu, logvar = model(image, condition)
+            recon, mu, logvar = model(image, condition, deterministic=not train)
             losses = cvae_loss(
                 recon, image, mu, logvar, condition, seed_vec,
                 surrogate, target_names, beta=beta, gamma=gamma,
@@ -83,6 +83,8 @@ def main():
     parser.add_argument("--gamma", type=float, default=1.0,
                          help="trọng số property-consistency loss")
     parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr-min", type=float, default=1e-5,
+                         help="lr tối thiểu ở cuối CosineAnnealing (0 = tắt schedule, giữ lr cố định)")
     parser.add_argument("--patience", type=int, default=15,
                          help="early stopping: dừng nếu val loss không giảm sau N epoch")
     parser.add_argument("--resolution", type=int, default=64)
@@ -104,6 +106,11 @@ def main():
                  resolution=args.resolution).to(device)
     surrogate, target_names = load_frozen_surrogate(device=device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    scheduler = None
+    if args.lr_min > 0:
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.epochs, eta_min=args.lr_min
+        )
 
     history = []
     best_val = float("inf")
@@ -117,7 +124,11 @@ def main():
         val_stats = run_epoch(model, val_loader, surrogate, target_names,
                                optimizer, beta, args.gamma, device, train=False)
 
-        print(f"[{epoch:03d}/{args.epochs}] beta={beta:.3f} | "
+        current_lr = optimizer.param_groups[0]["lr"]
+        if scheduler is not None:
+            scheduler.step()
+
+        print(f"[{epoch:03d}/{args.epochs}] beta={beta:.3f} lr={current_lr:.2e} | "
               f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
               f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
               f"prop_w={train_stats['prop_weighted']:.2f} || "
