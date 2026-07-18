@@ -115,33 +115,39 @@ def property_consistency_loss(
 # evaluate.py sample z~N(0,1) thật sự (không "ăn gian" bằng z suy ra từ ảnh
 # gốc như lúc train) thì property accuracy lộ ra rất tệ (R2 âm).
 #
-# Sửa: nhân prop với hệ số cố định PROP_LOSS_SCALE để đưa nó về gần thang
-# recon/kl TRƯỚC khi nhân với gamma. Việc này giữ nguyên ý nghĩa của gamma
-# (gamma=1 vẫn là "trọng số cơ sở hợp lý", không phải phải tự dò con số
-# hàng trăm/nghìn) và KHÔNG đụng vào cân bằng recon/kl đã ổn định.
+# Sửa: nhân prop với hệ số cố định (mặc định 1000.0, xem config.py
+# `CVAEConfig.prop_loss_scale`) để đưa nó về gần thang recon/kl TRƯỚC khi
+# nhân với gamma. Việc này giữ nguyên ý nghĩa của gamma (gamma=1 vẫn là
+# "trọng số cơ sở hợp lý", không phải phải tự dò con số hàng trăm/nghìn) và
+# KHÔNG đụng vào cân bằng recon/kl đã ổn định.
+# Giữ lại hằng số này làm default để không phá vỡ code cũ gọi cvae_loss()
+# không truyền prop_loss_scale.
 PROP_LOSS_SCALE = 1000.0
 
 
 def cvae_loss(
     recon, image, mu, logvar, condition, seed_vec,
     surrogate, target_names, beta: float, gamma: float = 1.0,
+    prop_loss_scale: float = PROP_LOSS_SCALE,
 ):
     """Tổng hợp 3 thành phần. Trả về dict để log riêng từng loss trong train.py.
     gamma: hệ số trọng số CHO PHẦN NHÂN THÊM vào property-consistency loss
-    (đã được PROP_LOSS_SCALE đưa về cùng thang recon/kl), mặc định 1.0.
+    (đã được prop_loss_scale đưa về cùng thang recon/kl), mặc định 1.0.
     Tăng gamma nếu muốn ưu tiên đúng Poisson ratio hơn chất lượng ảnh tái
-    tạo, giảm nếu thấy recon bị "hy sinh" quá nhiều (ảnh sinh ra mờ/nhoè)."""
+    tạo, giảm nếu thấy recon bị "hy sinh" quá nhiều (ảnh sinh ra mờ/nhoè).
+    prop_loss_scale: nên lấy từ CVAEConfig thay vì sửa hằng số PROP_LOSS_SCALE
+    trực tiếp trong file này - xem pipeline/phase5_cvae/config.py."""
     recon_l = reconstruction_loss(recon, image)
     kl_l = kl_divergence(mu, logvar)
     prop_l = property_consistency_loss(
         recon, condition, seed_vec, surrogate, target_names
     )
-    total = recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
+    total = recon_l + beta * kl_l + gamma * prop_loss_scale * prop_l
     return {
         "total": total,
         "recon": recon_l.detach(),
         "kl": kl_l.detach(),
-        "prop": prop_l.detach(),                                  # thang gốc (Poisson-ratio MSE), để dễ hiểu ý nghĩa vật lý
-        "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
+        "prop": prop_l.detach(),
+        "prop_weighted": (gamma * prop_loss_scale * prop_l).detach(),
         "beta": beta,
     }

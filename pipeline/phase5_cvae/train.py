@@ -36,13 +36,15 @@ from dataset import CVAEDataset            # noqa: E402
 from losses import (                       # noqa: E402
     cvae_loss, kl_beta_schedule, load_frozen_surrogate,
 )
+from config import CVAEConfig              # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
 
-def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, device, train: bool):
+def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
+              prop_loss_scale, device, train: bool):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0, "prop_weighted": 0.0}
     n = 0
@@ -57,6 +59,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, de
             losses = cvae_loss(
                 recon, image, mu, logvar, condition, seed_vec,
                 surrogate, target_names, beta=beta, gamma=gamma,
+                prop_loss_scale=prop_loss_scale,
             )
             if train:
                 optimizer.zero_grad()
@@ -74,25 +77,42 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, de
 
 
 def main():
+    defaults = CVAEConfig()  # nguồn default duy nhất - xem config.py
     parser = argparse.ArgumentParser()
-    parser.add_argument("--latent-dim", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--kl-warmup", type=int, default=30,
+    parser.add_argument("--latent-dim", type=int, default=defaults.latent_dim)
+    parser.add_argument("--epochs", type=int, default=defaults.epochs)
+    parser.add_argument("--batch-size", type=int, default=defaults.batch_size)
+    parser.add_argument("--kl-warmup", type=int, default=defaults.kl_warmup,
                          help="số epoch để beta KL tăng tuyến tính 0 -> 1")
-    parser.add_argument("--gamma", type=float, default=1.0,
-                         help="trọng số property-consistency loss")
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--lr-min", type=float, default=1e-5,
+    parser.add_argument("--gamma", type=float, default=defaults.gamma,
+                         help="trọng số property-consistency loss (mặc định "
+                              "20.0 theo kết quả sweep thật, xem config.py)")
+    parser.add_argument("--prop-loss-scale", type=float, default=defaults.prop_loss_scale,
+                         help="hệ số đưa property loss về cùng thang recon/kl trước khi nhân gamma")
+    parser.add_argument("--lr", type=float, default=defaults.lr)
+    parser.add_argument("--lr-min", type=float, default=defaults.lr_min,
                          help="lr tối thiểu ở cuối CosineAnnealing (0 = tắt schedule, giữ lr cố định)")
-    parser.add_argument("--patience", type=int, default=15,
+    parser.add_argument("--patience", type=int, default=defaults.patience,
                          help="early stopping: dừng nếu val loss không giảm sau N epoch")
-    parser.add_argument("--resolution", type=int, default=64)
+    parser.add_argument("--resolution", type=int, default=defaults.resolution)
+    parser.add_argument("--config-name", type=str, default=None,
+                         help="nếu đặt, lưu config đã dùng vào "
+                              "outputs/phase5/config_{name}.json (để tái lập run này sau)")
     args = parser.parse_args()
+
+    cfg = CVAEConfig(
+        latent_dim=args.latent_dim, condition_dim=2, resolution=args.resolution,
+        channels=defaults.channels, kl_warmup=args.kl_warmup, gamma=args.gamma, 
+        prop_loss_scale=args.prop_loss_scale, epochs=args.epochs,
+        batch_size=args.batch_size, lr=args.lr, lr_min=args.lr_min,
+        patience=args.patience,
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     os.makedirs(PHASE5_DIR, exist_ok=True)
+    if args.config_name:
+        cfg.save(os.path.join(PHASE5_DIR, f"config_{args.config_name}.json"))
 
     train_ds = CVAEDataset(os.path.join(PHASE3_DIR, "train.npz"))
     val_ds = CVAEDataset(os.path.join(PHASE3_DIR, "val.npz"))
@@ -103,7 +123,7 @@ def main():
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
     model = CVAE(condition_dim=2, latent_dim=args.latent_dim,
-                 resolution=args.resolution).to(device)
+                 resolution=args.resolution, channels=cfg.channels).to(device)
     surrogate, target_names = load_frozen_surrogate(device=device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = None
@@ -120,9 +140,11 @@ def main():
         beta = kl_beta_schedule(epoch, args.kl_warmup, beta_max=1.0)
 
         train_stats = run_epoch(model, train_loader, surrogate, target_names,
-                                 optimizer, beta, args.gamma, device, train=True)
+                                 optimizer, beta, args.gamma, args.prop_loss_scale,
+                                 device, train=True)
         val_stats = run_epoch(model, val_loader, surrogate, target_names,
-                               optimizer, beta, args.gamma, device, train=False)
+                               optimizer, beta, args.gamma, args.prop_loss_scale,
+                               device, train=False)
 
         current_lr = optimizer.param_groups[0]["lr"]
         if scheduler is not None:
@@ -147,6 +169,10 @@ def main():
                 "latent_dim": args.latent_dim,
                 "condition_dim": 2,
                 "resolution": args.resolution,
+                "channels": cfg.channels,
+                "gamma": args.gamma,
+                "kl_warmup": args.kl_warmup,
+                "prop_loss_scale": args.prop_loss_scale,
                 "epoch": epoch,
                 "val_loss": best_val,
             }, os.path.join(PHASE5_DIR, "cvae_best.pt"))

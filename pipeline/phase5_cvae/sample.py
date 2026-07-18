@@ -35,7 +35,8 @@ def load_model(device="cpu", ckpt_path=CKPT_PATH):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     model = CVAE(condition_dim=ckpt["condition_dim"],
                  latent_dim=ckpt["latent_dim"],
-                 resolution=ckpt["resolution"])
+                 resolution=ckpt["resolution"],
+                 channels=ckpt.get("channels", (32, 64, 128, 256)))
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()
