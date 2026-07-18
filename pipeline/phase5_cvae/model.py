@@ -136,9 +136,15 @@ class CVAE(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std
 
-    def forward(self, image, condition):
+    def forward(self, image, condition, deterministic: bool = False):
+        """deterministic=True: dùng mu trực tiếp làm z (không sample) - dùng
+        lúc validation để loại bỏ nhiễu ngẫu nhiên khỏi phép so sánh giữa
+        các epoch, giúp chọn checkpoint đáng tin hơn. deterministic=False
+        (mặc định): sample z theo reparameterization trick - dùng lúc
+        train, ĐÚNG chuẩn VAE (cần z ngẫu nhiên để gradient của KL có ý
+        nghĩa và latent space học được cấu trúc liên tục)."""
         mu, logvar = self.encoder(image, condition)
-        z = self.reparameterize(mu, logvar)
+        z = mu if deterministic else self.reparameterize(mu, logvar)
         recon = self.decoder(z, condition)
         return recon, mu, logvar
 
