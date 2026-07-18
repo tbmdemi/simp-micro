@@ -1,0 +1,26 @@
+{
+  "property_accuracy": {
+    "v12": {
+      "mae": 0.10561549663543701,
+      "r2": 0.45018064975738525
+    },
+    "v21": {
+      "mae": 0.10586436837911606,
+      "r2": 0.4402353763580322
+    },
+    "n_samples": 1184
+  },
+  "diversity_check": {
+    "condition": [
+      -0.6,
+      -0.6
+    ],
+    "pixel_std": 0.2735753357410431,
+    "preview": "diversity_v12_-0.60_v21_-0.60.png"
+  },
+  "interpolation": {
+    "idx_a": 0,
+    "idx_b": 1,
+    "preview": "interpolation_0_to_1.png"
+  }
+}
