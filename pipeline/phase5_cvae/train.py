@@ -44,7 +44,7 @@ PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
 def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, device, train: bool):
     model.train(mode=train)
-    totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0}
+    totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0, "prop_weighted": 0.0}
     n = 0
     for image, condition, seed_vec, _volfrac in loader:
         image = image.to(device)
@@ -67,6 +67,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma, de
         totals["recon"] += losses["recon"].item() * bsz
         totals["kl"] += losses["kl"].item() * bsz
         totals["prop"] += losses["prop"].item() * bsz
+        totals["prop_weighted"] += losses["prop_weighted"].item() * bsz
         n += bsz
 
     return {k: v / n for k, v in totals.items()}
@@ -118,9 +119,11 @@ def main():
 
         print(f"[{epoch:03d}/{args.epochs}] beta={beta:.3f} | "
               f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
-              f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} || "
+              f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
+              f"prop_w={train_stats['prop_weighted']:.2f} || "
               f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
-              f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f}")
+              f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
+              f"prop_w={val_stats['prop_weighted']:.2f}")
 
         history.append({"epoch": epoch, "beta": beta,
                          "train": train_stats, "val": val_stats})
