@@ -1,5 +1,5 @@
 """
-Phase 4 - evaluate.py  (roadmap bước 4.3 + 4.4)
+Phase 4 - evaluate.py
 ==================================================
 Đánh giá surrogate model đã train trên test.npz:
   - R², MAE riêng cho từng target (v12, v21, volfrac_achieved)

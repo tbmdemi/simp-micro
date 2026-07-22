@@ -1,5 +1,5 @@
 """
-Phase 4 - train.py  (roadmap bước 4.2)
+Phase 4 - train.py
 ========================================
 Huấn luyện SurrogateCNN trên train.npz, theo dõi val loss, early stopping.
 
@@ -35,7 +35,17 @@ LOSS_WEIGHTS = torch.tensor([1.0, 1.0, 0.3])
 
 
 def weighted_mse(pred, target, weights):
-    per_target_mse = ((pred - target) ** 2).mean(dim=0)  # (3,)
+    """Compute weighted MSE.
+
+    L1: Clamp to [-10, 10] std to prevent NaN from extreme values (early training
+    or degenerate inputs).
+    """
+    # ── L1: prevent NaN from extreme deviations ──
+    pred = torch.nan_to_num(pred, nan=0.0, posinf=10.0, neginf=-10.0)
+    target = torch.nan_to_num(target, nan=0.0, posinf=10.0, neginf=-10.0)
+    diff = pred - target
+    diff = diff.clamp(-10.0, 10.0)  # prevent squared blowup
+    per_target_mse = (diff ** 2).mean(dim=0)  # (3,)
     return (per_target_mse * weights.to(pred.device)).sum(), per_target_mse.detach()
 
 
@@ -55,10 +65,8 @@ def run_epoch(model, loader, optimizer, device, train: bool):
             if train:
                 optimizer.zero_grad()
                 loss.backward()
-                # Gradient clipping: giới hạn norm gradient <= 1.0 để tránh
-                # bước cập nhật quá lớn gây val_loss dao động mạnh giữa các
-                # epoch (quan sát thấy ở lần train đầu: val_loss nhảy
-                # 0.0055 -> 0.030 -> 0.0068 dù train_loss giảm đều).
+                # Giới hạn norm gradient <= 1.0 - không có clip này val_loss
+                # dao động mạnh giữa các epoch dù train_loss giảm đều.
                 torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
@@ -74,9 +82,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=5e-4,
-                         help="LR ban đầu. Giảm từ 1e-3 xuống 5e-4 (mặc định mới) "
-                              "sau khi lần train đầu cho thấy val_loss dao động "
-                              "mạnh giữa các epoch với lr=1e-3.")
+                         help="LR ban đầu (1e-3 gây val_loss dao động mạnh giữa epoch).")
     parser.add_argument("--patience", type=int, default=10,
                          help="Số epoch chờ trước khi early-stop nếu val loss không cải thiện")
     parser.add_argument("--limit", type=int, default=None,

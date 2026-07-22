@@ -44,7 +44,7 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 
 ## Project Status
 
-8-phase inverse-design roadmap. Phases 1-5 complete and validated on real data; Phase 6 onward in progress.
+8-phase inverse-design roadmap. Phases 1-4 complete and validated on real data; Phase 5 baseline trains but **fails real physics verification** (see row below); Phase 6 onward in progress.
 
 | Phase | Component | Status | Notes |
 |-------|-----------|--------|-------|
@@ -53,7 +53,7 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 | 2 | Multi-Batch Adaptive DOE | ✅ Complete | **8/8 batches**, 7,920 samples, **82.1% auxetic**, best ν₁₂ = −0.807. Adaptive pipeline auto-stopped after 2 consecutive batches with no objective improvement |
 | 3 | Dataset Build (density fields + targets) | ✅ Complete | 7,920 samples → 64×64 density fields, outlier-filtered, seed-stratified 70/15/15 split, physics-aware symmetry augmentation (train: 33,120 samples) |
 | 4 | CNN Surrogate Model | ✅ Complete | Predicts (ν₁₂, ν₂₁, volfrac) from density field. Test-set R²: ν₁₂ = 0.910, ν₂₁ = 0.911, volfrac = 0.982 (MAE 0.037 / 0.036 / 0.007). See [Phase 4](#4-cnn-surrogate-model-phase-4) below |
-| 5 | Conditional VAE | ✅ Complete (baseline) | Inverse design: target Poisson ratio → generated geometry. Frozen Phase-4 surrogate used for property-consistency loss; `gamma` (property-loss weight) swept at 1/5/20 — best so far R²(v12)=0.633 at `gamma=20`, **not yet plateaued**, wider sweep (10/30/50) planned. See [Phase 5](#5-conditional-vae-phase-5) below |
+| 5 | Conditional VAE | ⚠️ Baseline trains, **fails real-FE verification** | Inverse design: target Poisson ratio → generated geometry. Frozen Phase-4 surrogate used for property-consistency loss; `gamma` sweep 1→300 shows R²(v12, via surrogate) climbing monotonically to 0.857 with no plateau — but re-evaluating generated geometry with the **real FE solver** (`pipeline/phase5_cvae/verify_fe.py`) gives R²(v12) between **−1.16 and −2.41 at every gamma tested**, and the surrogate-vs-real gap *widens* as gamma increases. This is surrogate exploitation: higher gamma makes the decoder better at fooling the frozen CNN, not at generating real auxetic geometry (true-auxetic hit rate drops from 12/24 at gamma=20 to 4/24 at gamma=300). **The surrogate-only R² numbers below are not reliable evidence of inverse-design capability.** See [Phase 5](#5-conditional-vae-phase-5) below |
 | 6 | cGAN / Conditional Diffusion (optional upgrade) | ⬜ Not started | |
 | 7-8 | Validation, deployment | ⬜ Not started | |
 
@@ -70,7 +70,7 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 - **numpy** ≥ 1.24
 - **scipy** ≥ 1.10
 - **matplotlib** ≥ 3.7 (PNG output)
-- **pandas**, **scikit-learn**, **Pillow** (dataset pipeline, `pipeline/phase3_dataset/`)
+- **pandas**, **scikit-learn**, **Pillow** (dataset pipeline, `pipeline/phase3/`)
 
 ```bash
 pip install numpy scipy matplotlib pandas scikit-learn pillow
@@ -117,9 +117,9 @@ Results are written to `outputs/simp_results_{seed}/`:
 python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 
 # Phase 3: build the ML-ready dataset from completed batches
-python3 pipeline/phase3_dataset/scan_dataset.py
-python3 pipeline/phase3_dataset/build_npz.py --resolution 64
-python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
+python3 pipeline/phase3/scan_dataset.py
+python3 pipeline/phase3/build_npz.py --resolution 64
+python3 pipeline/phase3/finalize_dataset.py --resolution 64
 ```
 
 Output: `outputs/phase3/{train,val,test}.npz` — see [Dataset Build (Phase 3)](#3-dataset-build-density-fields--targets) below.
@@ -170,7 +170,7 @@ Output: `outputs/phase3/{train,val,test}.npz` — see [Dataset Build (Phase 3)](
 │   │   ├── coverage.py                    # KDE density + sparse-region detection
 │   │   └── visualize.py                   # Standalone HTML batch-progression reports
 │   │
-│   └── phase3_dataset/                    # Phase 3: ML dataset construction
+│   └── phase3/                            # Phase 3: ML dataset construction
 │       ├── scan_dataset.py                # Batch results -> manifest.csv (image path + targets)
 │       ├── build_npz.py                   # Resize density PNGs, normalize -> dataset_{res}.npz
 │       ├── augment_symmetry.py            # Physics-aware rotation/flip augmentation
@@ -260,9 +260,9 @@ Parameter ranges converged from the initial `volfrac ∈ [0.45, 0.70]` down to `
 ### 3. Dataset Build (Phase 3) — ✅ complete
 
 ```bash
-python3 pipeline/phase3_dataset/scan_dataset.py       # -> outputs/phase3/manifest.csv
-python3 pipeline/phase3_dataset/build_npz.py --resolution 64   # -> dataset_64.npz
-python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/val/test.npz
+python3 pipeline/phase3/scan_dataset.py       # -> outputs/phase3/manifest.csv
+python3 pipeline/phase3/build_npz.py --resolution 64   # -> dataset_64.npz
+python3 pipeline/phase3/finalize_dataset.py --resolution 64  # -> train/val/test.npz
 ```
 
 - Density field PNGs (616×616, matplotlib `imshow` render of the raw 50×50 `xPhys` grid) resized to 64×64 via box-filter downsampling.
@@ -293,7 +293,7 @@ Per-seed MAE ranges 0.021 (`reentrant_bowtie`) to 0.048 (`square`) — no seed c
 
 If R² < 0.90 on any target, the model doc recommends widening `channels` in `SurrogateCNN` (e.g. `[32,64,128,256] → [64,128,256,512]`) before changing architecture.
 
-### 5. Conditional VAE (Phase 5) — ✅ complete (baseline)
+### 5. Conditional VAE (Phase 5) — ⚠️ baseline trains, fails real-FE verification
 
 ```bash
 python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 50
@@ -311,12 +311,24 @@ Trains on `train.npz` (augmented, 33,120 samples), validates on `val.npz`, and u
 | 5 | 0.450 | 0.106 | 0.274 |
 | 20 | 0.633 | 0.086 | 0.314 |
 
-R² is still rising at `gamma=20` (not plateaued); `pixel_std` dips at `gamma=5` then partially recovers at `gamma=20` — the diversity/property-accuracy trade-off is non-monotonic and needs 1-2 more points (`gamma=10, 30, 50`) to characterize properly. `gamma=20` is the current default/best checkpoint.
+R² kept rising well past `gamma=20` in a wider, since-run sweep (`outputs/phase5/gamma_sweep_results/`): gamma=30→0.60, 50→0.63, 80→0.71, 100→0.76, 150→0.79, 200→0.79, 250→0.81, 300→0.86 — never plateauing.
+
+**⚠️ This R² is not trustworthy — confirmed by real-FE verification.** `pipeline/phase5_cvae/verify_fe.py` (independent of the surrogate: binarizes the generated image, resizes it to the actual FE grid, and runs the real `simp/core/solver.py` + `simp/homogenization/compute.py` to get ground-truth ν₁₂/ν₂₁) shows:
+
+| gamma | R²(v12) via surrogate | R²(v12) via real FE | true-auxetic hit rate (of 24 auxetic-target samples) |
+|---|---|---|---|
+| 1 | −0.42 | **−1.97** | 7/24 |
+| 20 | 0.63 | **−1.16** | 12/24 |
+| 100 | 0.76 | **−2.23** | 6/24 |
+| 300 | 0.86 | **−2.41** | 4/24 |
+
+Real R² is deeply negative at every gamma, and the surrogate-vs-real gap *widens* as gamma increases (surrogate exploitation — the decoder gets better at fooling the frozen CNN, not at generating real auxetic geometry). True-auxetic hit rate is actually *worse* at high gamma than at gamma=20. Full data: `outputs/phase5/fe_verification_report.json`. Before trusting/extending any gamma-sweep result, run `python3 pipeline/phase5_cvae/verify_fe.py --sanity-check` first (must show mean error < 0.05 using each sample's **real** `penal`, not the fixed default) then the full verification.
 
 **Caveats:**
 - Property-consistency loss shows a train/val gap (~0.0005 vs ~0.0013–0.0016 over epochs 33-40 of the `gamma=20` run, roughly 2.5-3×) — mild overfitting specific to property prediction, worth monitoring if training is extended.
 - `property_consistency_loss()` uses the **true** seed one-hot of the original sample as a stand-in for the generated image's seed (no seed label exists for generated geometry yet) — a documented approximation (see code comment in `losses.py`), noted as a TODO for a more general version.
 - No automated tests yet for this module (see [Tests](#tests)).
+- **Next step is not "tune gamma higher"** — it's addressing the surrogate-exploitation gap itself, e.g. periodically retraining/fine-tuning the surrogate on cVAE-generated images (adversarial-style), or replacing the frozen-surrogate loss with the real FE solver in the training loop (differentiable-FE or a REINFORCE-style estimator), or heavier regularization (`--lambda-tv`/`--lambda-bin`) to keep generated geometry within the surrogate's trusted distribution.
 
 ---
 
@@ -417,7 +429,7 @@ pytest tests/ -v
 | Dataset loading & auxetic classification | ✅ |
 | Logger CSV formatting | ✅ |
 
-> Coverage still pending for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`, `pipeline/phase3_dataset/`, **and — highest priority — `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/`**, which currently have zero automated tests despite being the most recently added and actively iterated-on modules (e.g. the `PROP_LOSS_SCALE`/`gamma` fix in Phase 5 has no regression test guarding it).
+> `tests/test_core_smoke.py` already has smoke-level (shape/no-crash, not deep-correctness) coverage for `solver.py`, `homogenization/compute.py`, `objectives/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`. Still zero automated tests for `seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/`, **and — highest priority — `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/`**, which currently have zero automated tests despite being the most recently added and actively iterated-on modules.
 
 ---
 

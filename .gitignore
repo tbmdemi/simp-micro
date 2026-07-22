@@ -117,3 +117,6 @@ environment.yaml
 .tox/
 
 *.pt
+
+# --- pytest's output---
+outputs/simp_results_circle/
