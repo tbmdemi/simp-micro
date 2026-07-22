@@ -130,12 +130,16 @@ def main():
     for epoch in range(1, args.epochs + 1):
         beta = kl_beta_schedule(epoch, args.kl_warmup, beta_max=1.0)
 
-        train_stats = run_epoch(model, train_loader, surrogate, target_names,
-                                 optimizer, beta, args.gamma,
-                                 args.lambda_tv, args.lambda_bin, device, train=True)
-        val_stats = run_epoch(model, val_loader, surrogate, target_names,
-                               optimizer, beta, args.gamma,
-                               args.lambda_tv, args.lambda_bin, device, train=False)
+        train_stats = run_epoch(
+            model, train_loader, surrogate, target_names,
+            optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
+            args.lambda_tv, args.lambda_bin, device, train=True
+        )
+        val_stats = run_epoch(
+            model, val_loader, surrogate, target_names,
+            optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
+            args.lambda_tv, args.lambda_bin, device, train=False
+        )
 
         current_lr = optimizer.param_groups[0]["lr"]
         if scheduler is not None:
