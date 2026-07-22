@@ -108,6 +108,25 @@ def property_consistency_loss(
     return F.mse_loss(pred_cond, condition)
 
 
+def tv_loss(recon: torch.Tensor) -> torch.Tensor:
+    """Total-variation: phạt biến thiên pixel đột ngột giữa các ô lân cận
+    (ngang + dọc). Đây là vai trò tương đương density filter trong SIMP
+    truyền thống (lọc trung bình lân cận để loại checkerboard) - ép decoder
+    sinh vùng liên tục thay vì nhiễu hạt ngẫu nhiên. Thang giá trị: trung
+    bình |chênh lệch pixel| trên toàn batch, nằm trong [0, 1]."""
+    dh = torch.abs(recon[:, :, 1:, :] - recon[:, :, :-1, :]).mean()
+    dw = torch.abs(recon[:, :, :, 1:] - recon[:, :, :, :-1]).mean()
+    return dh + dw
+
+
+def binarization_loss(recon: torch.Tensor) -> torch.Tensor:
+    """Phạt pixel nằm giữa 0 và 1 (cực đại tại 0.5, = 0 tại 0 hoặc 1) - ép
+    ảnh về gần nhị phân, đúng bản chất vật lý density field (0=rỗng,
+    1=vật liệu), đồng thời gián tiếp chống nhiễu grayscale ngẫu nhiên vì
+    nhiễu thường nằm ở vùng giá trị trung gian."""
+    return (recon * (1 - recon)).mean()
+
+
 # CHẠY THẬT ĐẦU TIÊN CHO THẤY: prop ~ O(0.01-0.05) trong khi recon ~ O(1000)
 # - chênh nhau ~5 bậc độ lớn. Với gamma=1 mặc định (bản cũ), gamma*prop gần
 # như KHÔNG có tiếng nói trong gradient tổng, nên lúc train `prop` giảm đều
@@ -115,39 +134,45 @@ def property_consistency_loss(
 # evaluate.py sample z~N(0,1) thật sự (không "ăn gian" bằng z suy ra từ ảnh
 # gốc như lúc train) thì property accuracy lộ ra rất tệ (R2 âm).
 #
-# Sửa: nhân prop với hệ số cố định (mặc định 1000.0, xem config.py
-# `CVAEConfig.prop_loss_scale`) để đưa nó về gần thang recon/kl TRƯỚC khi
-# nhân với gamma. Việc này giữ nguyên ý nghĩa của gamma (gamma=1 vẫn là
-# "trọng số cơ sở hợp lý", không phải phải tự dò con số hàng trăm/nghìn) và
-# KHÔNG đụng vào cân bằng recon/kl đã ổn định.
-# Giữ lại hằng số này làm default để không phá vỡ code cũ gọi cvae_loss()
-# không truyền prop_loss_scale.
+# Sửa: nhân prop với hệ số cố định PROP_LOSS_SCALE để đưa nó về gần thang
+# recon/kl TRƯỚC khi nhân với gamma. Việc này giữ nguyên ý nghĩa của gamma
+# (gamma=1 vẫn là "trọng số cơ sở hợp lý", không phải phải tự dò con số
+# hàng trăm/nghìn) và KHÔNG đụng vào cân bằng recon/kl đã ổn định.
 PROP_LOSS_SCALE = 1000.0
 
 
 def cvae_loss(
     recon, image, mu, logvar, condition, seed_vec,
     surrogate, target_names, beta: float, gamma: float = 1.0,
-    prop_loss_scale: float = PROP_LOSS_SCALE,
+    lambda_tv: float = 0.0, lambda_bin: float = 0.0,
 ):
-    """Tổng hợp 3 thành phần. Trả về dict để log riêng từng loss trong train.py.
+    """Tổng hợp các thành phần. Trả về dict để log riêng từng loss trong train.py.
     gamma: hệ số trọng số CHO PHẦN NHÂN THÊM vào property-consistency loss
-    (đã được prop_loss_scale đưa về cùng thang recon/kl), mặc định 1.0.
+    (đã được PROP_LOSS_SCALE đưa về cùng thang recon/kl), mặc định 1.0.
     Tăng gamma nếu muốn ưu tiên đúng Poisson ratio hơn chất lượng ảnh tái
     tạo, giảm nếu thấy recon bị "hy sinh" quá nhiều (ảnh sinh ra mờ/nhoè).
-    prop_loss_scale: nên lấy từ CVAEConfig thay vì sửa hằng số PROP_LOSS_SCALE
-    trực tiếp trong file này - xem pipeline/phase5_cvae/config.py."""
+
+    lambda_tv, lambda_bin: mặc định 0.0 (TẮT) để không phá baseline cũ
+    (gamma=1..300 đã chạy trước khi có 2 loss này). Bật lên (ví dụ thử
+    0.001-0.01 trước) khi nghi ngờ gamma cao đang khiến decoder sinh
+    density field nhiễu/không hợp lý vật lý để "đánh lừa" surrogate -
+    xem ghi chú trong docstring đầu file."""
     recon_l = reconstruction_loss(recon, image)
     kl_l = kl_divergence(mu, logvar)
     prop_l = property_consistency_loss(
         recon, condition, seed_vec, surrogate, target_names
     )
-    total = recon_l + beta * kl_l + gamma * prop_loss_scale * prop_l
+    tv_l = tv_loss(recon)
+    bin_l = binarization_loss(recon)
+    total = (recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
+             + lambda_tv * tv_l + lambda_bin * bin_l)
     return {
         "total": total,
         "recon": recon_l.detach(),
         "kl": kl_l.detach(),
-        "prop": prop_l.detach(),
-        "prop_weighted": (gamma * prop_loss_scale * prop_l).detach(),
+        "prop": prop_l.detach(),                                  # thang gốc (Poisson-ratio MSE), để dễ hiểu ý nghĩa vật lý
+        "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
+        "tv": tv_l.detach(),
+        "binarization": bin_l.detach(),
         "beta": beta,
     }
