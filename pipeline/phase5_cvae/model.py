@@ -122,13 +122,18 @@ class Decoder(nn.Module):
 
 
 class CVAE(nn.Module):
-    def __init__(self, condition_dim=2, latent_dim=32, resolution=64):
+    def __init__(self, condition_dim=2, latent_dim=32, resolution=64,
+                 channels=(32, 64, 128, 256)):
+        """channels: kênh của encoder theo thứ tự tăng dần (VD (32,64,128,256)).
+        Decoder tự dùng channels đảo ngược. Nên set qua CVAEConfig.channels
+        (config.py) thay vì sửa default ở đây, để đồng bộ với checkpoint đã
+        lưu (train.py lưu channels vào checkpoint - xem sample.py/load_model)."""
         super().__init__()
         self.latent_dim = latent_dim
         self.encoder = Encoder(condition_dim, latent_dim,
-                                resolution=resolution)
+                                channels=tuple(channels), resolution=resolution)
         self.decoder = Decoder(condition_dim, latent_dim,
-                                resolution=resolution)
+                                channels=tuple(reversed(channels)), resolution=resolution)
 
     @staticmethod
     def reparameterize(mu, logvar):

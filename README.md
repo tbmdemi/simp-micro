@@ -44,7 +44,7 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 
 ## Project Status
 
-8-phase inverse-design roadmap. Phases 1-3 complete and validated on real data; Phase 4 onward in progress.
+8-phase inverse-design roadmap. Phases 1-5 complete and validated on real data; Phase 6 onward in progress.
 
 | Phase | Component | Status | Notes |
 |-------|-----------|--------|-------|
@@ -52,12 +52,13 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 | 1 | LHS Screening | ✅ Complete | Initial run produced **0 auxetic samples** — root-caused to a Poisson-ratio formula error under rotation and an FE displacement bug; both fixed (see [Key Bugfixes](#key-bugfixes)) |
 | 2 | Multi-Batch Adaptive DOE | ✅ Complete | **8/8 batches**, 7,920 samples, **82.1% auxetic**, best ν₁₂ = −0.807. Adaptive pipeline auto-stopped after 2 consecutive batches with no objective improvement |
 | 3 | Dataset Build (density fields + targets) | ✅ Complete | 7,920 samples → 64×64 density fields, outlier-filtered, seed-stratified 70/15/15 split, physics-aware symmetry augmentation (train: 33,120 samples) |
-| 4 | CNN Surrogate Model | ⬜ Not started | Predict (ν₁₂, ν₂₁, volfrac) from density field |
-| 5 | Conditional VAE | ⬜ Not started | Inverse design: target Poisson ratio → generated geometry |
+| 4 | CNN Surrogate Model | ✅ Complete | Predicts (ν₁₂, ν₂₁, volfrac) from density field. Test-set R²: ν₁₂ = 0.910, ν₂₁ = 0.911, volfrac = 0.982 (MAE 0.037 / 0.036 / 0.007). See [Phase 4](#4-cnn-surrogate-model-phase-4) below |
+| 5 | Conditional VAE | ✅ Complete (baseline) | Inverse design: target Poisson ratio → generated geometry. Frozen Phase-4 surrogate used for property-consistency loss; `gamma` (property-loss weight) swept at 1/5/20 — best so far R²(v12)=0.633 at `gamma=20`, **not yet plateaued**, wider sweep (10/30/50) planned. See [Phase 5](#5-conditional-vae-phase-5) below |
 | 6 | cGAN / Conditional Diffusion (optional upgrade) | ⬜ Not started | |
 | 7-8 | Validation, deployment | ⬜ Not started | |
 
 > Detailed phase breakdown (2.1-2.9, 3.1-3.6, etc.) tracked in the project workflow dashboard (see [Documentation](#documentation)).
+> **Known gaps carried into Phase 6+:** (1) `mu` penalty in the auxetic objective is still disabled (`mu=0.0`), redesign pending; (2) homogenization does not yet export stiffness (`E₁₁/E₀`, `E₂₂/E₀`), so the original roadmap's `f1, f2` multi-objective targets are not available to Phase 4/5; (3) no automated tests exist yet for `pipeline/phase4_surrogate/` or `pipeline/phase5_cvae/`; (4) the `train`-vs-`val` gap on the property-consistency loss term (~2.5–3×, epochs 33-40 of the gamma=20 run) suggests mild overfitting specific to property prediction and should be monitored in future training runs.
 
 ---
 
@@ -220,7 +221,7 @@ penalty: activates when Q₁₁ or Q₂₂ < δ = 0.1·volfrac·E₀, normalized
 
 ---
 
-## Pipeline: Screening → Multi-Batch DOE → Dataset
+## Pipeline: Screening → Multi-Batch DOE → Dataset → Surrogate → cVAE
 
 ### 1. LHS Screening (Phase 1)
 
@@ -269,6 +270,53 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 - **Train/val/test split: 70/15/15, stratified by seed geometry** (all 11 seeds represented proportionally in every split).
 - **Physics-aware symmetry augmentation** applied to train only: 90°/270° rotation swaps `ν₁₂ ↔ ν₂₁` (unit-cell axes exchange roles); 180° rotation and horizontal/vertical flips preserve `ν₁₂, ν₂₁`. Train set: 5,520 → 33,120 samples (×6).
 - Targets currently exported: `v12`, `v21`, `volfrac_achieved`. **Note:** the original roadmap's `f1, f2` properties are not yet computed by the homogenization module — only `ν₁₂`/`ν₂₁` exist today. Extending `compute_homogenized_tensor()` to output normalized stiffness (e.g. `E₁₁/E₀`, `E₂₂/E₀`) is required before `f1, f2` can be added as surrogate/cVAE targets.
+
+### 4. CNN Surrogate Model (Phase 4) — ✅ complete
+
+```bash
+python3 pipeline/phase4_surrogate/train.py
+python3 pipeline/phase4_surrogate/evaluate.py
+python3 pipeline/phase4_surrogate/export_for_phase5.py
+```
+
+Architecture ("Phương án A" baseline): 4× `Conv(3x3) + BatchNorm + ReLU + MaxPool` blocks → global average pool → concat seed one-hot → 2 FC layers → 3 outputs (ν₁₂, ν₂₁, volfrac_achieved). Trained on `outputs/phase3/train.npz`, validated on `val.npz`.
+
+**Test-set performance** (`outputs/phase4/evaluation_report.json`, held-out `test.npz`, no leakage):
+
+| Target | R² | MAE |
+|---|---|---|
+| ν₁₂ | 0.910 | 0.037 |
+| ν₂₁ | 0.911 | 0.036 |
+| volfrac_achieved | 0.982 | 0.007 |
+
+Per-seed MAE ranges 0.021 (`reentrant_bowtie`) to 0.048 (`square`) — no seed catastrophically underperforms despite `reentrant_bowtie`/`hexagonal` having the lowest auxetic yield in Phase 2. Per-bin error is roughly flat across the ν₁₂ range, with the single most-negative bin (`[-0.8,-0.6)`, n=1) too sparse to draw conclusions from.
+
+If R² < 0.90 on any target, the model doc recommends widening `channels` in `SurrogateCNN` (e.g. `[32,64,128,256] → [64,128,256,512]`) before changing architecture.
+
+### 5. Conditional VAE (Phase 5) — ✅ complete (baseline)
+
+```bash
+python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 50
+python3 pipeline/phase5_cvae/evaluate.py
+python3 pipeline/phase5_cvae/sample.py
+```
+
+Trains on `train.npz` (augmented, 33,120 samples), validates on `val.npz`, and uses the **frozen** Phase-4 surrogate to compute a property-consistency loss against the sampled geometry. Total loss: `recon + beta·kl + gamma·PROP_LOSS_SCALE·prop_loss`, with `PROP_LOSS_SCALE = 1000` fixed to bring `prop_loss` (~O(0.01–0.05)) onto the same scale as `recon_loss` (~O(1000)) — without this scaling, `gamma=1` effectively zeroes out the property gradient (see [Key Bugfixes](#key-bugfixes)).
+
+**`gamma` sweep** (property-loss weight; not to be confused with `--beta`, the KL weight), evaluated at test time with `z ~ N(0, 1)` (no encoder leakage):
+
+| gamma | R² (ν₁₂) | MAE (ν₁₂) | pixel_std (diversity @ v12=v21=-0.6) |
+|---|---|---|---|
+| 1 | −0.418 | 0.174 | 0.326 |
+| 5 | 0.450 | 0.106 | 0.274 |
+| 20 | 0.633 | 0.086 | 0.314 |
+
+R² is still rising at `gamma=20` (not plateaued); `pixel_std` dips at `gamma=5` then partially recovers at `gamma=20` — the diversity/property-accuracy trade-off is non-monotonic and needs 1-2 more points (`gamma=10, 30, 50`) to characterize properly. `gamma=20` is the current default/best checkpoint.
+
+**Caveats:**
+- Property-consistency loss shows a train/val gap (~0.0005 vs ~0.0013–0.0016 over epochs 33-40 of the `gamma=20` run, roughly 2.5-3×) — mild overfitting specific to property prediction, worth monitoring if training is extended.
+- `property_consistency_loss()` uses the **true** seed one-hot of the original sample as a stand-in for the generated image's seed (no seed label exists for generated geometry yet) — a documented approximation (see code comment in `losses.py`), noted as a TODO for a more general version.
+- No automated tests yet for this module (see [Tests](#tests)).
 
 ---
 
@@ -369,7 +417,7 @@ pytest tests/ -v
 | Dataset loading & auxetic classification | ✅ |
 | Logger CSV formatting | ✅ |
 
-> Coverage still pending for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`, and the new `pipeline/phase3_dataset/` scripts.
+> Coverage still pending for `solver.py`, `homogenization/compute.py`, individual `objectives/*.py`, `seeds/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`, `pipeline/phase3_dataset/`, **and — highest priority — `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/`**, which currently have zero automated tests despite being the most recently added and actively iterated-on modules (e.g. the `PROP_LOSS_SCALE`/`gamma` fix in Phase 5 has no regression test guarding it).
 
 ---
 
@@ -387,11 +435,14 @@ pytest tests/ -v
 
 ## Documentation
 
-Additional dashboards, guides, and technical reports live under `html/` — see [`html/index.html`](html/index.html) for the full index. Note: some dashboard/report pages (`html/dashboards/`, `html/reports/`, `html/guides/`) reflect Phase 1 screening only and have **not yet been regenerated** against the completed Phase 2/3 results in this README. Treat their specific numbers as historical unless regenerated.
+Additional dashboards, guides, and technical reports live under `html/` — see [`html/index.html`](html/index.html) for the full index. Note: some dashboard/report pages (`html/dashboards/`, `html/reports/`, `html/guides/`) reflect Phase 1 screening only and have **not yet been regenerated** against the completed Phase 2-5 results in this README. Treat their specific numbers as historical unless regenerated.
 
 - `pipeline/REVIEW_ALGORITHMS_VI.md` — algorithm review (Vietnamese)
 - `outputs/multi_batch/reports/batch_progression.html` — auto-generated Phase 2 batch progression report
 - `outputs/phase3/manifest.csv`, `split_report.json` — Phase 3 dataset build artifacts
+- `outputs/phase4/evaluation_report.json`, `train_history.json` — Phase 4 surrogate results
+- `outputs/phase5/evaluation_report.json`, `eval_gamma{1,5,20}.json`, `train_history.json`, `diagnostics/` — Phase 5 cVAE results, including the gamma sweep
+- `notebooks/04_phase4_surrogate_analysis.ipynb`, `notebooks/05_phase5_cvae_analysis.ipynb`, `notebooks/06_phase1_to_phase5_pipeline_summary.ipynb` — end-to-end analysis notebooks
 
 ---
 
