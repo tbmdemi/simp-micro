@@ -1,5 +1,5 @@
 """
-Phase 5 - train.py  (roadmap bước 5.4)
+Phase 5 - train.py
 =========================================
 Train cVAE baseline trên outputs/phase3/train.npz (đã augment, 33,120 mẫu),
 validate trên val.npz, dùng surrogate frozen (Phase 4) cho property loss.

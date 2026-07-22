@@ -1,25 +1,19 @@
 """
 Phase 3 - Script 3/4: Data augmentation bằng đối xứng hình học/vật lý.
 
-Cơ sở vật lý (bước 3.3-3.4 trong roadmap):
-  - Ô đơn vị (unit cell) tuần hoàn dưới tải trục 1 và trục 2. Nếu ta xoay
-    ảnh density 90 độ, trục 1 và trục 2 hoán đổi vai trò cho nhau
-    => v12_new = v21_old, v21_new = v12_old.
-  - Lật ngang (flip trái-phải) hoặc lật dọc (flip trên-dưới) giữ nguyên
-    trục 1 và trục 2 riêng biệt => v12, v21 KHÔNG đổi (với giả thiết tải
-    đối xứng qua trục, đúng với thiết lập homogenization chuẩn dùng ở đây).
-  - Xoay 180 độ = lật ngang + lật dọc => v12, v21 không đổi.
+Cơ sở vật lý: ô đơn vị (unit cell) tuần hoàn dưới tải trục 1 và trục 2.
+  - Xoay 90/270 độ: trục 1 và trục 2 hoán đổi vai trò => v12_new = v21_old,
+    v21_new = v12_old.
+  - Lật ngang/dọc, xoay 180 độ: trục không hoán đổi => v12, v21 giữ nguyên
+    (giả thiết tải đối xứng qua trục, đúng với homogenization chuẩn ở đây).
 
-QUAN TRỌNG: augmentation này chỉ áp dụng packages hợp lệ vật lý (rotate90,
-rotate180, rotate270, flip_h, flip_v, và tổ hợp) - KHÔNG áp dụng các phép
-biến đổi tuỳ ý (VD shear, cắt xén) vì sẽ phá vỡ tính đúng đắn vật lý.
+Chỉ áp dụng các phép hợp lệ vật lý (rotate90/180/270, flip_h, flip_v, tổ hợp)
+- KHÔNG áp dụng phép biến đổi tuỳ ý (vd shear, cắt xén) vì sẽ phá vỡ tính
+đúng đắn vật lý.
 
-Áp dụng CHỈ trên tập train (để tránh leakage giữa các phiên bản đối xứng
-của cùng 1 mẫu vào cả train và val/test).
-
-Output: outputs/phase3/dataset_{RES}_train_augmented.npz (ghi đè/bổ sung
-vào bước split ở script 4 - script này được gọi TỪ script 4, không chạy
-độc lập trên toàn bộ dataset).
+Áp dụng CHỈ trên tập train (tránh leakage giữa các phiên bản đối xứng của
+cùng 1 mẫu vào cả train và val/test). Được gọi TỪ script 4 (finalize_dataset.py),
+không chạy độc lập trên toàn bộ dataset.
 """
 import numpy as np
 

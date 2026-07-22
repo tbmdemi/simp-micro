@@ -1,5 +1,5 @@
 """
-Phase 4 - export_for_phase5.py  (roadmap bước 4.5)
+Phase 4 - export_for_phase5.py
 =====================================================
 Đóng gói surrogate model đã train thành 1 file duy nhất, tự chứa đủ thông
 tin để Phase 5 (cVAE) load và dùng làm property-consistency loss mà

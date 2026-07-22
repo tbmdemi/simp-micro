@@ -15,6 +15,11 @@ Output: outputs/phase5/samples/v12_-0.60_v21_-0.60/sample_XX.png
 LƯU Ý: chỉ nên request v12 trong khoảng ~[-0.81, 0.37] (phạm vi dataset
 train, xem usage_note trong outputs/phase4/surrogate_for_phase5.pt). Ngoài
 khoảng này là ngoại suy, surrogate + cVAE đều không đáng tin.
+
+CẢNH BÁO: verify_fe.py đã xác nhận ảnh sinh ra bởi bất kỳ checkpoint nào
+(gamma 1-300) thường KHÔNG đạt đúng Poisson ratio thật khi kiểm bằng FE -
+xem outputs/phase5/fe_verification_report.json. Luôn verify FE thật trước
+khi dùng ảnh từ script này cho mục đích thực tế.
 """
 import os
 import sys

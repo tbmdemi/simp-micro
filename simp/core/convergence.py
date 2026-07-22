@@ -159,12 +159,9 @@ class ConvergenceChecker:
             self.obj_changes, self.window_obj, self.tol_obj,
         )
 
-        # Hội tụ khi thiết kế ổn định (mạnh) hoặc khi objective ổn định
-        # lâu dài (yếu hơn, cần cẩn thận).
-        # Lưu ý: điều kiện (obj_converged and change <= self.tol_change * 2)
-        # là heuristic không chuẩn. Trong SIMP chuẩn, chỉ cần design change
-        # hội tụ là đủ. Điều kiện bổ sung này giúp dừng sớm khi objective
-        # đã ổn định nhưng design change còn dao động nhỏ.
+        # Hội tụ khi design ổn định (tiêu chí chuẩn), HOẶC khi objective ổn
+        # định lâu dài và design change đã đủ nhỏ - heuristic bổ sung để
+        # dừng sớm, không phải tiêu chí SIMP chuẩn.
         if design_converged or (obj_converged and change <= self.tol_change * 2):
             self.converged = True
             return True
