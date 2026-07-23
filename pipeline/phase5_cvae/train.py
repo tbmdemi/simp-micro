@@ -36,6 +36,7 @@ from model import CVAE                     # noqa: E402
 from dataset import CVAEDataset            # noqa: E402
 from losses import (                       # noqa: E402
     cvae_loss, kl_beta_schedule, load_frozen_surrogate,
+    load_frozen_surrogate_ensemble,
 )
 from verify_fe import (                    # noqa: E402
     FE_PARAMS, resize_to_fe_grid, evaluate_density_field,
@@ -79,10 +80,11 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
 
 
 def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
-              lambda_tv, lambda_bin, device, train: bool):
+              lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
-              "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0}
+              "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
+              "disagreement": 0.0}
     n = 0
     for image, condition, seed_vec, _volfrac in loader:
         image = image.to(device)
@@ -96,6 +98,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
                 recon, image, mu, logvar, condition, seed_vec,
                 surrogate, target_names, beta=beta, gamma=gamma,
                 lambda_tv=lambda_tv, lambda_bin=lambda_bin,
+                lambda_disagreement=lambda_disagreement,
             )
             if train:
                 optimizer.zero_grad()
@@ -109,6 +112,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         totals["prop_weighted"] += losses["prop_weighted"].item() * bsz
         totals["tv"] += losses["tv"].item() * bsz
         totals["binarization"] += losses["binarization"].item() * bsz
+        totals["disagreement"] += float(losses["disagreement"]) * bsz
         n += bsz
 
     return {k: v / n for k, v in totals.items()}
@@ -138,7 +142,19 @@ def main():
     parser.add_argument("--surrogate-path", type=str, default=None,
                          help="Đường dẫn surrogate_for_phase5.pt khác mặc định "
                               "(vd checkpoint đã fine-tune đối kháng ở 1 vòng self-play). "
-                              "Bỏ trống = dùng SURROGATE_PATH mặc định trong losses.py.")
+                              "Bỏ trống = dùng SURROGATE_PATH mặc định trong losses.py. "
+                              "Bỏ qua nếu dùng --surrogate-paths (ensemble).")
+    parser.add_argument("--surrogate-paths", type=str, nargs="*", default=None,
+                         help="2+ đường dẫn surrogate_for_phase5.pt độc lập (vd huấn "
+                              "luyện với khởi tạo/seed khác nhau) - dùng ENSEMBLE thay "
+                              "vì 1 surrogate đông cứng: property loss = MSE(trung bình "
+                              "dự đoán, target) + lambda-disagreement * phương sai giữa "
+                              "các surrogate. Biện pháp cấu trúc chống exploitation, "
+                              "khó đánh lừa đồng thời N mô hình độc lập hơn 1 mô hình.")
+    parser.add_argument("--lambda-disagreement", type=float, default=0.0,
+                         help="Trọng số phạt phương sai giữa các surrogate trong "
+                              "ensemble (chỉ có tác dụng khi dùng --surrogate-paths). "
+                              "0.0 = chỉ dùng trung bình, không phạt bất đồng.")
     parser.add_argument("--resume-from", type=str, default=None,
                          help="Checkpoint cVAE (.pt) để load model_state_dict trước khi "
                               "train tiếp, thay vì khởi tạo ngẫu nhiên (self-play).")
@@ -180,7 +196,17 @@ def main():
         print(f"Đã load trọng số từ {args.resume_from} "
               f"(epoch={resume_ckpt.get('epoch')}, val_loss={resume_ckpt.get('val_loss')}) "
               f"- train tiếp thay vì khởi tạo ngẫu nhiên.")
-    if args.surrogate_path:
+    if args.surrogate_paths:
+        assert len(args.surrogate_paths) >= 2, (
+            "--surrogate-paths cần >= 2 checkpoint để tạo ensemble có ý nghĩa "
+            "(1 checkpoint thì dùng --surrogate-path thay vào)."
+        )
+        surrogate, target_names = load_frozen_surrogate_ensemble(
+            args.surrogate_paths, device=device
+        )
+        print(f"Ensemble surrogate: {len(surrogate)} model độc lập "
+              f"({args.surrogate_paths}), lambda_disagreement={args.lambda_disagreement}")
+    elif args.surrogate_path:
         surrogate, target_names = load_frozen_surrogate(device=device, path=args.surrogate_path)
     else:
         surrogate, target_names = load_frozen_surrogate(device=device)
@@ -212,12 +238,14 @@ def main():
         train_stats = run_epoch(
             model, train_loader, surrogate, target_names,
             optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
-            args.lambda_tv, args.lambda_bin, device, train=True
+            args.lambda_tv, args.lambda_bin, device, train=True,
+            lambda_disagreement=args.lambda_disagreement,
         )
         val_stats = run_epoch(
             model, val_loader, surrogate, target_names,
             optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
-            args.lambda_tv, args.lambda_bin, device, train=False
+            args.lambda_tv, args.lambda_bin, device, train=False,
+            lambda_disagreement=args.lambda_disagreement,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
@@ -228,11 +256,11 @@ def main():
               f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
               f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
               f"prop_w={train_stats['prop_weighted']:.2f} tv={train_stats['tv']:.4f} "
-              f"bin={train_stats['binarization']:.4f} || "
+              f"bin={train_stats['binarization']:.4f} disagree={train_stats['disagreement']:.5f} || "
               f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
               f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
               f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
-              f"bin={val_stats['binarization']:.4f}")
+              f"bin={val_stats['binarization']:.4f} disagree={val_stats['disagreement']:.5f}")
 
         fe_r2 = None
         if fe_eval_conditions is not None and epoch % args.fe_eval_every == 0:

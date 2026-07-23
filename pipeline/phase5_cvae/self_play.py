@@ -71,9 +71,20 @@ PHASE5_TRAIN = os.path.join(REPO_ROOT, "pipeline", "phase5_cvae", "train.py")
 
 def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
                   device: str, seed: int = 123):
-    """Chấm điểm 1 checkpoint cVAE bằng FE thật trên test.npz - dùng conditions
-    RIÊNG (seed khác) với những gì adversarial_dataset.py dùng để sinh dữ liệu
-    train surrogate, để không đánh giá trên chính tập đã "dạy" surrogate."""
+    """Chấm điểm 1 checkpoint cVAE bằng FE thật trên test.npz. `seed` PHẢI cố
+    định giống nhau ở mọi lần gọi (mọi round) để so sánh round-với-round là
+    apples-to-apples trên CÙNG 1 tập condition - test.npz vốn đã tách biệt
+    hoàn toàn với train.npz (nguồn condition của adversarial_dataset.py), nên
+    không cần đổi seed mỗi round để "tránh trùng" như bản trước từng làm
+    (đó là lỗi: mỗi round vô tình bị chấm trên 1 tập con test khác nhau,
+    khiến kết quả round-over-round bị nhiễu bởi độ khó tập test, không chỉ
+    bởi chất lượng checkpoint). Cũng cố định torch.manual_seed(seed) trước
+    khi generate - model.generate() lấy mẫu z ~ N(0,1) từ RNG toàn cục
+    (model.py không tự seed), nên KHÔNG cố định sẽ khiến chấm cùng 1
+    checkpoint 2 lần ra 2 kết quả khác nhau (thêm 1 trục nhiễu độc lập với
+    trục "tập condition" ở trên) - cả 2 đều phải cố định để so sánh
+    round-over-round có ý nghĩa."""
+    torch.manual_seed(seed)
     test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
     rng = np.random.default_rng(seed)
     idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
@@ -123,15 +134,27 @@ def run(args):
     surrogate_ckpt = args.start_surrogate_ckpt
     cvae_ckpt = args.start_cvae_ckpt
 
-    print("=== Round 0 (baseline, trước self-play) ===")
-    baseline = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device)
-    print(f"  R2(FE)={baseline['r2_fe_v12']:.4f} hit_rate={baseline['hit_rate']:.3f} "
-          f"({baseline['n_auxetic_targets']} auxetic targets)")
-    summary = [{"round": 0, "cvae_ckpt": cvae_ckpt, "surrogate_ckpt": surrogate_ckpt,
-                **baseline}]
+    summary_path = os.path.join(SELF_PLAY_DIR, "summary.json")
+    summary = []
+    if args.start_round > 1 and os.path.exists(summary_path):
+        with open(summary_path) as f:
+            summary = json.load(f)
+        print(f"=== Tiếp tục self-play từ round {args.start_round} "
+              f"({len(summary)} round trước đó đã có trong {summary_path}) ===")
+        last = summary[-1]
+        print(f"  Round cuối trước đó ({last['round']}): "
+              f"R2(FE)={last['r2_fe_v12']:.4f} hit_rate={last['hit_rate']:.3f}")
+    else:
+        print("=== Round 0 (baseline, trước self-play) ===")
+        baseline = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device)
+        print(f"  R2(FE)={baseline['r2_fe_v12']:.4f} hit_rate={baseline['hit_rate']:.3f} "
+              f"({baseline['n_auxetic_targets']} auxetic targets)")
+        summary = [{"round": 0, "cvae_ckpt": cvae_ckpt, "surrogate_ckpt": surrogate_ckpt,
+                    **baseline}]
 
-    for k in range(1, args.rounds + 1):
-        print(f"\n=== Round {k}/{args.rounds} ===")
+    end_round = args.start_round + args.rounds - 1
+    for k in range(args.start_round, end_round + 1):
+        print(f"\n=== Round {k}/{end_round} ===")
         round_dir = os.path.join(SELF_PLAY_DIR, f"round{k}")
         os.makedirs(round_dir, exist_ok=True)
 
@@ -147,6 +170,7 @@ def run(args):
         cmd = [
             sys.executable, PHASE4_TRAIN,
             "--adversarial-npz", adv_npz,
+            "--adversarial-oversample", str(args.adv_oversample),
             "--init-from", surrogate_ckpt,
             "--epochs", str(args.ft_epochs),
             "--patience", str(max(3, args.ft_epochs // 3)),
@@ -171,15 +195,18 @@ def run(args):
             "--patience", str(max(3, args.cvae_epochs // 3)),
             "--fe-eval-every", str(args.fe_eval_every),
             "--select-by", "fe_r2",
+            "--lambda-tv", str(args.lambda_tv),
+            "--lambda-bin", str(args.lambda_bin),
             "--output-name", cvae_name,
         ]
         print("  $", " ".join(cmd))
         subprocess.run(cmd, check=True, cwd=REPO_ROOT)
         cvae_ckpt = os.path.join(PHASE5_DIR, cvae_name)
 
-        # 5. Verify vòng này bằng FE thật (conditions riêng, seed khác bước 1)
-        result = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device,
-                               seed=123 + k)
+        # 5. Verify vòng này bằng FE thật - CÙNG 1 tập condition cố định mọi
+        # round (seed mặc định của verify_round) để so sánh round-over-round
+        # không bị nhiễu bởi tập test khác nhau (xem docstring verify_round).
+        result = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device)
         print(f"  --> R2(FE)={result['r2_fe_v12']:.4f} hit_rate={result['hit_rate']:.3f}")
         summary.append({"round": k, "cvae_ckpt": cvae_ckpt, "surrogate_ckpt": surrogate_ckpt,
                          **result})
@@ -203,6 +230,12 @@ def main():
                               "khác --seeds-per-condition (dùng lúc sinh dữ liệu train "
                               "surrogate ở bước 1).")
     parser.add_argument("--seeds-per-condition", type=int, default=2)
+    parser.add_argument("--adv-oversample", type=int, default=40,
+                         help="Số lần lặp mỗi mẫu đối kháng khi fine-tune surrogate "
+                              "(xem --adversarial-oversample của phase4 train.py). "
+                              "Mặc định trước đây là 1 lần (~0.1%% batch, vô hình) - "
+                              "40 đưa tỉ trọng lên mức đáng kể mà không lấn át "
+                              "hoàn toàn 33k mẫu thật.")
     parser.add_argument("--ft-epochs", type=int, default=10,
                          help="Số epoch fine-tune surrogate mỗi vòng.")
     parser.add_argument("--cvae-epochs", type=int, default=15,
@@ -211,6 +244,16 @@ def main():
     parser.add_argument("--gamma", type=float, default=20.0,
                          help="gamma=20 được chọn vì có hit-rate FE thật tốt nhất "
                               "(12/24) trong gamma-sweep gốc, xem README §5.")
+    parser.add_argument("--lambda-tv", type=float, default=0.0,
+                         help="Trọng số total-variation regularizer (bổ sung cho "
+                              "self-play, xem README - chưa từng kết hợp trước đây).")
+    parser.add_argument("--lambda-bin", type=float, default=0.0,
+                         help="Trọng số binarization regularizer (bổ sung cho "
+                              "self-play, xem README - chưa từng kết hợp trước đây).")
+    parser.add_argument("--start-round", type=int, default=1,
+                         help="Số vòng bắt đầu đánh số (>1 để tiếp tục 1 lần chạy "
+                              "self-play trước đó thay vì ghi đè round1.. - sẽ nạp "
+                              "summary.json cũ và nối thêm thay vì tính lại round 0).")
     parser.add_argument(
         "--start-cvae-ckpt", type=str,
         default=os.path.join(PHASE5_DIR, "cvae_gamma20.pt"),

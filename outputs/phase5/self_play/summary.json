@@ -1,29 +1,47 @@
 [
   {
     "round": 0,
-    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_gamma20.pt",
-    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_best.pt",
-    "r2_fe_v12": -9.504502580347365,
-    "hit_rate": 0.3333333333333333,
-    "n_auxetic_targets": 21,
-    "n_samples": 24
+    "cvae_ckpt": "outputs/phase5/cvae_gamma20.pt",
+    "surrogate_ckpt": "outputs/phase4/surrogate_best.pt",
+    "r2_fe_v12": -2.406659245897743,
+    "hit_rate": 0.47368421052631576,
+    "n_auxetic_targets": 76,
+    "n_samples": 96
   },
   {
     "round": 1,
     "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round1.pt",
     "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round1.pt",
-    "r2_fe_v12": -4.896055965412866,
-    "hit_rate": 0.3333333333333333,
-    "n_auxetic_targets": 18,
-    "n_samples": 24
+    "r2_fe_v12": -2.649563366695195,
+    "hit_rate": 0.32894736842105265,
+    "n_auxetic_targets": 76,
+    "n_samples": 96
   },
   {
     "round": 2,
     "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round2.pt",
     "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round2.pt",
-    "r2_fe_v12": -4.165545114494797,
-    "hit_rate": 0.5,
-    "n_auxetic_targets": 24,
-    "n_samples": 24
+    "r2_fe_v12": -2.7797491276453274,
+    "hit_rate": 0.40789473684210525,
+    "n_auxetic_targets": 76,
+    "n_samples": 96
+  },
+  {
+    "round": 3,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round3.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round3.pt",
+    "r2_fe_v12": -2.934100831841691,
+    "hit_rate": 0.27631578947368424,
+    "n_auxetic_targets": 76,
+    "n_samples": 96
+  },
+  {
+    "round": 4,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round4.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round4.pt",
+    "r2_fe_v12": -2.6743934794371436,
+    "hit_rate": 0.34210526315789475,
+    "n_auxetic_targets": 76,
+    "n_samples": 96
   }
 ]

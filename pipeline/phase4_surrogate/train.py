@@ -91,6 +91,15 @@ def main():
                          help="Đường dẫn .npz bổ sung (cùng schema outputs/phase3), "
                               "vd mẫu đối kháng từ adversarial_dataset.py, nối thêm "
                               "vào train set qua ConcatDataset (self-play).")
+    parser.add_argument("--adversarial-oversample", type=int, default=1,
+                         help="Lặp lại mỗi dataset --adversarial-npz N lần trước khi "
+                              "nối vào train set. Vài chục mẫu đối kháng giữa 33k mẫu "
+                              "thật chỉ chiếm ~0.1%% mỗi batch - gradient signal gần "
+                              "như vô hình, surrogate không thực sự học được gì mới "
+                              "(xác nhận bằng cách re-verify checkpoint round0-8 trên "
+                              "cùng 1 tập test cố định: R2 không cải thiện thật, chỉ "
+                              "dao động do nhiễu). Tăng số này (vd 30-50) để mẫu đối "
+                              "kháng chiếm tỉ trọng đáng kể trong gradient mỗi epoch.")
     parser.add_argument("--init-from", type=str, default=None,
                          help="Checkpoint .pt để load model_state_dict trước khi train "
                               "(fine-tune tiếp thay vì train từ đầu, dùng cho self-play).")
@@ -123,8 +132,9 @@ def main():
                 f"seed_classes của {p} ({list(ds.seed_classes)}) không khớp "
                 f"train.npz ({list(base_seed_classes)}) - cột one-hot sẽ lệch."
             )
-            extra.append(ds)
-            print(f"  + {len(ds)} mẫu đối kháng từ {p}")
+            extra.extend([ds] * args.adversarial_oversample)
+            print(f"  + {len(ds)} mẫu đối kháng từ {p} (x{args.adversarial_oversample} "
+                  f"oversample = {len(ds) * args.adversarial_oversample} mẫu hiệu dụng)")
         train_ds = ConcatDataset([train_ds] + extra)
         train_ds.n_seeds = base_n_seeds
         train_ds.seed_classes = base_seed_classes

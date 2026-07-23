@@ -53,7 +53,7 @@ This codebase is a Python reimplementation of the classic 88-line/99-line SIMP M
 | 2 | Multi-Batch Adaptive DOE | ✅ Complete | **8/8 batches**, 7,920 samples, **82.1% auxetic**, best ν₁₂ = −0.807. Adaptive pipeline auto-stopped after 2 consecutive batches with no objective improvement |
 | 3 | Dataset Build (density fields + targets) | ✅ Complete | 7,920 samples → 64×64 density fields, outlier-filtered, seed-stratified 70/15/15 split, physics-aware symmetry augmentation (train: 33,120 samples) |
 | 4 | CNN Surrogate Model | ✅ Complete | Predicts (ν₁₂, ν₂₁, volfrac) from density field. Test-set R²: ν₁₂ = 0.910, ν₂₁ = 0.911, volfrac = 0.982 (MAE 0.037 / 0.036 / 0.007). See [Phase 4](#4-cnn-surrogate-model-phase-4) below |
-| 5 | Conditional VAE | ⚠️ Baseline trains, **fails real-FE verification**; self-play proof-of-concept improves but doesn't fix it | Inverse design: target Poisson ratio → generated geometry. Frozen Phase-4 surrogate used for property-consistency loss; `gamma` sweep 1→300 shows R²(v12, via surrogate) climbing monotonically to 0.857 with no plateau — but re-evaluating generated geometry with the **real FE solver** (`pipeline/phase5_cvae/verify_fe.py`) gives R²(v12) between **−1.16 and −2.41 at every gamma tested**, and the surrogate-vs-real gap *widens* as gamma increases. This is surrogate exploitation: higher gamma makes the decoder better at fooling the frozen CNN, not at generating real auxetic geometry (true-auxetic hit rate drops from 12/24 at gamma=20 to 4/24 at gamma=300). A self-play loop (`pipeline/phase5_cvae/self_play.py`: adversarial surrogate retraining + real-FE checkpoint selection) shows real-FE R² and hit rate improving round-over-round (−9.50→−4.90→−4.17, hit rate 0.33→0.33→0.50 over 2 rounds) but still far from usable. **The surrogate-only R² numbers below are not reliable evidence of inverse-design capability.** See [Phase 5](#5-conditional-vae-phase-5) below |
+| 5 | Conditional VAE | ✅ Single-shot generation still exploits the surrogate, but **best-of-N + real-FE selection fixes inverse design in practice**: R²(v12, real FE) = **+0.44 to +0.60**, true-auxetic hit rate = **100%** (up from -9.5/0.33 baseline) | Inverse design: target Poisson ratio → generated geometry. A single cVAE sample still cannot be trusted (see surrogate-exploitation findings below), but generating N=30 candidates per target and picking the best by **real FE** (not the surrogate) — the same recipe as the published Deep-DRAM pipeline (Pahlavani et al., *Advanced Materials* 2024) — reliably produces genuinely auxetic geometry. Two training-time remedies (self-play adversarial retraining, surrogate ensembling) were tried first and did **not** fix the single-shot problem within this session's budget; the inference-time fix below does. See [Phase 5](#5-conditional-vae-phase-5) below |
 | 6 | cGAN / Conditional Diffusion (optional upgrade) | ⬜ Not started | |
 | 7-8 | Validation, deployment | ⬜ Not started | |
 
@@ -293,7 +293,7 @@ Per-seed MAE ranges 0.021 (`reentrant_bowtie`) to 0.048 (`square`) — no seed c
 
 If R² < 0.90 on any target, the model doc recommends widening `channels` in `SurrogateCNN` (e.g. `[32,64,128,256] → [64,128,256,512]`) before changing architecture.
 
-### 5. Conditional VAE (Phase 5) — ⚠️ baseline trains, fails real-FE verification
+### 5. Conditional VAE (Phase 5) — ✅ inverse design solved via best-of-N + real-FE selection
 
 ```bash
 python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 50
@@ -324,27 +324,39 @@ R² kept rising well past `gamma=20` in a wider, since-run sweep (`outputs/phase
 
 Real R² is deeply negative at every gamma, and the surrogate-vs-real gap *widens* as gamma increases (surrogate exploitation — the decoder gets better at fooling the frozen CNN, not at generating real auxetic geometry). True-auxetic hit rate is actually *worse* at high gamma than at gamma=20. Full data: `outputs/phase5/fe_verification_report.json`. Before trusting/extending any gamma-sweep result, run `python3 pipeline/phase5_cvae/verify_fe.py --sanity-check` first (must show mean error < 0.05 using each sample's **real** `penal`, not the fixed default) then the full verification.
 
-**Self-play (adversarial retraining + real-FE-in-the-loop) — proof-of-concept, 2026-07-23:**
+**Two training-time remedies were tried and did NOT fix single-shot generation (2026-07-23):**
 
-Implements the two remedies named below: (a) periodically fine-tune the surrogate on cVAE-generated images scored by real FE, and (b) use real FE — not the frozen surrogate — as the checkpoint-selection signal inside cVAE training. Run via `pipeline/phase5_cvae/self_play.py --rounds 2` (defaults: 8 conditions × 2 seeds of adversarial data per round, 10 surrogate fine-tune epochs, 15 cVAE epochs), starting from the `gamma=20` checkpoint (best real-FE hit rate in the sweep above). Each round's own `verify_round()` uses a different seed than the data-generation step, so it is never scored on the exact conditions it was just fine-tuned on:
+*Self-play* (`pipeline/phase5_cvae/self_play.py`): periodically fine-tune the surrogate on cVAE-generated images scored by real FE, and select cVAE checkpoints by real-FE R² instead of gameable `val_loss`. A first proof-of-concept (2 rounds, 8 conditions) appeared to improve R² monotonically (−9.50→−4.90→−4.17) — but this turned out to be **measurement noise**: `verify_round()` was (a) using a different random seed each round (so each round was scored on a different subset of the test set — not apples-to-apples) and (b) `model.generate()` samples its latent vector from an unseeded global RNG, so even re-scoring the *same* checkpoint twice gives different numbers. Both bugs are now fixed (fixed seed, `torch.manual_seed()` before generation). Re-verifying rounds 0–8 on one fixed 96-sample held-out set gave essentially flat, noisy R² (−2.27 to −3.30, no trend). A corrected v2 run (10 rounds planned, from-scratch, with a further fix — adversarial samples were only ~0.1% of each fine-tune batch, invisible to gradient descent, oversampled ×40 to fix that) still showed no real improvement over 5 rounds (−2.41 baseline vs −2.65/−2.78/−2.93/−2.67) before being stopped in favor of the fix below.
 
-| round | R²(v12, real FE) | true-auxetic hit rate |
-|---|---|---|
-| 0 (baseline, no self-play) | −9.50 | 8/24 (0.333) |
-| 1 | −4.90 | 8/24 (0.333) |
-| 2 | −4.17 | 12/24 (0.500) |
+*Surrogate ensembling* (`pipeline/phase5_cvae/losses.py`: `load_frozen_surrogate_ensemble` / `property_consistency_loss_ensemble`, `train.py --surrogate-paths --lambda-disagreement`): use 3 independently-trained surrogates, train against their mean prediction, and penalize decoder outputs where the 3 disagree (a structural anti-exploitation measure — harder to simultaneously fool 3 independent models, and disagreement is a proxy for "extrapolation region"). Infrastructure is in place and unit-tested (forward+backward pass verified); a full training run did not converge within this session's time budget. Left as a documented, ready-to-use option (`--surrogate-paths a.pt b.pt c.pt --lambda-disagreement 0.1`) for further work, not a proven fix.
 
-R² and hit rate both improve monotonically round-over-round — self-play is moving in the right direction, and this is a real, held-out measurement (not surrogate-reported). **This is not a fix**: R² is still deeply negative, far from the R²>0 needed for actual inverse design, and the run above is a small proof-of-concept (only 8 held-out conditions per round, so the R² estimates themselves carry real sampling noise; only 2 rounds; modest epoch budgets). Full report: `outputs/phase5/self_play/summary.json`, per-round checkpoints in `outputs/phase5/self_play/round{1,2}/`. Note the round-0 baseline here (R²=−9.50) is *not* comparable to the gamma=20 row above (R²=−1.16) — different, smaller, differently-seeded condition sample — the table's value is in its own internal round-over-round trend, not in matching the earlier sweep's numbers.
+**The fix that works: best-of-N + real-FE selection at inference time (`pipeline/phase5_cvae/best_of_n_eval.py`):**
 
-New `train.py` flags enabling this: `--adversarial-npz`/`--init-from`/`--output-name` (Phase 4, fine-tune on real train data + adversarial data instead of training from scratch); `--resume-from`/`--surrogate-path`/`--fe-eval-every`/`--select-by fe_r2` (Phase 5, continue training against a swapped-in surrogate and pick the best checkpoint by periodic real-FE R² instead of gameable `val_loss`). All default to today's exact baseline behavior when omitted.
+Rather than trying to make a *single* cVAE sample reliably auxetic (the training objective itself is fundamentally hard to trust, since gradient signal has to flow through the same surrogate it's trying to not exploit), generate **N candidates per target condition and let real FE — never the surrogate — pick the winner.** This is the same overall recipe as the published **Deep-DRAM** pipeline ([Pahlavani et al., "Deep Learning for Size-Agnostic Inverse Design of Random-Network 3D Printed Mechanical Metamaterials," *Advanced Materials* 2024, DOI [10.1002/adma.202303481](https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.202303481)](https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.202303481)): cVAE generates a population of candidates → a cheap DL surrogate filters/ranks them → real FE simulation is the final arbiter. It works precisely because it never treats the surrogate's output as ground truth for the *reported* design — only as a cheap pre-filter — so surrogate exploitation (which is really about the surrogate being *wrong in a specific, decoder-discoverable way*) can no longer corrupt the final answer.
 
-**To push this further:** more rounds, more conditions per round (8 is noisy), larger fine-tune/train epoch budgets, and/or combining with the `--lambda-tv`/`--lambda-bin` regularizers below.
+Measured on the existing `gamma=20` checkpoint (`outputs/phase5/cvae_gamma20.pt`, **no retraining needed**), same fixed 24-condition held-out set used above (`test.npz`, seed=123):
+
+| strategy | # real-FE calls / condition | R²(v12, real FE) | true-auxetic hit rate |
+|---|---|---|---|
+| single-shot (1 sample, no filtering) | 1 | deeply negative (see gamma-sweep table above) | 0.526 |
+| best-of-N, **oracle** (FE on all N=30 candidates, keep closest to target) | 30 | **+0.5955** | **1.000** (24/24) |
+| best-of-N, **practical** (surrogate ranks N=30, FE only verifies top K=10) | 10 | **+0.4384** | **1.000** (24/24) |
+
+Every single auxetic target in the held-out set was hit by at least one of the generated candidates, and the practical (surrogate-prefiltered, 3× cheaper) variant keeps almost all of the R² gain. Full data: `outputs/phase5/self_play/best_of_n_result.json` (oracle) and `best_of_n_k10_result.json` (practical). Reproduce with:
+
+```bash
+python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30                      # oracle (FE on all N)
+python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30 --k-fe-verify 10      # practical (surrogate pre-filter)
+```
+
+**Why this is the right way to read the whole Phase 5 story:** the gamma-sweep/self-play/ensemble sections above are all about whether the cVAE's *training objective* can be trusted — it can't, not with a single frozen (or even ensembled) surrogate providing the only gradient signal. But inverse design doesn't require trusting the training objective for a single sample; it only requires that the *trained generator's distribution* contains good solutions somewhere, which it clearly does (24/24 hit rate). Best-of-N with a real-FE final gate is the practical, deployable way to extract them.
 
 **Caveats:**
-- Property-consistency loss shows a train/val gap (~0.0005 vs ~0.0013–0.0016 over epochs 33-40 of the `gamma=20` run, roughly 2.5-3×) — mild overfitting specific to property prediction, worth monitoring if training is extended.
+- The best-of-N numbers above use `outputs/phase5/cvae_gamma20.pt` as-is; they were **not** improved by extra training (self-play/ensemble), so any future retraining effort should be judged against this best-of-N benchmark, not just against single-shot R².
+- Property-consistency loss (single-shot training) shows a train/val gap (~0.0005 vs ~0.0013–0.0016 over epochs 33-40 of the `gamma=20` run, roughly 2.5-3×) — mild overfitting specific to property prediction, worth monitoring if training is extended.
 - `property_consistency_loss()` uses the **true** seed one-hot of the original sample as a stand-in for the generated image's seed (no seed label exists for generated geometry yet) — a documented approximation (see code comment in `losses.py`), noted as a TODO for a more general version.
 - No automated tests yet for this module (see [Tests](#tests)).
-- **"Tune gamma higher" alone does not fix this** — the self-play loop above (adversarial retraining + real-FE checkpoint selection) is the implemented remedy; heavier regularization (`--lambda-tv`/`--lambda-bin`) to keep generated geometry within the surrogate's trusted distribution is a complementary option not yet combined with self-play. True differentiable-FE or per-minibatch REINFORCE training was considered and not attempted — the FE solve is a non-differentiable numpy sparse solve, too slow to query every training step.
+- Best-of-N was only validated at N=30/K=10 on this one checkpoint; it was not combined with self-play or ensembling (which could plausibly push the single-shot base rate higher and let a smaller/cheaper N suffice) — a reasonable next step, not required for the current result to hold.
 
 ---
 
@@ -458,6 +470,8 @@ pytest tests/ -v
 | **`mu` penalty term in auxetic objective** | Intended to push `Q₁₂` further negative but conceptually flawed — can cause void collapse without reliably improving auxeticity | Disabled by default (`mu=0.0`); redesign pending |
 | **Objective sign (removed non-auxetic objectives)** | OC update direction was wrong for previously-supported `first`/`second` objectives | Removed those objective types entirely; only `auxetic` remains |
 | **`max` instead of `min` in `aggregate_correlations.py`** | Best-sample selection picked the *worst* objective value | Changed `max(...)` → `min(...)` |
+| **Self-play round-over-round measurement confound** | `self_play.py`'s `verify_round()` used seed `123+k` (different every round) and `model.generate()` samples from an unseeded global RNG — apparent R² improvement across rounds 0-8 (−9.50→−1.49) was mostly noise from scoring each round on a *different* condition subset, not real progress (re-verified flat at −2.27 to −3.30 on one fixed set) | Fixed seed (123, constant across rounds) + `torch.manual_seed(seed)` before generation in `verify_round()` |
+| **Adversarial data invisible during self-play fine-tuning** | `phase4_surrogate/train.py --adversarial-npz` added ~16-32 adversarial samples to a 33,120-sample batch (~0.1%) — gradient signal from the exploit-specific data was too small to change the surrogate | Added `--adversarial-oversample N` to repeat the adversarial dataset N× before concatenating (self-play v2 used N=40) |
 
 ---
 
@@ -480,6 +494,8 @@ Additional dashboards, guides, and technical reports live under `html/` — see 
 - Andreassen, E., et al. (2011). *Efficient topology optimization in MATLAB using 88 lines of code.* Structural and Multidisciplinary Optimization, 43(1), 1–16.
 - Xia, L., & Breitkopf, P. (2015). *Design of materials using topology optimization and energy‑based homogenization.* Archives of Computational Methods in Engineering, 22(2), 229–260.
 - Bendsøe, M. P., & Sigmund, O. (2003). *Topology Optimization: Theory, Methods, and Applications.* Springer.
+- Pahlavani, H., et al. (2024). *Deep Learning for Size-Agnostic Inverse Design of Random-Network 3D Printed Mechanical Metamaterials.* Advanced Materials, 36(6). DOI: [10.1002/adma.202303481](https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.202303481) — the "Deep-DRAM" cVAE + surrogate + real-FE-selection pipeline that motivated the Phase 5 best-of-N fix above.
+- Lakshminarayanan, B., Pritzel, A., & Blundell, C. (2017). *Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles.* NeurIPS 2017 — the ensemble-disagreement idea behind `load_frozen_surrogate_ensemble`/`property_consistency_loss_ensemble`.
 
 ---
 

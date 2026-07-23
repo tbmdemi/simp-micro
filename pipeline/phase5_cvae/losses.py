@@ -54,6 +54,20 @@ def load_frozen_surrogate(device="cpu", path=SURROGATE_PATH):
     return model, target_names
 
 
+def load_frozen_surrogate_ensemble(paths, device="cpu"):
+    """Load nhiều surrogate độc lập (vd huấn luyện với seed/khởi tạo khác
+    nhau) để dùng property_consistency_loss_ensemble - đánh lừa đồng thời
+    N mô hình độc lập khó hơn nhiều so với đánh lừa 1 mô hình đông cứng,
+    đây là biện pháp khắc phục surrogate-exploitation mang tính cấu trúc,
+    bổ sung cho self-play (xem README §5)."""
+    models, target_names = [], None
+    for p in paths:
+        m, tn = load_frozen_surrogate(device=device, path=p)
+        models.append(m)
+        target_names = tn  # giống nhau giữa các surrogate (cùng target_names schema)
+    return models, target_names
+
+
 def kl_beta_schedule(epoch: int, warmup_epochs: int, beta_max: float = 1.0) -> float:
     """Tăng tuyến tính 0 -> beta_max trong warmup_epochs, giữ nguyên sau đó."""
     if warmup_epochs <= 0:
@@ -89,6 +103,34 @@ def property_consistency_loss(
     return F.mse_loss(pred_cond, condition)
 
 
+def property_consistency_loss_ensemble(
+    recon: torch.Tensor,
+    condition: torch.Tensor,
+    seed_vec: torch.Tensor,
+    surrogates,
+    target_names,
+    lambda_disagreement: float = 0.0,
+):
+    """Bản ensemble của property_consistency_loss(): pred_cond = TRUNG BÌNH
+    dự đoán qua N surrogate độc lập (khó bị decoder đánh lừa đồng loạt hơn
+    1 surrogate), cộng thêm lambda_disagreement * phương sai giữa các
+    surrogate - phạt decoder sinh ảnh rơi vào vùng các surrogate BẤT ĐỒNG
+    (dấu hiệu ngoại suy/vùng mù, đúng chỗ exploitation hay xảy ra) ngay cả
+    khi trung bình dự đoán trùng target. lambda_disagreement=0 => giống hệt
+    hành vi mean-ensemble không phạt bất đồng."""
+    idx_v12 = target_names.index("v12")
+    idx_v21 = target_names.index("v21")
+    preds_cond = []
+    for surrogate in surrogates:
+        pred = surrogate(recon, seed_vec)
+        preds_cond.append(torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1))
+    preds_stack = torch.stack(preds_cond, dim=0)  # (N_surrogate, B, 2)
+    mean_pred = preds_stack.mean(dim=0)
+    mse = F.mse_loss(mean_pred, condition)
+    disagreement = preds_stack.var(dim=0, unbiased=False).mean()
+    return mse + lambda_disagreement * disagreement, disagreement.detach()
+
+
 def tv_loss(recon: torch.Tensor) -> torch.Tensor:
     """Phạt biến thiên pixel đột ngột (ngang+dọc) - vai trò tương đương
     density filter trong SIMP truyền thống, chống nhiễu checkerboard."""
@@ -112,16 +154,31 @@ def cvae_loss(
     recon, image, mu, logvar, condition, seed_vec,
     surrogate, target_names, beta: float, gamma: float = 1.0,
     lambda_tv: float = 0.0, lambda_bin: float = 0.0,
+    lambda_disagreement: float = 0.0,
 ):
     """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
     lambda_tv/lambda_bin mặc định 0.0 (tắt, để không phá baseline gamma=1..300
     đã chạy trước khi có 2 loss này) - bật lên (thử 0.001-0.01 trước) để thử
-    giảm exploitation ở gamma cao, xem docstring đầu file."""
+    giảm exploitation ở gamma cao, xem docstring đầu file.
+
+    `surrogate` có thể là 1 model (như cũ, backward-compatible) HOẶC 1
+    list/tuple các model (ensemble - xem property_consistency_loss_ensemble,
+    load_frozen_surrogate_ensemble) - dùng trung bình dự đoán qua ensemble
+    thay vì 1 surrogate đông cứng, cộng thêm lambda_disagreement * phương
+    sai giữa các surrogate để phạt decoder sinh ảnh vào vùng các surrogate
+    bất đồng (biện pháp cấu trúc chống exploitation, bổ sung cho self-play)."""
     recon_l = reconstruction_loss(recon, image)
     kl_l = kl_divergence(mu, logvar)
-    prop_l = property_consistency_loss(
-        recon, condition, seed_vec, surrogate, target_names
-    )
+    is_ensemble = isinstance(surrogate, (list, tuple))
+    if is_ensemble:
+        prop_l, disagreement_l = property_consistency_loss_ensemble(
+            recon, condition, seed_vec, surrogate, target_names, lambda_disagreement
+        )
+    else:
+        prop_l = property_consistency_loss(
+            recon, condition, seed_vec, surrogate, target_names
+        )
+        disagreement_l = torch.tensor(0.0)
     tv_l = tv_loss(recon)
     bin_l = binarization_loss(recon)
     total = (recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
@@ -134,5 +191,6 @@ def cvae_loss(
         "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
         "tv": tv_l.detach(),
         "binarization": bin_l.detach(),
+        "disagreement": disagreement_l.detach() if torch.is_tensor(disagreement_l) else disagreement_l,
         "beta": beta,
     }
