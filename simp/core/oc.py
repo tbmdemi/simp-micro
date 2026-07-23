@@ -62,11 +62,7 @@ def oc_update(
     for _ in range(100):
         lmid = (l1 + l2) / 2
 
-        # Quy tắc cập nhật OC
-        # Hai chế độ:
-        #   use_sqrt=True:  x * sqrt(max(0, -dc/(dv*lmid)))  (Sigmund 2001)
-        #   use_sqrt=False: x * max(0, -dc/(dv*lmid))        (MATLAB reference)
-        # Mặc định False để khớp MATLAB.
+        # Quy tắc cập nhật OC (xem use_sqrt ở docstring)
         ratio = np.maximum(0.0, -dc / (dv * lmid + 1e-15))
         if use_sqrt:
             ratio = np.sqrt(ratio)
@@ -91,12 +87,9 @@ def oc_update(
             xPhys_flat = H @ xnew.flatten('F') / Hs
             xPhys = np.reshape(xPhys_flat, (nely, nelx), order='F')
 
-        # Kiểm tra ràng buộc thể tích (và stiffness nếu có)
-        # Lưu ý: Q tensor được evaluate tại density field cũ (x), không phải
-        # candidate mới (xnew). Đây là approximation phổ biến trong OC update
-        # (Sigmund 2001, Andreassen 2011) — giả định rằng stiffness không thay
-        # đổi đáng kể trong 1 iteration. Trong thực tế, với move limit nhỏ
-        # (0.05-0.2), sai số là chấp nhận được.
+        # Q được evaluate tại x cũ, không phải xnew - approximation chuẩn của
+        # OC update (Sigmund 2001, Andreassen 2011), chấp nhận được với move
+        # limit nhỏ (0.05-0.2).
         vol = np.mean(xPhys)
 
         # MATLAB-style: mean(xPhys) > volfrac && Q(1,1) >= delta && Q(2,2) >= delta

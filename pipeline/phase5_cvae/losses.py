@@ -1,29 +1,18 @@
 """
 Phase 5 - losses.py
 =====================
-3 thành phần loss (bước 5.3):
+Tổng loss = BCE reconstruction + beta·KL (beta tăng tuyến tính theo epoch,
+xem kl_beta_schedule) + gamma·PROP_LOSS_SCALE·property-consistency (MSE
+giữa surrogate dự đoán trên ảnh sinh ra và condition target) + các
+regularizer tuỳ chọn (tv_loss, binarization_loss, periodicity_loss -
+roadmap 6.2/6.3, xem manufacturability.py).
 
-1. Reconstruction: BCE, không phải MSE - vì density field gần nhị phân
-   (0 = rỗng, 1 = vật liệu), BCE phạt đúng bản chất phân loại pixel hơn.
-
-2. KL divergence: có HỆ SỐ BETA tăng dần theo epoch (KL annealing), KHÔNG
-   cố định beta=1 như VAE gốc. Lý do: condition vector chỉ 2 chiều (v12,
-   v21) - nếu bật KL full ngay từ đầu, decoder rất dễ "bỏ qua" latent z
-   (posterior collapse) vì chỉ cần dựa vào condition cũng giảm được
-   reconstruction loss kha khá. Bắt đầu beta=0, tăng tuyến tính tới
-   beta_max qua warmup_epochs.
-
-3. Property-consistency: đưa ẢNH LIÊN TỤC (không binarize) do decoder sinh
-   ra thẳng vào surrogate ĐÃ ĐÓNG BĂNG (outputs/phase4/surrogate_for_phase5.pt)
-   để dự đoán (v12, v21), so với target condition bằng MSE. Đây là loss
-   BẮT BUỘC decoder phải sinh hình học thật sự đạt Poisson ratio mong
-   muốn, không chỉ "trông giống" density field.
-
-   LƯU Ý QUAN TRỌNG (ghi trong usage_note của export_for_phase5.py):
-   surrogate chỉ đáng tin trong phân phối train (11 seed đã thấy, v12 in
-   khoảng ~[-0.81, 0.37]). Nếu property_loss cho ra giá trị rất nhỏ nhưng
-   ảnh sinh ra "lạ" (không giống geometry nào trong 11 seed), ĐỪNG tin
-   tuyệt đối con số này - cần verify lại bằng FE thật ở Phase 6 (bước 6.5).
+CẢNH BÁO ĐÃ XÁC NHẬN (outputs/phase5/fe_verification_report.json, xem
+verify_fe.py): R2 của property-consistency đo qua surrogate KHÔNG đáng tin
+ở bất kỳ gamma nào (đã thử 1-300) - R2 đo bằng FE thật luôn âm nặng, và
+khoảng cách surrogate-vs-FE càng doãng ra khi gamma càng tăng (decoder học
+đánh lừa surrogate, không sinh hình học auxetic thật). Đừng tăng gamma kỳ
+vọng cải thiện thật - xem mục Phase 5 trong README.
 """
 import os
 import torch
@@ -35,11 +24,9 @@ SURROGATE_PATH = os.path.join(REPO_ROOT, "outputs", "phase4", "surrogate_for_pha
 
 
 def _import_surrogate_cnn():
-    """Import SurrogateCNN từ pipeline/phase4_surrogate/model.py bằng
-    importlib thay vì sys.path + `import model` - vì phase5_cvae CŨNG có
-    file model.py trùng tên, nếu dùng sys.path/import thường sẽ bị đụng
-    module đã cache trong sys.modules (import sai file). importlib.util
-    load theo đường dẫn tuyệt đối nên tránh được xung đột này."""
+    """Load bằng importlib theo đường dẫn tuyệt đối, không phải sys.path +
+    `import model`, vì phase5_cvae cũng có model.py trùng tên - tránh đụng
+    module đã cache sai trong sys.modules."""
     import importlib.util
     path = os.path.join(REPO_ROOT, "pipeline", "phase4_surrogate", "model.py")
     spec = importlib.util.spec_from_file_location("phase4_surrogate_model", path)
@@ -68,6 +55,20 @@ def load_frozen_surrogate(device="cpu", path=SURROGATE_PATH):
     return model, target_names
 
 
+def load_frozen_surrogate_ensemble(paths, device="cpu"):
+    """Load nhiều surrogate độc lập (vd huấn luyện với seed/khởi tạo khác
+    nhau) để dùng property_consistency_loss_ensemble - đánh lừa đồng thời
+    N mô hình độc lập khó hơn nhiều so với đánh lừa 1 mô hình đông cứng,
+    đây là biện pháp khắc phục surrogate-exploitation mang tính cấu trúc,
+    bổ sung cho self-play (xem README §5)."""
+    models, target_names = [], None
+    for p in paths:
+        m, tn = load_frozen_surrogate(device=device, path=p)
+        models.append(m)
+        target_names = tn  # giống nhau giữa các surrogate (cùng target_names schema)
+    return models, target_names
+
+
 def kl_beta_schedule(epoch: int, warmup_epochs: int, beta_max: float = 1.0) -> float:
     """Tăng tuyến tính 0 -> beta_max trong warmup_epochs, giữ nguyên sau đó."""
     if warmup_epochs <= 0:
@@ -76,10 +77,8 @@ def kl_beta_schedule(epoch: int, warmup_epochs: int, beta_max: float = 1.0) -> f
 
 
 def reconstruction_loss(recon: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    # recon, target: (B, 1, RES, RES) trong [0,1]. reduction="sum" rồi chia
-    # theo batch - GIỮ NGUYÊN thang này vì cân bằng recon/kl hiện tại (kl
-    # dừng ổn định ~66 ở beta=1, không collapse) đã hoạt động tốt trong lần
-    # train thật đầu tiên - không nên đụng vào để tránh phá cân bằng đó.
+    # sum-per-pixel rồi chia theo batch (không mean toàn bộ) - đổi thang này
+    # sẽ đổi luôn cân bằng recon/kl, cần retune beta nếu sửa.
     return F.binary_cross_entropy(recon, target, reduction="sum") / recon.size(0)
 
 
@@ -95,12 +94,9 @@ def property_consistency_loss(
     surrogate: nn.Module,
     target_names,
 ) -> torch.Tensor:
-    """So sánh (v12, v21) surrogate dự đoán trên ảnh sinh ra với condition
-    target. seed_vec dùng seed one-hot THẬT của mẫu gốc (surrogate cần input
-    này) - đây là xấp xỉ hợp lý cho baseline vì ta chưa có nhãn seed cho ảnh
-    generate. Nếu sau này muốn tổng quát hơn (không phụ thuộc seed thật),
-    có thể thử trung bình dự đoán qua nhiều seed_vec hoặc dùng seed phổ biến
-    nhất - để ở TODO cho bản nâng cấp."""
+    """seed_vec dùng seed one-hot THẬT của mẫu gốc (surrogate cần input này)
+    vì ảnh generate chưa có nhãn seed - xấp xỉ, TODO: thử trung bình qua
+    nhiều seed_vec hoặc seed phổ biến nhất cho bản tổng quát hơn."""
     pred = surrogate(recon, seed_vec)  # (B, 3) = [v12, v21, volfrac]
     idx_v12 = target_names.index("v12")
     idx_v21 = target_names.index("v21")
@@ -108,36 +104,93 @@ def property_consistency_loss(
     return F.mse_loss(pred_cond, condition)
 
 
+def property_consistency_loss_ensemble(
+    recon: torch.Tensor,
+    condition: torch.Tensor,
+    seed_vec: torch.Tensor,
+    surrogates,
+    target_names,
+    lambda_disagreement: float = 0.0,
+):
+    """Bản ensemble của property_consistency_loss(): pred_cond = TRUNG BÌNH
+    dự đoán qua N surrogate độc lập (khó bị decoder đánh lừa đồng loạt hơn
+    1 surrogate), cộng thêm lambda_disagreement * phương sai giữa các
+    surrogate - phạt decoder sinh ảnh rơi vào vùng các surrogate BẤT ĐỒNG
+    (dấu hiệu ngoại suy/vùng mù, đúng chỗ exploitation hay xảy ra) ngay cả
+    khi trung bình dự đoán trùng target. lambda_disagreement=0 => giống hệt
+    hành vi mean-ensemble không phạt bất đồng."""
+    idx_v12 = target_names.index("v12")
+    idx_v21 = target_names.index("v21")
+    preds_cond = []
+    for surrogate in surrogates:
+        pred = surrogate(recon, seed_vec)
+        preds_cond.append(torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1))
+    preds_stack = torch.stack(preds_cond, dim=0)  # (N_surrogate, B, 2)
+    mean_pred = preds_stack.mean(dim=0)
+    mse = F.mse_loss(mean_pred, condition)
+    disagreement = preds_stack.var(dim=0, unbiased=False).mean()
+    return mse + lambda_disagreement * disagreement, disagreement.detach()
+
+
 def tv_loss(recon: torch.Tensor) -> torch.Tensor:
-    """Total-variation: phạt biến thiên pixel đột ngột giữa các ô lân cận
-    (ngang + dọc). Đây là vai trò tương đương density filter trong SIMP
-    truyền thống (lọc trung bình lân cận để loại checkerboard) - ép decoder
-    sinh vùng liên tục thay vì nhiễu hạt ngẫu nhiên. Thang giá trị: trung
-    bình |chênh lệch pixel| trên toàn batch, nằm trong [0, 1]."""
+    """Phạt biến thiên pixel đột ngột (ngang+dọc) - vai trò tương đương
+    density filter trong SIMP truyền thống, chống nhiễu checkerboard."""
     dh = torch.abs(recon[:, :, 1:, :] - recon[:, :, :-1, :]).mean()
     dw = torch.abs(recon[:, :, :, 1:] - recon[:, :, :, :-1]).mean()
     return dh + dw
 
 
 def binarization_loss(recon: torch.Tensor) -> torch.Tensor:
-    """Phạt pixel nằm giữa 0 và 1 (cực đại tại 0.5, = 0 tại 0 hoặc 1) - ép
-    ảnh về gần nhị phân, đúng bản chất vật lý density field (0=rỗng,
-    1=vật liệu), đồng thời gián tiếp chống nhiễu grayscale ngẫu nhiên vì
-    nhiễu thường nằm ở vùng giá trị trung gian."""
+    """Phạt pixel giữa 0-1 (cực đại tại 0.5) - ép ảnh về gần nhị phân đúng
+    bản chất density field."""
     return (recon * (1 - recon)).mean()
 
 
-# CHẠY THẬT ĐẦU TIÊN CHO THẤY: prop ~ O(0.01-0.05) trong khi recon ~ O(1000)
-# - chênh nhau ~5 bậc độ lớn. Với gamma=1 mặc định (bản cũ), gamma*prop gần
-# như KHÔNG có tiếng nói trong gradient tổng, nên lúc train `prop` giảm đều
-# (trông có vẻ tốt) nhưng thực chất model gần như chỉ tối ưu recon; lúc
-# evaluate.py sample z~N(0,1) thật sự (không "ăn gian" bằng z suy ra từ ảnh
-# gốc như lúc train) thì property accuracy lộ ra rất tệ (R2 âm).
-#
-# Sửa: nhân prop với hệ số cố định PROP_LOSS_SCALE để đưa nó về gần thang
-# recon/kl TRƯỚC khi nhân với gamma. Việc này giữ nguyên ý nghĩa của gamma
-# (gamma=1 vẫn là "trọng số cơ sở hợp lý", không phải phải tự dò con số
-# hàng trăm/nghìn) và KHÔNG đụng vào cân bằng recon/kl đã ổn định.
+def periodicity_loss(recon: torch.Tensor) -> torch.Tensor:
+    """Roadmap 6.3 (manufacturability.py check_periodicity): phạt lệch giữa
+    cột trái/phải và hàng trên/dưới của ảnh reconstruct - ô đơn vị được lát
+    bằng TỊNH TIẾN, nên cột phải (col=nelx-1) của ô này nằm sát cột trái
+    (col=0) của ô kế tiếp (bản sao y hệt, tức cũng là col=0 của chính ô
+    này) - occupancy 2 biên đối diện không khớp tạo bước nhảy rắn/rỗng đột
+    ngột ngay tại mép ghép khi in thành lattice thật. Khác với PBC trong
+    simp/core/pbc.py (chỉ ràng buộc trường CHUYỂN VỊ lúc giải FE trên 1 ô,
+    không ràng buộc ảnh sinh ra phải ghép liền mạch về mặt HÌNH HỌC)."""
+    left, right = recon[:, :, :, 0], recon[:, :, :, -1]
+    top, bottom = recon[:, :, 0, :], recon[:, :, -1, :]
+    return F.mse_loss(left, right) + F.mse_loss(top, bottom)
+
+
+def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tensor,
+                                 lambda_tv: float = 0.0, lambda_bin: float = 0.0,
+                                 lambda_periodic: float = 0.0):
+    """XÁC NHẬN THỰC NGHIỆM (2026-07-23): áp tv_loss/binarization_loss/
+    periodicity_loss lên `recon` trong cvae_loss() KHÔNG cải thiện
+    manufacturability lúc generate() - vì `recon` ở đó được decode từ z ~
+    POSTERIOR (qua encoder thật, tái tạo ảnh training thật vốn đã liên
+    thông/tuần hoàn sẵn - 4 seed shape circle/square/reentrant_bowtie/
+    hexagonal đều là unit cell hợp lệ), nên loss gần như không đổi suốt
+    training (~0.22-0.25 loss giá trị periodic qua 25 epoch, xem
+    manufacturability rate đo được KHÔNG đổi: 0-3.5%, thống kê giống hệt
+    baseline). model.generate() lúc inference lại sample z ~ PRIOR N(0,1)
+    (không qua encoder) - chế độ hoàn toàn khác, đúng chế độ mà tỉ lệ thấp
+    được đo. Hàm này áp cùng 3 regularizer lên ảnh decode từ z PRIOR (cùng
+    chế độ với generate()), để gradient thực sự chạm đúng hành vi cần sửa."""
+    bsz = condition.size(0)
+    z_prior = torch.randn(bsz, latent_dim, device=condition.device)
+    prior_recon = decoder(z_prior, condition)
+    tv_l = tv_loss(prior_recon)
+    bin_l = binarization_loss(prior_recon)
+    periodic_l = periodicity_loss(prior_recon)
+    total = lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l
+    return total, {
+        "prior_tv": tv_l.detach(),
+        "prior_binarization": bin_l.detach(),
+        "prior_periodic": periodic_l.detach(),
+    }
+
+
+# prop_loss ~ O(0.01-0.05) vs recon ~ O(1000), ~5 bậc độ lớn chênh lệch -
+# không có scale này thì gamma*prop gần như vô hình trong gradient tổng.
 PROP_LOSS_SCALE = 1000.0
 
 
@@ -145,27 +198,36 @@ def cvae_loss(
     recon, image, mu, logvar, condition, seed_vec,
     surrogate, target_names, beta: float, gamma: float = 1.0,
     lambda_tv: float = 0.0, lambda_bin: float = 0.0,
+    lambda_disagreement: float = 0.0, lambda_periodic: float = 0.0,
 ):
-    """Tổng hợp các thành phần. Trả về dict để log riêng từng loss trong train.py.
-    gamma: hệ số trọng số CHO PHẦN NHÂN THÊM vào property-consistency loss
-    (đã được PROP_LOSS_SCALE đưa về cùng thang recon/kl), mặc định 1.0.
-    Tăng gamma nếu muốn ưu tiên đúng Poisson ratio hơn chất lượng ảnh tái
-    tạo, giảm nếu thấy recon bị "hy sinh" quá nhiều (ảnh sinh ra mờ/nhoè).
+    """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
+    lambda_tv/lambda_bin mặc định 0.0 (tắt, để không phá baseline gamma=1..300
+    đã chạy trước khi có 2 loss này) - bật lên (thử 0.001-0.01 trước) để thử
+    giảm exploitation ở gamma cao, xem docstring đầu file.
 
-    lambda_tv, lambda_bin: mặc định 0.0 (TẮT) để không phá baseline cũ
-    (gamma=1..300 đã chạy trước khi có 2 loss này). Bật lên (ví dụ thử
-    0.001-0.01 trước) khi nghi ngờ gamma cao đang khiến decoder sinh
-    density field nhiễu/không hợp lý vật lý để "đánh lừa" surrogate -
-    xem ghi chú trong docstring đầu file."""
+    `surrogate` có thể là 1 model (như cũ, backward-compatible) HOẶC 1
+    list/tuple các model (ensemble - xem property_consistency_loss_ensemble,
+    load_frozen_surrogate_ensemble) - dùng trung bình dự đoán qua ensemble
+    thay vì 1 surrogate đông cứng, cộng thêm lambda_disagreement * phương
+    sai giữa các surrogate để phạt decoder sinh ảnh vào vùng các surrogate
+    bất đồng (biện pháp cấu trúc chống exploitation, bổ sung cho self-play)."""
     recon_l = reconstruction_loss(recon, image)
     kl_l = kl_divergence(mu, logvar)
-    prop_l = property_consistency_loss(
-        recon, condition, seed_vec, surrogate, target_names
-    )
+    is_ensemble = isinstance(surrogate, (list, tuple))
+    if is_ensemble:
+        prop_l, disagreement_l = property_consistency_loss_ensemble(
+            recon, condition, seed_vec, surrogate, target_names, lambda_disagreement
+        )
+    else:
+        prop_l = property_consistency_loss(
+            recon, condition, seed_vec, surrogate, target_names
+        )
+        disagreement_l = torch.tensor(0.0)
     tv_l = tv_loss(recon)
     bin_l = binarization_loss(recon)
+    periodic_l = periodicity_loss(recon)
     total = (recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
-             + lambda_tv * tv_l + lambda_bin * bin_l)
+             + lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l)
     return {
         "total": total,
         "recon": recon_l.detach(),
@@ -174,5 +236,7 @@ def cvae_loss(
         "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
         "tv": tv_l.detach(),
         "binarization": bin_l.detach(),
+        "periodic": periodic_l.detach(),
+        "disagreement": disagreement_l.detach() if torch.is_tensor(disagreement_l) else disagreement_l,
         "beta": beta,
     }

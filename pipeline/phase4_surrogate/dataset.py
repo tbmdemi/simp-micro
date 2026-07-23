@@ -1,18 +1,10 @@
 """
 Phase 4 - dataset.py
 =====================
-PyTorch Dataset đọc trực tiếp file .npz sinh ra từ Phase 3
-(outputs/phase3/{train,val,test}.npz).
+Đọc outputs/phase3/{train,val,test}.npz.
 
-Mỗi mẫu trả về:
-    image      : Tensor (1, RES, RES) float32, giá trị [0,1]
-    seed_vec   : Tensor (n_seeds,) float32, one-hot - dùng làm input phụ
-    targets    : Tensor (3,) float32 = [v12, v21, volfrac_achieved]
-
-Không cần sửa file này để chạy baseline. Chỉ sửa nếu bạn:
-  - Thêm target mới (VD f1, f2 sau khi làm bước 4.0 mở rộng homogenization)
-    -> sửa trong hàm __getitem__, phần "targets = ..."
-  - Đổi cách chuẩn hoá target (hiện KHÔNG scale v12/v21, giữ đơn vị vật lý)
+Mỗi mẫu: image (1,RES,RES) [0,1], seed_vec (n_seeds,) one-hot, targets
+(3,)=[v12,v21,volfrac_achieved] (không chuẩn hoá, giữ đơn vị vật lý gốc).
 """
 import numpy as np
 import torch

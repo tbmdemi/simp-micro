@@ -1,17 +1,13 @@
 """
-Adaptive sampling orchestrator: decides what to do next based on coverage.
-
-Workflow:
-  1. After each batch, run coverage analysis on accumulated results.
-  2. Based on coverage gaps, objective improvement, and convergence,
-     decide: stop / refine locally / expand globally.
-  3. Generate the next BatchConfig accordingly.
+Adaptive sampling orchestrator: after each batch, runs coverage analysis on
+accumulated results and decides stop / refine / expand, producing the next
+BatchConfig.
 
 Decision logic:
-  - If objective has not improved for 2+ batches AND coverage is adequate → STOP.
-  - If sparsity > 30% of property space → expand: add new seeds/objectives.
-  - If sparsity < 10% but best objective is still far from theoretical →
-    refine: narrow param bounds around best samples.
+  - Objective stagnant for 2+ batches AND coverage adequate -> STOP.
+  - Sparsity > 30% of property space -> EXPAND (new seeds/objectives).
+  - Sparsity < 10% but objective still improving -> REFINE (narrow bounds
+    around best samples).
 """
 
 from copy import deepcopy
@@ -25,6 +21,15 @@ from pipeline.multi_batch.coverage import (
     recommend_new_samples,
 )
 from pipeline.multi_batch.params import BatchConfig, BatchMode, SamplingStrategy
+
+
+# Fix H1: reentrant_bowtie was missing from this list, so _fill_seeds() could
+# never add it back in when expanding seeds.
+_ALL_SEEDS = [
+    'circle', 'square', 'hourglass', 'four_circle', 'hexagonal',
+    'nine_circle', 'cross_rectangular', 'grid_circular_voids',
+    'small_square_cross', 'circle_half_quarter', 'reentrant_bowtie',
+]
 
 
 def _load_accumulated_results(summaries: List[Dict]) -> List[Dict]:
@@ -55,11 +60,13 @@ def _load_accumulated_results(summaries: List[Dict]) -> List[Dict]:
     return all_results
 
 
+# Fix L2: denominator takes abs(curr) too (not just abs(prev)), so a near-zero
+# prev no longer produces a spuriously huge relative improvement.
 def _relative_improvement(curr: float, prev: float) -> float:
     """Compute relative improvement when minimizing (lower = better).
 
-    Positive return value means the objective improved.
-    The value is the fractional improvement relative to |prev|.
+    Positive return value means the objective improved. Fractional, relative
+    to max(|prev|, |curr|, 1e-10) — see Fix L2 above.
 
     Args:
         curr: Current best objective value.
@@ -67,11 +74,21 @@ def _relative_improvement(curr: float, prev: float) -> float:
 
     Returns:
         Relative improvement fraction (positive = curr is better).
-        0.0 if prev is effectively zero.
     """
-    denom = max(abs(prev), 1e-10)
+    denom = max(abs(prev), abs(curr), 1e-10)
     # Positive when curr < prev (minimization, lower is better)
     return (prev - curr) / denom
+
+
+def _fill_seeds(expanded_seeds: List[str]) -> List[str]:
+    """Add seeds from _ALL_SEEDS until we have at least 5."""
+    result = list(expanded_seeds)
+    for s in _ALL_SEEDS:
+        if len(result) >= 5:
+            break
+        if s not in result:
+            result.append(s)
+    return result
 
 
 def decide_next_action(
@@ -106,6 +123,10 @@ def decide_next_action(
             'coverage': coverage_report output
             'sparse_targeted_params': List[Dict] of targeted param suggestions
     """
+    # ── Fix M1: param_ranges=None early guard ──
+    if param_ranges is not None and not isinstance(param_ranges, dict):
+        raise ValueError("param_ranges must be a dict or None")
+
     n_completed = len(summaries)
 
     # ── 1. Load results ──
@@ -238,16 +259,7 @@ def decide_next_action(
 
         next_id = n_completed + 1
         expanded_seeds = list(config.get('active_seeds', [])) if isinstance(config, dict) else (list(config.active_seeds) if hasattr(config, 'active_seeds') else [])
-        if len(expanded_seeds) < 5:
-            all_seeds = [
-                'circle', 'square', 'hourglass', 'four_circle', 'hexagonal',
-                'nine_circle', 'cross_rectangular', 'grid_circular_voids',
-                'small_square_cross', 'circle_half_quarter',
-            ]
-            for s in all_seeds:
-                if s not in expanded_seeds:
-                    expanded_seeds.append(s)
-                    break
+        expanded_seeds = _fill_seeds(expanded_seeds)
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
@@ -267,7 +279,7 @@ def decide_next_action(
         )
         return decision
 
-    # 4c. Expand: high sparsity — add more seeds/objectives or wider ranges
+    # 4g. Expand: high sparsity — add more seeds/objectives or wider ranges
     if sparsity_frac > sparsity_expand_threshold:
         decision['action'] = 'expand'
         decision['reason'] = (f'High sparsity ({sparsity_frac:.1%}). '
@@ -275,16 +287,7 @@ def decide_next_action(
 
         next_id = n_completed + 1
         expanded_seeds = list(config.get('active_seeds', [])) if isinstance(config, dict) else (list(config.active_seeds) if hasattr(config, 'active_seeds') else [])
-        if len(expanded_seeds) < 5:
-            all_seeds = [
-                'circle', 'square', 'hourglass', 'four_circle', 'hexagonal',
-                'nine_circle', 'cross_rectangular', 'grid_circular_voids',
-                'small_square_cross', 'circle_half_quarter',
-            ]
-            for s in all_seeds:
-                if s not in expanded_seeds:
-                    expanded_seeds.append(s)
-                    break
+        expanded_seeds = _fill_seeds(expanded_seeds)
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
@@ -315,7 +318,7 @@ def decide_next_action(
         )
         return decision
 
-    # ── 4d. Refine + optionally fill sparse regions ──
+    # ── 4h. Refine + optionally fill sparse regions ──
     decision['action'] = 'refine'
     next_id = n_completed + 1
     current_active = config.get('active', {}) if isinstance(config, dict) else config.active
@@ -336,8 +339,6 @@ def decide_next_action(
         for pname, prange in param_ranges.items():
             if pname not in narrowed_param_ranges:
                 narrowed_param_ranges[pname] = prange
-    else:
-        narrowed_param_ranges = dict(param_ranges or {})
 
     # Check if narrowing actually reduced any range
     did_narrow = False

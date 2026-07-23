@@ -31,6 +31,30 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 
 
+def _seed_only_stratify(seed_names: np.ndarray, v12: np.ndarray,
+                        n_bins: int = 5, epsilon: float = 1e-6) -> np.ndarray:
+    """Tạo stratify label từ seed, KHÔNG dùng percentile từ toàn bộ dữ liệu.
+
+    Dùng fixed v12 bins (dựa trên domain: Poisson ratio auxetic [-1, 0.5])
+    thay vì percentile để tránh data leakage (percentile cần toàn bộ dữ liệu).
+
+    Lưu ý: nếu dữ liệu thực tế nằm ngoài [-1, 0.5], cần mở rộng bins.
+    """
+    lo, hi = -1.0, 0.5
+    v12_clipped = np.clip(v12, lo + epsilon, hi - epsilon)
+    bin_edges = np.linspace(lo, hi, n_bins + 1)
+    v12_bin_labels = np.clip(np.digitize(v12_clipped, bin_edges[1:-1]), 0, n_bins - 1)
+    combined = np.char.add(
+        np.char.add(seed_names.astype(str), "_v12"),
+        v12_bin_labels.astype(str)
+    )
+    # Nếu có class chỉ có 1 mẫu, train_test_split sẽ lỗi → fallback về seed-only
+    unique, counts = np.unique(combined, return_counts=True)
+    if counts.min() < 2:
+        return seed_names.astype(str)
+    return combined
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--resolution", type=int, default=64)
@@ -57,16 +81,27 @@ def main():
 
     idx_all = np.where(keep_mask)[0]
     seed_names_all = data["seed_names"][idx_all]
+    v12_all = data["v12"][idx_all]
 
-    # Chia stratify theo seed: train vs (val+test) trước, rồi val vs test
+    # Stratify theo seed + fixed v12 bins — KHÔNG dùng percentile toàn bộ dữ liệu
+    # (fix: data leakage khi percentile leak thông tin test set vào train set)
+    strat_labels = _seed_only_stratify(seed_names_all, v12_all, n_bins=5)
+
+    # Chia train vs (val+test)
     idx_train, idx_temp = train_test_split(
         idx_all, test_size=(args.val_frac + args.test_frac),
-        stratify=seed_names_all, random_state=args.seed,
+        stratify=strat_labels, random_state=args.seed,
     )
+
+    # Stratify val/test split (dùng fixed bins, không percentile)
+    seed_names_temp = data["seed_names"][idx_temp]
+    v12_temp = data["v12"][idx_temp]
+    strat_labels_temp = _seed_only_stratify(seed_names_temp, v12_temp, n_bins=5)
+
     rel_test_frac = args.test_frac / (args.val_frac + args.test_frac)
     idx_val, idx_test = train_test_split(
         idx_temp, test_size=rel_test_frac,
-        stratify=data["seed_names"][idx_temp], random_state=args.seed,
+        stratify=strat_labels_temp, random_state=args.seed,
     )
 
     print(f"Train: {len(idx_train)}, Val: {len(idx_val)}, Test: {len(idx_test)}")

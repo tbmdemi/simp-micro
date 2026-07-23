@@ -1,17 +1,13 @@
 """
 Bộ điều phối vòng lặp tối ưu hóa SIMP (phiên bản đơn giản).
 
-Phối hợp: FE -> đồng nhất hóa -> hàm mục tiêu -> lọc -> OC.
-Dùng dict params thay cho SimpConfig.
+Phối hợp: FE -> đồng nhất hóa -> hàm mục tiêu -> lọc -> OC. Dùng dict params
+thay cho SimpConfig.
 
-LỊCH SỬ FIX QUAN TRỌNG (xem CHANGELOG.md để biết chi tiết đầy đủ):
-  - v12/v21 giờ dùng compute_nu12()/compute_nu21() (nghịch đảo ma trận Q
-    đầy đủ), thay vì công thức rút gọn Q12/Q22 chỉ đúng khi rotation=0.
-  - FIX QUAN TRỌNG NHẤT: solve_fe() trả về U là trường DAO ĐỘNG (fluctuation)
-    chi, nghiệm của K@chi = -K@U0 - không phải tổng chuyển vị. Trước đây
-    compute_homogenized_tensor() nhận nhầm chi làm tổng chuyển vị, khiến Q
-    luôn phản ánh gần đúng vật liệu nền đẳng hướng (v12 ~ nu) bất kể
-    topology. Đã sửa: cộng lại U_total = U0 + chi trước khi tính Q.
+FIX QUAN TRỌNG (xem CHANGELOG.md): solve_fe() trả về fluctuation chi (nghiệm
+K@chi=-K@U0), không phải tổng chuyển vị. compute_homogenized_tensor() từng
+nhận nhầm chi làm tổng chuyển vị, khiến Q luôn lệch về vật liệu nền đẳng
+hướng bất kể topology - đã sửa bằng U_total = U0 + chi trước khi tính Q.
 """
 
 import json
@@ -93,11 +89,9 @@ def run_simp(params: dict) -> dict:
     void_size_frac = params.get('void_size_frac', 0.4)
     rotation_deg = params.get('rotation_deg', 0.0)
     beta = params.get('beta', 1.0)
-    # mu: mặc định 0.0 (khuyến nghị GIỮ 0.0). Số hạng mu*(Q11+Q22) trong
-    # objective KHÔNG tạo áp lực trực tiếp lên Q12 - nó thưởng độ cứng,
-    # điều không liên quan tới việc kéo Q12 xuống âm. Đã kiểm chứng thực
-    # nghiệm: mu > 0 không cải thiện (thậm chí có xu hướng làm Q12 dương
-    # hơn). Cần thiết kế lại cơ chế này trước khi bật lại mu > 0.
+    # mu mặc định 0.0 - KHUYẾN NGHỊ GIỮ NGUYÊN: số hạng mu*(Q11+Q22) chỉ
+    # thưởng độ cứng, không tạo áp lực lên Q12 - thực nghiệm cho thấy mu > 0
+    # không cải thiện (thậm chí Q12 dương hơn). Cần thiết kế lại trước khi bật.
     mu = params.get('mu', 0.0)
     rho0 = params.get('rho0', 1.0)
     save_every = params.get('save_every', 1)
@@ -171,15 +165,11 @@ def run_simp(params: dict) -> dict:
         loop += 1
 
         try:
-            # FE: trả về U là trường DAO ĐỘNG (fluctuation) chi thỏa
-            # K@chi = -K@U0, KHÔNG phải tổng chuyển vị (xem docstring
-            # solve_fe trong core/solver.py).
+            # solve_fe trả về U là fluctuation chi (K@chi=-K@U0), KHÔNG phải
+            # tổng chuyển vị (xem docstring module ở trên).
             U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal, E0, Emin, rho0=rho0)
 
-            # Đồng nhất hóa: công thức Q_ij = 1/|Omega| Sum_e (u_e^i)^T k_e (u_e^j)
-            # (Andreassen et al. 2014, eq. 6) yêu cầu TỔNG chuyển vị u = u0 + chi.
-            # Cộng lại U0 trước khi dùng - thiếu bước này khiến Q luôn lệch về
-            # phía vật liệu nền đẳng hướng bất kể topology thực tế.
+            # Đồng nhất hóa (Andreassen 2014 eq.6) cần TỔNG chuyển vị u=u0+chi.
             U_total = U0 + U
             Q, dQ, _ = compute_homogenized_tensor(
                 U_total, U0, xPhys, material.KE, edofMat, penal, E0, Emin, rho0=rho0,

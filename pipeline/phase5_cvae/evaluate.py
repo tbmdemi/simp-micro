@@ -1,21 +1,19 @@
 """
-Phase 5 - evaluate.py  (roadmap bước 5.5)
+Phase 5 - evaluate.py
 =============================================
 3 phép kiểm tra latent space sau khi train xong:
 
-1. property_accuracy(): với mỗi mẫu trong test.npz, sinh geometry theo
-   condition (v12,v21) của chính mẫu đó, dùng surrogate frozen dự đoán lại
-   Poisson ratio của ảnh sinh ra, so với target ban đầu -> R2/MAE. Đây là
-   con số quan trọng nhất để biết cVAE có "nghe lời" condition hay không.
+1. property_accuracy(): sinh geometry theo condition (v12,v21) của mỗi mẫu
+   test, dùng surrogate frozen dự đoán lại Poisson ratio -> R2/MAE.
+   CẢNH BÁO: con số này KHÔNG đáng tin - đo hoàn toàn qua surrogate mà
+   chính gamma đang tối ưu chống lại, xem outputs/phase5/fe_verification_report.json
+   (verify_fe.py) và mục Phase 5 trong README trước khi dùng số ở đây.
 
-2. diversity_check(): giữ condition CỐ ĐỊNH, sample nhiều z ngẫu nhiên khác
-   nhau -> đo độ đa dạng hình học (pixel-wise std giữa các mẫu). Nếu std
-   gần 0 -> posterior collapse thật sự xảy ra (decoder bỏ qua z hoàn toàn),
-   cần tăng kl-warmup hoặc giảm gamma ở train.py rồi train lại.
+2. diversity_check(): giữ condition cố định, sample nhiều z -> đo độ đa
+   dạng hình học (pixel-wise std). Gần 0 -> nghi posterior collapse.
 
-3. interpolation(): nội suy tuyến tính z giữa 2 mẫu test ngẫu nhiên (cùng
-   giữ condition của mẫu 1) -> lưu chuỗi ảnh để mắt thường kiểm tra latent
-   space có "mượt" không (không có bước nhảy hình học đột ngột).
+3. interpolation(): nội suy tuyến tính z giữa 2 mẫu test -> lưu chuỗi ảnh
+   để kiểm tra mắt thường latent space có mượt không.
 
 Cách chạy:
     python3 pipeline/phase5_cvae/evaluate.py
@@ -58,9 +56,9 @@ def property_accuracy(model, surrogate, target_names, test_loader, device):
         pred_cond = torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
         preds.append(pred_cond.cpu().numpy())
         targets.append(condition.cpu().numpy())
-
     preds = np.concatenate(preds)
     targets = np.concatenate(targets)
+
     mae = np.abs(preds - targets).mean(axis=0)
     ss_res = ((targets - preds) ** 2).sum(axis=0)
     ss_tot = ((targets - targets.mean(axis=0)) ** 2).sum(axis=0)

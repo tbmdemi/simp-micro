@@ -1,13 +1,10 @@
 """
-Phase 1: LHS Screening - PARALLEL VERSION với multiprocessing.Pool
+Phase 1: LHS Screening - chạy song song bằng multiprocessing.Pool.
 
-Cải tiến:
-  1. Dùng multiprocessing.Pool để chạy evaluate_sample song song
-  2. 2 chiến lược: 
-     - map(): chặn tới khi tất cả xong (đơn giản, progress không rõ)
-     - imap_unordered(): bất đồng bộ, thấy progress ngay
-  3. Tự động phát hiện số CPU
-  4. Fallback sequential nếu có lỗi
+2 chiến lược:
+  - map(): chặn tới khi tất cả xong (đơn giản, progress không rõ)
+  - imap_unordered(): bất đồng bộ, thấy progress ngay
+Tự động phát hiện số CPU; fallback về sequential nếu Pool lỗi.
 
 Usage:
     python phase1_screening_parallel.py --objective auxetic --seed circle --workers 4
@@ -586,24 +583,18 @@ def main() -> None:
             output_base=args.output,
         )
 
-    # ──────────────────────────────────────────────
-    # Post-process: Aggregate all seeds into _all_correlations.json and _all_summaries_parallel.json
-    # ──────────────────────────────────────────────
+    # ── Post-process: aggregate all seeds into _all_correlations.json / _all_summaries_parallel.json ──
     if args.all:
         aggregate_all_data(args.output, 'auxetic')
 
 def aggregate_all_data(base_dir: str, objective: str) -> None:
-    """Aggregate per-seed outputs into _all_correlations.json and _all_summaries_parallel.json.
+    """Aggregate per-seed outputs via pipeline/phase1_analyst.py (the sole
+    aggregation logic in the repo).
 
-    Đây chỉ là wrapper mỏng gọi vào pipeline/phase1_analyst.py — nguồn logic
-    aggregation DUY NHẤT trong repo. Trước đây hàm này có bản implementation
-    riêng, tách biệt hoàn toàn với phase1_analyst.py, dẫn tới 2 hệ quả:
-      1. Dùng Pearson vs Spearman khác nhau giữa 2 script (đã hợp nhất về
-         Spearman trong phase1_analyst.py).
-      2. Hàm này chỉ quét đúng list `SEEDS` cứng trong pipeline/params.py —
-         seed nào chạy ngoài danh sách đó (hoặc thêm muộn) sẽ bị bỏ sót âm
-         thầm. phase1_analyst.py tự động discover thư mục seed trên đĩa nên
-         không có rủi ro này.
+    Trước đây có bản implementation riêng ở đây, dùng Pearson (khác Spearman
+    của phase1_analyst.py) và chỉ quét đúng list `SEEDS` cứng trong
+    pipeline/params.py nên seed thêm muộn bị bỏ sót âm thầm. Nay chỉ gọi
+    thẳng phase1_analyst.py, tự động discover seed trên đĩa nên hết rủi ro đó.
 
     `objective` hiện chưa dùng (phase1_analyst.py tự phát hiện objective từ
     tên file/metadata) — giữ tham số để không phá vỡ chữ ký gọi hàm hiện có.

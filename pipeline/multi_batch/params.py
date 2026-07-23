@@ -81,6 +81,7 @@ class BatchConfig:
             "hexagonal",
             "hourglass",
             "nine_circle",
+            "reentrant_bowtie",
             "small_square_cross",
             "square",
         ]

@@ -5,7 +5,23 @@ Sinh geometry mới từ 1 target Poisson ratio (v12, v21) bất kỳ, dùng cVA
 đã train. Đây là "inverse design" thật sự - input chỉ là con số mong muốn,
 output là ảnh density field.
 
-Cách chạy:
+CẢNH BÁO QUAN TRỌNG - ĐỌC TRƯỚC KHI DÙNG KẾT QUẢ SCRIPT NÀY:
+verify_fe.py đã xác nhận ảnh sinh ra bởi BẤT KỲ checkpoint nào (gamma
+1-300) thường KHÔNG đạt đúng Poisson ratio thật khi kiểm bằng FE thật -
+R2(FE thật) âm nặng ở mọi gamma đã thử, xem
+outputs/phase5/fe_verification_report.json và mục Phase 5 trong README.
+Script này chỉ sinh 1 mẫu/lần gọi, KHÔNG lọc qua FE - dùng để xem NHANH
+hình dạng generator sinh ra, KHÔNG dùng trực tiếp kết quả cho mục đích
+thực tế.
+
+Quy trình CHÍNH THỨC để lấy 1 geometry đáng tin cậy là best_of_n_eval.py
+(sinh N ứng viên, chấm điểm bằng FE thật, giữ ứng viên tốt nhất -
+R2=+0.44..+0.60, hit rate 100% trên tập test, xem README §5):
+
+    python3 pipeline/phase5_cvae/best_of_n_eval.py \\
+        --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
+
+Cách chạy (chỉ để xem nhanh, không phải quy trình chính thức):
     python3 pipeline/phase5_cvae/sample.py --v12 -0.6 --v21 -0.6 --n 8
 
 Output: outputs/phase5/samples/v12_-0.60_v21_-0.60/sample_XX.png
@@ -55,15 +71,31 @@ def main():
     parser.add_argument("--n", type=int, default=8, help="số mẫu sinh ra")
     parser.add_argument("--out", type=str, default=None,
                          help="thư mục output tuỳ chỉnh (mặc định tự đặt theo v12/v21)")
+    parser.add_argument("--ckpt", type=str, default=CKPT_PATH,
+                         help="checkpoint cVAE (.pt) để load - mặc định outputs/phase5/"
+                              "cvae_best.pt. Giống --cvae-ckpt của best_of_n_eval.py.")
     args = parser.parse_args()
 
-    if not os.path.exists(CKPT_PATH):
+    if not os.path.exists(args.ckpt):
         raise FileNotFoundError(
-            f"Không tìm thấy {CKPT_PATH} - hãy chạy train.py trước."
+            f"Không tìm thấy {args.ckpt} - hãy chạy train.py trước."
         )
 
+    print("=" * 70)
+    print("CẢNH BÁO: sample.py sinh 1 MẪU DUY NHẤT mỗi lần gọi, KHÔNG lọc")
+    print("qua FE thật. verify_fe.py đã xác nhận ảnh sinh ra bởi cVAE thường")
+    print("KHÔNG đạt đúng Poisson ratio mong muốn khi kiểm bằng FE thật, dù")
+    print("R2 qua surrogate trông cao (surrogate exploitation - xem README §5,")
+    print("outputs/phase5/fe_verification_report.json).")
+    print("Script này chỉ nên dùng để xem NHANH hình dạng generator sinh ra.")
+    print("Muốn kết quả đáng tin cậy, dùng quy trình CHÍNH THỨC best_of_n_eval.py")
+    print("(sinh N ứng viên, chọn bằng FE thật - R2=+0.44..+0.60, hit rate 100%):")
+    print("    python3 pipeline/phase5_cvae/best_of_n_eval.py "
+          "--cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30")
+    print("=" * 70)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = load_model(device=device)
+    model = load_model(device=device, ckpt_path=args.ckpt)
 
     condition = torch.tensor([args.v12, args.v21], dtype=torch.float32, device=device)
     samples = model.generate(condition, n_samples=args.n, device=device)  # (n,1,64,64)
@@ -77,9 +109,8 @@ def main():
 
     print(f"Đã sinh {args.n} mẫu cho target v12={args.v12}, v21={args.v21}")
     print(f"Lưu tại: {out_dir}")
-    print("Bước tiếp theo gợi ý: chạy verify FEA thật (Phase 6, bước 6.5) trên "
-          "các mẫu này để kiểm tra cVAE có thật sự đạt Poisson ratio mong muốn, "
-          "vì property loss lúc train chỉ dựa trên surrogate (không phải FE thật).")
+    print("Nhắc lại: đây là mẫu CHƯA qua lọc FE - dùng best_of_n_eval.py để có "
+          "kết quả đáng tin cậy trước khi dùng cho mục đích thực tế.")
 
 
 if __name__ == "__main__":

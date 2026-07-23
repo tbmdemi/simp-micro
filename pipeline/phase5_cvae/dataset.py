@@ -1,20 +1,13 @@
 """
 Phase 5 - dataset.py
 =====================
-PyTorch Dataset đọc trực tiếp outputs/phase3/{train,val,test}.npz - CÙNG file
-mà Phase 4 dùng, không cần build lại dataset.
+Đọc outputs/phase3/{train,val,test}.npz (cùng file Phase 4 dùng). Khác Phase 4:
+v12/v21 ở đây là CONDITION đầu vào cVAE (không phải target regress), giữ
+nguyên đơn vị vật lý (không chuẩn hoá). seed_onehot vẫn trả về nhưng chỉ dùng
+phụ ở evaluate.py, không đưa vào condition vector (xem model.py).
 
-Khác với Phase 4 (dataset.py trả targets = [v12, v21, volfrac] để REGRESS),
-ở đây v12/v21 đóng vai trò CONDITION (đầu vào cVAE), không phải target dự
-đoán. seed_onehot vẫn được trả về nhưng CHỈ dùng phụ (debug / phân tích theo
-seed sau này ở evaluate.py) - mặc định KHÔNG đưa vào condition vector, xem
-lý do ở docstring của model.py.
-
-Mỗi mẫu trả về:
-    image      : Tensor (1, RES, RES) float32, [0,1]
-    condition  : Tensor (2,) float32 = [v12, v21]   (giữ nguyên đơn vị vật lý)
-    seed_vec   : Tensor (n_seeds,) float32, one-hot - dùng phụ, không bắt buộc
-    volfrac    : Tensor scalar float32 - dùng phụ cho evaluate.py nếu cần
+Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21], seed_vec
+(n_seeds,) one-hot, volfrac scalar.
 """
 import os
 import numpy as np

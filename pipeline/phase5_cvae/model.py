@@ -3,35 +3,18 @@ Phase 5 - model.py
 ====================
 Conditional VAE (cVAE) cho inverse design: target (v12, v21) -> density field.
 
-Quyết định kiến trúc (bước 5.1 - 5.2):
-  - Condition vector = [v12, v21] (2 chiều), KHÔNG gồm seed one-hot.
-    Lý do: mục tiêu Phase 5 là "chỉ cần đưa target Poisson ratio, sinh ra
-    hình học" - đúng tinh thần inverse design. Nếu ép thêm seed vào
-    condition, người dùng cuối phải biết trước muốn seed nào mới generate
-    được, trái với mục tiêu ban đầu. seed_onehot vẫn được Dataset trả về,
-    nhưng chỉ dùng ở evaluate.py để PHÂN TÍCH latent space học được gì
-    (VD: liệu z có tự phân cụm theo seed family không), không đưa vào
-    forward pass của model.
-    -> Nếu sau khi train thấy generation kém đa dạng / không đúng seed
-    mong muốn, có thể nâng cấp: concat seed_vec vào condition ở cả
-    encoder/decoder mà KHÔNG cần đổi cấu trúc file này, chỉ đổi
-    `condition_dim` khi khởi tạo CVAE và nối thêm seed_vec trước khi gọi
-    model (xem ghi chú trong train.py).
+Condition vector = [v12, v21] (2 chiều), KHÔNG gồm seed one-hot - mục tiêu
+inverse design là chỉ cần đưa target Poisson ratio, không cần biết trước
+seed nào. seed_onehot vẫn được Dataset trả về (dùng ở evaluate.py để phân
+tích latent space theo seed family), không đưa vào forward pass model.
+Nếu cần nâng cấp: concat seed_vec vào condition ở cả encoder/decoder,
+chỉ cần đổi `condition_dim` lúc khởi tạo CVAE, không cần sửa file này.
 
-  - Encoder: 4 ConvBlock (32->64->128->256), giống hệt SurrogateCNN của
-    Phase 4 (pipeline/phase4_surrogate/model.py) NHƯNG giữ lại feature map
-    không gian (không GAP) để decoder có đủ thông tin tái tạo hình học.
-    64x64 -> 32 -> 16 -> 8 -> 4 (256 kênh) -> flatten -> concat condition
-    -> FC -> (mu, logvar) kích thước latent_dim (mặc định 32).
-
-  - Decoder: đối xứng ngược lại bằng ConvTranspose2d, đầu vào là
-    [z, condition] -> FC -> reshape (256,4,4) -> 4 lần upsample x2 ->
-    64x64x1 -> Sigmoid (ảnh density field ~ nhị phân, khớp loss BCE ở
-    losses.py).
-
-Nếu R2 property-consistency (5.3) không đạt, có thể tăng CHANNELS hoặc
-latent_dim mà KHÔNG cần sửa logic file này - giống comment trong
-Phase 4 model.py.
+Encoder: 4 ConvBlock (32->64->128->256, giống SurrogateCNN Phase 4 nhưng
+GIỮ feature map không gian, không GAP, để decoder có đủ thông tin tái tạo)
+-> flatten -> concat condition -> FC -> (mu, logvar).
+Decoder: đối xứng ngược bằng ConvTranspose2d, [z, condition] -> FC ->
+reshape -> upsample x2 x4 lần -> Sigmoid.
 """
 import torch
 import torch.nn as nn
@@ -124,10 +107,10 @@ class Decoder(nn.Module):
 class CVAE(nn.Module):
     def __init__(self, condition_dim=2, latent_dim=32, resolution=64,
                  channels=(32, 64, 128, 256)):
-        """channels: kênh của encoder theo thứ tự tăng dần (VD (32,64,128,256)).
-        Decoder tự dùng channels đảo ngược. Nên set qua CVAEConfig.channels
-        (config.py) thay vì sửa default ở đây, để đồng bộ với checkpoint đã
-        lưu (train.py lưu channels vào checkpoint - xem sample.py/load_model)."""
+        """channels: kênh encoder tăng dần (VD (32,64,128,256)); decoder tự
+        dùng đảo ngược. train.py lưu channels vào checkpoint (sample.py đọc
+        lại) nên đổi giá trị này sau khi đã có checkpoint cũ sẽ không load
+        lại được state_dict cũ."""
         super().__init__()
         self.latent_dim = latent_dim
         self.encoder = Encoder(condition_dim, latent_dim,
@@ -142,12 +125,9 @@ class CVAE(nn.Module):
         return mu + eps * std
 
     def forward(self, image, condition, deterministic: bool = False):
-        """deterministic=True: dùng mu trực tiếp làm z (không sample) - dùng
-        lúc validation để loại bỏ nhiễu ngẫu nhiên khỏi phép so sánh giữa
-        các epoch, giúp chọn checkpoint đáng tin hơn. deterministic=False
-        (mặc định): sample z theo reparameterization trick - dùng lúc
-        train, ĐÚNG chuẩn VAE (cần z ngẫu nhiên để gradient của KL có ý
-        nghĩa và latent space học được cấu trúc liên tục)."""
+        """deterministic=True: z=mu (không sample) - dùng lúc validation để
+        loại nhiễu ngẫu nhiên khỏi so sánh giữa các epoch. False (mặc định,
+        lúc train): sample z qua reparameterization trick, chuẩn VAE."""
         mu, logvar = self.encoder(image, condition)
         z = mu if deterministic else self.reparameterize(mu, logvar)
         recon = self.decoder(z, condition)

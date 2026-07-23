@@ -1,14 +1,12 @@
 """
 Phase 4 - model.py
 ====================
-Kiến trúc CNN "Phương án A" (baseline) từ roadmap bước 4.1:
-  4 block Conv(3x3)+BN+ReLU+MaxPool -> Global Average Pool
-  -> concat seed one-hot -> 2 FC layer -> 3 output (v12, v21, volfrac)
+CNN baseline: 4x Conv(3x3)+BN+ReLU+MaxPool -> GAP -> concat seed one-hot
+-> 2 FC layer -> 3 output (v12, v21, volfrac).
 
-Nếu sau khi đánh giá (bước 4.3) mà R² không đạt (< 0.90), nâng cấp bằng
-cách tăng CHANNELS bên dưới (VD [32,64,128,256] -> [64,128,256,512])
-hoặc thêm residual connection - KHÔNG cần đổi cấu trúc file, chỉ đổi
-tham số truyền vào SurrogateCNN().
+Nếu R² < 0.90, thử tăng CHANNELS (VD [32,64,128,256] -> [64,128,256,512])
+hoặc thêm residual connection - chỉ cần đổi tham số truyền vào
+SurrogateCNN(), không cần đổi cấu trúc file.
 """
 import torch
 import torch.nn as nn
