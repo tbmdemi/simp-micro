@@ -1,0 +1,1797 @@
+<!--
+  Title:    SIMP Analyst - Workflow Diagram v2.0
+  Type:     Dashboard / Showcase Pipeline
+  Aesthetic: Modern technical dashboard, card-based phase layout, animated flow
+  Fonts:    Syne (headings) + DM Sans (body)
+  Nguồn dữ liệu: đồng bộ theo AI_Tạo_sinh_trong_vật_liệu.xlsx (sheet Checklist / Tổng quan / Summary / Top Params Detail)
+  8 giai đoạn (0→7), khớp đúng số bước, trạng thái và số liệu thật tại thời điểm cập nhật.
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIMP Analyst — Workflow Pipeline v2.0</title>
+<style>
+/* ══════════════════════════════════════════════════════════════
+   GOOGLE FONTS
+   ══════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap');
+
+/* ══════════════════════════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --color-bg:            #f4f2ed;
+  --color-surface:       #ffffff;
+  --color-surface-alt:   #faf9f7;
+  --color-border:        #e8e6e0;
+  --color-text-primary:  #1a1a2e;
+  --color-text-secondary:#5a6b7c;
+  --color-text-muted:    #8e99a9;
+
+  /* Phase colours — 8 giai đoạn (0→7), lạnh → ấm theo chiều pipeline */
+  --phase-0: #64748b;   /* Dữ liệu SIMP (MATLAB) */
+  --phase-1: #4a90d9;   /* Sàng lọc LHS */
+  --phase-2: #2f9e97;   /* Mở rộng DOE */
+  --phase-3: #50b87a;   /* Biểu diễn & tăng cường dữ liệu */
+  --phase-4: #7c6fd9;   /* Mô hình surrogate */
+  --phase-5: #c1548a;   /* Mô hình sinh có điều kiện */
+  --phase-6: #d9605c;   /* Hậu xử lý & kiểm định FEA */
+  --phase-7: #d4a843;   /* Active Learning Loop */
+
+  --phase-0-bg:   #eef1f4;
+  --phase-1-bg:   #edf3fb;
+  --phase-2-bg:   #e9f7f5;
+  --phase-3-bg:   #ebf7f1;
+  --phase-4-bg:   #efedfb;
+  --phase-5-bg:   #fbeef4;
+  --phase-6-bg:   #fdeeed;
+  --phase-7-bg:   #fdf8e8;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-card:    0 2px 16px rgba(0,0,0,0.06);
+  --shadow-hover:   0 8px 30px rgba(0,0,0,0.10);
+  --shadow-node:    0 2px 8px rgba(0,0,0,0.04);
+  --shadow-node-hover: 0 6px 20px rgba(0,0,0,0.08);
+
+  --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESET & BASE
+   ══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(74,144,217,0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(155,114,196,0.03) 0%, transparent 50%);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--color-text-primary);
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONTAINER
+   ══════════════════════════════════════════════════════════════ */
+.container {
+  max-width: 1320px;
+  width: 100%;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.07);
+  padding: 36px 32px 44px;
+  position: relative;
+  overflow: hidden;
+}
+.container::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--phase-0), var(--phase-1), var(--phase-2), var(--phase-3), var(--phase-4), var(--phase-5), var(--phase-6), var(--phase-7));
+  opacity: 0.8;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HEADER
+   ══════════════════════════════════════════════════════════════ */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header-left h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #4a90d9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #edf2f7;
+  padding: 4px 14px;
+  border-radius: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+.version-badge span {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #4a90d9;
+  animation: pulseDot 2s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.header-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.header-right .total-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface-alt);
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+.header-right .total-stat.highlight {
+  background: color-mix(in srgb, var(--phase-1) 10%, var(--color-surface-alt));
+  color: var(--phase-1);
+}
+
+/* Subtitle */
+.subtitle {
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  border-left: 4px solid var(--phase-1);
+  padding-left: 18px;
+  margin: 12px 0 22px;
+  font-weight: 400;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   OVERALL PROJECT PROGRESS (số liệu thật, tĩnh — không phải hiệu ứng scroll)
+   ══════════════════════════════════════════════════════════════ */
+.overall-progress {
+  margin-bottom: 26px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 20px 16px;
+}
+.overall-progress-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin-bottom: 9px;
+}
+.overall-progress-label .title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+.overall-progress-pct {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--phase-1);
+}
+.overall-progress-pct small {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  font-size: 11.5px;
+  margin-left: 4px;
+}
+.overall-progress-track {
+  height: 10px;
+  background: #e8e6e0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.overall-progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  background: linear-gradient(90deg, var(--phase-0), var(--phase-1), var(--phase-2));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROGRESS TRACK
+   ══════════════════════════════════════════════════════════════ */
+.progress-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding: 0 4px;
+  position: relative;
+}
+.progress-track::before {
+  content: '';
+  position: absolute;
+  top: 18px; left: 20px; right: 20px;
+  height: 3px;
+  background: #e8e6e0;
+  border-radius: 4px;
+  z-index: 0;
+}
+.progress-track .progress-fill {
+  position: absolute;
+  top: 18px; left: 20px;
+  height: 3px;
+  border-radius: 4px;
+  z-index: 1;
+  background: linear-gradient(90deg, var(--phase-0), var(--phase-1), var(--phase-2), var(--phase-3), var(--phase-4), var(--phase-5), var(--phase-6), var(--phase-7));
+  width: 0%;
+  transition: width 1.2s ease;
+}
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 2;
+  cursor: default;
+}
+.progress-step .step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  transition: var(--transition);
+  border: 2.5px solid #e0ddd5;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+.progress-step.completed .step-circle {
+  background: var(--step-color);
+  border-color: var(--step-color);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--step-color) 16%, transparent);
+}
+.progress-step.next .step-circle {
+  background: var(--color-surface);
+  border-style: dashed;
+  border-color: var(--step-color);
+  color: var(--step-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--step-color) 14%, transparent);
+}
+.progress-step .step-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.progress-step.completed .step-label { color: var(--step-color); }
+.progress-step.next .step-label { color: var(--step-color); }
+
+/* ══════════════════════════════════════════════════════════════
+   LEGEND
+   ══════════════════════════════════════════════════════════════ */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  background: var(--color-surface-alt);
+  padding: 12px 22px;
+  border-radius: 40px;
+  margin-bottom: 36px;
+  border: 1px solid var(--color-border);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FLOW
+   ══════════════════════════════════════════════════════════════ */
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE CARD
+   ══════════════════════════════════════════════════════════════ */
+.phase {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: var(--transition);
+  position: relative;
+  opacity: 0;
+  transform: translateY(30px);
+}
+.phase.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.phase::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 5px;
+  background: var(--phase-color);
+  border-radius: 0 4px 4px 0;
+}
+.phase:hover {
+  border-color: transparent;
+  box-shadow: var(--shadow-hover);
+}
+.phase[data-phase="7"] {
+  border-style: dashed;
+  border-color: var(--phase-7);
+}
+.phase[data-phase="7"]:hover {
+  border-style: solid;
+  border-color: var(--phase-7);
+}
+
+/* Phase Header */
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px 14px 28px;
+  background: var(--phase-bg);
+  border-bottom: 1px solid transparent;
+  flex-wrap: wrap;
+}
+.phase-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 16px;
+  color: #fff;
+  background: var(--phase-color);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--phase-color) 30%, transparent);
+}
+.phase-header h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.phase-header h2 .phase-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.phase-status-group {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.phase-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.phase-status.completed {
+  background: color-mix(in srgb, var(--phase-color) 14%, transparent);
+  color: var(--phase-color);
+}
+.phase-status.pending {
+  background: #f1f0ec;
+  color: var(--color-text-muted);
+}
+.next-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 30px;
+  color: #fff;
+  background: var(--phase-color);
+  white-space: nowrap;
+}
+
+/* Phase Body (nodes row) */
+.phase-body {
+  padding: 18px 22px 16px 28px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.phase-body::-webkit-scrollbar {
+  height: 5px;
+}
+.phase-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.phase-body::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+.nodes-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+  padding: 4px 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NODE
+   ══════════════════════════════════════════════════════════════ */
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 112px;
+  max-width: 150px;
+  padding: 12px 12px 10px;
+  background: var(--color-surface);
+  border: 1.5px solid color-mix(in srgb, var(--phase-color) 25%, var(--color-border));
+  border-radius: var(--radius-md);
+  position: relative;
+  transition: var(--transition);
+  box-shadow: var(--shadow-node);
+  cursor: default;
+}
+.node:hover {
+  transform: translateY(-4px);
+  border-color: var(--phase-color);
+  box-shadow: var(--shadow-node-hover);
+  z-index: 5;
+}
+.node .node-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+  transition: var(--transition);
+}
+.node:hover .node-icon {
+  transform: scale(1.15);
+}
+.node .node-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+.node .node-desc {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.node .node-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--phase-color) 12%, transparent);
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  width: 100%;
+}
+.node .node-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.node .node-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.node .node-status-dot.done { background: #10b981; }
+.node .node-status-dot.progress { background: #f59e0b; animation: pulseDot 2s ease infinite; }
+.node .node-status-dot.wait { background: #d1d5db; }
+
+/* Node arrow */
+.node-arrow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--phase-color) 40%, var(--color-text-muted));
+  font-size: 18px;
+  padding: 0 2px;
+  font-weight: 300;
+}
+
+/* Decision diamond – special node */
+.node-diamond {
+  min-width: 80px;
+  max-width: 100px;
+  padding: 14px 8px;
+}
+.node-diamond .node-icon {
+  font-size: 18px;
+}
+.node-diamond::after {
+  content: '';
+  position: absolute;
+  top: -6px; left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px; height: 12px;
+  background: var(--color-surface);
+  border-left: 1.5px solid color-mix(in srgb, var(--phase-color) 25%, var(--color-border));
+  border-top: 1.5px solid color-mix(in srgb, var(--phase-color) 25%, var(--color-border));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INSIGHT BOX (chi tiết sensitivity / số liệu bổ sung)
+   ══════════════════════════════════════════════════════════════ */
+.insight-box {
+  margin: 4px 22px 14px 28px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--phase-color) 6%, var(--color-surface));
+  border: 1px dashed color-mix(in srgb, var(--phase-color) 38%, var(--color-border));
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+.insight-title {
+  font-weight: 700;
+  color: var(--phase-color);
+  font-size: 11.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.insight-box strong { color: var(--color-text-primary); }
+.insight-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 9px;
+}
+.insight-chip {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+.insight-chip small { color: var(--color-text-muted); font-weight: 500; }
+.insight-chip.dim { color: var(--color-text-muted); font-weight: 500; }
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE FOOTER
+   ══════════════════════════════════════════════════════════════ */
+.phase-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 10px 22px 12px 28px;
+  background: color-mix(in srgb, var(--phase-color) 4%, var(--color-surface-alt));
+  border-top: 1px solid color-mix(in srgb, var(--phase-color) 10%, var(--color-border));
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.phase-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.phase-footer strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PHASE CONNECTOR (vertical)
+   ══════════════════════════════════════════════════════════════ */
+.connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 0;
+  position: relative;
+  height: 56px;
+  overflow: visible;
+}
+.connector svg {
+  width: 24px;
+  height: 44px;
+  overflow: visible;
+}
+.connector-line {
+  stroke: var(--color-border);
+  stroke-width: 2;
+  stroke-dasharray: 5,4;
+}
+.connector-dot {
+  animation: flowPulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes flowPulse {
+  0%   { r: 3; opacity: 0.3; }
+  40%  { r: 4; opacity: 1; }
+  60%  { r: 4; opacity: 1; }
+  100% { r: 3; opacity: 0.3; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOOP-BACK CONNECTOR (Phase 7 → Phase 4-5)
+   ══════════════════════════════════════════════════════════════ */
+.loop-connector {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 16px 4px 0;
+  margin-top: -6px;
+  margin-bottom: -6px;
+  position: relative;
+  z-index: 3;
+}
+.loop-connector svg {
+  width: 80px;
+  height: 60px;
+  overflow: visible;
+}
+.loop-label {
+  position: absolute;
+  right: 100px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--phase-7);
+  white-space: nowrap;
+  background: rgba(255,255,255,0.85);
+  padding: 3px 12px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--phase-7) 30%, transparent);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GOAL FOOTER
+   ══════════════════════════════════════════════════════════════ */
+.goal-section {
+  margin-top: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px 32px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #f5f0ff 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid #e2e0f0;
+}
+.goal-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+.goal-badge small {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.goal-metrics {
+  display: flex;
+  gap: 20px 32px;
+  flex-wrap: wrap;
+}
+.goal-metric {
+  text-align: center;
+}
+.goal-metric .value {
+  font-family: 'Syne', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  display: block;
+  color: var(--color-text-primary);
+}
+.goal-metric .value small {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+.goal-metric .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOOLTIP
+   ══════════════════════════════════════════════════════════════ */
+.node-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 11px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  pointer-events: none;
+  line-height: 1.5;
+  max-width: 220px;
+  white-space: normal;
+  text-align: left;
+  font-weight: 400;
+}
+.node-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a1a2e;
+}
+.node:hover .node-tooltip {
+  display: block;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .container { padding: 28px 20px 32px; }
+  .header-left h1 { font-size: 24px; }
+  .header-right .total-stat { font-size: 12px; padding: 4px 12px; }
+  .phase-header h2 { font-size: 16px; }
+  .phase-header h2 .phase-sub { font-size: 12px; }
+  .node { min-width: 100px; padding: 10px 10px 8px; }
+  .node .node-title { font-size: 11px; }
+  .phase-body { padding: 14px 16px 12px 22px; }
+}
+@media (max-width: 768px) {
+  body { padding: 16px 8px; }
+  .container { padding: 20px 14px 24px; border-radius: var(--radius-lg); }
+  .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .header-right { width: 100%; justify-content: flex-start; }
+  .header-left h1 { font-size: 20px; }
+  .version-badge { font-size: 10px; padding: 3px 10px; }
+  .subtitle { font-size: 13px; padding-left: 12px; margin-bottom: 16px; }
+  .overall-progress { padding: 12px 14px 14px; margin-bottom: 18px; }
+  .progress-track { display: none; }
+  .legend { gap: 8px 14px; padding: 10px 16px; font-size: 12px; }
+  .phase-header { padding: 14px 14px 10px 20px; flex-wrap: wrap; }
+  .phase-header h2 { font-size: 15px; width: 100%; }
+  .phase-status-group { margin-left: 0; font-size: 11px; }
+  .phase-badge { width: 32px; height: 32px; font-size: 13px; }
+  .phase-body { padding: 12px 14px 10px 20px; }
+  .insight-box { margin: 4px 14px 12px 20px; }
+  .node { min-width: 90px; padding: 8px 8px 6px; }
+  .node .node-icon { font-size: 17px; }
+  .node .node-title { font-size: 10px; }
+  .node .node-desc { font-size: 9.5px; }
+  .node .node-meta { font-size: 8.5px; }
+  .node-arrow { font-size: 14px; }
+  .phase-footer { font-size: 10px; padding: 8px 14px 10px 20px; gap: 4px 12px; }
+  .connector { height: 36px; }
+  .connector svg { height: 28px; }
+  .loop-connector { justify-content: center; padding: 4px 0; }
+  .loop-connector svg { width: 60px; height: 44px; }
+  .loop-label { right: auto; left: 50%; top: 0; transform: translateX(-50%); font-size: 9px; padding: 2px 8px; }
+  .goal-section { flex-direction: column; text-align: center; padding: 16px; gap: 12px; }
+  .goal-badge { font-size: 18px; flex-direction: column; }
+  .goal-badge small { font-size: 12px; }
+  .goal-metric .value { font-size: 20px; }
+}
+@media (max-width: 480px) {
+  .container { padding: 14px 8px 18px; border-radius: var(--radius-md); }
+  .header-left h1 { font-size: 17px; }
+  .subtitle { font-size: 11.5px; }
+  .node { min-width: 76px; padding: 6px 6px 5px; border-radius: var(--radius-sm); }
+  .node .node-icon { font-size: 14px; }
+  .node .node-title { font-size: 9px; }
+  .node .node-desc { font-size: 8.5px; }
+  .node .node-meta { font-size: 7.5px; margin-top: 3px; padding-top: 3px; }
+  .node-arrow { font-size: 11px; }
+  .phase-header { padding: 10px 10px 8px 14px; }
+  .phase-body { padding: 8px 8px 8px 14px; }
+  .phase-footer { padding: 6px 10px 8px 14px; font-size: 9px; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOTION REDUCED
+   ══════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .phase { opacity: 1; transform: none; }
+  .progress-track .progress-fill { transition: none; }
+  .overall-progress-fill { transition: none; }
+  .version-badge span { animation: none; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ════════════ HEADER ════════════ -->
+  <header class="header">
+    <div class="header-left">
+      <h1>🧊 SIMP Analyst</h1>
+      <span class="version-badge"><span></span> v2.0.0</span>
+    </div>
+    <div class="header-right">
+      <span class="total-stat">📦 1.620+ mẫu thu thập</span>
+      <span class="total-stat">⚡ 8 giai đoạn</span>
+      <span class="total-stat">🎯 Auxetic (ν &lt; 0)</span>
+      <span class="total-stat highlight">📊 37,5% hoàn thành</span>
+    </div>
+  </header>
+
+  <p class="subtitle">
+    Quy trình 8 giai đoạn: <strong>Dữ liệu SIMP (MATLAB)</strong> → <strong>Sàng lọc LHS</strong> → <strong>Mở rộng DOE</strong> → <strong>Biểu diễn &amp; tăng cường dữ liệu</strong> → <strong>Surrogate CNN</strong> → <strong>Generative Model</strong> → <strong>Kiểm định FEA</strong> → <strong>Active Learning Loop</strong> — thiết kế Unit Cell Auxetic theo yêu cầu
+  </p>
+
+  <!-- ════════════ OVERALL PROGRESS (số liệu thật từ Checklist) ════════════ -->
+  <div class="overall-progress">
+    <div class="overall-progress-label">
+      <span class="title">📈 Tiến độ dự án (theo Checklist)</span>
+      <span class="overall-progress-pct">37,5% <small>· 3/8 giai đoạn · 19/48 đầu việc hoàn thành</small></span>
+    </div>
+    <div class="overall-progress-track">
+      <div class="overall-progress-fill" style="width:37.5%"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ PROGRESS TRACK ════════════ -->
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+    <div class="progress-step completed" style="--step-color: var(--phase-0);">
+      <div class="step-circle">0</div>
+      <span class="step-label">SIMP Data</span>
+    </div>
+    <div class="progress-step completed" style="--step-color: var(--phase-1);">
+      <div class="step-circle">1</div>
+      <span class="step-label">LHS</span>
+    </div>
+    <div class="progress-step completed" style="--step-color: var(--phase-2);">
+      <div class="step-circle">2</div>
+      <span class="step-label">DOE</span>
+    </div>
+    <div class="progress-step next" style="--step-color: var(--phase-3);">
+      <div class="step-circle">3</div>
+      <span class="step-label">Data Rep</span>
+    </div>
+    <div class="progress-step" style="--step-color: var(--phase-4);">
+      <div class="step-circle">4</div>
+      <span class="step-label">Surrogate</span>
+    </div>
+    <div class="progress-step" style="--step-color: var(--phase-5);">
+      <div class="step-circle">5</div>
+      <span class="step-label">Generative</span>
+    </div>
+    <div class="progress-step" style="--step-color: var(--phase-6);">
+      <div class="step-circle">6</div>
+      <span class="step-label">Validation</span>
+    </div>
+    <div class="progress-step" style="--step-color: var(--phase-7);">
+      <div class="step-circle">7</div>
+      <span class="step-label">Active Learning</span>
+    </div>
+  </div>
+
+  <!-- ════════════ LEGEND ════════════ -->
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-0)"></span> 0 · SIMP (MATLAB)</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-1)"></span> 1 · Sàng lọc LHS</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-2)"></span> 2 · Mở rộng DOE</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-3)"></span> 3 · Biểu diễn dữ liệu</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-4)"></span> 4 · Surrogate</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-5)"></span> 5 · Generative</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-6)"></span> 6 · Validation FEA</span>
+    <span class="legend-item"><span class="legend-swatch" style="background:var(--phase-7)"></span> 7 · Active Learning</span>
+  </div>
+
+  <!-- ════════════ MAIN FLOW ════════════ -->
+  <div class="flow">
+
+    <!-- ──── PHASE 0: Dữ liệu SIMP (MATLAB) ──── -->
+    <section class="phase" data-phase="0"
+             style="--phase-color: var(--phase-0); --phase-bg: var(--phase-0-bg); transition-delay: 0.05s;">
+      <div class="phase-header">
+        <div class="phase-badge">0</div>
+        <h2>⚙️ Dữ liệu SIMP <span class="phase-sub">Topology Optimization (MATLAB)</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status completed">✅ Hoàn thành</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">🌱</div>
+            <div class="node-title">Seed Init</div>
+            <div class="node-desc">10 patterns</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>⏱ 0.5s</span></div>
+            <div class="node-tooltip">Khởi tạo 10 seed hình học: circle, square, hourglass, four_circle, hexagonal, nine_circle, cross_rectangular, grid_circular_voids, small_square_cross, circle_half_quarter</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔧</div>
+            <div class="node-title">FE Solver</div>
+            <div class="node-desc">+ PBC</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>⏱ ~8s</span></div>
+            <div class="node-tooltip">Phần tử hữu hạn với điều kiện biên tuần hoàn (Periodic Boundary Conditions)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📊</div>
+            <div class="node-title">Homogenization</div>
+            <div class="node-desc">Q tensor 3×3</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>⏱ 2s</span></div>
+            <div class="node-tooltip">Tính tensor độ cứng tương đương Q (3×3) từ trường ứng suất-biến dạng</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🎯</div>
+            <div class="node-title">Objective</div>
+            <div class="node-desc">Auxetic / First / Second</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>3 hàm mục tiêu</span></div>
+            <div class="node-tooltip">Định nghĩa 3 hàm mục tiêu: auxetic (Poisson ratio âm), first, second — dùng xuyên suốt Phase 0-2</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🧹</div>
+            <div class="node-title">Sensitivity Filter</div>
+            <div class="node-desc">Checkerboard</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>r_min=1.5</span></div>
+            <div class="node-tooltip">Lọc độ nhạy loại bỏ hiện tượng bàn cờ (checkerboard pattern)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔄</div>
+            <div class="node-title">OC Update</div>
+            <div class="node-desc">Bisection</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>⏱ 1s</span></div>
+            <div class="node-tooltip">Cập nhật biến thiết kế bằng Optimality Criteria, chia đôi tìm Lagrange multiplier</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">✅</div>
+            <div class="node-title">Converged?</div>
+            <div class="node-desc">ε &lt; 0.01</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>~45 iters</span></div>
+            <div class="node-tooltip">Kiểm tra hội tụ: thay đổi thiết kế < 1% hoặc đạt max iterations</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">💾</div>
+            <div class="node-title">Output</div>
+            <div class="node-desc">Density + ν, ω</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>64×64 PNG</span></div>
+            <div class="node-tooltip">Xuất ảnh mật độ (64×64) + giá trị Poisson ratio ν, tần số riêng f1, f2</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>4/4 đầu việc</strong> (0.1 → 0.4)</span>
+        <span>⏱ <strong>~45 vòng lặp</strong> / lần chạy tối ưu</span>
+        <span>🎯 <strong>10 seed</strong> × <strong>3 hàm mục tiêu</strong> (auxetic/first/second)</span>
+        <span>📈 Ngưỡng hội tụ <strong>ε &lt; 0.01</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 0→1 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-0)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-1)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-1)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 1: Sàng lọc LHS ──── -->
+    <section class="phase" data-phase="1"
+             style="--phase-color: var(--phase-1); --phase-bg: var(--phase-1-bg); transition-delay: 0.12s;">
+      <div class="phase-header">
+        <div class="phase-badge">1</div>
+        <h2>🧪 Sàng lọc LHS <span class="phase-sub">Latin Hypercube Screening</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status completed">✅ Hoàn thành</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">📋</div>
+            <div class="node-title">Xác định tham số</div>
+            <div class="node-desc">Input variables</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>5 tham số</span></div>
+            <div class="node-tooltip">Xác định danh sách tham số đầu vào: volume fraction, filter radius, penalization power p, boundary/load, trọng số objective</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🧮</div>
+            <div class="node-title">Thiết kế LHS</div>
+            <div class="node-desc">Ma trận mẫu</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>10 seed × 3 obj</span></div>
+            <div class="node-tooltip">Thiết kế ma trận Latin Hypercube Sampling ban đầu — xác định số mức và số điểm mẫu</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">⚙️</div>
+            <div class="node-title">Chạy SIMP</div>
+            <div class="node-desc">Từng điểm LHS</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>1.500 mẫu</span></div>
+            <div class="node-tooltip">Chạy SIMP cho từng điểm mẫu LHS: 50 mẫu × 10 seed × 3 objective (auxetic/first/second) = 1.500 lần chạy</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔍</div>
+            <div class="node-title">Sensitivity</div>
+            <div class="node-desc">Hồi quy chuẩn hóa</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>p tới 10⁻²⁸</span></div>
+            <div class="node-tooltip">Tính sensitivity (hồi quy chuẩn hóa) cho ν, f1, f2 trên từng seed/objective</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🗂️</div>
+            <div class="node-title">Phân loại</div>
+            <div class="node-desc">Nhạy / không nhạy</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>volfrac nhạy mạnh</span></div>
+            <div class="node-tooltip">Phân loại tham số: nhạy mạnh (volfrac), nhạy cục bộ, không nhạy (move, rmin, void_size_frac)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">📊</div>
+            <div class="node-title">Pareto Front</div>
+            <div class="node-desc">Auxetic vs tần số</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>Sơ bộ</span></div>
+            <div class="node-tooltip">Vẽ sơ bộ Pareto front giữa hành vi auxetic và tần số riêng — cần hoàn thiện phần trình bày</div>
+          </div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title">🔑 Kết quả Sensitivity Analysis (10 seed × 3 objective, n=50/seed)</div>
+          Tham số ảnh hưởng nhất quán và mạnh nhất tới ν, f1, f2 trên toàn bộ 10 seed là <strong>volfrac</strong>, với hệ số tương quan r ≈ 0,87 – 0,96 và p-value từ 10⁻¹⁶ đến 10⁻²⁸. Các tham số còn lại (move, rmin, void_size_frac) không đạt ý nghĩa thống kê (p &gt; 0,05) ở hầu hết seed → được cố định ở giá trị nominal khi bước sang Phase 2.
+          <div class="insight-params">
+            <span class="insight-chip">volfrac <small>r ≈ 0,94 · p &lt; 10⁻¹⁵</small></span>
+            <span class="insight-chip dim">move <small>không đáng kể</small></span>
+            <span class="insight-chip dim">rmin <small>không đáng kể</small></span>
+            <span class="insight-chip dim">void_size_frac <small>không đáng kể</small></span>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>6/6 đầu việc</strong> (1.1 → 1.6)</span>
+        <span>🧪 <strong>1.500 mẫu</strong> LHS (10 seed × 3 obj × 50)</span>
+        <span>🔑 <strong>volfrac</strong> = tham số nhạy nhất</span>
+        <span>📐 Pareto front <strong>sơ bộ</strong> (cần trình bày tiếp)</span>
+      </div>
+    </section>
+
+    <!-- Connector 1→2 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-1)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-2)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-2)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 2: Mở rộng DOE ──── -->
+    <section class="phase" data-phase="2"
+             style="--phase-color: var(--phase-2); --phase-bg: var(--phase-2-bg); transition-delay: 0.19s;">
+      <div class="phase-header">
+        <div class="phase-badge">2</div>
+        <h2>📈 Mở rộng DOE <span class="phase-sub">Design of Experiments</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status completed">✅ Hoàn thành</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">✂️</div>
+            <div class="node-title">Thu hẹp biến</div>
+            <div class="node-desc">Cố định biến không nhạy</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>rmin, move, penal</span></div>
+            <div class="node-tooltip">Cố định rmin=1.5, move=0.2, penal=3.0; giữ volfrac ∈ [0.3, 0.7] và void_size_frac ∈ [0.1, 0.4] làm biến active</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🎲</div>
+            <div class="node-title">Sampling Strategy</div>
+            <div class="node-desc">Sobol sequence</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>Đã chọn</span></div>
+            <div class="node-tooltip">Chọn chiến lược sampling: Sobol sequence (so với Optimized LHS)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📦</div>
+            <div class="node-title">Batch 1</div>
+            <div class="node-desc">SIMP run</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>120 mẫu</span></div>
+            <div class="node-tooltip">Chạy SIMP batch 1: 120 mẫu Sobol trên không gian biến đã thu hẹp (pipeline.phase2_multi_batch, max 5 batch)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🗺️</div>
+            <div class="node-title">Coverage Analysis</div>
+            <div class="node-desc">ν vs f1 vs f2</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>Đã phân tích</span></div>
+            <div class="node-tooltip">Phân tích coverage property space (scatter ν vs f1 vs f2), xác định vùng thưa cần bổ sung</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📦</div>
+            <div class="node-title">Batch 2</div>
+            <div class="node-desc">Directed sampling</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>Đã chạy</span></div>
+            <div class="node-tooltip">Thiết kế & chạy SIMP batch 2 — directed sampling nhắm vào vùng thưa / vùng quan trọng</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">❓</div>
+            <div class="node-title">Đủ coverage?</div>
+            <div class="node-desc">Dừng / Batch 3</div>
+            <div class="node-meta"><span><span class="node-status-dot done"></span>Đã đánh giá</span></div>
+            <div class="node-tooltip">Đánh giá lại coverage, quyết định dừng hoặc chạy thêm batch 3</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>9/9 đầu việc</strong> (2.1 → 2.9)</span>
+        <span>📦 Batch 1: <strong>120 mẫu</strong> (Sobol)</span>
+        <span>🔒 Cố định: <strong>rmin, move, penal</strong></span>
+        <span>🎯 Active: <strong>volfrac, void_size_frac</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 2→3 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-2)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-3)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-3)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 3: Biểu diễn & tăng cường dữ liệu ──── -->
+    <section class="phase" data-phase="3"
+             style="--phase-color: var(--phase-3); --phase-bg: var(--phase-3-bg); transition-delay: 0.26s;">
+      <div class="phase-header">
+        <div class="phase-badge">3</div>
+        <h2>🖼️ Biểu diễn &amp; tăng cường dữ liệu <span class="phase-sub">Representation &amp; Augmentation</span></h2>
+        <div class="phase-status-group">
+          <span class="next-badge">📍 Tiếp theo</span>
+          <span class="phase-status pending">⬜ Chưa bắt đầu</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">📐</div>
+            <div class="node-title">Resize</div>
+            <div class="node-desc">64×64 / 128×128</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa chọn</span></div>
+            <div class="node-tooltip">Chuẩn hóa resolution ảnh density field về 64×64 hoặc 128×128 pixel</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📏</div>
+            <div class="node-title">Normalize</div>
+            <div class="node-desc">ν, f1, f2</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Chuẩn hóa / scale giá trị property (Poisson ratio, f1, f2)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🪞</div>
+            <div class="node-title">Invariance Check</div>
+            <div class="node-desc">Đối xứng</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Kiểm tra tính bất biến của property qua phép đối xứng (xoay / lật) trước khi augment</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔄</div>
+            <div class="node-title">Augmentation</div>
+            <div class="node-desc">Xoay 4 × Lật 2</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Dự kiến 8×</span></div>
+            <div class="node-tooltip">Áp dụng data augmentation bằng đối xứng hợp lệ: xoay 4 góc × lật 2 chiều → dự kiến hệ số 8×</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">✂️</div>
+            <div class="node-title">Train / Val / Test</div>
+            <div class="node-desc">Stratified Split</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Chia tập dữ liệu train/validation/test — stratified theo ν</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">💾</div>
+            <div class="node-title">Save</div>
+            <div class="node-desc">HDF5 / NPZ</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Lưu dataset dưới định dạng HDF5 / NPZ chuẩn cho pipeline ML</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>0/6 đầu việc</strong> (3.1 → 3.6)</span>
+        <span>🔄 Augmentation dự kiến <strong>8×</strong></span>
+        <span>📐 Input hiện có: <strong>1.620+ mẫu</strong> (Phase 1-2)</span>
+        <span>💾 Định dạng dự kiến <strong>HDF5 + NPZ</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 3→4 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-3)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-4)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-4)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 4: Mô hình surrogate ──── -->
+    <section class="phase" data-phase="4"
+             style="--phase-color: var(--phase-4); --phase-bg: var(--phase-4-bg); transition-delay: 0.33s;">
+      <div class="phase-header">
+        <div class="phase-badge">4</div>
+        <h2>🧠 Mô hình Surrogate <span class="phase-sub">CNN Regression</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status pending">⬜ Chưa bắt đầu</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">🏗️</div>
+            <div class="node-title">Kiến trúc CNN</div>
+            <div class="node-desc">Regression Model</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa chọn</span></div>
+            <div class="node-tooltip">Chọn kiến trúc CNN hồi quy để predict ν, f1, f2 từ ảnh density field</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📈</div>
+            <div class="node-title">Huấn luyện</div>
+            <div class="node-desc">ν, f1, f2</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Huấn luyện surrogate dự đoán Poisson ratio ν, tần số f1, f2 từ ảnh mật độ</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📊</div>
+            <div class="node-title">Đánh giá</div>
+            <div class="node-desc">R², MAE</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Đánh giá surrogate trên validation/test set bằng R² và MAE</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔎</div>
+            <div class="node-title">Sai số vùng biên</div>
+            <div class="node-desc">Vùng thưa dữ liệu</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Kiểm tra sai số ở vùng biên / vùng thưa dữ liệu để tránh ngoại suy sai</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">💾</div>
+            <div class="node-title">Lưu Model</div>
+            <div class="node-desc">Cho loss Phase 5</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Lưu surrogate model để dùng trong property-consistency loss của generative model (Phase 5)</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>0/5 đầu việc</strong> (4.1 → 4.5)</span>
+        <span>🧠 Input: <strong>dataset Phase 3</strong></span>
+        <span>🎯 Output: <strong>ν, f1, f2</strong></span>
+        <span>🔗 Phục vụ loss của <strong>Phase 5</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 4→5 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-4)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-5)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-5)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 5: Mô hình sinh có điều kiện ──── -->
+    <section class="phase" data-phase="5"
+             style="--phase-color: var(--phase-5); --phase-bg: var(--phase-5-bg); transition-delay: 0.40s;">
+      <div class="phase-header">
+        <div class="phase-badge">5</div>
+        <h2>🎨 Mô hình sinh có điều kiện <span class="phase-sub">cVAE / cGAN / Diffusion</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status pending">⬜ Chưa bắt đầu</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">🏗️</div>
+            <div class="node-title">Kiến trúc cVAE</div>
+            <div class="node-desc">Khởi điểm</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa chọn</span></div>
+            <div class="node-tooltip">Chọn kiến trúc khởi điểm: Conditional VAE (cVAE)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🧭</div>
+            <div class="node-title">Vector điều kiện</div>
+            <div class="node-desc">Target ν, f1, f2</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Thiết kế vector điều kiện: target Poisson ratio, f1, f2</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🧮</div>
+            <div class="node-title">Thiết kế Loss</div>
+            <div class="node-desc">Recon + KL + Consistency</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Reconstruction + KL divergence + property-consistency loss (từ surrogate Phase 4)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🚂</div>
+            <div class="node-title">Train cVAE</div>
+            <div class="node-desc">Baseline</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Huấn luyện cVAE baseline</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🌌</div>
+            <div class="node-title">Latent Space</div>
+            <div class="node-desc">Interpolation</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Đánh giá latent space: interpolation, sinh mẫu ngẫu nhiên</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">✨</div>
+            <div class="node-title">cGAN?</div>
+            <div class="node-desc">Tùy chọn nâng cao</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Tùy chọn</span></div>
+            <div class="node-tooltip">(Nâng cấp - tùy chọn) Thử nghiệm Conditional GAN</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">🌫️</div>
+            <div class="node-title">Diffusion?</div>
+            <div class="node-desc">Tùy chọn nâng cao</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Tùy chọn</span></div>
+            <div class="node-tooltip">(Nâng cấp - tùy chọn) Thử nghiệm conditional diffusion — tham khảo hướng video denoising diffusion cho inverse design (Deep-DRAM)</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>0/7 đầu việc</strong> (5.1 → 5.7, 2 bước tùy chọn)</span>
+        <span>🎨 Baseline: <strong>cVAE</strong></span>
+        <span>✨ Nâng cao: <strong>cGAN / Diffusion</strong></span>
+        <span>📚 Tham khảo: <strong>Deep-DRAM</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 5→6 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-5)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-6)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-6)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 6: Hậu xử lý & kiểm định FEA ──── -->
+    <section class="phase" data-phase="6"
+             style="--phase-color: var(--phase-6); --phase-bg: var(--phase-6-bg); transition-delay: 0.47s;">
+      <div class="phase-header">
+        <div class="phase-badge">6</div>
+        <h2>🔬 Hậu xử lý &amp; kiểm định FEA <span class="phase-sub">Validation</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status pending">⬜ Chưa bắt đầu</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">⚪</div>
+            <div class="node-title">Thresholding</div>
+            <div class="node-desc">Binary hóa</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>η=0.5</span></div>
+            <div class="node-tooltip">Nhị phân hóa density field sinh ra → binary (0/1) với threshold η = 0.5</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔗</div>
+            <div class="node-title">Connectivity</div>
+            <div class="node-desc">Check</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Pass/Fail</span></div>
+            <div class="node-tooltip">Kiểm tra connectivity / kích thước feature tối thiểu</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📋</div>
+            <div class="node-title">Periodic Check</div>
+            <div class="node-desc">Tuần hoàn</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Biên đối xứng</span></div>
+            <div class="node-tooltip">Kiểm tra tính tuần hoàn khi ghép ô đơn vị (cần cho periodic boundary conditions)</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🏆</div>
+            <div class="node-title">Rank Candidates</div>
+            <div class="node-desc">Top-N</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Top 5</span></div>
+            <div class="node-tooltip">Lọc candidate qua surrogate — rank theo sai số với target, chọn Top 5</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">⚡</div>
+            <div class="node-title">FEM Verify</div>
+            <div class="node-desc">SIMP thật</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>⏱ ~30s</span></div>
+            <div class="node-tooltip">Verify FEA/SIMP thật cho top candidate</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">✅</div>
+            <div class="node-title">Target ν đạt?</div>
+            <div class="node-desc">So sánh</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Dung sai ±0.05</span></div>
+            <div class="node-tooltip">So sánh kết quả verify với target ban đầu — dung sai ν ± 0.05</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>0/6 đầu việc</strong> (6.1 → 6.6)</span>
+        <span>🏆 <strong>Top-5</strong> ứng viên được chọn</span>
+        <span>⚡ FEM Verify <strong>~30s</strong> / mẫu</span>
+        <span>🎯 Dung sai <strong>ν ± 0.05</strong></span>
+      </div>
+    </section>
+
+    <!-- Connector 6→7 -->
+    <div class="connector">
+      <svg viewBox="0 0 24 44" fill="none">
+        <line x1="12" y1="0" x2="12" y2="44" class="connector-line"/>
+        <circle cx="12" cy="8" r="3.5" fill="var(--phase-6)" class="connector-dot"/>
+        <circle cx="12" cy="22" r="3" fill="var(--phase-7)" opacity="0.6"/>
+        <circle cx="12" cy="36" r="2.5" fill="var(--phase-7)" opacity="0.3"/>
+      </svg>
+    </div>
+
+    <!-- ──── PHASE 7: Active Learning Loop ──── -->
+    <section class="phase" data-phase="7"
+             style="--phase-color: var(--phase-7); --phase-bg: var(--phase-7-bg); transition-delay: 0.54s;">
+      <div class="phase-header">
+        <div class="phase-badge">7</div>
+        <h2>🔄 Active Learning Loop <span class="phase-sub">Tự động cải tiến liên tục</span></h2>
+        <div class="phase-status-group">
+          <span class="phase-status pending">⬜ Chưa bắt đầu</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="nodes-row">
+          <div class="node">
+            <div class="node-icon">➕</div>
+            <div class="node-title">Add Verified</div>
+            <div class="node-desc">Vào dataset</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Thêm candidate đã verify tốt (FEM) vào dataset training</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔄</div>
+            <div class="node-title">Retrain Surrogate</div>
+            <div class="node-desc">Phase 4</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Huấn luyện lại surrogate (Phase 4) với dataset mở rộng</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">🔄</div>
+            <div class="node-title">Retrain Gen</div>
+            <div class="node-desc">Phase 5</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Huấn luyện lại / fine-tune generative model (Phase 5) trên tập dữ liệu mở rộng</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node">
+            <div class="node-icon">📊</div>
+            <div class="node-title">Re-evaluate</div>
+            <div class="node-desc">Coverage</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Đánh giá lại coverage property space</div>
+          </div>
+          <span class="node-arrow">→</span>
+          <div class="node node-diamond">
+            <div class="node-icon">❓</div>
+            <div class="node-title">Dừng / Tiếp?</div>
+            <div class="node-desc">Batch mới</div>
+            <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
+            <div class="node-tooltip">Quyết định dừng loop hoặc tiếp tục thêm batch</div>
+          </div>
+        </div>
+      </div>
+      <div class="phase-footer">
+        <span>📊 <strong>0/5 đầu việc</strong> (7.1 → 7.5)</span>
+        <span>🔄 Loop lại <strong>Phase 4 &amp; 5</strong></span>
+        <span>🎯 Tiêu chí dừng: <strong>hội tụ coverage</strong></span>
+        <span>♻️ Chưa bắt đầu vòng nào</span>
+      </div>
+    </section>
+
+    <!-- ──── LOOP-BACK: Phase 7 → Phase 4-5 ──── -->
+    <div class="loop-connector">
+      <svg viewBox="0 0 80 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <path id="loopPath" d="M 60 52 C 20 52, 20 8, 60 8" stroke="none" fill="none"/>
+        </defs>
+        <!-- Background glow -->
+        <path d="M 60 52 C 18 52, 18 8, 60 8" stroke="var(--phase-7)" stroke-width="2.5"
+              stroke-dasharray="6 4" opacity="0.5" fill="none"/>
+        <path d="M 60 52 C 18 52, 18 8, 60 8" stroke="var(--phase-7)" stroke-width="1.5"
+              opacity="0.25" fill="none"/>
+        <!-- Animated dot -->
+        <circle r="4.5" fill="var(--phase-7)" filter="url(#glow)">
+          <animateMotion dur="4s" repeatCount="indefinite" rotate="auto">
+            <mpath href="#loopPath"/>
+          </animateMotion>
+        </circle>
+        <defs>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+      <span class="loop-label">♻️ Loop → Phase 4-5</span>
+    </div>
+
+  </div><!-- /flow -->
+
+  <!-- ════════════ GOAL SECTION ════════════ -->
+  <div class="goal-section">
+    <div class="goal-badge">
+      🎯 Mục tiêu cuối
+      <small>Thiết kế Unit Cell Auxetic (ν &lt; 0) theo yêu cầu</small>
+    </div>
+    <div class="goal-metrics">
+      <div class="goal-metric">
+        <span class="value"><span data-count="1620">0</span>+</span>
+        <span class="label">Tổng mẫu (LHS+DOE)</span>
+      </div>
+      <div class="goal-metric">
+        <span class="value">37,5%</span>
+        <span class="label">Hoàn thành dự án</span>
+      </div>
+      <div class="goal-metric">
+        <span class="value"><span data-count="3">0</span><small>/8</small></span>
+        <span class="label">Giai đoạn hoàn thành</span>
+      </div>
+      <div class="goal-metric">
+        <span class="value"><small>ν</small> &lt; 0</span>
+        <span class="label">Auxetic Target</span>
+      </div>
+      <div class="goal-metric">
+        <span class="value"><span data-count="10">0</span></span>
+        <span class="label">Seed Families</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+
+  // ── 1. SCROLL REVEAL (IntersectionObserver) ──
+  const phaseCards = document.querySelectorAll('.phase');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  phaseCards.forEach((card) => observer.observe(card));
+
+  // ── 2. PROGRESS BAR ANIMATION (hiệu ứng scroll — độc lập với tiến độ dự án thật) ──
+  function updateProgress() {
+    const phases = document.querySelectorAll('.phase');
+    let visibleCount = 0;
+    phases.forEach((p) => { if (p.classList.contains('visible')) visibleCount++; });
+    const pct = Math.min((visibleCount / phases.length) * 100, 100);
+    const fill = document.getElementById('progressFill');
+    if (fill) fill.style.width = pct + '%';
+  }
+
+  const progressObserver = new MutationObserver(() => updateProgress());
+  phaseCards.forEach((card) => {
+    progressObserver.observe(card, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  // ── 3. COUNTER ANIMATION ──
+  function animateCounters() {
+    const counters = document.querySelectorAll('[data-count]');
+    counters.forEach((el) => {
+      const target = parseInt(el.getAttribute('data-count'), 10);
+      if (isNaN(target)) return;
+      const duration = 1500;
+      const start = performance.now();
+
+      function step(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(eased * target);
+        el.textContent = current.toLocaleString();
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = target.toLocaleString();
+        }
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  const goalSection = document.querySelector('.goal-section');
+  if (goalSection) {
+    const goalObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          animateCounters();
+          goalObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    goalObserver.observe(goalSection);
+  }
+
+  // ── 4. KEYBOARD / ACCESSIBILITY: hiện tooltip khi focus ──
+  const nodes = document.querySelectorAll('.node');
+  nodes.forEach((n) => {
+    n.setAttribute('tabindex', '0');
+    n.addEventListener('focus', function() {
+      const tip = this.querySelector('.node-tooltip');
+      if (tip) tip.style.display = 'block';
+    });
+    n.addEventListener('blur', function() {
+      const tip = this.querySelector('.node-tooltip');
+      if (tip) tip.style.display = '';
+    });
+  });
+
+  // ── 5. INITIAL LOAD: reveal first phase immediately ──
+  setTimeout(() => {
+    const firstPhase = document.querySelector('.phase');
+    if (firstPhase && !firstPhase.classList.contains('visible')) {
+      firstPhase.classList.add('visible');
+    }
+    updateProgress();
+  }, 200);
+
+})();
+</script>
+
+</body>
+</html>

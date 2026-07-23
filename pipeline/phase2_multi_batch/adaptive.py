@@ -15,12 +15,12 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from pipeline.multi_batch.coverage import (
+from pipeline.phase2_multi_batch.coverage import (
     coverage_report,
     find_sparse_regions,
     recommend_new_samples,
 )
-from pipeline.multi_batch.params import BatchConfig, BatchMode, SamplingStrategy
+from pipeline.phase2_multi_batch.params import BatchConfig, BatchMode, SamplingStrategy
 
 
 # Fix H1: reentrant_bowtie was missing from this list, so _fill_seeds() could

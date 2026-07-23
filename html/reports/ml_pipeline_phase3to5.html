@@ -1,0 +1,515 @@
+<!--
+  Title: Từ Dataset đến Thiết kế Ngược — Phase 3-5 Results
+  Type: Report
+  Aesthetic: Same academic Playfair+Inter language as inverse_auxetic_report.html, extended with
+             hand-built SVG charts (gamma-sweep divergence, best-of-N comparison, manufacturability bars)
+  Generated: 2026-07-23
+-->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Flow và kết quả thực tế của Phase 3 (Dataset Build), Phase 4 (CNN Surrogate) và Phase 5 (cVAE Inverse Design) trong pipeline SIMP Analyst, bao gồm phát hiện surrogate exploitation và giải pháp best-of-N.">
+<title>Từ Dataset đến Thiết kế Ngược — Phase 3-5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']], processEscapes: true },
+        options: { ignoreHtmlClass: 'no-mathjax' }
+    };
+</script>
+<script type="text/javascript" id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+    :root {
+        --bg: #f5f4f0;
+        --surface: #ffffff;
+        --border: #e0ddd7;
+        --text: #1b1b2f;
+        --text2: #4e4e6b;
+        --text3: #8a8aa0;
+        --accent: #1f3c6c;
+        --accent-light: #dfe9f3;
+        --accent2: #6fa3ff;
+        --good: #0d7a3f;
+        --good-light: #e5f4ec;
+        --bad: #b6392f;
+        --bad-light: #fbeae8;
+        --radius: 12px;
+        --shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        line-height: 1.7;
+        color: var(--text);
+        background: var(--bg);
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+    }
+    header {
+        background: linear-gradient(135deg, var(--accent) 0%, #10203a 100%);
+        color: white;
+        padding: 50px 20px;
+        text-align: center;
+    }
+    header h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2.6rem;
+        margin: 0 0 10px 0;
+    }
+    header p { font-size: 1.05rem; opacity: 0.92; max-width: 700px; margin: 0 auto; }
+    .header-meta {
+        display: flex; justify-content: center; gap: 2rem; margin-top: 1.75rem; flex-wrap: wrap;
+    }
+    .header-meta .stat { text-align: center; }
+    .header-meta .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 1.3rem; font-weight: 600; display: block; }
+    .header-meta .stat-label { font-size: 0.72rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.05em; }
+    .container { max-width: 1020px; margin: 0 auto; padding: 20px; }
+    section {
+        background: var(--surface);
+        padding: 32px;
+        margin: 25px 0;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+    }
+    h2 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        color: var(--accent);
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 8px;
+        margin: 0 0 20px 0;
+    }
+    h3 { font-size: 1.25rem; margin: 24px 0 10px; color: var(--text); }
+    h4 { font-size: 1rem; margin: 16px 0 8px; color: var(--text); }
+    p { color: var(--text2); margin-bottom: 1rem; }
+    p.vi { font-style: italic; color: var(--text3); font-size: 0.92rem; }
+    code {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+        background: var(--accent-light); padding: 2px 6px; border-radius: 4px; color: var(--accent);
+    }
+    .formula-box {
+        background: #faf9f7; border-left: 4px solid var(--accent);
+        padding: 12px 18px; margin: 20px 0; overflow-x: auto; border-radius: 4px;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.92rem; }
+    th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th {
+        background: var(--accent-light); font-weight: 600; color: var(--accent);
+        font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    tr:hover td { background: #f8f7f4; }
+    td.num, th.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+    .card {
+        background: var(--bg); border-radius: 8px; padding: 16px 18px; margin: 14px 0;
+        border: 1px solid var(--border);
+    }
+    .card-title { font-weight: 600; font-size: 1rem; margin-bottom: 8px; color: var(--accent); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 18px 0; }
+    .stat-tile {
+        flex: 1 1 140px; background: var(--accent-light); border-radius: 10px;
+        padding: 14px 16px; text-align: center;
+    }
+    .stat-tile .v { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 600; color: var(--accent); }
+    .stat-tile .l { font-size: 0.72rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+    .flow-steps { display: flex; flex-direction: column; gap: 0; margin: 20px 0; }
+    .flow-step {
+        display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px dashed var(--border);
+    }
+    .flow-step:last-child { border-bottom: none; }
+    .flow-step .num {
+        flex: 0 0 32px; height: 32px; border-radius: 50%; background: var(--accent);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 0.9rem;
+    }
+    .flow-step .body strong { color: var(--text); }
+    .flow-step .body code { font-size: 0.8em; }
+    .badge {
+        display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem;
+        font-weight: 600; padding: 2px 9px; border-radius: 999px; text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .badge.good { background: var(--good-light); color: var(--good); }
+    .badge.bad { background: var(--bad-light); color: var(--bad); }
+    .callout {
+        border-left: 4px solid var(--bad); background: var(--bad-light);
+        padding: 14px 18px; border-radius: 6px; margin: 20px 0;
+    }
+    .callout.good-callout { border-left-color: var(--good); background: var(--good-light); }
+    .callout p { color: var(--text); margin-bottom: 0.5rem; }
+    .callout p:last-child { margin-bottom: 0; }
+    .toc { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .toc a {
+        display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--accent-light);
+        color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: 500;
+        transition: background 0.15s ease;
+    }
+    .toc a:hover { background: var(--accent); color: white; }
+    .chart-svg-wrap { width: 100%; overflow-x: auto; margin: 18px 0; }
+    .chart-svg-wrap svg { display: block; font-family: 'Inter', sans-serif; }
+    .legend-row { display: flex; gap: 20px; flex-wrap: wrap; margin: 10px 0 4px; font-size: 0.82rem; color: var(--text2); }
+    .legend-row .sw { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-row .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .bar-chart-v { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+    .bar-row-v { display: grid; grid-template-columns: 190px 1fr 56px; align-items: center; gap: 10px; }
+    .bar-row-v .lbl { font-size: 0.82rem; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+    .bar-track-v { position: relative; height: 12px; background: var(--accent-light); border-radius: 999px; overflow: hidden; }
+    .bar-fill-v { position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px; }
+    .bar-val-v { font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: var(--text); text-align: right; }
+    @media (max-width: 700px) {
+        .grid-2, .grid-3 { grid-template-columns: 1fr; }
+        header h1 { font-size: 2rem; }
+        .bar-row-v { grid-template-columns: 110px 1fr 46px; }
+    }
+    footer { text-align: center; padding: 20px; color: var(--text2); border-top: 1px solid var(--border); margin-top: 40px; }
+    .simp-hub-nav {
+      position: fixed; top: 14px; left: 14px; z-index: 10000;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; background: rgba(255,255,255,0.85); color: #1a1a2e;
+      border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
+      font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .simp-hub-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.16); }
+    @media (prefers-color-scheme: dark) {
+      .simp-hub-nav { background: rgba(24,28,38,0.85); color: #eef1f7; border-color: rgba(255,255,255,0.1); }
+    }
+    @media (max-width: 640px) {
+      .simp-hub-nav { top: 8px; left: 8px; padding: 6px 10px; font-size: 12px; }
+    }
+</style>
+</head>
+<body>
+<a href="../index.html" class="simp-hub-nav">← SIMP Analyst</a>
+<header>
+    <h1>Từ Dataset đến Thiết kế Ngược</h1>
+    <p>Flow và kết quả thực tế của Phase 3 (Dataset Build), Phase 4 (CNN Surrogate) và Phase 5 (cVAE Inverse Design) — bao gồm phát hiện <em>surrogate exploitation</em> và giải pháp best-of-N đã được xác minh bằng FE thực.</p>
+    <div class="header-meta">
+        <div class="stat"><span class="stat-num">33,120</span><span class="stat-label">Train images (Phase 3)</span></div>
+        <div class="stat"><span class="stat-num">R²=0.91</span><span class="stat-label">Surrogate (Phase 4)</span></div>
+        <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Hit rate (Phase 5)</span></div>
+    </div>
+</header>
+<div class="container">
+
+<section>
+    <h2>Mục lục</h2>
+    <ul class="toc">
+        <li><a href="#overview">0. Vị trí trong Pipeline</a></li>
+        <li><a href="#phase3">1. Phase 3 — Dataset Build</a></li>
+        <li><a href="#phase4">2. Phase 4 — CNN Surrogate</a></li>
+        <li><a href="#phase5">3. Phase 5 — cVAE Inverse Design</a></li>
+        <li><a href="#exploitation">3.1 Surrogate Exploitation</a></li>
+        <li><a href="#bestofn">3.2 Giải pháp: Best-of-N</a></li>
+        <li><a href="#manufacturability">3.3 Khả năng chế tạo</a></li>
+        <li><a href="#conclusion">4. Tổng kết</a></li>
+    </ul>
+</section>
+
+<!-- 0. OVERVIEW -->
+<section id="overview">
+    <h2>0. Vị trí trong Pipeline</h2>
+    <p>Phase 1 (LHS screening, xem <a href="auxetic_phase1_analysis.html">báo cáo Phase 1</a>) và Phase 2 (multi-batch adaptive DOE, xem <a href="../guides/multi_batch_adaptive_sampling.html">hướng dẫn kiến trúc &amp; kết quả</a>) đã tạo ra <strong>7.920 mẫu SIMP</strong> đã hội tụ. Báo cáo này tiếp nối từ đó: biến 7.920 mẫu thô thành một dataset ảnh có thể huấn luyện (Phase 3), học một surrogate CNN dự đoán nhanh tính chất vật liệu từ ảnh (Phase 4), rồi dùng surrogate đó để huấn luyện một cVAE sinh hình học ngược từ mục tiêu ν₁₂/ν₂₁ mong muốn (Phase 5).</p>
+    <div class="flow-steps">
+        <div class="flow-step">
+            <div class="num">2</div>
+            <div class="body"><strong>Multi-Batch Adaptive DOE</strong> — 8 batch, 7.920 mẫu, 100% hội tụ FE. <em>(đã hoàn thành, xem link trên)</em></div>
+        </div>
+        <div class="flow-step">
+            <div class="num">3</div>
+            <div class="body"><strong>Dataset Build</strong> — resize 64×64, lọc outlier, chia stratified train/val/test, tăng cường đối xứng vật lý.</div>
+        </div>
+        <div class="flow-step">
+            <div class="num">4</div>
+            <div class="body"><strong>CNN Surrogate</strong> — dự đoán (ν₁₂, ν₂₁, volfrac) từ ảnh mật độ, dùng làm "trọng tài rẻ" trong loss của Phase 5.</div>
+        </div>
+        <div class="flow-step">
+            <div class="num">5</div>
+            <div class="body"><strong>cVAE Inverse Design</strong> — sinh ảnh mật độ từ target (ν₁₂, ν₂₁); phát hiện &amp; khắc phục vấn đề surrogate exploitation qua best-of-N + FE thực.</div>
+        </div>
+    </div>
+</section>
+
+<!-- 1. PHASE 3 -->
+<section id="phase3">
+    <h2>1. Phase 3 — Dataset Build</h2>
+    <p>Biến 7.920 mẫu thô (ảnh PNG + CSV rải rác trong 8 thư mục batch) thành 3 file <code>.npz</code> sẵn sàng cho PyTorch, qua 4 script tuần tự.</p>
+
+    <div class="flow-steps">
+        <div class="flow-step">
+            <div class="num">1</div>
+            <div class="body"><code>scan_dataset.py</code> — quét toàn bộ 8 batch, khớp mỗi sample với ảnh mật độ cuối cùng + <code>volume_fraction</code> từ <code>iteration_data.csv</code> → <code>manifest.csv</code>.</div>
+        </div>
+        <div class="flow-step">
+            <div class="num">2</div>
+            <div class="body"><code>build_npz.py --resolution 64</code> — resize ảnh (từ lưới <code>xPhys</code> 50×50 gốc) về 64×64 bằng box-filter downsampling, chuẩn hóa pixel [0,1] → <code>dataset_64.npz</code>.</div>
+        </div>
+        <div class="flow-step">
+            <div class="num">3</div>
+            <div class="body"><code>augment_symmetry.py</code> — tăng cường đối xứng vật lý hợp lệ, chỉ áp dụng cho tập train (gọi từ script 4, không chạy độc lập).</div>
+        </div>
+        <div class="flow-step">
+            <div class="num">4</div>
+            <div class="body"><code>finalize_dataset.py --resolution 64</code> — lọc mẫu suy biến, chia 70/15/15 phân tầng theo seed, tăng cường train → <code>train/val/test.npz</code> + <code>split_report.json</code>.</div>
+        </div>
+    </div>
+
+    <h3>Quy tắc tăng cường đối xứng</h3>
+    <p>Ô đơn vị tuần hoàn dưới tải trục 1 và trục 2 — mỗi phép biến đổi hình học phải đi kèm phép hoán đổi target tương ứng để giữ đúng ý nghĩa vật lý:</p>
+    <table>
+        <thead><tr><th>Phép biến đổi</th><th>Ảnh hưởng lên target</th></tr></thead>
+        <tbody>
+            <tr><td>Xoay 90° / 270°</td><td>Trục 1 và trục 2 hoán đổi vai trò → <strong>ν₁₂ ↔ ν₂₁</strong></td></tr>
+            <tr><td>Xoay 180°, lật ngang/dọc</td><td>Trục không hoán đổi → ν₁₂, ν₂₁ giữ nguyên</td></tr>
+        </tbody>
+    </table>
+    <p class="vi">Chỉ áp dụng các phép hợp lệ vật lý — không dùng biến đổi tùy ý (shear, cắt xén) vì sẽ phá vỡ tính đúng đắn vật lý. Áp dụng CHỈ trên train để tránh rò rỉ giữa các biến thể đối xứng của cùng một mẫu vào val/test.</p>
+
+    <h3>Kết quả (<code>split_report.json</code>)</h3>
+    <div class="stat-row">
+        <div class="stat-tile"><div class="v">7,920</div><div class="l">Mẫu thô</div></div>
+        <div class="stat-tile"><div class="v">33</div><div class="l">Bị loại (suy biến)</div></div>
+        <div class="stat-tile"><div class="v">33,120</div><div class="l">Train (×6 augment)</div></div>
+        <div class="stat-tile"><div class="v">1,183</div><div class="l">Validation</div></div>
+        <div class="stat-tile"><div class="v">1,184</div><div class="l">Test</div></div>
+    </div>
+    <table>
+        <thead><tr><th>Split</th><th>N (trước augment)</th><th>Khoảng ν₁₂ đạt được</th></tr></thead>
+        <tbody>
+            <tr><td>Train</td><td class="num">5,520 → 33,120</td><td class="num">[−0.807, 0.276]</td></tr>
+            <tr><td>Validation</td><td class="num">1,183</td><td class="num">[−0.621, 0.236]</td></tr>
+            <tr><td>Test</td><td class="num">1,184</td><td class="num">[−0.627, 0.370]</td></tr>
+        </tbody>
+    </table>
+    <p>33/7.920 mẫu (0,4%) bị loại vì <code>volfrac_achieved</code> nằm ngoài <code>[0.05, 0.95]</code> — topology sụp về rỗng hoặc đặc hoàn toàn, không mang thông tin hình học hữu ích. Chia stratified theo seed đảm bảo cả 11 seed geometry xuất hiện tỉ lệ đều ở cả 3 tập (~108 mẫu/seed ở val và test).</p>
+
+    <div class="callout" style="border-left-color: var(--accent); background: var(--accent-light);">
+        <p><strong>Khoảng trống đã biết:</strong> target xuất ra hiện chỉ có <code>v12</code>, <code>v21</code>, <code>volfrac_achieved</code>. Các chỉ số <code>f1, f2</code> (độ cứng chuẩn hóa E₁₁/E₀, E₂₂/E₀ theo roadmap gốc) chưa khả dụng — cần mở rộng <code>compute_homogenized_tensor()</code> để xuất trước khi có thể dùng.</p>
+    </div>
+</section>
+
+<!-- 2. PHASE 4 -->
+<section id="phase4">
+    <h2>2. Phase 4 — CNN Surrogate Model</h2>
+    <p>Một CNN nhỏ học dự đoán nhanh <code>(ν₁₂, ν₂₁, volfrac)</code> trực tiếp từ ảnh mật độ, không cần chạy FE — cần thiết vì FE thật quá chậm để đặt bên trong vòng lặp gradient descent của loss property-consistency ở Phase 5.</p>
+
+    <h3>Kiến trúc (<code>SurrogateCNN</code>)</h3>
+    <div class="formula-box" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.9;">
+        Input: density field (1,64,64) + seed one-hot (11,)<br>
+        4× ConvBlock: Conv2d(3×3) → BatchNorm → ReLU → MaxPool2d(2) &nbsp; channels 32→64→128→256<br>
+        &nbsp;&nbsp;(64×64 → 32 → 16 → 8 → 4)<br>
+        → Global Average Pool → flatten (256,) → concat seed one-hot (11,) → (267,)<br>
+        → Linear(267→128) → ReLU → Dropout(0.2) → Linear(128→3)<br>
+        Output: [ν₁₂, ν₂₁, volfrac_achieved]
+    </div>
+    <p class="vi">Huấn luyện: weighted MSE (trọng số <code>[1.0, 1.0, 0.3]</code>, giảm ưu tiên volfrac), AdamW lr=5e-4, <code>ReduceLROnPlateau</code>, gradient clipping (max_norm=1.0) để tránh val_loss dao động mạnh, early stopping patience=10.</p>
+
+    <h3>Kết quả trên test set (<code>evaluation_report.json</code>)</h3>
+    <table>
+        <thead><tr><th>Target</th><th class="num">R²</th><th class="num">MAE</th></tr></thead>
+        <tbody>
+            <tr><td>ν₁₂</td><td class="num">0.910</td><td class="num">0.0373</td></tr>
+            <tr><td>ν₂₁</td><td class="num">0.911</td><td class="num">0.0363</td></tr>
+            <tr><td>volfrac_achieved</td><td class="num">0.982</td><td class="num">0.0074</td></tr>
+        </tbody>
+    </table>
+    <p>Checkpoint tốt nhất ở epoch 38/48, val_loss=0.00551.</p>
+
+    <h3>MAE(ν₁₂) theo seed</h3>
+    <div class="bar-chart-v">
+        <div class="bar-row-v"><span class="lbl">reentrant_bowtie</span><div class="bar-track-v"><div class="bar-fill-v" style="width:44%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0215</span></div>
+        <div class="bar-row-v"><span class="lbl">nine_circle</span><div class="bar-track-v"><div class="bar-fill-v" style="width:60%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0293</span></div>
+        <div class="bar-row-v"><span class="lbl">circle_half_quarter</span><div class="bar-track-v"><div class="bar-fill-v" style="width:60%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0294</span></div>
+        <div class="bar-row-v"><span class="lbl">grid_circular_voids</span><div class="bar-track-v"><div class="bar-fill-v" style="width:71%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0345</span></div>
+        <div class="bar-row-v"><span class="lbl">cross_rectangular</span><div class="bar-track-v"><div class="bar-fill-v" style="width:72%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0350</span></div>
+        <div class="bar-row-v"><span class="lbl">circle</span><div class="bar-track-v"><div class="bar-fill-v" style="width:72%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0352</span></div>
+        <div class="bar-row-v"><span class="lbl">hourglass</span><div class="bar-track-v"><div class="bar-fill-v" style="width:82%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0400</span></div>
+        <div class="bar-row-v"><span class="lbl">hexagonal</span><div class="bar-track-v"><div class="bar-fill-v" style="width:90%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0438</span></div>
+        <div class="bar-row-v"><span class="lbl">small_square_cross</span><div class="bar-track-v"><div class="bar-fill-v" style="width:93%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0455</span></div>
+        <div class="bar-row-v"><span class="lbl">square</span><div class="bar-track-v"><div class="bar-fill-v" style="width:98%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0478</span></div>
+        <div class="bar-row-v"><span class="lbl">four_circle</span><div class="bar-track-v"><div class="bar-fill-v" style="width:100%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0489</span></div>
+    </div>
+    <p class="vi">Không seed nào kém nghiêm trọng (dao động 0,021–0,049) — nếu R² &lt; 0,90 trên bất kỳ target nào, thử mở rộng <code>channels</code> trong <code>SurrogateCNN</code> trước khi đổi kiến trúc.</p>
+</section>
+
+<!-- 3. PHASE 5 -->
+<section id="phase5">
+    <h2>3. Phase 5 — Conditional VAE (Inverse Design)</h2>
+    <p>Bước thiết kế ngược thực sự: một mô hình sinh nhận target <strong>(ν₁₂, ν₂₁)</strong> làm điều kiện và sinh ra một ảnh mật độ 64×64 đạt được tính chất đó — không cần biết trước seed hay tham số thiết kế nào.</p>
+
+    <h3>Kiến trúc (<code>CVAE</code>)</h3>
+    <div class="formula-box" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.9;">
+        Encoder: 4× ConvBlock (32→64→128→256, giữ feature map không gian, KHÔNG dùng GAP)<br>
+        &nbsp;&nbsp;64×64×1 → 4×4×256 → flatten (4096,) → concat condition [ν₁₂,ν₂₁] (2,) → FC → (μ, logσ²), latent_dim=32<br>
+        Decoder (ConvTranspose2d, đối xứng ngược):<br>
+        &nbsp;&nbsp;[z (32,), condition (2,)] → FC → reshape (256,4,4) → 4× ConvTranspose2d → Sigmoid → (1,64,64)
+    </div>
+    <p class="vi">Lựa chọn thiết kế quan trọng: condition vector <strong>chỉ gồm [ν₁₂, ν₂₁]</strong> — không có seed one-hot — để đúng tinh thần inverse design thực sự.</p>
+
+    <h3>Hàm loss</h3>
+    <div class="formula-box">
+        \[ \mathcal{L} = \mathcal{L}_{recon} + \beta \cdot \mathcal{L}_{KL} + \gamma \cdot 1000 \cdot \mathcal{L}_{prop} \]
+    </div>
+    <p><code>β</code> tăng tuyến tính 0→1 qua 30 epoch đầu (chống posterior collapse). <code>L_prop</code> là MSE giữa target và dự đoán của <strong>surrogate Phase 4 đã đóng băng</strong> trên ảnh do decoder sinh ra. Hằng số nhân <code>1000</code> (<code>PROP_LOSS_SCALE</code>) là một sửa lỗi quan trọng — thiếu nó, ở <code>gamma=1</code> mặc định ban đầu, property loss (~0.01–0.05) hoàn toàn vô hình trước recon+kl (~1000) trong gradient.</p>
+
+    <!-- 3.1 EXPLOITATION -->
+    <h3 id="exploitation">3.1 Phát hiện: Surrogate Exploitation</h3>
+    <p><code>gamma</code> là tham số điều chỉnh quan trọng nhất — quét <code>gamma</code> từ 1 đến 300 để xem property-consistency loss ảnh hưởng thế nào đến chất lượng sinh. Kết quả tưởng như càng tăng gamma càng tốt <em>— nếu chỉ nhìn qua surrogate</em>:</p>
+
+    <div class="chart-svg-wrap">
+        <svg viewBox="0 0 660 330" width="660" height="330" role="img" aria-label="Biểu đồ R² qua surrogate tăng dần theo gamma trong khi R² qua FE thực luôn âm sâu">
+            <!-- gridlines -->
+            <g stroke="#e1e0d9" stroke-width="1">
+                <line x1="50" y1="20" x2="620" y2="20"></line>
+                <line x1="50" y1="54.7" x2="620" y2="54.7"></line>
+                <line x1="50" y1="124.2" x2="620" y2="124.2"></line>
+                <line x1="50" y1="158.9" x2="620" y2="158.9"></line>
+                <line x1="50" y1="193.6" x2="620" y2="193.6"></line>
+                <line x1="50" y1="228.3" x2="620" y2="228.3"></line>
+                <line x1="50" y1="263.1" x2="620" y2="263.1"></line>
+            </g>
+            <!-- zero baseline, emphasized -->
+            <line x1="50" y1="89.4" x2="620" y2="89.4" stroke="#8a8aa0" stroke-width="1.5"></line>
+            <!-- y-axis labels -->
+            <g font-size="10" fill="#8a8aa0" text-anchor="end" font-family="JetBrains Mono, monospace">
+                <text x="44" y="24">1.0</text>
+                <text x="44" y="93">0.0</text>
+                <text x="44" y="163">−1.0</text>
+                <text x="44" y="232">−2.0</text>
+            </g>
+            <text x="18" y="150" font-size="11" fill="#8a8aa0" text-anchor="middle" transform="rotate(-90 18 150)">R² (ν₁₂)</text>
+
+            <!-- surrogate line (blue, slot 1) -->
+            <polyline fill="none" stroke="#2a78d6" stroke-width="2.5"
+                points="50,118.6 107,58.2 164,45.7 221,47.8 278,45.7 335,40.1 392,36.7 449,34.6 506,34.6 563,33.2 620,29.7"></polyline>
+            <g fill="#2a78d6">
+                <circle cx="50" cy="118.6" r="4"><title>gamma=1: R²(surrogate)=−0.42</title></circle>
+                <circle cx="107" cy="58.2" r="4"><title>gamma=5: R²(surrogate)=0.45</title></circle>
+                <circle cx="164" cy="45.7" r="4"><title>gamma=20: R²(surrogate)=0.63</title></circle>
+                <circle cx="221" cy="47.8" r="4"><title>gamma=30: R²(surrogate)=0.60</title></circle>
+                <circle cx="278" cy="45.7" r="4"><title>gamma=50: R²(surrogate)=0.63</title></circle>
+                <circle cx="335" cy="40.1" r="4"><title>gamma=80: R²(surrogate)=0.71</title></circle>
+                <circle cx="392" cy="36.7" r="4"><title>gamma=100: R²(surrogate)=0.76</title></circle>
+                <circle cx="449" cy="34.6" r="4"><title>gamma=150: R²(surrogate)=0.79</title></circle>
+                <circle cx="506" cy="34.6" r="4"><title>gamma=200: R²(surrogate)=0.79</title></circle>
+                <circle cx="563" cy="33.2" r="4"><title>gamma=250: R²(surrogate)=0.81</title></circle>
+                <circle cx="620" cy="29.7" r="4"><title>gamma=300: R²(surrogate)=0.86</title></circle>
+            </g>
+            <text x="618" y="16" text-anchor="end" font-size="11" fill="#2a78d6" font-weight="600">R² qua surrogate (bị đánh lừa)</text>
+
+            <!-- real FE line (red, slot 8) - only measured at gamma 1,20,100,300 -->
+            <polyline fill="none" stroke="#e34948" stroke-width="2.5" stroke-dasharray="5,3"
+                points="50,226.25 164,170 392,244.3 620,256.8"></polyline>
+            <g fill="#e34948">
+                <circle cx="50" cy="226.25" r="5"><title>gamma=1: R²(FE thực)=−1.97</title></circle>
+                <circle cx="164" cy="170" r="5"><title>gamma=20: R²(FE thực)=−1.16</title></circle>
+                <circle cx="392" cy="244.3" r="5"><title>gamma=100: R²(FE thực)=−2.23</title></circle>
+                <circle cx="620" cy="256.8" r="5"><title>gamma=300: R²(FE thực)=−2.41</title></circle>
+            </g>
+            <text x="618" y="303" text-anchor="end" font-size="11" fill="#e34948" font-weight="600">R² qua FE thực (âm sâu mọi gamma)</text>
+
+            <!-- x axis labels -->
+            <g font-size="9.5" fill="#8a8aa0" text-anchor="middle" font-family="JetBrains Mono, monospace">
+                <text x="50" y="315">1</text>
+                <text x="107" y="315">5</text>
+                <text x="164" y="315">20</text>
+                <text x="221" y="315">30</text>
+                <text x="278" y="315">50</text>
+                <text x="335" y="315">80</text>
+                <text x="392" y="315">100</text>
+                <text x="449" y="315">150</text>
+                <text x="506" y="315">200</text>
+                <text x="563" y="315">250</text>
+                <text x="620" y="315">300</text>
+            </g>
+            <text x="335" y="329" font-size="11" fill="#8a8aa0" text-anchor="middle">gamma (γ)</text>
+        </svg>
+    </div>
+    <div class="legend-row">
+        <span class="sw"><span class="dot" style="background:#2a78d6;"></span>R² qua surrogate đóng băng (11 điểm)</span>
+        <span class="sw"><span class="dot" style="background:#e34948;"></span>R² qua FE thực, <code>verify_fe.py</code> (4 điểm kiểm chứng)</span>
+    </div>
+
+    <div class="callout">
+        <p><strong>Surrogate exploitation:</strong> R² đo qua surrogate tăng đơn điệu theo gamma và không bao giờ bão hòa, nhưng R² đo qua FE thực âm sâu ở <em>mọi</em> mức gamma — và khoảng cách surrogate-vs-thực <strong>nới rộng thêm</strong> khi gamma tăng (từ cách biệt 1,55 ở γ=1 lên 3,27 ở γ=300). Đây là bằng chứng rõ ràng rằng decoder học cách đánh lừa CNN đóng băng thay vì sinh hình học auxetic thực.</p>
+    </div>
+
+    <h4>Hai biện pháp thử ở giai đoạn huấn luyện — không khắc phục được vấn đề single-shot</h4>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-title">❌ Self-play <span class="badge bad">Không hiệu quả</span></div>
+            <p style="margin-bottom:0;">Tinh chỉnh lại surrogate trên ảnh cVAE sinh ra + chấm điểm bằng FE thực mỗi vòng, chọn checkpoint theo R² thực thay vì val_loss. Sau khi sửa 2 lỗi đo lường (RNG seed không nhất quán giữa các vòng), R² vẫn phẳng/nhiễu qua 8 vòng: −2,41 (gốc) so với −2,65 / −2,78 / −2,93 / −2,67 ở các vòng sau.</p>
+        </div>
+        <div class="card">
+            <div class="card-title">⏸️ Ensemble surrogate <span class="badge bad">Chưa hội tụ</span></div>
+            <p style="margin-bottom:0;">3 surrogate huấn luyện độc lập, phạt decoder khi chúng bất đồng (kiểu Deep Ensembles). Hạ tầng đã được viết + unit-test (forward/backward xác minh), nhưng một lần chạy huấn luyện đầy đủ không hội tụ trong thời gian phiên làm việc — để lại như một lựa chọn đã ghi nhận, chưa phải giải pháp đã chứng minh.</p>
+        </div>
+    </div>
+
+    <!-- 3.2 BEST OF N -->
+    <h3 id="bestofn">3.2 Giải pháp: Best-of-N + Chọn lọc bằng FE thực</h3>
+    <p>Cùng công thức với pipeline Deep-DRAM đã công bố (Pahlavani et al., <em>Advanced Materials</em> 2024): sinh N ứng viên/điều kiện, để <strong>FE thực</strong> (không phải surrogate) chọn người thắng cuộc. Không cần huấn luyện lại — đo trực tiếp trên checkpoint <code>cvae_gamma20.pt</code> có sẵn, tập giữ riêng 24 điều kiện (19 auxetic).</p>
+
+    <table>
+        <thead><tr><th>Chiến lược</th><th class="num"># lần gọi FE / điều kiện</th><th class="num">R² (ν₁₂, FE thực)</th><th class="num">Tỷ lệ trúng auxetic</th></tr></thead>
+        <tbody>
+            <tr><td>Single-shot (1 mẫu, không lọc)</td><td class="num">1</td><td class="num">âm sâu</td><td class="num">0.526 (10/19)</td></tr>
+            <tr><td>Best-of-N <strong>oracle</strong> (FE trên toàn bộ N=30)</td><td class="num">30</td><td class="num"><strong>+0.5955</strong></td><td class="num"><strong>1.000 (19/19)</strong></td></tr>
+            <tr><td>Best-of-N <strong>thực dụng</strong> (surrogate xếp hạng N=30, FE kiểm chứng top K=10)</td><td class="num">10</td><td class="num"><strong>+0.4384</strong></td><td class="num"><strong>1.000 (19/19)</strong></td></tr>
+        </tbody>
+    </table>
+    <p class="vi">Biến thể thực dụng (lọc sơ bộ bằng surrogate, rẻ hơn 3× về số lần gọi FE) giữ được gần như toàn bộ mức tăng R² và vẫn đạt tỷ lệ trúng 100%.</p>
+
+    <div class="callout good-callout">
+        <p><strong>Vì sao cách này hiệu quả:</strong> mục tiêu huấn luyện (một mẫu đơn lẻ phải đáng tin cậy qua gradient của một surrogate) về cơ bản khó đảm bảo — nhưng inverse design chỉ cần <em>phân phối của generator</em> chứa lời giải tốt ở đâu đó, và dùng FE thực làm cổng cuối cùng khiến điều đó an toàn để khai thác, ngay cả với một generator single-shot không hoàn hảo.</p>
+    </div>
+
+    <!-- 3.3 MANUFACTURABILITY -->
+    <h3 id="manufacturability">3.3 Khả năng chế tạo — hệ số Poisson đúng không đồng nghĩa với khả thi để chế tạo</h3>
+    <p><code>manufacturability.py</code> kiểm tra 2 điều kiện độc lập với độ chính xác Poisson: <strong>connectivity</strong> (một khối liền, không có đảo nổi, không có nét mảnh hơn bề rộng tối thiểu) và <strong>periodicity</strong> (cạnh đối diện của ô đơn vị phải khớp khi ghép lát bằng phép tịnh tiến — khác với điều kiện biên tuần hoàn trên trường chuyển vị dùng trong FE).</p>
+
+    <div class="bar-chart-v">
+        <div class="bar-row-v"><span class="lbl">Connectivity only</span><div class="bar-track-v"><div class="bar-fill-v" style="width:100%; background:var(--accent2);"></div></div><span class="bar-val-v">7–28%</span></div>
+        <div class="bar-row-v"><span class="lbl">Periodicity only</span><div class="bar-track-v"><div class="bar-fill-v" style="width:40%; background:var(--accent2);"></div></div><span class="bar-val-v">3–11%</span></div>
+        <div class="bar-row-v"><span class="lbl">Cả hai đồng thời</span><div class="bar-track-v"><div class="bar-fill-v" style="width:13%; background:var(--bad);"></div></div><span class="bar-val-v">0–3.5%</span></div>
+    </div>
+    <p>Tỷ lệ thấp này <strong>đồng đều trên toàn không gian thuộc tính</strong>, không phải một "vùng chết" cục bộ (xác nhận bằng <code>coverage_eval.py</code> trên lưới 8 điều kiện) — nghĩa là đây là vấn đề hành vi của decoder, không phải khoảng trống dữ liệu cần active learning để lấp đầy.</p>
+
+    <h4>Giảm nhẹ: lọc tại inference với N lớn hơn nhiều</h4>
+    <table>
+        <thead><tr><th>Cấu hình</th><th class="num">N</th><th class="num">Tỷ lệ trúng</th><th class="num">R² (FE thực)</th></tr></thead>
+        <tbody>
+            <tr><td>Không ràng buộc (mặc định)</td><td class="num">30</td><td class="num">1.000</td><td class="num">+0.44 → +0.60</td></tr>
+            <tr><td>Yêu cầu khả chế tạo, N nhỏ</td><td class="num">30–300</td><td class="num">0.800</td><td class="num"><strong>−1.96</strong> (gây hại)</td></tr>
+            <tr><td>Yêu cầu khả chế tạo, N lớn</td><td class="num">1,500</td><td class="num"><strong>1.000</strong></td><td class="num">+0.187</td></tr>
+        </tbody>
+    </table>
+    <p class="vi">Đánh đổi giữa khả năng chế tạo và độ chính xác thuộc tính là có thật, không chỉ là vấn đề chi phí tính toán thêm. Kết luận: dùng best-of-N mặc định khi cần độ chính xác Poisson; thêm <code>--require-manufacturable</code> + N lớn (≥1000) chỉ khi thiết kế khả thi chế tạo là yêu cầu bắt buộc.</p>
+</section>
+
+<!-- 4. CONCLUSION -->
+<section id="conclusion">
+    <h2>4. Tổng kết</h2>
+    <p>Pipeline từ dataset đến thiết kế ngược (Phase 3→5) đã hoàn thành với một câu chuyện rõ ràng: một surrogate CNN chính xác (R²≈0.91) không đủ để làm trọng tài duy nhất trong loss huấn luyện generative model — nó bị khai thác. Giải pháp không nằm ở việc huấn luyện lại tốt hơn, mà ở việc đặt <strong>FE thực làm trọng tài cuối cùng</strong> tại thời điểm inference (best-of-N), giữ nguyên checkpoint đã có.</p>
+    <ul>
+        <li><strong>Phase 3:</strong> 7.920 → 33.120 mẫu train (sau tăng cường), split stratified theo seed.</li>
+        <li><strong>Phase 4:</strong> R²(ν₁₂)=0.910, R²(ν₂₁)=0.911, R²(volfrac)=0.982 trên test set.</li>
+        <li><strong>Phase 5:</strong> single-shot bị khai thác surrogate (R² FE thực âm sâu) → best-of-N + FE thực khắc phục hoàn toàn về mặt độ chính xác Poisson (R²=+0.44 đến +0.60, tỷ lệ trúng 100%); khả năng chế tạo là một trục đánh đổi riêng (0–3.5% mặc định, +0.19 R² nếu ép N=1500 để đảm bảo khả chế tạo).</li>
+    </ul>
+    <p class="vi">Phase 6-8 (chế tạo/kiểm định thực nghiệm, active learning, mở rộng property space) chưa bắt đầu — xem <a href="../guides/simp_guide_and_roadmap.html">lộ trình đầy đủ</a>.</p>
+</section>
+
+</div>
+<footer>
+    <p>Generated by SIMP Analyst · Phase 3-5 Pipeline Results · 2026</p>
+</footer>
+</body>
+</html>

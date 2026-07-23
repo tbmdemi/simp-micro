@@ -7,8 +7,8 @@ Phase 1: LHS Screening - chạy song song bằng multiprocessing.Pool.
 Tự động phát hiện số CPU; fallback về sequential nếu Pool lỗi.
 
 Usage:
-    python phase1_screening_parallel.py --objective auxetic --seed circle --workers 4
-    python phase1_screening_parallel.py --all --workers auto
+    python -m pipeline.phase1_screening.screening_parallel --objective auxetic --seed circle --workers 4
+    python -m pipeline.phase1_screening.screening_parallel --all --workers auto
 """
 
 import argparse
@@ -588,18 +588,18 @@ def main() -> None:
         aggregate_all_data(args.output, 'auxetic')
 
 def aggregate_all_data(base_dir: str, objective: str) -> None:
-    """Aggregate per-seed outputs via pipeline/phase1_analyst.py (the sole
-    aggregation logic in the repo).
+    """Aggregate per-seed outputs via pipeline/phase1_screening/analyst.py (the
+    sole aggregation logic in the repo).
 
     Trước đây có bản implementation riêng ở đây, dùng Pearson (khác Spearman
-    của phase1_analyst.py) và chỉ quét đúng list `SEEDS` cứng trong
+    của analyst.py) và chỉ quét đúng list `SEEDS` cứng trong
     pipeline/params.py nên seed thêm muộn bị bỏ sót âm thầm. Nay chỉ gọi
-    thẳng phase1_analyst.py, tự động discover seed trên đĩa nên hết rủi ro đó.
+    thẳng analyst.py, tự động discover seed trên đĩa nên hết rủi ro đó.
 
-    `objective` hiện chưa dùng (phase1_analyst.py tự phát hiện objective từ
+    `objective` hiện chưa dùng (analyst.py tự phát hiện objective từ
     tên file/metadata) — giữ tham số để không phá vỡ chữ ký gọi hàm hiện có.
     """
-    from pipeline.phase1_analyst import main as run_analyst
+    from pipeline.phase1_screening.analyst import main as run_analyst
     run_analyst(root_dir=base_dir)
 
 
