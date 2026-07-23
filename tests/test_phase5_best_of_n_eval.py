@@ -277,6 +277,72 @@ class TestBestOfNEdgeCases:
         assert result_a["hit_rate_best_of_n"] == result_b["hit_rate_best_of_n"]
 
 
+class TestRequireManufacturable:
+    """Roadmap 6.2/6.3: --require-manufacturable should restrict the
+    candidate pool (ranking + FE verification) to images that pass
+    manufacturability.check_manufacturability(), while still reporting
+    v12_first (single-shot baseline) unfiltered — see best_of_n_eval.py."""
+
+    def test_filters_candidate_pool_to_manufacturable_only(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        # only even-indexed candidates (0, 2 of 4) count as "manufacturable"
+        state = {"n": 0}
+
+        def fake_check_manufacturability(img_bin, min_feature_px=2, periodicity_tol=0.1):
+            idx = state["n"]
+            state["n"] += 1
+            return {"passes_all": idx % 2 == 0}
+
+        monkeypatch.setattr(boe_mod, "check_manufacturability", fake_check_manufacturability)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=4, device="cpu", seed=1,
+            require_manufacturable=True,
+        )
+
+        assert result["per_condition"][0]["n_manufacturable"] == 2
+        assert result["per_condition"][0]["frac_manufacturable"] == pytest.approx(0.5)
+        # n_fe_calls_total only counts oracle-loop FE calls (not the
+        # separately-recomputed, always-unfiltered v12_first) - candidate
+        # pool restricted to 2 manufacturable candidates -> <= 2.
+        assert 0 < result["n_fe_calls_total"] <= 2
+
+    def test_disabled_by_default_uses_full_pool(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        def fake_check_manufacturability(img_bin, min_feature_px=2, periodicity_tol=0.1):
+            return {"passes_all": False}  # nothing manufacturable
+
+        monkeypatch.setattr(boe_mod, "check_manufacturability", fake_check_manufacturability)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=4, device="cpu", seed=1,
+        )  # require_manufacturable defaults to False
+
+        # all 4 candidates still scored by real FE despite none "passing" -
+        # the filter must be a no-op when the flag is off.
+        assert result["n_fe_calls_total"] == 4
+
+
 class TestBestOfNCli:
     def test_main_writes_result_json(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import best_of_n_eval as boe_mod

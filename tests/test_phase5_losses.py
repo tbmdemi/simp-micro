@@ -13,6 +13,8 @@ from pipeline.phase5_cvae.losses import (
     cvae_loss,
     kl_beta_schedule,
     kl_divergence,
+    periodicity_loss,
+    prior_sample_regularization,
     property_consistency_loss,
     property_consistency_loss_ensemble,
     reconstruction_loss,
@@ -192,6 +194,77 @@ class TestTvAndBinarizationLoss:
         assert torch.isclose(binarization_loss(img), torch.tensor(0.25), atol=1e-6)
 
 
+class TestPeriodicityLoss:
+    def test_zero_when_opposite_edges_match(self):
+        img = torch.zeros(2, 1, 8, 8)
+        img[:, :, :, 0] = 1.0
+        img[:, :, :, -1] = 1.0   # left col == right col
+        img[:, :, 0, :] = 0.3
+        img[:, :, -1, :] = 0.3   # top row == bottom row
+        assert torch.isclose(periodicity_loss(img), torch.tensor(0.0), atol=1e-6)
+
+    def test_positive_when_opposite_edges_mismatch(self):
+        img = torch.zeros(2, 1, 8, 8)
+        img[:, :, :, 0] = 1.0    # left col solid, right col left at 0 (void)
+        assert periodicity_loss(img).item() > 0.0
+
+    def test_uses_only_boundary_pixels_not_interior(self):
+        img_a = torch.zeros(1, 1, 8, 8)
+        img_b = img_a.clone()
+        img_b[:, :, 3:5, 3:5] = 1.0  # interior-only change
+        assert torch.isclose(periodicity_loss(img_a), periodicity_loss(img_b), atol=1e-6)
+
+
+class TestPriorSampleRegularization:
+    """prior_sample_regularization() must decode from a PRIOR z ~ N(0,1),
+    the same regime CVAE.generate() uses at inference - NOT the posterior
+    z the rest of cvae_loss operates on. See the function's docstring for
+    why this distinction was added: empirically, regularizing posterior
+    reconstructions didn't move generation-time manufacturability at all
+    (~0-3.5% pass rate before AND after a 25-epoch fine-tune)."""
+
+    def _make_decoder(self, latent_dim=4, resolution=8):
+        from pipeline.phase5_cvae.model import Decoder
+        return Decoder(condition_dim=2, latent_dim=latent_dim,
+                        channels=(8, 4), resolution=resolution)
+
+    def test_returns_all_expected_keys_and_is_differentiable(self):
+        decoder = self._make_decoder()
+        condition = torch.zeros(3, 2, requires_grad=False)
+        total, stats = prior_sample_regularization(
+            decoder, latent_dim=4, condition=condition,
+            lambda_tv=0.1, lambda_bin=0.1, lambda_periodic=0.1,
+        )
+        for key in ("prior_tv", "prior_binarization", "prior_periodic"):
+            assert key in stats
+        # total must carry gradient back to decoder params (weights, not z)
+        total.backward()
+        assert any(p.grad is not None for p in decoder.parameters())
+
+    def test_zero_lambdas_gives_zero_total(self):
+        decoder = self._make_decoder()
+        condition = torch.zeros(3, 2)
+        total, _ = prior_sample_regularization(
+            decoder, latent_dim=4, condition=condition,
+            lambda_tv=0.0, lambda_bin=0.0, lambda_periodic=0.0,
+        )
+        assert torch.isclose(total, torch.tensor(0.0), atol=1e-6)
+
+    def test_uses_a_fresh_random_z_each_call(self):
+        """Regression guard: if this ever gets refactored to reuse/cache a z
+        or accidentally decode from a fixed input, two calls would produce
+        identical stats - real randn() sampling almost never does."""
+        decoder = self._make_decoder()
+        condition = torch.zeros(3, 2)
+        _, stats_a = prior_sample_regularization(
+            decoder, latent_dim=4, condition=condition, lambda_periodic=1.0,
+        )
+        _, stats_b = prior_sample_regularization(
+            decoder, latent_dim=4, condition=condition, lambda_periodic=1.0,
+        )
+        assert stats_a["prior_periodic"].item() != stats_b["prior_periodic"].item()
+
+
 class TestCvaeLoss:
     def test_returns_all_expected_keys(self):
         class DummySurrogate(torch.nn.Module):
@@ -211,7 +284,7 @@ class TestCvaeLoss:
             beta=0.5, gamma=1.0,
         )
         for key in ("total", "recon", "kl", "prop", "prop_weighted",
-                    "tv", "binarization", "disagreement", "beta"):
+                    "tv", "binarization", "periodic", "disagreement", "beta"):
             assert key in out
         assert out["total"].requires_grad  # differentiable wrt recon/mu/logvar
 

@@ -36,7 +36,7 @@ from model import CVAE                     # noqa: E402
 from dataset import CVAEDataset            # noqa: E402
 from losses import (                       # noqa: E402
     cvae_loss, kl_beta_schedule, load_frozen_surrogate,
-    load_frozen_surrogate_ensemble,
+    load_frozen_surrogate_ensemble, prior_sample_regularization,
 )
 from verify_fe import (                    # noqa: E402
     FE_PARAMS, resize_to_fe_grid, evaluate_density_field,
@@ -80,11 +80,13 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
 
 
 def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
-              lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0):
+              lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0,
+              lambda_periodic=0.0, regularize_prior_samples=False):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
               "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
-              "disagreement": 0.0}
+              "periodic": 0.0, "disagreement": 0.0,
+              "prior_tv": 0.0, "prior_binarization": 0.0, "prior_periodic": 0.0}
     n = 0
     for image, condition, seed_vec, _volfrac in loader:
         image = image.to(device)
@@ -99,7 +101,19 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
                 surrogate, target_names, beta=beta, gamma=gamma,
                 lambda_tv=lambda_tv, lambda_bin=lambda_bin,
                 lambda_disagreement=lambda_disagreement,
+                lambda_periodic=lambda_periodic,
             )
+            if regularize_prior_samples:
+                prior_reg_total, prior_stats = prior_sample_regularization(
+                    model.decoder, model.latent_dim, condition,
+                    lambda_tv=lambda_tv, lambda_bin=lambda_bin,
+                    lambda_periodic=lambda_periodic,
+                )
+                losses["total"] = losses["total"] + prior_reg_total
+                losses.update(prior_stats)
+            else:
+                losses.update({"prior_tv": torch.tensor(0.0), "prior_binarization": torch.tensor(0.0),
+                                "prior_periodic": torch.tensor(0.0)})
             if train:
                 optimizer.zero_grad()
                 losses["total"].backward()
@@ -112,7 +126,11 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         totals["prop_weighted"] += losses["prop_weighted"].item() * bsz
         totals["tv"] += losses["tv"].item() * bsz
         totals["binarization"] += losses["binarization"].item() * bsz
+        totals["periodic"] += losses["periodic"].item() * bsz
         totals["disagreement"] += float(losses["disagreement"]) * bsz
+        totals["prior_tv"] += losses["prior_tv"].item() * bsz
+        totals["prior_binarization"] += losses["prior_binarization"].item() * bsz
+        totals["prior_periodic"] += losses["prior_periodic"].item() * bsz
         n += bsz
 
     return {k: v / n for k, v in totals.items()}
@@ -133,6 +151,19 @@ def main():
     parser.add_argument("--lambda-bin", type=float, default=0.0,
                          help="trọng số binarization loss (ép ảnh về gần nhị phân 0/1). "
                               "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.")
+    parser.add_argument("--lambda-periodic", type=float, default=0.0,
+                         help="Roadmap 6.3: trọng số periodicity loss (MSE giữa cột "
+                              "trái/phải + hàng trên/dưới ảnh reconstruct - xem "
+                              "losses.periodicity_loss, manufacturability.check_periodicity). "
+                              "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.")
+    parser.add_argument("--regularize-prior-samples", action="store_true",
+                         help="ÁP THÊM lambda-tv/lambda-bin/lambda-periodic lên ảnh decode "
+                              "từ z ~ PRIOR N(0,1) (cùng chế độ model.generate() dùng lúc "
+                              "inference), KHÔNG chỉ trên `recon` posterior (qua encoder) "
+                              "như mặc định - xem losses.prior_sample_regularization "
+                              "docstring: recon posterior đã gần-tuần hoàn sẵn (ảnh training "
+                              "thật), nên regularize nó không cải thiện manufacturability lúc "
+                              "generate(); cần regularize đúng chế độ prior mới có tác dụng.")
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--lr-min", type=float, default=1e-5,
                          help="lr tối thiểu ở cuối CosineAnnealing (0 = tắt schedule, giữ lr cố định)")
@@ -240,12 +271,16 @@ def main():
             optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
             args.lambda_tv, args.lambda_bin, device, train=True,
             lambda_disagreement=args.lambda_disagreement,
+            lambda_periodic=args.lambda_periodic,
+            regularize_prior_samples=args.regularize_prior_samples,
         )
         val_stats = run_epoch(
             model, val_loader, surrogate, target_names,
             optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
             args.lambda_tv, args.lambda_bin, device, train=False,
             lambda_disagreement=args.lambda_disagreement,
+            lambda_periodic=args.lambda_periodic,
+            regularize_prior_samples=args.regularize_prior_samples,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
@@ -256,11 +291,17 @@ def main():
               f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
               f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
               f"prop_w={train_stats['prop_weighted']:.2f} tv={train_stats['tv']:.4f} "
-              f"bin={train_stats['binarization']:.4f} disagree={train_stats['disagreement']:.5f} || "
+              f"bin={train_stats['binarization']:.4f} periodic={train_stats['periodic']:.4f} "
+              f"prior[tv={train_stats['prior_tv']:.4f} bin={train_stats['prior_binarization']:.4f} "
+              f"periodic={train_stats['prior_periodic']:.4f}] "
+              f"disagree={train_stats['disagreement']:.5f} || "
               f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
               f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
               f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
-              f"bin={val_stats['binarization']:.4f} disagree={val_stats['disagreement']:.5f}")
+              f"bin={val_stats['binarization']:.4f} periodic={val_stats['periodic']:.4f} "
+              f"prior[tv={val_stats['prior_tv']:.4f} bin={val_stats['prior_binarization']:.4f} "
+              f"periodic={val_stats['prior_periodic']:.4f}] "
+              f"disagree={val_stats['disagreement']:.5f}")
 
         fe_r2 = None
         if fe_eval_conditions is not None and epoch % args.fe_eval_every == 0:
@@ -286,6 +327,7 @@ def main():
                     "gamma": args.gamma,
                     "lambda_tv": args.lambda_tv,
                     "lambda_bin": args.lambda_bin,
+                    "lambda_periodic": args.lambda_periodic,
                 }, ckpt_path)
             elif fe_r2 is not None:
                 epochs_no_improve += 1
@@ -308,6 +350,7 @@ def main():
                     "gamma": args.gamma,
                     "lambda_tv": args.lambda_tv,
                     "lambda_bin": args.lambda_bin,
+                    "lambda_periodic": args.lambda_periodic,
                 }, ckpt_path)
             else:
                 epochs_no_improve += 1

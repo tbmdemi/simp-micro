@@ -4,7 +4,8 @@ Phase 5 - losses.py
 Tổng loss = BCE reconstruction + beta·KL (beta tăng tuyến tính theo epoch,
 xem kl_beta_schedule) + gamma·PROP_LOSS_SCALE·property-consistency (MSE
 giữa surrogate dự đoán trên ảnh sinh ra và condition target) + các
-regularizer tuỳ chọn (tv_loss, binarization_loss).
+regularizer tuỳ chọn (tv_loss, binarization_loss, periodicity_loss -
+roadmap 6.2/6.3, xem manufacturability.py).
 
 CẢNH BÁO ĐÃ XÁC NHẬN (outputs/phase5/fe_verification_report.json, xem
 verify_fe.py): R2 của property-consistency đo qua surrogate KHÔNG đáng tin
@@ -145,6 +146,49 @@ def binarization_loss(recon: torch.Tensor) -> torch.Tensor:
     return (recon * (1 - recon)).mean()
 
 
+def periodicity_loss(recon: torch.Tensor) -> torch.Tensor:
+    """Roadmap 6.3 (manufacturability.py check_periodicity): phạt lệch giữa
+    cột trái/phải và hàng trên/dưới của ảnh reconstruct - ô đơn vị được lát
+    bằng TỊNH TIẾN, nên cột phải (col=nelx-1) của ô này nằm sát cột trái
+    (col=0) của ô kế tiếp (bản sao y hệt, tức cũng là col=0 của chính ô
+    này) - occupancy 2 biên đối diện không khớp tạo bước nhảy rắn/rỗng đột
+    ngột ngay tại mép ghép khi in thành lattice thật. Khác với PBC trong
+    simp/core/pbc.py (chỉ ràng buộc trường CHUYỂN VỊ lúc giải FE trên 1 ô,
+    không ràng buộc ảnh sinh ra phải ghép liền mạch về mặt HÌNH HỌC)."""
+    left, right = recon[:, :, :, 0], recon[:, :, :, -1]
+    top, bottom = recon[:, :, 0, :], recon[:, :, -1, :]
+    return F.mse_loss(left, right) + F.mse_loss(top, bottom)
+
+
+def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tensor,
+                                 lambda_tv: float = 0.0, lambda_bin: float = 0.0,
+                                 lambda_periodic: float = 0.0):
+    """XÁC NHẬN THỰC NGHIỆM (2026-07-23): áp tv_loss/binarization_loss/
+    periodicity_loss lên `recon` trong cvae_loss() KHÔNG cải thiện
+    manufacturability lúc generate() - vì `recon` ở đó được decode từ z ~
+    POSTERIOR (qua encoder thật, tái tạo ảnh training thật vốn đã liên
+    thông/tuần hoàn sẵn - 4 seed shape circle/square/reentrant_bowtie/
+    hexagonal đều là unit cell hợp lệ), nên loss gần như không đổi suốt
+    training (~0.22-0.25 loss giá trị periodic qua 25 epoch, xem
+    manufacturability rate đo được KHÔNG đổi: 0-3.5%, thống kê giống hệt
+    baseline). model.generate() lúc inference lại sample z ~ PRIOR N(0,1)
+    (không qua encoder) - chế độ hoàn toàn khác, đúng chế độ mà tỉ lệ thấp
+    được đo. Hàm này áp cùng 3 regularizer lên ảnh decode từ z PRIOR (cùng
+    chế độ với generate()), để gradient thực sự chạm đúng hành vi cần sửa."""
+    bsz = condition.size(0)
+    z_prior = torch.randn(bsz, latent_dim, device=condition.device)
+    prior_recon = decoder(z_prior, condition)
+    tv_l = tv_loss(prior_recon)
+    bin_l = binarization_loss(prior_recon)
+    periodic_l = periodicity_loss(prior_recon)
+    total = lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l
+    return total, {
+        "prior_tv": tv_l.detach(),
+        "prior_binarization": bin_l.detach(),
+        "prior_periodic": periodic_l.detach(),
+    }
+
+
 # prop_loss ~ O(0.01-0.05) vs recon ~ O(1000), ~5 bậc độ lớn chênh lệch -
 # không có scale này thì gamma*prop gần như vô hình trong gradient tổng.
 PROP_LOSS_SCALE = 1000.0
@@ -154,7 +198,7 @@ def cvae_loss(
     recon, image, mu, logvar, condition, seed_vec,
     surrogate, target_names, beta: float, gamma: float = 1.0,
     lambda_tv: float = 0.0, lambda_bin: float = 0.0,
-    lambda_disagreement: float = 0.0,
+    lambda_disagreement: float = 0.0, lambda_periodic: float = 0.0,
 ):
     """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
     lambda_tv/lambda_bin mặc định 0.0 (tắt, để không phá baseline gamma=1..300
@@ -181,8 +225,9 @@ def cvae_loss(
         disagreement_l = torch.tensor(0.0)
     tv_l = tv_loss(recon)
     bin_l = binarization_loss(recon)
+    periodic_l = periodicity_loss(recon)
     total = (recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
-             + lambda_tv * tv_l + lambda_bin * bin_l)
+             + lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l)
     return {
         "total": total,
         "recon": recon_l.detach(),
@@ -191,6 +236,7 @@ def cvae_loss(
         "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
         "tv": tv_l.detach(),
         "binarization": bin_l.detach(),
+        "periodic": periodic_l.detach(),
         "disagreement": disagreement_l.detach() if torch.is_tensor(disagreement_l) else disagreement_l,
         "beta": beta,
     }

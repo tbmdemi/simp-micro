@@ -16,6 +16,11 @@ So sánh trực tiếp với hit_rate 1-mẫu đã đo trong self_play.verify_ro
 (cùng 24 condition, seed=123, tập test.npz) để biết best-of-N cải thiện
 được bao nhiêu so với single-shot.
 
+Roadmap 6.2/6.3 (manufacturability.py): đúng Poisson ratio (FE thật) không
+đồng nghĩa "sản xuất được" - thêm --require-manufacturable để loại ứng
+viên rời rạc/nét quá mảnh/không ghép ô tuần hoàn khỏi việc xếp hạng & chọn
+best-of-N. Mặc định TẮT (giữ hành vi gốc, chỉ tối ưu Poisson ratio).
+
 Cách chạy:
     python3 pipeline/phase5_cvae/best_of_n_eval.py \\
         --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
@@ -32,6 +37,7 @@ from dataset import CVAEDataset                                # noqa: E402
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
 from self_play import load_cvae                                # noqa: E402
 from losses import load_frozen_surrogate, SURROGATE_PATH        # noqa: E402
+from manufacturability import check_manufacturability           # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
@@ -40,7 +46,8 @@ PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
 def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               device: str, seed: int = 123, k_fe_verify: int = None,
-              surrogate_path: str = None):
+              surrogate_path: str = None, require_manufacturable: bool = False,
+              min_feature_px: int = 2, periodicity_tol: float = 0.1):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -86,7 +93,27 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
                 img = model.generate(cond_t, n_samples=1, device=device)
             imgs.append(img.squeeze().cpu().numpy().astype(np.float32))
 
-        fe_order = range(n_samples)
+        # roadmap 6.2/6.3: connectivity + min-feature-size + periodicity -
+        # cấu trúc "sản xuất được" là điều kiện tách biệt với việc đạt đúng
+        # Poisson ratio, xem manufacturability.py docstring.
+        manuf_reports = [
+            check_manufacturability((img > 0.5).astype(np.float32),
+                                     min_feature_px=min_feature_px,
+                                     periodicity_tol=periodicity_tol)
+            for img in imgs
+        ]
+        n_manufacturable = sum(1 for r in manuf_reports if r["passes_all"])
+        candidate_pool = range(n_samples)
+        if require_manufacturable:
+            manufacturable_idx = [i for i, r in enumerate(manuf_reports) if r["passes_all"]]
+            if manufacturable_idx:
+                candidate_pool = manufacturable_idx
+            # nếu KHÔNG có ứng viên nào manufacturable, giữ nguyên cả N mẫu
+            # (không loại hết, tránh mất cả condition này khỏi báo cáo) -
+            # nhưng frac_manufacturable=0 trong per_condition sẽ phản ánh
+            # đúng việc target này chưa có lời giải sản xuất được.
+
+        fe_order = candidate_pool
         if k_fe_verify is not None:
             # dùng seed one-hot mặc định (seed đầu tiên trong seed_classes) vì
             # ảnh generate không có nhãn seed thật - cùng xấp xỉ với
@@ -97,7 +124,9 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             with torch.no_grad():
                 pred = surrogate(imgs_t, seed_vec)
             surrogate_v12 = pred[:, idx_v12].cpu().numpy()
-            fe_order = np.argsort(np.abs(surrogate_v12 - cond[0]))[:k_fe_verify]
+            pool = list(candidate_pool)
+            order_within_pool = np.argsort(np.abs(surrogate_v12[pool] - cond[0]))[:k_fe_verify]
+            fe_order = [pool[j] for j in order_within_pool]
 
         v12_reals = []
         for i in fe_order:
@@ -136,6 +165,8 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             "v12_best": v12_best,
             "v12_all": v12_reals.tolist(),
             "frac_auxetic_among_samples": float((v12_reals < 0).mean()) if is_auxetic_target else None,
+            "n_manufacturable": n_manufacturable,
+            "frac_manufacturable": n_manufacturable / n_samples,
         })
 
     hit_rate_best_of_n = n_hits_best_of_n / n_auxetic_targets if n_auxetic_targets else float("nan")
@@ -146,6 +177,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     ss_res = ((targets_best - preds_best) ** 2).sum()
     ss_tot = ((targets_best - targets_best.mean()) ** 2).sum()
     r2_best_of_n = float(1 - ss_res / ss_tot) if ss_tot > 0 else float("nan")
+    mean_frac_manufacturable = float(np.mean([c["frac_manufacturable"] for c in per_condition]))
 
     return {
         "n_conditions": n_conditions,
@@ -156,6 +188,8 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         "hit_rate_single_shot": hit_rate_single_shot,
         "hit_rate_best_of_n": hit_rate_best_of_n,
         "r2_fe_v12_best_of_n": r2_best_of_n,
+        "require_manufacturable": require_manufacturable,
+        "mean_frac_manufacturable": mean_frac_manufacturable,
         "per_condition": per_condition,
     }
 
@@ -180,11 +214,26 @@ def main():
     parser.add_argument("--surrogate-path", type=str, default=None,
                          help="Surrogate dùng để xếp hạng khi --k-fe-verify được set. "
                               "Bỏ trống = SURROGATE_PATH mặc định trong losses.py.")
+    parser.add_argument("--require-manufacturable", action="store_true",
+                         help="Roadmap 6.2/6.3: loại ứng viên không liên thông / có nét "
+                              "mảnh hơn ngưỡng / không ghép ô tuần hoàn được (xem "
+                              "manufacturability.py) khỏi việc xếp hạng và chọn best-of-N. "
+                              "Mặc định tắt (chỉ tối ưu đúng Poisson ratio, không lọc "
+                              "manufacturability, giống hành vi gốc).")
+    parser.add_argument("--min-feature-px", type=int, default=2,
+                         help="Ngưỡng độ rộng nét tối thiểu (pixel, lưới 64x64) cho "
+                              "--require-manufacturable.")
+    parser.add_argument("--periodicity-tol", type=float, default=0.1,
+                         help="Tỉ lệ pixel-biên tối đa được phép không khớp khi ghép ô "
+                              "tuần hoàn cho --require-manufacturable.")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     result = best_of_n(args.cvae_ckpt, args.n_conditions, args.n_samples, device, args.seed,
-                        k_fe_verify=args.k_fe_verify, surrogate_path=args.surrogate_path)
+                        k_fe_verify=args.k_fe_verify, surrogate_path=args.surrogate_path,
+                        require_manufacturable=args.require_manufacturable,
+                        min_feature_px=args.min_feature_px,
+                        periodicity_tol=args.periodicity_tol)
 
     print(f"Checkpoint: {args.cvae_ckpt}")
     print(f"N condition: {result['n_conditions']} ({result['n_auxetic_targets']} auxetic target) "
@@ -193,6 +242,7 @@ def main():
     print(f"  hit_rate (1 mẫu duy nhất, mẫu đầu)      = {result['hit_rate_single_shot']:.3f}")
     print(f"  hit_rate (best-of-N, chọn bởi FE oracle) = {result['hit_rate_best_of_n']:.3f}")
     print(f"  R2(FE, best-of-N)                        = {result['r2_fe_v12_best_of_n']:.4f}")
+    print(f"  frac manufacturable (6.2/6.3, TB các cond) = {result['mean_frac_manufacturable']:.3f}")
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w") as f:
