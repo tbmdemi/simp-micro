@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="SIMP Analyst - Trung tâm tập trung cho tài liệu, dashboard và báo cáo SIMP topology optimization.">
 <title>SIMP Analyst - Trung tâm Tài liệu</title>
+<script>
+  (function () {
+    var saved = localStorage.getItem('simp-theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+  })();
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
@@ -19,10 +25,38 @@
     --text3: #8e94a8;
     --accent: #2c5aa0;
     --accent-light: #e8f0ff;
+    --accent2: #54a0ff;
     --radius-sm: 6px;
     --radius-md: 10px;
     --radius-lg: 16px;
   }
+
+  :root[data-theme="dark"] {
+    --bg: #0f1117;
+    --surface: #171a24;
+    --border: #2a2e3d;
+    --text: #eef0f6;
+    --text2: #b2b7c7;
+    --text3: #767c90;
+    --accent: #6fa3ff;
+    --accent-light: #1b2740;
+    --accent2: #2c5aa0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1117;
+      --surface: #171a24;
+      --border: #2a2e3d;
+      --text: #eef0f6;
+      --text2: #b2b7c7;
+      --text3: #767c90;
+      --accent: #6fa3ff;
+      --accent-light: #1b2740;
+      --accent2: #2c5aa0;
+    }
+  }
+
   html { scroll-behavior: smooth; }
 
   body {
@@ -31,6 +65,7 @@
     color: var(--text);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    transition: background 0.25s ease, color 0.25s ease;
   }
 
   .container {
@@ -40,11 +75,22 @@
   }
 
   header {
+    position: relative;
     background: linear-gradient(135deg, var(--accent) 0%, #1a3d70 100%);
     color: white;
-    padding: 6rem 2rem;
+    padding: 6rem 2rem 3.5rem;
     text-align: center;
-    margin-bottom: 4rem;
+    margin-bottom: 3rem;
+  }
+
+  :root[data-theme="dark"] header {
+    background: linear-gradient(135deg, #1c3b6d 0%, #0d1c33 100%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) header {
+      background: linear-gradient(135deg, #1c3b6d 0%, #0d1c33 100%);
+    }
   }
 
   h1 {
@@ -59,6 +105,134 @@
     max-width: 600px;
     margin: 0 auto;
     font-weight: 300;
+  }
+
+  .stats-strip {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    margin-top: 2.5rem;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 600;
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.85;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .theme-toggle {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.5rem;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .theme-toggle:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+
+  .toolbar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+  }
+
+  .search-box {
+    position: relative;
+    flex: 1 1 280px;
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 0.85rem 1rem 0.85rem 2.6rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .search-box input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  .search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 0.9rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.95rem;
+    opacity: 0.6;
+  }
+
+  .search-hint {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1rem 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    pointer-events: none;
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-pill {
+    padding: 0.6rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+
+  .filter-pill:hover { border-color: var(--accent); color: var(--accent); }
+
+  .filter-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
   }
 
   main { margin-bottom: 6rem; }
@@ -96,7 +270,7 @@
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2, #54a0ff));
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.3s ease;
@@ -104,7 +278,7 @@
 
   .resource-card:hover {
     border-color: var(--accent);
-    box-shadow: 0 8px 24px rgba(44, 90, 160, 0.1);
+    box-shadow: 0 8px 24px rgba(44, 90, 160, 0.15);
     transform: translateY(-4px);
   }
 
@@ -146,6 +320,16 @@
 
   .card-link:hover { gap: 1rem; }
 
+  .empty-state {
+    display: none;
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text3);
+    font-size: 1.05rem;
+  }
+
+  .empty-state.visible { display: block; }
+
   footer {
     background: var(--accent);
     color: white;
@@ -155,11 +339,23 @@
 
   footer p { margin-bottom: 0.5rem; opacity: 0.9; }
 
+  :root[data-theme="dark"] footer {
+    background: #142238;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) footer {
+      background: #142238;
+    }
+  }
+
   @media (max-width: 768px) {
     h1 { font-size: 2.2rem; }
     .section-title { font-size: 1.6rem; }
     .resources-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-    header { padding: 3rem 1rem; }
+    header { padding: 4rem 1rem 3rem; }
+    .stats-strip { gap: 1.5rem; }
+    .theme-toggle { top: 0.75rem; right: 0.75rem; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -170,21 +366,44 @@
 <body>
 
 <header>
+  <button class="theme-toggle" id="theme-toggle" aria-label="Chuyển chế độ sáng/tối" title="Chuyển chế độ sáng/tối">🌙</button>
   <div class="container">
     <h1>SIMP Analyst</h1>
     <p class="subtitle">
       Trung tâm tập trung cho Tối Ưu Hóa topology SIMP - tài liệu, dashboard và báo cáo nghiên cứu
     </p>
+    <div class="stats-strip">
+      <div class="stat"><span class="stat-num">1</span><span class="stat-label">Dashboard</span></div>
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">Hướng dẫn</span></div>
+      <div class="stat"><span class="stat-num">4</span><span class="stat-label">Báo cáo</span></div>
+      <div class="stat"><span class="stat-num">8</span><span class="stat-label">Tài liệu</span></div>
+    </div>
   </div>
 </header>
 
 <main class="container">
 
+  <div class="toolbar">
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Tìm dashboard, hướng dẫn, báo cáo, tài liệu…" autocomplete="off">
+      <span class="search-hint">/</span>
+    </div>
+    <div class="filter-pills" id="filter-pills">
+      <button class="filter-pill active" data-category="all">Tất cả</button>
+      <button class="filter-pill" data-category="dashboard">📊 Dashboard</button>
+      <button class="filter-pill" data-category="guide">📚 Hướng dẫn</button>
+      <button class="filter-pill" data-category="report">📄 Báo cáo</button>
+      <button class="filter-pill" data-category="doc">📘 Tài liệu</button>
+    </div>
+  </div>
+
+  <p class="empty-state" id="empty-state">Không tìm thấy tài liệu phù hợp. Hãy thử từ khóa khác.</p>
+
   <!-- ===== DASHBOARDS ===== -->
-  <section>
-    <h2 class="section-title">📊 Dashboard & Theo dõi tiến độ</h2>
+  <section data-section="dashboard">
+    <h2 class="section-title">📊 Dashboard &amp; Theo dõi tiến độ</h2>
     <div class="resources-grid">
-      <div class="resource-card">
+      <div class="resource-card" data-category="dashboard">
         <div class="card-icon">📈</div>
         <div class="card-category">Dashboard</div>
         <h3 class="card-title">Giai Đoạn 1 Screening</h3>
@@ -199,13 +418,13 @@
   </section>
 
   <!-- ===== GUIDES & REFERENCES ===== -->
-  <section>
-    <h2 class="section-title">📚 Hướng dẫn & Tài liệu tham khảo</h2>
+  <section data-section="guide">
+    <h2 class="section-title">📚 Hướng dẫn &amp; Tài liệu tham khảo</h2>
     <div class="resources-grid">
-      <div class="resource-card">
+      <div class="resource-card" data-category="guide">
         <div class="card-icon">🗺️</div>
-        <div class="card-category">Hướng dẫn & Lộ trình</div>
-        <h3 class="card-title">SIMP - Quy trình & Lộ trình</h3>
+        <div class="card-category">Hướng dẫn &amp; Lộ trình</div>
+        <h3 class="card-title">SIMP - Quy trình &amp; Lộ trình</h3>
         <p class="card-description">
           Hướng dẫn quy trình Tối Ưu Hóa SIMP kết hợp lộ trình chiến lược ba giai đoạn: từ công thức hóa đến sản xuất.
         </p>
@@ -214,7 +433,7 @@
         </a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="guide">
         <div class="card-icon">⚙️</div>
         <div class="card-category">Tài liệu Kỹ thuật</div>
         <h3 class="card-title">Tối Ưu Hóa Pipeline</h3>
@@ -225,14 +444,26 @@
           Xem Pipeline →
         </a>
       </div>
+
+      <div class="resource-card" data-category="guide">
+        <div class="card-icon">🧭</div>
+        <div class="card-category">Kiến trúc Pipeline</div>
+        <h3 class="card-title">Multi-Batch Adaptive Sampling</h3>
+        <p class="card-description">
+          Kiến trúc pipeline lấy mẫu thích ứng đa batch + kết quả thực tế: 8 batch, 7.920 mẫu, 100% hội tụ FE, tỷ lệ auxetic theo seed.
+        </p>
+        <a href="guides/multi_batch_adaptive_sampling.html" class="card-link">
+          Xem Kiến trúc →
+        </a>
+      </div>
     </div>
   </section>
 
   <!-- ===== REPORTS ===== -->
-  <section>
+  <section data-section="report">
     <h2 class="section-title">📄 Báo cáo Nghiên cứu</h2>
     <div class="resources-grid">
-      <div class="resource-card">
+      <div class="resource-card" data-category="report">
         <div class="card-icon">📈</div>
         <div class="card-category">Báo cáo Technical</div>
         <h3 class="card-title">Phase 1 — Parameter Screening</h3>
@@ -243,7 +474,7 @@
           Xem Báo cáo →
         </a>
       </div>
-      <div class="resource-card">
+      <div class="resource-card" data-category="report">
         <div class="card-icon">🔬</div>
         <div class="card-category">Báo cáo Kỹ thuật</div>
         <h3 class="card-title">Phân tích Vật liệu Auxetic</h3>
@@ -254,14 +485,36 @@
           Đọc Báo cáo →
         </a>
       </div>
+      <div class="resource-card" data-category="report">
+        <div class="card-icon">🧬</div>
+        <div class="card-category">Báo cáo Nghiên cứu</div>
+        <h3 class="card-title">Inverse Design of Auxetic Metamaterials</h3>
+        <p class="card-description">
+          Khám phá toàn diện thiết kế ngược cho cấu trúc auxetic tối ưu topology — từ lý thuyết đồng nhất hóa đến khuyến nghị tham số cho Phase 2.
+        </p>
+        <a href="inverse_auxetic_report.html" class="card-link">
+          Đọc Báo cáo →
+        </a>
+      </div>
+      <div class="resource-card" data-category="report">
+        <div class="card-icon">🧪</div>
+        <div class="card-category">Báo cáo Kỹ thuật</div>
+        <h3 class="card-title">Từ Dataset đến Thiết kế Ngược (Phase 3-5)</h3>
+        <p class="card-description">
+          Flow và kết quả thực tế của Dataset Build, CNN Surrogate (R²=0.91) và cVAE Inverse Design — bao gồm phát hiện surrogate exploitation và giải pháp best-of-N.
+        </p>
+        <a href="reports/ml_pipeline_phase3to5.html" class="card-link">
+          Xem Báo cáo →
+        </a>
+      </div>
     </div>
   </section>
 
   <!-- ===== DOCUMENTATION ===== -->
-  <section>
+  <section data-section="doc">
     <h2 class="section-title">📘 Tài liệu kỹ thuật (Markdown)</h2>
     <div class="resources-grid">
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">📋</div>
         <div class="card-category">Tổng quan</div>
         <h3 class="card-title">INDEX - Mục lục tài liệu</h3>
@@ -272,7 +525,7 @@
         <a href="../docs/INDEX.md" class="card-link">Xem INDEX →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">📊</div>
         <div class="card-category">Báo cáo</div>
         <h3 class="card-title">Báo cáo Phase 1 Screening</h3>
@@ -283,9 +536,9 @@
         <a href="../docs/phase1_screening_report.md" class="card-link">Đọc báo cáo →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">🐛</div>
-        <div class="card-category">Lỗi & Sửa lỗi</div>
+        <div class="card-category">Lỗi &amp; Sửa lỗi</div>
         <h3 class="card-title">Báo cáo lỗi tổng hợp</h3>
         <p class="card-description">
           Tổng hợp các bug phát hiện trong quá trình chuẩn hóa Python vs MATLAB,
@@ -294,7 +547,7 @@
         <a href="../docs/bug_reports.md" class="card-link">Xem báo cáo →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">🏗️</div>
         <div class="card-category">Kiến trúc</div>
         <h3 class="card-title">Architecture Review</h3>
@@ -305,7 +558,7 @@
         <a href="../docs/architecture_review.md" class="card-link">Đọc review →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">🔄</div>
         <div class="card-category">So sánh</div>
         <h3 class="card-title">So sánh MATLAB vs Python</h3>
@@ -316,7 +569,7 @@
         <a href="../docs/comparison_matlab_python.md" class="card-link">So sánh →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">🎯</div>
         <div class="card-category">Hướng dẫn</div>
         <h3 class="card-title">Hướng dẫn Phase 2 Tuning</h3>
@@ -327,7 +580,7 @@
         <a href="../docs/phase2_guide.md" class="card-link">Xem hướng dẫn →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">👋</div>
         <div class="card-category">Onboarding</div>
         <h3 class="card-title">PROJECT ONBOARDING</h3>
@@ -338,7 +591,7 @@
         <a href="../docs/PROJECT_ONBOARDING.md" class="card-link">Bắt đầu →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">📝</div>
         <div class="card-category">Workflow</div>
         <h3 class="card-title">Workflow phân tích SIMP</h3>
@@ -349,7 +602,7 @@
         <a href="../docs/WORKFLOW_SIMP_ANALYSIS.md" class="card-link">Xem workflow →</a>
       </div>
 
-      <div class="resource-card">
+      <div class="resource-card" data-category="doc">
         <div class="card-icon">✅</div>
         <div class="card-category">Chất lượng</div>
         <h3 class="card-title">Task - Kiểm tra chất lượng ảnh</h3>
@@ -363,16 +616,16 @@
   </section>
 
   <!-- ===== QUICK START ===== -->
-  <section>
+  <section data-section="none">
     <h2 class="section-title">🚀 Bắt đầu nhanh</h2>
     <div style="background: var(--accent-light); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem;">
       <h3 style="color: var(--accent); margin-bottom: 1rem;">Bắt đầu với SIMP</h3>
       <p style="color: var(--text2); margin-bottom: 1rem;">
-        Khám phá hệ sinh thái SIMP thông qua các dashboard tương tác, hướng dẫn chi tiết và báo cáo kỹ thuật. 
+        Khám phá hệ sinh thái SIMP thông qua các dashboard tương tác, hướng dẫn chi tiết và báo cáo kỹ thuật.
         Bắt đầu bằng cách xem <strong>Giai Đoạn 1 Screening Dashboard</strong> để hiểu quá trình Screening ban đầu.
       </p>
       <p style="color: var(--text2);">
-        Sau đó, đọc <strong>Quy trình SIMP & Lộ trình</strong> để nắm bắt toàn bộ quy trình Tối Ưu Hóa ba giai đoạn.
+        Sau đó, đọc <strong>Quy trình SIMP &amp; Lộ trình</strong> để nắm bắt toàn bộ quy trình Tối Ưu Hóa ba giai đoạn.
       </p>
     </div>
   </section>
@@ -385,6 +638,88 @@
     <p style="font-size: 0.9rem; margin-top: 1rem;">Tối ưu hóa topology 3 giai đoạn | Phân tích vật liệu Auxetic | Pipeline Tham số</p>
   </div>
 </footer>
+
+<script>
+  (function () {
+    var toggle = document.getElementById('theme-toggle');
+    var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    function currentTheme() {
+      return document.documentElement.getAttribute('data-theme') || (prefersDark ? 'dark' : 'light');
+    }
+
+    function syncIcon() {
+      toggle.textContent = currentTheme() === 'dark' ? '☀️' : '🌙';
+    }
+
+    toggle.addEventListener('click', function () {
+      var next = currentTheme() === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('simp-theme', next);
+      syncIcon();
+    });
+
+    syncIcon();
+
+    // ---- Search + category filter ----
+    var searchInput = document.getElementById('search-input');
+    var pills = Array.prototype.slice.call(document.querySelectorAll('.filter-pill'));
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.resource-card'));
+    var sections = Array.prototype.slice.call(document.querySelectorAll('main > section[data-section]'));
+    var emptyState = document.getElementById('empty-state');
+    var activeCategory = 'all';
+
+    function applyFilter() {
+      var query = searchInput.value.trim().toLowerCase();
+      var totalVisible = 0;
+
+      cards.forEach(function (card) {
+        var category = card.getAttribute('data-category');
+        var text = card.textContent.toLowerCase();
+        var matchesCategory = activeCategory === 'all' || category === activeCategory;
+        var matchesQuery = !query || text.indexOf(query) !== -1;
+        var visible = matchesCategory && matchesQuery;
+        card.style.display = visible ? '' : 'none';
+        if (visible) totalVisible++;
+      });
+
+      sections.forEach(function (section) {
+        if (section.getAttribute('data-section') === 'none') return;
+        var grid = section.querySelector('.resources-grid');
+        if (!grid) return;
+        var anyVisible = Array.prototype.some.call(grid.children, function (card) {
+          return card.style.display !== 'none';
+        });
+        section.style.display = anyVisible ? '' : 'none';
+      });
+
+      emptyState.classList.toggle('visible', totalVisible === 0);
+    }
+
+    pills.forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        pills.forEach(function (p) { p.classList.remove('active'); });
+        pill.classList.add('active');
+        activeCategory = pill.getAttribute('data-category');
+        applyFilter();
+      });
+    });
+
+    searchInput.addEventListener('input', applyFilter);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+      if (e.key === 'Escape' && document.activeElement === searchInput) {
+        searchInput.value = '';
+        applyFilter();
+        searchInput.blur();
+      }
+    });
+  })();
+</script>
 
 </body>
 </html>

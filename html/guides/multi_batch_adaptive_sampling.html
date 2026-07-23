@@ -478,6 +478,26 @@
   .cli-ref td:first-child { font-family: 'Space Mono', monospace; color: var(--accent); }
   .cli-ref tr:hover td { background: var(--raised); }
 
+  /* ===== BAR LIST (per-seed results) ===== */
+  .bar-list { display: flex; flex-direction: column; gap: 10px; margin-top: var(--gap-md); }
+  .bar-row { display: grid; grid-template-columns: 178px 1fr 52px; align-items: center; gap: 12px; }
+  .bar-row .bar-label {
+    font-size: 0.8rem; color: var(--text2); font-family: 'Space Mono', monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bar-track { position: relative; height: 10px; background: var(--raised); border-radius: 999px; overflow: hidden; }
+  .bar-fill {
+    position: absolute; top: 0; left: 0; height: 100%;
+    background: var(--accent); border-radius: 999px;
+    transition: filter 0.15s ease;
+  }
+  .bar-row:hover .bar-fill { filter: brightness(1.2); }
+  .bar-row:hover .bar-label { color: var(--text); }
+  .bar-value { font-size: 0.78rem; font-family: 'Space Mono', monospace; color: var(--text); text-align: right; }
+  @media (max-width: 640px) {
+    .bar-row { grid-template-columns: 100px 1fr 44px; gap: 8px; }
+  }
+
   /* ===== DECISION TABLE ===== */
   .decision-grid {
     display: grid;
@@ -570,8 +590,28 @@
     .cli-ref td, .cli-ref th { padding: 6px 4px; }
   }
 </style>
+<style>
+  .simp-hub-nav {
+    position: fixed; top: 14px; left: 14px; z-index: 10000;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; background: rgba(255,255,255,0.85); color: #1a1a2e;
+    border: 1px solid rgba(0,0,0,0.08); border-radius: 999px;
+    font: 500 13px/1.2 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .simp-hub-nav:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.16); }
+  @media (prefers-color-scheme: dark) {
+    .simp-hub-nav { background: rgba(24,28,38,0.85); color: #eef1f7; border-color: rgba(255,255,255,0.1); }
+  }
+  @media (max-width: 640px) {
+    .simp-hub-nav { top: 8px; left: 8px; padding: 6px 10px; font-size: 12px; }
+  }
+</style>
 </head>
 <body>
+<a href="../index.html" class="simp-hub-nav">← SIMP Analyst</a>
 
 <!-- ===== HERO ===== -->
 <section class="hero">
@@ -911,6 +951,124 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
 
   <div class="highlight-box warn" style="margin-top: var(--gap-lg);">
     <p><strong>Decision thresholds are configurable:</strong> <code>sparsity_expand_threshold</code>, <code>sparsity_refine_threshold</code>, <code>improvement_patience</code>. Tune them via the <code>decide_next_action()</code> function signature — no subclassing needed.</p>
+  </div>
+</section>
+
+<!-- ===== RESULTS ===== -->
+<section class="fade-in">
+  <div class="section-header">
+    <h2>Kết quả thực tế / Real Run Results</h2>
+    <p>One completed run: 8 batches, 7,920 samples — this is what the adaptive loop actually did, not a projection.</p>
+    <p class="vi">Một lần chạy đã hoàn thành: 8 batch, 7.920 mẫu — đây là những gì vòng lặp thích ứng đã thực sự làm, không phải dự đoán.</p>
+  </div>
+
+  <div class="hero-metrics" style="margin: 0 0 var(--gap-lg); justify-content: flex-start;">
+    <div class="hero-metric">
+      <div class="hero-metric-value"><span class="accent">8</span></div>
+      <div class="hero-metric-label">Batches</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-metric-value"><span class="accent2">7,920</span></div>
+      <div class="hero-metric-label">Total Samples</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-metric-value"><span class="accent">100%</span></div>
+      <div class="hero-metric-label">FE Convergence</div>
+    </div>
+    <div class="hero-metric">
+      <div class="hero-metric-value"><span class="warn">−0.807</span></div>
+      <div class="hero-metric-label">Best ν₁₂ (batch 8)</div>
+    </div>
+  </div>
+
+  <div class="cli-ref">
+    <table>
+      <thead>
+        <tr><th>Batch</th><th>Strategy / Chiến lược</th><th># Samples</th><th>% Auxetic</th><th>Best ν₁₂</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Sobol (explore)</td><td>1,320</td><td>74.9%</td><td>−0.612</td></tr>
+        <tr><td>2</td><td>Sobol (explore)</td><td>600</td><td>79.7%</td><td>−0.519</td></tr>
+        <tr><td>3</td><td>Sobol (explore)</td><td>720</td><td>71.8%</td><td>−0.565</td></tr>
+        <tr><td>4</td><td>Optimized LHS (refine)</td><td>1,056</td><td>83.6%</td><td>−0.605</td></tr>
+        <tr><td>5</td><td>Optimized LHS (refine)</td><td>1,067</td><td>85.7%</td><td>−0.752</td></tr>
+        <tr><td>6</td><td>Optimized LHS (refine)</td><td>1,045</td><td>85.4%</td><td>−0.649</td></tr>
+        <tr><td>7</td><td>Optimized LHS (refine)</td><td>1,056</td><td>85.3%</td><td>−0.621</td></tr>
+        <tr><td>8</td><td>Optimized LHS (refine)</td><td>1,056</td><td><strong>87.8%</strong></td><td><strong>−0.807</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="highlight-box" style="margin-top: var(--gap-lg);">
+    <p><strong>Why it stopped at batch 8:</strong> 2 consecutive batches without objective improvement, with sparsity stabilized around ~18.5% — the stop condition from the Decision Logic above. The <code>volfrac</code> search range narrowed from <code>[0.45, 0.70]</code> to <code>[0.50, 0.58]</code> by batch 8, consistent with Phase 1's finding that <code>volfrac</code> is the dominant parameter (Spearman r ≈ 0.87–0.96).</p>
+    <p class="vi"><strong>Vì sao dừng ở batch 8:</strong> 2 batch liên tiếp không cải thiện mục tiêu, độ thưa ổn định quanh ~18,5% — đúng điều kiện dừng ở mục Decision Logic phía trên. Khoảng tìm kiếm <code>volfrac</code> thu hẹp từ <code>[0.45, 0.70]</code> xuống <code>[0.50, 0.58]</code> ở batch 8, khớp với phát hiện ở Phase 1 rằng <code>volfrac</code> là tham số chi phối (Spearman r ≈ 0,87–0,96).</p>
+  </div>
+
+  <div class="module-deep" style="margin-top: var(--gap-lg);">
+    <h3>Auxetic success rate per seed / Tỷ lệ thành công auxetic theo seed</h3>
+    <p>Fraction of samples with both ν₁₂ &lt; 0 and ν₂₁ &lt; 0, measured across all 7,920 completed samples.</p>
+    <p class="vi">Tỷ lệ mẫu có cả ν₁₂ &lt; 0 và ν₂₁ &lt; 0, đo trên toàn bộ 7.920 mẫu đã hoàn thành.</p>
+
+    <div class="bar-list">
+      <div class="bar-row" title="grid_circular_voids: 99.4%">
+        <span class="bar-label">grid_circular_voids</span>
+        <div class="bar-track"><div class="bar-fill" style="width:99.4%"></div></div>
+        <span class="bar-value">99.4%</span>
+      </div>
+      <div class="bar-row" title="nine_circle: 98.9%">
+        <span class="bar-label">nine_circle</span>
+        <div class="bar-track"><div class="bar-fill" style="width:98.9%"></div></div>
+        <span class="bar-value">98.9%</span>
+      </div>
+      <div class="bar-row" title="square: 94.0%">
+        <span class="bar-label">square</span>
+        <div class="bar-track"><div class="bar-fill" style="width:94.0%"></div></div>
+        <span class="bar-value">94.0%</span>
+      </div>
+      <div class="bar-row" title="circle: 93.8%">
+        <span class="bar-label">circle</span>
+        <div class="bar-track"><div class="bar-fill" style="width:93.8%"></div></div>
+        <span class="bar-value">93.8%</span>
+      </div>
+      <div class="bar-row" title="cross_rectangular: 93.3%">
+        <span class="bar-label">cross_rectangular</span>
+        <div class="bar-track"><div class="bar-fill" style="width:93.3%"></div></div>
+        <span class="bar-value">93.3%</span>
+      </div>
+      <div class="bar-row" title="small_square_cross: 93.1%">
+        <span class="bar-label">small_square_cross</span>
+        <div class="bar-track"><div class="bar-fill" style="width:93.1%"></div></div>
+        <span class="bar-value">93.1%</span>
+      </div>
+      <div class="bar-row" title="four_circle: 87.9%">
+        <span class="bar-label">four_circle</span>
+        <div class="bar-track"><div class="bar-fill" style="width:87.9%"></div></div>
+        <span class="bar-value">87.9%</span>
+      </div>
+      <div class="bar-row" title="hourglass: 67.8%">
+        <span class="bar-label">hourglass</span>
+        <div class="bar-track"><div class="bar-fill" style="width:67.8%"></div></div>
+        <span class="bar-value">67.8%</span>
+      </div>
+      <div class="bar-row" title="hexagonal: 64.4%">
+        <span class="bar-label">hexagonal</span>
+        <div class="bar-track"><div class="bar-fill" style="width:64.4%"></div></div>
+        <span class="bar-value">64.4%</span>
+      </div>
+      <div class="bar-row" title="circle_half_quarter: 61.7%">
+        <span class="bar-label">circle_half_quarter</span>
+        <div class="bar-track"><div class="bar-fill" style="width:61.7%"></div></div>
+        <span class="bar-value">61.7%</span>
+      </div>
+      <div class="bar-row" title="reentrant_bowtie: 48.6%">
+        <span class="bar-label">reentrant_bowtie</span>
+        <div class="bar-track"><div class="bar-fill" style="width:48.6%"></div></div>
+        <span class="bar-value">48.6%</span>
+      </div>
+    </div>
+
+    <p style="margin-top: var(--gap-md);"><code>reentrant_bowtie</code> and <code>hexagonal</code> are the hardest geometries to push auxetic — good candidates for further parameter tuning in a future batch.</p>
+    <p class="vi"><code>reentrant_bowtie</code> và <code>hexagonal</code> là các hình học khó đẩy về auxetic nhất — ứng viên tốt để tiếp tục tinh chỉnh tham số ở batch tương lai.</p>
   </div>
 </section>
 
