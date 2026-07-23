@@ -27,10 +27,13 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE4_DIR = os.path.join(REPO_ROOT, "outputs", "phase4")
 
 
-def main():
-    src = os.path.join(PHASE4_DIR, "surrogate_best.pt")
-    dst = os.path.join(PHASE4_DIR, "surrogate_for_phase5.pt")
-    eval_report_path = os.path.join(PHASE4_DIR, "evaluation_report.json")
+def export_surrogate(src: str, dst: str, eval_report_path: str = None):
+    """Đóng gói 1 checkpoint surrogate (định dạng train.py lưu ra) thành file
+    tự chứa cho Phase 5 dùng. Tách hàm này ra khỏi main() để self_play.py
+    (mỗi vòng self-play export 1 checkpoint riêng, không đụng
+    surrogate_for_phase5.pt chính) có thể gọi lại mà không lặp code."""
+    if eval_report_path is None:
+        eval_report_path = os.path.join(PHASE4_DIR, "evaluation_report.json")
 
     ckpt = torch.load(src, map_location="cpu", weights_only=False)
 
@@ -75,6 +78,12 @@ def main():
         print(f"  R2 (test set): "
               f"v12={eval_report['overall']['v12']['r2']:.4f}, "
               f"v21={eval_report['overall']['v21']['r2']:.4f}")
+
+
+def main():
+    src = os.path.join(PHASE4_DIR, "surrogate_best.pt")
+    dst = os.path.join(PHASE4_DIR, "surrogate_for_phase5.pt")
+    export_surrogate(src, dst)
 
 
 if __name__ == "__main__":

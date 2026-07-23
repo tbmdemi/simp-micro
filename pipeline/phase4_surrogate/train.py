@@ -87,6 +87,16 @@ def main():
                          help="Số epoch chờ trước khi early-stop nếu val loss không cải thiện")
     parser.add_argument("--limit", type=int, default=None,
                          help="Chỉ dùng N mẫu đầu (debug nhanh, bỏ trống = toàn bộ)")
+    parser.add_argument("--adversarial-npz", type=str, nargs="*", default=None,
+                         help="Đường dẫn .npz bổ sung (cùng schema outputs/phase3), "
+                              "vd mẫu đối kháng từ adversarial_dataset.py, nối thêm "
+                              "vào train set qua ConcatDataset (self-play).")
+    parser.add_argument("--init-from", type=str, default=None,
+                         help="Checkpoint .pt để load model_state_dict trước khi train "
+                              "(fine-tune tiếp thay vì train từ đầu, dùng cho self-play).")
+    parser.add_argument("--output-name", type=str, default="surrogate_best.pt",
+                         help="Tên file checkpoint lưu trong outputs/phase4/ - đổi "
+                              "tên này để không ghi đè surrogate_best.pt chính (self-play).")
     args = parser.parse_args()
 
     os.makedirs(PHASE4_DIR, exist_ok=True)
@@ -95,6 +105,8 @@ def main():
 
     train_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "train.npz"))
     val_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "val.npz"))
+    base_n_seeds = train_ds.n_seeds
+    base_seed_classes = train_ds.seed_classes
     if args.limit:
         from torch.utils.data import Subset
         train_ds_full, val_ds_full = train_ds, val_ds
@@ -102,6 +114,20 @@ def main():
         val_ds = Subset(val_ds_full, range(min(args.limit // 4 or 1, len(val_ds_full))))
         train_ds.n_seeds = train_ds_full.n_seeds
         train_ds.seed_classes = train_ds_full.seed_classes
+    if args.adversarial_npz:
+        from torch.utils.data import ConcatDataset
+        extra = []
+        for p in args.adversarial_npz:
+            ds = AuxeticDataset(p)
+            assert list(ds.seed_classes) == list(base_seed_classes), (
+                f"seed_classes của {p} ({list(ds.seed_classes)}) không khớp "
+                f"train.npz ({list(base_seed_classes)}) - cột one-hot sẽ lệch."
+            )
+            extra.append(ds)
+            print(f"  + {len(ds)} mẫu đối kháng từ {p}")
+        train_ds = ConcatDataset([train_ds] + extra)
+        train_ds.n_seeds = base_n_seeds
+        train_ds.seed_classes = base_seed_classes
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
@@ -110,6 +136,12 @@ def main():
                              num_workers=2)
 
     model = SurrogateCNN(n_seeds=train_ds.n_seeds).to(device)
+    if args.init_from:
+        init_ckpt = torch.load(args.init_from, map_location=device, weights_only=False)
+        model.load_state_dict(init_ckpt["model_state_dict"])
+        print(f"Đã load trọng số khởi tạo từ {args.init_from} "
+              f"(epoch={init_ckpt.get('epoch')}, val_loss={init_ckpt.get('val_loss')}) "
+              f"- fine-tune tiếp thay vì train từ đầu.")
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=4
@@ -117,7 +149,7 @@ def main():
 
     best_val_loss = float("inf")
     epochs_no_improve = 0
-    best_ckpt_path = os.path.join(PHASE4_DIR, "surrogate_best.pt")
+    best_ckpt_path = os.path.join(PHASE4_DIR, args.output_name)
     history = []
 
     for epoch in range(1, args.epochs + 1):
@@ -160,11 +192,14 @@ def main():
                 break
 
     import json
-    with open(os.path.join(PHASE4_DIR, "train_history.json"), "w") as f:
+    history_name = ("train_history.json" if args.output_name == "surrogate_best.pt"
+                     else args.output_name.replace(".pt", "_history.json"))
+    history_path = os.path.join(PHASE4_DIR, history_name)
+    with open(history_path, "w") as f:
         json.dump(history, f, indent=2)
 
     print(f"\nĐã lưu model tốt nhất: {best_ckpt_path} (val_loss={best_val_loss:.5f})")
-    print(f"Lịch sử training: {os.path.join(PHASE4_DIR, 'train_history.json')}")
+    print(f"Lịch sử training: {history_path}")
 
 
 if __name__ == "__main__":

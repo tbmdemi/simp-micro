@@ -1,0 +1,29 @@
+[
+  {
+    "round": 0,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_gamma20.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_best.pt",
+    "r2_fe_v12": -9.504502580347365,
+    "hit_rate": 0.3333333333333333,
+    "n_auxetic_targets": 21,
+    "n_samples": 24
+  },
+  {
+    "round": 1,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round1.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round1.pt",
+    "r2_fe_v12": -4.896055965412866,
+    "hit_rate": 0.3333333333333333,
+    "n_auxetic_targets": 18,
+    "n_samples": 24
+  },
+  {
+    "round": 2,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_round2.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_round2.pt",
+    "r2_fe_v12": -4.165545114494797,
+    "hit_rate": 0.5,
+    "n_auxetic_targets": 24,
+    "n_samples": 24
+  }
+]
