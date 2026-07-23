@@ -15,7 +15,7 @@ Tham số FIXED được đặt ở TRUNG ĐIỂM range đã khảo sát trong p
 PARAM_SPACE — lựa chọn trung tính khi không có bằng chứng thống kê để chọn
 giá trị cụ thể hơn (correlation không cho biết hướng tối ưu cục bộ chính xác).
 
-Output schema (khớp pipeline/multi_batch/params.py::load_refined_parameters):
+Output schema (khớp pipeline/phase2_multi_batch/params.py::load_refined_parameters):
 {
   "fixed_parameters": {"rmin": 1.75, ...},
   "active_parameters": {"volfrac": {"range": [0.45, 0.70]}, ...},
@@ -28,7 +28,7 @@ Output schema (khớp pipeline/multi_batch/params.py::load_refined_parameters):
 }
 
 Usage:
-    python -m pipeline.phase1_refine_params \\
+    python -m pipeline.phase1_screening.refine_params \\
         --correlations outputs/pipeline/phase1/_all_correlations.json \\
         --output outputs/pipeline/phase1/refined_parameters.json
 """
@@ -38,7 +38,7 @@ import json
 import os
 from typing import Dict, List, Tuple
 
-from params import PARAM_SPACE
+from pipeline.params import PARAM_SPACE
 
 P_THRESHOLD = 0.10
 
@@ -100,7 +100,7 @@ def build_refined_parameters(correlations: Dict) -> Dict:
         "_decision_log": decisions,
         "_meta": {
             "p_threshold": P_THRESHOLD,
-            "source": "pipeline/phase1_refine_params.py",
+            "source": "pipeline/phase1_screening/refine_params.py",
         },
     }
 

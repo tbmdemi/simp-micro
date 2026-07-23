@@ -2,7 +2,7 @@
 CLI entry point for multi-batch adaptive sampling pipeline.
 
 Usage:
-    python -m pipeline.multi_batch.main --phase1-summary <path> [options]
+    python -m pipeline.phase2_multi_batch.main --phase1-summary <path> [options]
 
 Workflow:
     1. Load phase 1 summary → extract param ranges, existing results.
@@ -22,24 +22,24 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from pipeline.multi_batch.params import (
+from pipeline.phase2_multi_batch.params import (
     BatchConfig,
     BatchMode,
     SamplingStrategy,
     load_phase1_params,
     prepare_output,
 )
-from pipeline.multi_batch.sampling import generate_design
-from pipeline.multi_batch.runner import run_batch_from_design
-from pipeline.multi_batch.coverage import (
+from pipeline.phase2_multi_batch.sampling import generate_design
+from pipeline.phase2_multi_batch.runner import run_batch_from_design
+from pipeline.phase2_multi_batch.coverage import (
     coverage_report,
     find_sparse_regions,
 )
-from pipeline.multi_batch.adaptive import (
+from pipeline.phase2_multi_batch.adaptive import (
     decide_next_action,
     _load_accumulated_results,
 )
-from pipeline.multi_batch.visualize import (
+from pipeline.phase2_multi_batch.visualize import (
     generate_coverage_html,
     generate_batch_progression_html,
 )

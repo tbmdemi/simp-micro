@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Ghi chú: khối lượng công việc dưới đây (Phase 3-5 đầy đủ) đã hoàn thành và có mặt trong `main`/`FixLoss` từ lâu, nhưng chưa từng được ghi vào CHANGELOG — mục này bù lại khoảng trống đó. Chưa gắn số phiên bản mới vì đó là quyết định phát hành, không tự ý bump.
 
 ### Added
-- **Phase 3 (`pipeline/phase3/`)**: pipeline build dataset (`scan_dataset.py`, `build_npz.py`, `augment_symmetry.py`, `finalize_dataset.py`) — 7.920 lần chạy SIMP → trường mật độ 64×64 + target (`v12`, `v21`, `volfrac_achieved`), chia 70/15/15 phân tầng theo seed, tăng cường đối xứng vật lý (train ×6 → 33.120 mẫu).
+- **Phase 3 (`pipeline/phase3_dataset/`)**: pipeline build dataset (`scan_dataset.py`, `build_npz.py`, `augment_symmetry.py`, `finalize_dataset.py`) — 7.920 lần chạy SIMP → trường mật độ 64×64 + target (`v12`, `v21`, `volfrac_achieved`), chia 70/15/15 phân tầng theo seed, tăng cường đối xứng vật lý (train ×6 → 33.120 mẫu).
 - **Phase 4 (`pipeline/phase4_surrogate/`)**: CNN surrogate (`SurrogateCNN`) dự đoán (v12, v21, volfrac) từ trường mật độ. R² trên test set = 0,910 / 0,911 / 0,982.
 - **Phase 5 (`pipeline/phase5_cvae/`)**: conditional VAE cho thiết kế ngược (`dataset.py`, `model.py`, `losses.py`, `train.py`, `evaluate.py`, `sample.py`, `verify_fe.py`), cùng:
   - gamma-sweep cho trọng số property-loss, kiểm chứng độc lập bằng FE thực (`verify_fe.py`) — phát hiện hiện tượng khai thác surrogate.
@@ -27,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Một số lỗi tính đúng ở Phase 4/5 phát hiện qua kiểm chứng FE (chi tiết nguyên nhân gốc: xem EXPERIMENT_LOG.md).
-- Đường dẫn lỗi thời `pipeline/phase3_dataset/` → `pipeline/phase3/` trong PROJECT_DOCUMENTATION.md và comment `.gitignore`.
 - `html/inverse_auxetic_report.html` (báo cáo sơ bộ Phase 1, sinh 2026-07-16) có bảng xếp hạng seed trái ngược dữ liệu Phase 2 đã xác thực — thêm banner cảnh báo.
 - Metadata packaging lỗi thời trong `pyproject.toml` (tên project, author, URL repository) còn sót lại từ trước khi đổi tên sang AuxForge.
 
@@ -54,7 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-07-10
 
 ### Added
-- **`pipeline/multi_batch/`**: Multi-batch adaptive sampling pipeline — a complete module for intelligent, sequential design space exploration.
+- **`pipeline/phase2_multi_batch/`**: Multi-batch adaptive sampling pipeline — a complete module for intelligent, sequential design space exploration.
 
   - **`params.py`**: Configuration layer with `BatchConfig` and `PipelineConfig` dataclasses, parameter management (fixed vs active), and JSON serialization.
     - `SamplingStrategy` enum: `SOBOL`, `LHS`, `OPTIMIZED_LHS`, `RANDOM`
@@ -93,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   - **`main.py`**: CLI entry point orchestrating the full loop:
     ```
-    python -m pipeline.multi_batch.main --phase1-summary <path> [options]
+    python -m pipeline.phase2_multi_batch.main --phase1-summary <path> [options]
     ```
     - `--phase1-summary` — path to Phase 1 summary JSON or directory
     - `--max-batches` — iteration limit (default: 5)

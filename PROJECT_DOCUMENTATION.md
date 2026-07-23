@@ -110,13 +110,13 @@ Khảo sát không gian tham số (`volfrac`, `penal`, `rmin`, `move`, `void_siz
 
 ### Thuật toán
 - `LatinHypercube(d=n_dims, seed=42)` — tái lập được.
-- Chạy song song bằng multiprocessing (`phase1_screening_parallel.py`).
+- Chạy song song bằng multiprocessing (`pipeline/phase1_screening/screening_parallel.py`).
 - Phân tích độ nhạy bằng **Spearman correlation** giữa từng tham số và kết quả (ν₁₂), lọc NaN, yêu cầu `n_valid ≥ 5`.
 
 ### Cách chạy
 ```bash
-python -m pipeline.phase1_screening_parallel --objective auxetic --seed hexagonal
-python -m pipeline.phase1_screening_parallel --all     # toàn bộ 11 seed
+python -m pipeline.phase1_screening.screening_parallel --objective auxetic --seed hexagonal
+python -m pipeline.phase1_screening.screening_parallel --all     # toàn bộ 11 seed
 ```
 
 **Điều kiện tiên quyết:** Core engine (Phase 0) hoạt động đúng — đặc biệt công thức ν₁₂ và FE displacement, vì lần chạy Phase 1 đầu tiên đã bị 2 bug này che khuất hoàn toàn kết quả (0/N mẫu auxetic).
@@ -135,7 +135,7 @@ python -m pipeline.phase1_screening_parallel --all     # toàn bộ 11 seed
 ### Mục đích
 Sinh dataset lớn, đa dạng, có kiểm soát chất lượng, bằng vòng lặp DOE (Design of Experiments) thích ứng — mỗi batch học từ batch trước để quyết định thu hẹp/mở rộng không gian tham số.
 
-### Thuật toán (`pipeline/multi_batch/`)
+### Thuật toán (`pipeline/phase2_multi_batch/`)
 1. **Sampling** (`sampling.py`): chiến lược Sobol (explore, batch đầu) hoặc Optimized LHS (refine, các batch sau), sinh ra bộ tham số mới cho mỗi batch.
 2. **Coverage analysis** (`coverage.py`): ước lượng mật độ KDE trên không gian đặc trưng đã thu thập, phát hiện vùng thưa (sparse region) cần lấy mẫu thêm.
 3. **Adaptive decision** (`adaptive.py`): sau mỗi batch, quyết định:
@@ -147,7 +147,7 @@ Sinh dataset lớn, đa dạng, có kiểm soát chất lượng, bằng vòng l
 
 ### Cách chạy
 ```bash
-python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
+python -m pipeline.phase2_multi_batch.main --phase1-summary outputs/pipeline/phase1
 ```
 
 **Điều kiện tiên quyết:** Kết quả Phase 1 (để khởi tạo range tham số ban đầu, dựa trên sensitivity `volfrac` chi phối).
@@ -189,7 +189,7 @@ python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 ### Mục đích
 Chuyển 7.920 kết quả SIMP thô (PNG + CSV) thành dataset ML-ready: ảnh 64×64 chuẩn hóa + nhãn (targets) + train/val/test split + augmentation.
 
-### Pipeline (`pipeline/phase3/`)
+### Pipeline (`pipeline/phase3_dataset/`)
 1. **`scan_dataset.py`** → quét toàn bộ batch, tạo `manifest.csv` (đường dẫn ảnh + targets thô).
 2. **`build_npz.py --resolution 64`** → resize PNG gốc (616×616, render matplotlib `imshow` từ lưới `xPhys` 50×50 thô) xuống 64×64 bằng box-filter downsampling, đóng gói `dataset_64.npz`.
 3. **`augment_symmetry.py`** → augmentation dựa trên vật lý đối xứng (physics-aware), chỉ áp cho tập train.
@@ -205,9 +205,9 @@ Chuyển 7.920 kết quả SIMP thô (PNG + CSV) thành dataset ML-ready: ảnh 
 
 ### Cách chạy
 ```bash
-python3 pipeline/phase3/scan_dataset.py
-python3 pipeline/phase3/build_npz.py --resolution 64
-python3 pipeline/phase3/finalize_dataset.py --resolution 64
+python3 pipeline/phase3_dataset/scan_dataset.py
+python3 pipeline/phase3_dataset/build_npz.py --resolution 64
+python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 ```
 
 **Điều kiện tiên quyết:** Toàn bộ 8 batch Phase 2 đã chạy xong (`outputs/multi_batch/batch_*`).

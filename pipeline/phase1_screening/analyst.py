@@ -202,7 +202,7 @@ def load_run_metadata(csv_path: str) -> Dict[str, Optional[float]]:
     """Đọc elapsed_time / n_workers thật từ file JSON song hành với CSV.
 
     CSV tổng hợp `phase1_{seed}_{objective}.csv` luôn đi kèm file JSON cùng
-    tên (`.json`) do `save_results()` trong phase1_screening_parallel.py ghi
+    tên (`.json`) do `save_results()` trong phase1_screening/screening_parallel.py ghi
     ra. File JSON này chứa `metadata.elapsed_time` (tổng thời gian chạy,
     đơn vị giây) và `metadata.n_workers` — không thể suy ra 2 giá trị này
     một cách đáng tin cậy chỉ từ CSV, nên đọc trực tiếp từ JSON nếu có.
@@ -360,7 +360,7 @@ def compute_correlations(
 
     Dùng Spearman (rank-based) thay vì Pearson vì quan hệ giữa tham số SIMP
     và obj_value không được giả định là tuyến tính — khớp với phương pháp
-    dùng trong pipeline/phase1_screening_parallel.py (nguồn dữ liệu thật).
+    dùng trong pipeline/phase1_screening/screening_parallel.py (nguồn dữ liệu thật).
 
     Args:
         df: DataFrame với cột 'obj_value' và các cột param

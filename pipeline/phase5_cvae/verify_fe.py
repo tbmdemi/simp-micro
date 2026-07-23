@@ -160,7 +160,7 @@ def sanity_check():
               "ở phần dưới cho tới khi tìm ra nguyên nhân (khả năng cao: "
               "FE_PARAMS['nelx']/['nely']/['penal'] sai, hoặc cách resize/"
               "binarize không khớp cách outputs/phase3 được tạo ra - kiểm "
-              "tra lại pipeline/phase3/build_npz.py để xem chính xác cách "
+              "tra lại pipeline/phase3_dataset/build_npz.py để xem chính xác cách "
               "PNG gốc -> 64x64 được tạo).")
     else:
         print("[OK] Sai lệch nhỏ - FE_PARAMS và cách resize đáng tin cậy. "
