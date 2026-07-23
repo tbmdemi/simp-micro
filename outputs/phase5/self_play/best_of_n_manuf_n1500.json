@@ -1,0 +1,74 @@
+{
+  "n_conditions": 3,
+  "n_samples_per_condition": 1500,
+  "k_fe_verify": 8,
+  "n_fe_calls_total": 24,
+  "n_auxetic_targets": 3,
+  "hit_rate_single_shot": 0.0,
+  "hit_rate_best_of_n": 1.0,
+  "r2_fe_v12_best_of_n": 0.18706525491353154,
+  "require_manufacturable": true,
+  "mean_frac_manufacturable": 0.012888888888888889,
+  "per_condition": [
+    {
+      "target_v12": -0.1562294214963913,
+      "is_auxetic_target": true,
+      "n_valid_samples": 8,
+      "v12_first": 0.3433609650269306,
+      "v12_best": -0.14117442601078012,
+      "v12_all": [
+        -0.12771279662584495,
+        -1.0741200389015268e-10,
+        -0.14117442601078012,
+        0.04555443787050968,
+        -0.02373198751158541,
+        -0.05231213090964452,
+        -0.05856156193433541,
+        -0.0977437322833065
+      ],
+      "frac_auxetic_among_samples": 0.875,
+      "n_manufacturable": 27,
+      "frac_manufacturable": 0.018
+    },
+    {
+      "target_v12": -0.5196581482887268,
+      "is_auxetic_target": true,
+      "n_valid_samples": 8,
+      "v12_first": 0.016313407368717392,
+      "v12_best": -0.2878714748869685,
+      "v12_all": [
+        -0.08572796068891995,
+        0.22303753981673768,
+        -0.0993124934152966,
+        -0.2878714748869685,
+        -0.06810969188233172,
+        -0.11202876933699435,
+        -0.10467703437411316,
+        -0.17250830298914555
+      ],
+      "frac_auxetic_among_samples": 0.875,
+      "n_manufacturable": 12,
+      "frac_manufacturable": 0.008
+    },
+    {
+      "target_v12": -0.2940864562988281,
+      "is_auxetic_target": true,
+      "n_valid_samples": 8,
+      "v12_first": 2.509116483365547e-10,
+      "v12_best": -0.32196312817926553,
+      "v12_all": [
+        -0.1515423710205217,
+        -0.32196312817926553,
+        -0.15090645342780562,
+        0.1396223187317801,
+        0.11931936839434398,
+        0.16668561043051572,
+        0.004240217765685661,
+        -0.06952285232536796
+      ],
+      "frac_auxetic_among_samples": 0.5,
+      "n_manufacturable": 19,
+      "frac_manufacturable": 0.012666666666666666
+    }
+  ]
+}

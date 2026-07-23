@@ -2,16 +2,12 @@
 Phase 1 Analyst — Aggregation Script.
 
 Quét toàn bộ dữ liệu Phase 1 (outputs/pipeline/phase1/) và tạo hai file tổng hợp:
-  1. _all_correlations.json — chi tiết hệ số tương quan Spearman cho mỗi cặp (seed, objective)
-  2. _all_summaries_parallel.json — tóm tắt gọn, top 3 tham số, best obj, elapsed time...
+  1. _all_correlations.json — hệ số tương quan Spearman cho mỗi cặp (seed, objective)
+  2. _all_summaries_parallel.json — tóm tắt gọn: top 3 tham số, best obj, elapsed time...
 
-Luồng xử lý:
-  1. Quét thư mục phase1 → phát hiện seeds (danh sách thư mục con)
-  2. Với mỗi seed, tìm file CS V tổng hợp phase1_{seed}_{objective}.csv
-     (nếu không có, fallback đọc từ các thư mục sample_*)
-  3. Đọc dữ liệu, phân tích param_names tự động
-  4. Tính Spearman correlation cho từng tham số với obj_value
-  5. Ghi hai file JSON đầu ra
+Luồng xử lý: phát hiện seeds -> tìm CSV tổng hợp phase1_{seed}_{objective}.csv
+(fallback đọc từ thư mục sample_* nếu thiếu) -> tự động phát hiện param_names ->
+tính Spearman correlation với obj_value -> ghi hai file JSON trên.
 """
 
 import json
@@ -107,9 +103,8 @@ def discover_configs(seed_dir: str, seed: str) -> List[Dict[str, Any]]:
                     matched = True
                     break
 
-        # Mặc dù seed trùng khớp với tên thư mục, vẫn có trường hợp
-        # filename không theo pattern (ví dụ: phase1_circle_first.csv).
-        # Nếu không match known objective, thử dùng split('_', 1) làm fallback.
+        # Fallback nếu filename không theo pattern chuẩn (vd: phase1_circle_first.csv):
+        # thử split('_', 1) đơn giản.
         if not matched:
             parts = rest.split('_', 1)
             if len(parts) == 2:
@@ -207,7 +202,7 @@ def load_run_metadata(csv_path: str) -> Dict[str, Optional[float]]:
     """Đọc elapsed_time / n_workers thật từ file JSON song hành với CSV.
 
     CSV tổng hợp `phase1_{seed}_{objective}.csv` luôn đi kèm file JSON cùng
-    tên (`.json`) do `save_results()` trong phase1_screening_parallel.py ghi
+    tên (`.json`) do `save_results()` trong phase1_screening/screening_parallel.py ghi
     ra. File JSON này chứa `metadata.elapsed_time` (tổng thời gian chạy,
     đơn vị giây) và `metadata.n_workers` — không thể suy ra 2 giá trị này
     một cách đáng tin cậy chỉ từ CSV, nên đọc trực tiếp từ JSON nếu có.
@@ -365,7 +360,7 @@ def compute_correlations(
 
     Dùng Spearman (rank-based) thay vì Pearson vì quan hệ giữa tham số SIMP
     và obj_value không được giả định là tuyến tính — khớp với phương pháp
-    dùng trong pipeline/phase1_screening_parallel.py (nguồn dữ liệu thật).
+    dùng trong pipeline/phase1_screening/screening_parallel.py (nguồn dữ liệu thật).
 
     Args:
         df: DataFrame với cột 'obj_value' và các cột param

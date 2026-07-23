@@ -52,11 +52,9 @@ def build_pbc(nelx: int, nely: int, nodenrs: np.ndarray):
     top_dofs_u = 2 * top_nodes
     top_dofs_v = 2 * top_nodes + 1
 
-    # Xác định các bậc tự do độc lập (master) và phụ thuộc (slave)
-    # Master: tất cả bậc tự do trừ các nút trên biên phải và biên trên
-    # (vì left = right, bottom = top)
-    # QUAN TRỌNG: các nút trên biên trái và biên dưới (bao gồm góc dưới-trái)
-    # phải là master để các slave trên biên phải và biên trên có thể tham chiếu đến
+    # Master: tất cả DOF trừ biên phải/biên trên (left=right, bottom=top).
+    # Biên trái và biên dưới (kể cả góc dưới-trái) phải là master để các
+    # slave trên biên phải/biên trên có nơi tham chiếu.
     master_mask = np.ones(ndof, dtype=bool)
 
     # Loại bỏ biên phải (trừ góc trên-phải)
@@ -69,11 +67,7 @@ def build_pbc(nelx: int, nely: int, nodenrs: np.ndarray):
         master_mask[top_dofs_u[i]] = False
         master_mask[top_dofs_v[i]] = False
 
-    # Góc trên-phải bị loại 2 lần (ok)
-    # Góc dưới-phải bị loại (biên phải) - ok
-    # Góc trên-trái bị loại (biên trên) - ok
-    # Góc dưới-trái KHÔNG bị loại - là master
-
+    # Chỉ góc dưới-trái không bị loại bởi vòng nào ở trên -> là master duy nhất.
     master_dofs = np.where(master_mask)[0]
     n_master = len(master_dofs)
 
@@ -117,6 +111,25 @@ def build_pbc(nelx: int, nely: int, nodenrs: np.ndarray):
             rows.append(top_dofs_v[i])
             cols.append(master_to_idx[bottom_dofs_v[i]])
             vals.append(1.0)
+
+    # BUG FIX: góc trên-phải không phải master lẫn không phải slave của hai
+    # vòng trên (cả góc trên-trái và góc dưới-phải mà nó cần tham chiếu đều
+    # đã bị loại khỏi master), nên trước fix hàng của nó trong pbc_mat toàn
+    # số 0 -> chuyển vị bị ghim cứng = 0 thay vì tuần hoàn đúng. Nhờ tính bắc
+    # cầu của PBC (4 góc tương đương nhau), nối thẳng nó về góc dưới-trái -
+    # master duy nhất trong 4 góc.
+    bottom_left_dof_u = bottom_dofs_u[0]
+    bottom_left_dof_v = bottom_dofs_v[0]
+    top_right_dof_u = top_dofs_u[nelx]
+    top_right_dof_v = top_dofs_v[nelx]
+    if bottom_left_dof_u in master_to_idx:
+        rows.append(top_right_dof_u)
+        cols.append(master_to_idx[bottom_left_dof_u])
+        vals.append(1.0)
+    if bottom_left_dof_v in master_to_idx:
+        rows.append(top_right_dof_v)
+        cols.append(master_to_idx[bottom_left_dof_v])
+        vals.append(1.0)
 
     pbc_mat = coo_matrix(
         (vals, (rows, cols)),

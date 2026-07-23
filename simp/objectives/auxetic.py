@@ -1,40 +1,16 @@
 """
-Hàm mục tiêu auxetic sử dụng tổ hợp Q12 và stiffness để tạo ra hệ số Poisson âm.
+Hàm mục tiêu auxetic: tối thiểu Q12 (proxy cho nu12 âm) với phạt stiffness.
 
-Cơ sở toán học
---------------
-Với tensor compliance S = Q^-1 (3x3, Voigt notation [11, 22, 12]):
+Cơ sở: nu12 = -S12/S11 với S = Q^-1. Khi orthotropic theo trục (Q13=Q23=0),
+rút gọn còn nu12 = Q12/Q22 -> dấu Q12 trùng dấu nu12 (vì Q22 > 0), nên dùng
+Q12 làm proxy. Minimize Q12 thuần túy dễ dừng ở Q12≈0 (OC coi là đủ tối ưu),
+nên thêm số hạng -μ*(Q11+Q22) (μ>0) để tạo áp lực kéo Q12 âm hơn trong khi
+vẫn giữ stiffness; μ=0 giữ hành vi cũ. Penalty chuẩn hóa theo delta^2 để
+đồng bậc với Q12.
 
-    nu12 = -S12 / S11
-
-Khi vật liệu orthotropic theo đúng trục tọa độ (Q13 = Q23 = 0), có thể rút gọn:
-    S11 = Q22 / det(Q),   S12 = -Q12 / det(Q)
-    =>  nu12 = Q12 / Q22
-
-Do đó dấu của nu12 trùng với dấu của Q12 (vì Q22 > 0). Đây là lý do dùng Q12
-làm proxy cho nu12 trong tối ưu hóa.
-
-Tuy nhiên, chỉ minimize Q12 thuần túy thường không đủ mạnh để đẩy Q12 xuống
-dưới 0 vì OC có thể dừng ở trạng thái Q12 ≈ 0 (gần đẳng hướng) và cho rằng
-đó là tối ưu. Để khắc phục, ta thêm một số hạng -μ*(Q11 + Q22) vào objective,
-tạo áp lực kéo Q12 xuống âm trong khi vẫn duy trì stiffness.
-
-Công thức objective (dạng minimization cho OC):
-    c = Q12 - μ * (Q11 + Q22) + penalty_terms
-
-Với:
-    - μ (mu) > 0: hệ số cân bằng. Khi μ càng lớn, áp lực kéo Q12 xuống âm càng
-      mạnh, nhưng có thể gây void collapse nếu penalty không đủ.
-    - μ = 0: hành vi cũ (minimize Q12 thuần túy), giữ nguyên để tương thích.
-
-Penalty được chuẩn hóa theo delta^2 để đồng bậc với Q12, tránh penalty trội
-trong giai đoạn Q12 còn nhỏ.
-
-CẢNH BÁO VỀ ROTATION
----------------------
-Nếu unit cell được xoay (rotation != 0), tensor Q có Q13, Q23 != 0. Hàm
-compute_nu12() sử dụng nghịch đảo ma trận 3x3 đầy đủ để tính nu12 chính xác.
-Module này tự động cảnh báo khi coupling shear-normal vượt ngưỡng.
+CẢNH BÁO ROTATION: nếu unit cell bị xoay, Q13/Q23 != 0 và công thức rút gọn
+trên sai lệch; compute_nu12()/compute_nu21() luôn dùng nghịch đảo ma trận
+3x3 đầy đủ nên đúng trong mọi trường hợp.
 """
 
 import numpy as np
@@ -59,9 +35,8 @@ def compute_nu12(Q: np.ndarray, rotation_tol: float = 1e-3) -> float:
     scale = np.sqrt(max(Q[0, 0] * Q[1, 1], 1e-12))
     coupling = max(abs(Q[0, 2]), abs(Q[1, 2])) / scale
     if coupling > rotation_tol:
-        # Q13/Q23 đáng kể -> công thức rút gọn Q12/Q22 sẽ sai lệch.
-        # Hàm này luôn trả về giá trị đúng (qua S=Q^-1), nhưng caller
-        # nên log/kiểm tra coupling nếu cần debug.
+        # Coupling đáng kể - công thức rút gọn Q12/Q22 sẽ sai, nhưng giá trị
+        # trả về ở đây (qua S=Q^-1) vẫn luôn đúng.
         pass
 
     return float(nu12)
@@ -85,19 +60,10 @@ def compute_auxetic_q12_objective(
     beta: float = 1.0,
     mu: float = 0.0,
 ) -> tuple:
-    """Tối thiểu hóa Q12 (→ auxetic) với ràng buộc phạt stiffness và tham số μ.
+    """Tối thiểu hóa Q12 (proxy cho nu12 âm), với phạt stiffness và tham số μ.
 
-    Hàm mục tiêu (dạng minimization cho OC):
-        c = Q12 - μ * (Q11 + Q22) + penalty_terms
-
-    Trong đó:
-        - μ (mu) kiểm soát mức độ ưu tiên kéo Q12 xuống âm.
-          μ = 0   : hành vi cũ (chỉ minimize Q12).
-          μ > 0   : tạo áp lực kéo Q12 xuống âm, đồng thời duy trì stiffness.
-          Giá trị khởi điểm gợi ý: μ = 0.1 → 0.5.
-        - Q12 là proxy cho nu12 (dấu trùng khi vật liệu orthotropic theo trục).
-        - penalty_terms: phạt khi Q11 hoặc Q22 xuống dưới ngưỡng
-          δ = 0.1 * volfrac * E0, chuẩn hóa theo δ² để đồng bậc với Q12.
+    c = Q12 - μ*(Q11 + Q22) + penalty_terms (xem docstring đầu module).
+    Gợi ý khởi điểm μ = 0.1 → 0.5 nếu bật (mặc định μ=0, hành vi cũ).
 
     Args:
         Q: Ten-xơ độ cứng đồng nhất hóa (3×3).
@@ -115,8 +81,7 @@ def compute_auxetic_q12_objective(
     delta = 0.1 * volfrac * E0
     delta_sq = max(delta ** 2, 1e-12)  # tránh chia 0
 
-    # Mục tiêu chính: Q12 - mu*(Q11 + Q22)
-    # Khi mu > 0: tạo áp lực kéo Q12 xuống âm vì Q11+Q22 luôn dương.
+    # mu > 0 tạo áp lực kéo Q12 xuống âm vì Q11+Q22 luôn dương.
     c = Q[0, 1] - mu * (Q[0, 0] + Q[1, 1])
     dc = dQ[0, 1, :, :] - mu * (dQ[0, 0, :, :] + dQ[1, 1, :, :])
 

@@ -50,15 +50,10 @@ def solve_fe(
     nele = nelx * nely
     ndof = pbc.shape[0]
 
-    # Lắp ráp ma trận độ cứng toàn cục
-    # xPhys: (nely, nelx) -> chuyển thành vector (nele,) theo thứ tự Fortran
+    # Lắp ráp ma trận độ cứng toàn cục. E_penal = Emin + (rho0*x^penal)*(E0-Emin)
+    # - rho0 hỗ trợ scaling kiểu MATLAB Second_Obj (rho0=7850, E0=1).
     xPhys_vec = xPhys.flatten('F')  # (nele,)
-    # KE: (8,8) -> (64,)
     KE_vec = KE.flatten()  # (64,)
-    # Mỗi phần tử có KE riêng: (64, 1) * (1, nele) -> (64, nele)
-    # Công thức SIMP: E(x) = Emin + x^penal * (E0 - Emin)
-    # Hỗ trợ rho0 scaling (MATLAB Second_Obj: rho0=7850, E0=1)
-    # E_penal = Emin + (rho0 * x^penal) * (E0 - Emin)
     xe = rho0 * xPhys_vec ** penal
     sK = KE_vec[:, np.newaxis] * (Emin + xe[np.newaxis, :] * (E0 - Emin))
     sK = sK.flatten('F')
@@ -81,12 +76,9 @@ def solve_fe(
     nnx = nelx + 1
     nny = nely + 1
 
-    # Xây dựng chuyển vị biến dạng đơn vị cho mỗi nút
-    # U⁰(x,y) = ε⁰ · [x, y]ᵀ
-    # 
-    # FIX (2026-06-06): Dùng nodenrs-based DOF indexing thay vì idx-based
+    # Xây dựng chuyển vị biến dạng đơn vị cho mỗi nút: U⁰(x,y) = ε⁰ · [x, y]ᵀ
+    # FIX (2026-06-06): dùng nodenrs-based DOF indexing (không phải idx-based)
     # để tương thích với edofMat (dùng node number).
-    # Lấy nodenrs từ tham số hoặc rebuild
     try:
         from .fem import build_dof_mesh
         _dummy_nodenrs, _, _, _, _ = build_dof_mesh(nelx, nely)
@@ -112,7 +104,7 @@ def solve_fe(
             U0[dof_v, 2] = x_coord / 2
 
     # Tải trọng: F = -PBC^T @ (K_global @ U0)
-    # FIX (2026-06-06): Sửa sign - nghiệm là fluctuation χ thỏa K@χ = -K@U0
+    # FIX (2026-06-06): sign đúng phải âm - nghiệm là fluctuation χ thỏa K@χ = -K@U0
     F = -pbc.T @ (K_global @ U0)
 
     # Cố định 2 bậc tự do đầu tiên (u, v của nút 0) để loại bỏ chuyển vị cứng

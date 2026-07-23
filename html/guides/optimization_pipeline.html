@@ -836,12 +836,27 @@ section { padding: var(--gap-xl) 0; }
   .obj-grid { grid-template-columns: 1fr; }
 }
 </style>
+  <style>
+    .nav-home {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent2);
+      white-space: nowrap;
+      text-decoration: none;
+      padding-right: var(--gap-lg);
+      border-right: 1px solid var(--border);
+    }
+    .nav-home:hover { color: var(--accent); }
+  </style>
 </head>
 <body>
 
 <!-- ===== NAV ===== -->
 <nav class="site-nav">
   <div class="nav-inner">
+    <a href="../index.html" class="nav-home">← SIMP Analyst</a>
     <span class="nav-logo">SIMP <span>◆</span> Opt</span>
     <a class="nav-link" href="#Tổng Quan">Tổng Quan</a>
     <a class="nav-link" href="#params">Tham Số</a>

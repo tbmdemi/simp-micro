@@ -1,21 +1,16 @@
 """
-Mẫu seed reentrant bowtie (no bướm) - cơ chế chuẩn cho auxetic honeycomb.
+Mẫu seed reentrant bowtie (nơ bướm) - cơ chế chuẩn cho auxetic honeycomb.
 
-Khác với các seed hiện có (lỗ tròn/hourglass cục bộ trên nền đặc), seed
-này tạo ra 4 thanh chéo nối từ tâm ra 4 góc của unit cell theo góc
-reentrant (< 90 độ so với phương ngang), mô phỏng cơ chế "gập-xoay"
-(rotating hinge) đặc trưng của reentrant honeycomb - cấu trúc auxetic
-kinh điển trong literature (Lakes, 1987; Gibson & Ashby).
+4 thanh chéo nối từ tâm ra 4 góc theo góc reentrant (< 90 độ so với
+phương ngang), mô phỏng cơ chế "gập-xoay" (rotating hinge) đặc trưng của
+reentrant honeycomb (Lakes, 1987; Gibson & Ashby).
 
-Nền là VOID (mật độ thấp), chỉ các thanh chéo là SOLID - ngược lại hoàn
-toàn so với hourglass_seed (nền đặc, lõm cục bộ). Đây là điểm khác biệt
-quan trọng nhất giúp thoát khỏi local optimum gần đẳng hướng: seed bắt
-đầu từ gần-đồng nhất-đặc thường hội tụ về nghiệm gần isotropic (v12~nu
-của vật liệu nền), trong khi seed bắt đầu từ cấu trúc thưa có cơ chế
-sẵn dễ giữ được tính auxetic hơn qua quá trình tối ưu.
-
-Đã kiểm chứng thực nghiệm: kết hợp với volfrac~0.5, seed này cho v12 gần
-0 hơn đáng kể so với các seed nền-đặc truyền thống (sau khi đã sửa lỗi
+Khác biệt cốt lõi so với các seed khác: nền là VOID, chỉ thanh chéo là
+SOLID (hourglass_seed thì ngược lại - nền đặc, lõm cục bộ). Seed nền-đặc
+thường hội tụ về nghiệm gần isotropic (v12~nu vật liệu nền) vì đã kẹt gần
+local optimum đẳng hướng; seed nền-thưa có cơ chế gập-xoay sẵn nên giữ
+được tính auxetic tốt hơn qua tối ưu. Đã kiểm chứng: kết hợp volfrac~0.5,
+seed này cho v12 gần 0 hơn đáng kể so với seed nền-đặc (sau khi sửa lỗi
 U0+U trong runner.py).
 """
 
@@ -30,22 +25,13 @@ def reentrant_bowtie_seed(
     reentrant_angle_deg: float = 60.0,
     strut_width_frac: float = 0.12,
 ) -> np.ndarray:
-    """Tạo mẫu reentrant bowtie (4 thanh chéo dạng chữ X co góc reentrant).
+    """Reentrant bowtie: 4 thanh chéo dạng chữ X co góc reentrant, nền void.
 
-    Args:
-        nelx: Số phần tử theo phương x.
-        nely: Số phần tử theo phương y.
-        volfrac: Tỉ lệ thể tích mục tiêu (dùng để chuẩn hóa mật độ nền/thanh).
-        rotation_deg: Góc xoay toàn bộ mẫu (độ).
-        reentrant_angle_deg: Góc giữa thanh chéo và phương ngang, < 90 độ
-            tạo hình "nơ bướm" lõm vào trong (đặc trưng reentrant). Giá
-            trị điển hình 50-70 độ; 60 độ cho kết quả tốt nhất trong thử
-            nghiệm sơ bộ.
-        strut_width_frac: Độ dày thanh chéo, tính theo phần trăm của
-            min(nelx, nely). Giá trị điển hình 0.08-0.15.
-
-    Returns:
-        Mảng (nely, nelx) mật độ ban đầu - nền void, thanh chéo solid.
+    reentrant_angle_deg: góc thanh chéo so với phương ngang, < 90 độ tạo hình
+        "nơ bướm" lõm reentrant. Điển hình 50-70 độ; 60 độ tốt nhất trong thử
+        nghiệm sơ bộ.
+    strut_width_frac: độ dày thanh chéo, phần trăm của min(nelx, nely).
+        Điển hình 0.08-0.15.
     """
     # Nền = void nhẹ (khác hourglass_seed dùng nền đặc = volfrac)
     x = np.full((nely, nelx), max(0.01, volfrac * 0.15))

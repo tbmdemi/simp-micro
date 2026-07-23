@@ -14,5 +14,5 @@ Các gói con:
 """
 
 __version__ = '1.4.0'
-__author__ = 'SIMP Analyst Team'
+__author__ = 'AuxForge Team'
 __license__ = 'MIT'

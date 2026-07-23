@@ -2,7 +2,7 @@
 CLI entry point for multi-batch adaptive sampling pipeline.
 
 Usage:
-    python -m pipeline.multi_batch.main --phase1-summary <path> [options]
+    python -m pipeline.phase2_multi_batch.main --phase1-summary <path> [options]
 
 Workflow:
     1. Load phase 1 summary → extract param ranges, existing results.
@@ -22,24 +22,24 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
-from pipeline.multi_batch.params import (
+from pipeline.phase2_multi_batch.params import (
     BatchConfig,
     BatchMode,
     SamplingStrategy,
     load_phase1_params,
     prepare_output,
 )
-from pipeline.multi_batch.sampling import generate_design
-from pipeline.multi_batch.runner import run_batch_from_design
-from pipeline.multi_batch.coverage import (
+from pipeline.phase2_multi_batch.sampling import generate_design
+from pipeline.phase2_multi_batch.runner import run_batch_from_design
+from pipeline.phase2_multi_batch.coverage import (
     coverage_report,
     find_sparse_regions,
 )
-from pipeline.multi_batch.adaptive import (
+from pipeline.phase2_multi_batch.adaptive import (
     decide_next_action,
     _load_accumulated_results,
 )
-from pipeline.multi_batch.visualize import (
+from pipeline.phase2_multi_batch.visualize import (
     generate_coverage_html,
     generate_batch_progression_html,
 )
@@ -347,10 +347,9 @@ def main() -> None:
         print(f"  BATCH {batch_id} / up to {args.max_batches}")
         print(f"{'='*60}")
 
-        # Build config for this batch. batch_id==1 always uses CLI args
-        # directly. Với batch_id>1, nếu --seeds được truyền tay, ép dùng
-        # batch thủ công (bỏ qua decide_next_action) — để backfill seed
-        # còn thiếu mà không bị engine tự ý dừng/refine đè lên.
+        # batch_id==1 always uses CLI args directly. Với batch_id>1, nếu --seeds
+        # được truyền tay, ép dùng batch thủ công (bỏ qua decide_next_action) để
+        # backfill seed thiếu mà không bị engine tự dừng/refine đè lên.
         if batch_id == 1 or args.seeds is not None:
             strat = strategy_map.get(args.strategy, SamplingStrategy.SOBOL)
             batch_seeds = args.seeds if args.seeds is not None else seeds[:5]
@@ -410,9 +409,8 @@ def main() -> None:
                             print(f"    {pname}: [{new_lo:.4f}, {new_hi:.4f}] "
                                   f"({reduction:.0f}% reduction)")
 
-                # Persist narrowed ranges for next iteration (Issue #1 fix)
-                # The decision returns next_config with param_ranges already set
-                # to narrowed values. Use those directly.
+                # Persist narrowed ranges for next iteration (Issue #1 fix):
+                # next_config already carries them, so use directly.
                 if decision_config and decision_config.param_ranges:
                     # Check if the new ranges differ from current effective ranges
                     any_change = False

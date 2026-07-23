@@ -32,14 +32,10 @@ def build_dof_mesh(nelx: int, nely: int):
 
     # Ma trận bậc tự do phần tử: tất cả 8 bậc tự do cho mỗi phần tử
     # Node ordering (CCW từ bottom-left): [BL, BR, TR, TL]
-    # BL: bottom-left, BR: bottom-right, TR: top-right, TL: top-left
-    # 
-    # BUG FIX (2026-06-06): edofVec và offset đều sai.
-    # - edofVec dùng 2*node+1 thay vì 2*node-1 → lệch 2 DOF
-    # - offset cho TR dùng 2*nely (sai) thay vì 2*(nely+1)+2 (đúng)
-    # - offset cho TL dùng -2,-1 (sai) thay vì +2,+3 (đúng)
+    # BUG FIX (2026-06-06): u-DOF phải là 2*node-1 (không phải 2*node+1,
+    # lệch 2 DOF); offset TR/TL cũng từng sai tương ứng.
     edofVec = np.reshape(
-        2 * nodenrs[:-1, :-1] - 1,  # FIX: u-DOF = 2*node-1
+        2 * nodenrs[:-1, :-1] - 1,
         nelx * nely,
         order='F'
     )

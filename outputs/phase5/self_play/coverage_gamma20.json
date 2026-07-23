@@ -1,0 +1,94 @@
+{
+  "grid_size": 8,
+  "n_samples_per_target": 20,
+  "v12_range": [
+    -0.81,
+    0.37
+  ],
+  "n_auxetic_targets": 5,
+  "hit_rate": 1.0,
+  "mean_abs_error": 0.19889692734770503,
+  "dead_zone_targets": [],
+  "per_target": [
+    {
+      "target_v12": -0.81,
+      "is_auxetic_target": true,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": -0.1899304576136713,
+      "abs_error": 0.6200695423863287,
+      "hit": true
+    },
+    {
+      "target_v12": -0.6414285714285715,
+      "is_auxetic_target": true,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": -0.2573672484552527,
+      "abs_error": 0.38406132297331874,
+      "hit": true
+    },
+    {
+      "target_v12": -0.47285714285714286,
+      "is_auxetic_target": true,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": -0.15612386793850297,
+      "abs_error": 0.3167332749186399,
+      "hit": true
+    },
+    {
+      "target_v12": -0.30428571428571427,
+      "is_auxetic_target": true,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": -0.39428859718851067,
+      "abs_error": 0.0900028829027964,
+      "hit": true
+    },
+    {
+      "target_v12": -0.13571428571428568,
+      "is_auxetic_target": true,
+      "n_valid_samples": 20,
+      "n_manufacturable": 2,
+      "frac_manufacturable": 0.1,
+      "best_v12": -0.09507522775098382,
+      "abs_error": 0.04063905796330186,
+      "hit": true
+    },
+    {
+      "target_v12": 0.03285714285714292,
+      "is_auxetic_target": false,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": 0.03439820061230551,
+      "abs_error": 0.0015410577551625906,
+      "hit": null
+    },
+    {
+      "target_v12": 0.2014285714285715,
+      "is_auxetic_target": false,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": 0.12990003035084205,
+      "abs_error": 0.07152854107772946,
+      "hit": null
+    },
+    {
+      "target_v12": 0.37,
+      "is_auxetic_target": false,
+      "n_valid_samples": 20,
+      "n_manufacturable": 0,
+      "frac_manufacturable": 0.0,
+      "best_v12": 0.4365997388043625,
+      "abs_error": 0.06659973880436248,
+      "hit": null
+    }
+  ]
+}

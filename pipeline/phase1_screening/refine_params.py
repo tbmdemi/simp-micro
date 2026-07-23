@@ -1,25 +1,21 @@
 """
-Sinh outputs/pipeline/phase1/refined_parameters.json từ _all_correlations.json.
-
-Đây là bước "2.1 — Thu hẹp không gian biến" trong kế hoạch mở rộng DOE:
+Sinh outputs/pipeline/phase1/refined_parameters.json từ _all_correlations.json:
 với mỗi tham số SIMP (volfrac, penal, rmin, move, void_size_frac), quyết định
 giữ ACTIVE (tiếp tục sample ở Phase 2) hay FIX ở giá trị nominal, dựa trên
 p-value Spearman thu được từ 11 seeds ở Phase 1.
 
-QUY TẮC (đã thống nhất với người dùng):
-    Một tham số được giữ ACTIVE nếu có ÍT NHẤT 1 seed đạt p < 0.10.
-    Ngưỡng lỏng (0.10 thay vì 0.05 chuẩn) để không bỏ sót tín hiệu borderline
-    như `penal` ở seed `reentrant_bowtie` (p≈0.06) — vì các seed có cơ chế
-    đạt auxetic khác nhau (vd bowtie dựa vào góc re-entrant hơn là volfrac
-    thuần túy), một tham số "im lặng" ở 10 seed nhưng có tín hiệu ở 1 seed
-    vẫn đáng giữ lại thay vì cố định cứng.
+QUY TẮC: một tham số giữ ACTIVE nếu có ÍT NHẤT 1 seed đạt p < 0.10. Ngưỡng
+lỏng (0.10 thay vì 0.05 chuẩn) để không bỏ sót tín hiệu borderline như `penal`
+ở seed `reentrant_bowtie` (p≈0.06) — các seed có cơ chế đạt auxetic khác nhau
+(vd bowtie dựa vào góc re-entrant hơn volfrac thuần túy), nên một tham số
+"im lặng" ở 10 seed nhưng có tín hiệu ở 1 seed vẫn đáng giữ ACTIVE thay vì
+cố định cứng.
 
 Tham số FIXED được đặt ở TRUNG ĐIỂM range đã khảo sát trong pipeline/params.py
-PARAM_SPACE — đây là lựa chọn an toàn, trung tính khi không có bằng chứng
-thống kê để chọn một giá trị cụ thể hơn (không suy ra "giá trị tối ưu" từ
-correlation vì correlation không cho biết hướng tối ưu cục bộ chính xác).
+PARAM_SPACE — lựa chọn trung tính khi không có bằng chứng thống kê để chọn
+giá trị cụ thể hơn (correlation không cho biết hướng tối ưu cục bộ chính xác).
 
-Output schema (khớp với pipeline/multi_batch/params.py::load_refined_parameters):
+Output schema (khớp pipeline/phase2_multi_batch/params.py::load_refined_parameters):
 {
   "fixed_parameters": {"rmin": 1.75, ...},
   "active_parameters": {"volfrac": {"range": [0.45, 0.70]}, ...},
@@ -27,13 +23,12 @@ Output schema (khớp với pipeline/multi_batch/params.py::load_refined_paramet
   "active_objectives": ["auxetic"],
   "_decision_log": {  # audit trail, không được multi_batch đọc, chỉ để tham khảo
       "volfrac": {"active": true, "min_pval": 1e-6, "seed": "square"},
-      "rmin": {"active": true, "min_pval": 0.021, "seed": "square", "note": "borderline theo ngưỡng 0.10"},
       ...
   }
 }
 
 Usage:
-    python -m pipeline.phase1_refine_params \\
+    python -m pipeline.phase1_screening.refine_params \\
         --correlations outputs/pipeline/phase1/_all_correlations.json \\
         --output outputs/pipeline/phase1/refined_parameters.json
 """
@@ -43,7 +38,7 @@ import json
 import os
 from typing import Dict, List, Tuple
 
-from params import PARAM_SPACE
+from pipeline.params import PARAM_SPACE
 
 P_THRESHOLD = 0.10
 
@@ -105,7 +100,7 @@ def build_refined_parameters(correlations: Dict) -> Dict:
         "_decision_log": decisions,
         "_meta": {
             "p_threshold": P_THRESHOLD,
-            "source": "pipeline/phase1_refine_params.py",
+            "source": "pipeline/phase1_screening/refine_params.py",
         },
     }
 

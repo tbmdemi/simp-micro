@@ -16,9 +16,14 @@ PARAM_SPACE: Dict[str, Tuple[float, float]] = {
     # rotation_deg đã được cố định trong FIXED_PARAMS
 }
 
-# Tham số cố định (không thay đổi trong screening)
+# Tham số cố định (không đổi trong Phase 1 screening).
+# LƯU Ý: chỉ dùng bởi pipeline/phase1_screening/screening_parallel.py. pipeline/phase2_multi_batch/runner.py
+# (Phase 2 - nơi sinh 7,920 mẫu dùng cho Phase 3/4/5) có DEFAULT_FIXED riêng,
+# hardcode nelx=nely=50 độc lập với file này - đổi nelx/nely ở đây KHÔNG ảnh
+# hưởng độ phân giải dataset thật (đã xác nhận outputs/phase3 ở lưới 50x50,
+# xem pipeline/phase5_cvae/verify_fe.py).
 FIXED_PARAMS = {
-    'nelx': 80,           # tăng độ phân giải
+    'nelx': 80,           # tăng độ phân giải (chỉ áp dụng cho Phase 1 screening)
     'nely': 80,
     'ft': 2,
     'E0': 199.0,

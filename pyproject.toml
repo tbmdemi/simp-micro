@@ -3,14 +3,14 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "simp-analyst"
+name = "auxforge"
 version = "1.4.0"
 description = "SIMP Topology Optimization for Periodic Material Microstructure Design"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "SIMP Analyst Team"},
+    {name = "AuxForge Team"},
 ]
 keywords = [
     "topology-optimization",
@@ -33,9 +33,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/Input_SIMP_Analyst"
-Documentation = "https://github.com/your-org/Input_SIMP_Analyst/docs"
-Repository = "https://github.com/your-org/Input_SIMP_Analyst"
+Homepage = "https://github.com/tbmdemi/simp-micro"
+Documentation = "https://github.com/tbmdemi/simp-micro#readme"
+Repository = "https://github.com/tbmdemi/simp-micro"
 
 [project.scripts]
 simp = "simp.main:main"
