@@ -298,8 +298,10 @@ If R² < 0.90 on any target, the model doc recommends widening `channels` in `Su
 ```bash
 python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 50
 python3 pipeline/phase5_cvae/evaluate.py
-python3 pipeline/phase5_cvae/sample.py
+python3 pipeline/phase5_cvae/sample.py    # quick single-shot preview only — see warning below
 ```
+
+> **`sample.py` vs `best_of_n_eval.py`:** `sample.py` generates **one** candidate per call with no FE filtering — it now prints a warning banner pointing at `best_of_n_eval.py` every time it runs, precisely because a lone sample is not trustworthy (see the surrogate-exploitation findings below). `best_of_n_eval.py` (generate N, keep the real-FE winner) is the **official, recommended workflow** for getting an actual auxetic geometry out of the cVAE — use `sample.py` only to eyeball what the generator is currently producing.
 
 Trains on `train.npz` (augmented, 33,120 samples), validates on `val.npz`, and uses the **frozen** Phase-4 surrogate to compute a property-consistency loss against the sampled geometry. Total loss: `recon + beta·kl + gamma·PROP_LOSS_SCALE·prop_loss`, with `PROP_LOSS_SCALE = 1000` fixed to bring `prop_loss` (~O(0.01–0.05)) onto the same scale as `recon_loss` (~O(1000)) — without this scaling, `gamma=1` effectively zeroes out the property gradient (see [Key Bugfixes](#key-bugfixes)).
 
@@ -456,8 +458,12 @@ pytest tests/ -v
 | Core smoke (FEM, material, filter, OC, solver, PBC) | ✅ |
 | Dataset loading & auxetic classification | ✅ |
 | Logger CSV formatting | ✅ |
+| `pipeline/phase4_surrogate/` (model, dataset, evaluate, export, train) | ✅ |
+| `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**) | ✅ |
 
-> `tests/test_core_smoke.py` already has smoke-level (shape/no-crash, not deep-correctness) coverage for `solver.py`, `homogenization/compute.py`, `objectives/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`. Still zero automated tests for `seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/`, **and — highest priority — `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/`**, which currently have zero automated tests despite being the most recently added and actively iterated-on modules.
+> `tests/test_core_smoke.py` already has smoke-level (shape/no-crash, not deep-correctness) coverage for `solver.py`, `homogenization/compute.py`, `objectives/*.py`, `core/filter.py`, `core/oc.py`, `core/pbc.py`. `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/` (previously 0% coverage, formerly flagged here as highest priority) now have `tests/test_phase4_*.py` / `tests/test_phase5_*.py` — all against small synthetic Phase-3-schema `.npz` fixtures and tiny FE grids (no dependency on the real, gitignored `outputs/phase3/*.npz`), so the suite stays fast (~3s) and runs anywhere. `best_of_n_eval.py` — the actual fix for surrogate exploitation (see [Phase 5](#5-conditional-vae-phase-5) below) — has its own dedicated `tests/test_phase5_best_of_n_eval.py`: deterministic FE-stubbed checks of the best-candidate/hit-rate/R² selection math, the `--k-fe-verify` FE-call budget, and edge cases (all FE solves failing, seed reproducibility). Still zero automated tests for `seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/`.
+>
+> **Note for anyone adding tests here:** `pipeline/phase4_surrogate/` and `pipeline/phase5_cvae/` each define same-named sibling modules (`dataset.py`, `model.py`, `evaluate.py`, `train.py`, ...) imported via `sys.path.insert(0, <own dir>)` + bare `from dataset import X` rather than package-relative imports. Importing two such modules from *different* phases in the same process makes whichever one imports first win the `sys.modules["dataset"]` (etc.) cache slot, silently breaking the other. `tests/conftest.py`'s `_isolate_pipeline_bare_imports` autouse fixture resets that cache between every test, but it only helps for imports done **inside** a test function/method — importing these modules at test-file top level (executed once at collection, before any fixture runs) reintroduces the same landmine. Follow the existing convention: import lazily inside each test.
 
 ---
 
