@@ -35,6 +35,7 @@ Codebase này là bản triển khai lại bằng Python của các đoạn mã 
 - [File Đầu ra](#file-đầu-ra)
 - [Tiêu chí Hội tụ](#tiêu-chí-hội-tụ)
 - [Kiểm thử](#kiểm-thử)
+- [Giới hạn Đã biết / Known Limitations](#giới-hạn-đã-biết--known-limitations)
 - [Tài liệu](#tài-liệu)
 - [Tài liệu Tham khảo](#tài-liệu-tham-khảo)
 - [Giấy phép](#giấy-phép)
@@ -56,8 +57,8 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 6 | cGAN / Conditional Diffusion (nâng cấp tùy chọn) | ⬜ Chưa bắt đầu | |
 | 7-8 | Xác thực, triển khai | ⬜ Chưa bắt đầu | |
 
-> Chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.): xem dashboard `docs/workflow.html`.
-> **Khoảng trống đã biết:** phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng; khả năng chế tạo — xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực).
+> Chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.): xem dashboard `html/dashboards/workflow.html`.
+> **Khoảng trống đã biết** (tóm tắt — xem đầy đủ tại [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng; khả năng chế tạo — xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng — đọc kỹ trước khi trích dẫn.
 
 ---
 
@@ -117,13 +118,13 @@ python3 pipeline/phase3/finalize_dataset.py --resolution 64
 │   ├── phase4_surrogate/      # Phase 4: dataset, model (SurrogateCNN), train, evaluate, export_for_phase5
 │   └── phase5_cvae/           # Phase 5: dataset, model, losses, train, evaluate, sample, verify_fe,
 │                               #   adversarial_dataset, self_play, best_of_n_eval (inference chính thức),
-│                               #   manufacturability, coverage_eval
+│                               #   manufacturability, coverage_eval, bootstrap_ci (CI cho R²/hit_rate)
 │
 ├── analysis/                 # Phân tích độ nhạy (ANOVA, Sobol, regression), Pareto front, dataset QC
 ├── notebooks/, html/         # Jupyter notebook + dashboard/báo cáo (xem html/index.html)
-├── docs/workflow.html        # Dashboard workflow toàn dự án (chi tiết từng phase con)
-├── tests/                     # Bộ kiểm thử PyTest (194 test)
-├── outputs/                   # Dữ liệu sinh ra (gitignored — .npz/.png lớn không commit)
+├── html/dashboards/workflow.html        # Dashboard workflow toàn dự án (chi tiết từng phase con)
+├── tests/                     # Bộ kiểm thử PyTest (208 test)
+├── outputs/                   # Dữ liệu sinh ra — phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
 ├── PROJECT_DOCUMENTATION.md, EXPERIMENT_LOG.md, INSTRUCTIONS.md, CHANGELOG.md   # xem mục Tài liệu
 └── pyproject.toml, requirements.txt, README.md
 ```
@@ -250,20 +251,22 @@ Huấn luyện trên `train.npz` (33.120 mẫu), dùng surrogate Phase-4 **đón
 
 **Quy trình chính thức (`best_of_n_eval.py`):** sinh N ứng viên/điều kiện, để **FE thực** (không phải surrogate) chọn người thắng cuộc — cùng công thức pipeline Deep-DRAM đã công bố (Pahlavani et al. 2024, xem [Tài liệu Tham khảo](#tài-liệu-tham-khảo)). Đo trên checkpoint `gamma=20` (không cần huấn luyện lại), tập giữ riêng 24 điều kiện (19 auxetic):
 
-| chiến lược | # lần gọi FE thực / điều kiện | R²(v12, FE thực) | tỷ lệ trúng auxetic thực |
+| chiến lược | # lần gọi FE thực / điều kiện | R²(v12, FE thực) [95% CI bootstrap] | tỷ lệ trúng auxetic thực [95% CI Wilson] |
 |---|---|---|---|
 | single-shot (1 mẫu, không lọc) | 1 | âm sâu | 0,526 (10/19) |
-| best-of-N, **oracle** (FE trên toàn bộ N=30, giữ ứng viên gần mục tiêu nhất) | 30 | **+0,5955** | **1,000** (19/19) |
-| best-of-N, **thực dụng** (surrogate xếp hạng N=30, FE chỉ kiểm chứng top K=10) | 10 | **+0,4384** | **1,000** (19/19) |
+| best-of-N, **oracle** (FE trên toàn bộ N=30, giữ ứng viên gần mục tiêu nhất) | 30 | **+0,5955** [0,003, 0,845] | **1,000** (19/19) [0,832, 1,000] |
+| best-of-N, **thực dụng** (surrogate xếp hạng N=30, FE chỉ kiểm chứng top K=10) | 10 | **+0,4384** [−0,372, 0,748] | **1,000** (19/19) [0,832, 1,000] |
 
 Biến thể thực dụng (lọc sơ bộ bằng surrogate, rẻ hơn 3×) giữ được gần như toàn bộ mức tăng R². Dữ liệu đầy đủ: `outputs/phase5/self_play/best_of_n_result.json` (oracle), `best_of_n_k10_result.json` (thực dụng).
+
+> **⚠️ Cỡ mẫu nhỏ (n=19-24 điều kiện) — đọc khoảng tin cậy, đừng chỉ đọc điểm ước lượng.** CI 95% trên được tính bằng `pipeline/phase5_cvae/bootstrap_ci.py` (percentile bootstrap cho R², Wilson score interval cho tỷ lệ trúng — không chạy lại FE, chỉ resample lại `per_condition` đã lưu sẵn trong JSON). R² dao động trong khoảng rộng [0,00, 0,85] cho biến thể oracle — nghĩa là con số điểm +0,60 có thể lạc quan hơn thực tế đáng kể nếu lặp lại trên một tập điều kiện khác. Tỷ lệ trúng 19/19 cũng không đồng nghĩa "luôn luôn trúng": CI dưới chỉ ~83%. Trước khi trích dẫn các con số này như một kết luận mạnh, nên mở rộng tập giữ riêng vượt quá 24 điều kiện. Chạy lại: `python3 pipeline/phase5_cvae/bootstrap_ci.py outputs/phase5/self_play/best_of_n_result.json outputs/phase5/self_play/best_of_n_k10_result.json`.
 
 ```bash
 python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30                      # oracle (FE trên toàn bộ N)
 python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30 --k-fe-verify 10      # thực dụng (lọc sơ bộ bằng surrogate)
 ```
 
-**Khả năng chế tạo — hệ số Poisson đúng ≠ khả thi để chế tạo.** `manufacturability.py` kiểm tra `check_connectivity()` + `check_periodicity()` (ghép lát không bước nhảy). Trên đầu ra gốc: đạt cả hai đồng thời chỉ **0–3,5%**, đồng đều toàn không gian thuộc tính (không phải vùng chết — `coverage_eval.py`). Giảm nhẹ: `--require-manufacturable` với N nhỏ (30-300) **gây hại** (R² +0,44→-1,96); N=**1500** khôi phục **tỷ lệ trúng 1,0, R²=+0,19**:
+**Khả năng chế tạo — hệ số Poisson đúng ≠ khả thi để chế tạo.** `manufacturability.py` kiểm tra `check_connectivity()` + `check_periodicity()` (ghép lát không bước nhảy). Trên đầu ra gốc: đạt cả hai đồng thời chỉ **0–3,5%**, đồng đều toàn không gian thuộc tính (không phải vùng chết — `coverage_eval.py`). Giảm nhẹ: `--require-manufacturable` với N nhỏ (30-300) **gây hại** (R² +0,44→-1,96, đo trên 6 điều kiện, CI 95% [−13,74, 0,83] — cực rộng vì n quá nhỏ); N=**1500** khôi phục **tỷ lệ trúng 1,0, R²=+0,19** — nhưng con số này đo trên **chỉ 3 điều kiện** (chi phí FE ở N=1500 quá lớn để test rộng hơn trong phiên này), CI 95% bootstrap cho R² là **[−2,19, 0,90]** và CI Wilson cho tỷ lệ trúng là **[0,44, 1,00]** — tức là **chưa đủ bằng chứng để khẳng định chắc chắn**, chỉ nên đọc như một tín hiệu sơ bộ đáng theo đuổi, không phải kết luận:
 
 ```bash
 python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 --require-manufacturable
@@ -350,7 +353,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **194/194 test pass** (`pytest tests/ -q`, ~3s).
+Trạng thái hiện tại: **208/208 test pass** (`pytest tests/ -q`, ~4s).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -361,7 +364,7 @@ Trạng thái hiện tại: **194/194 test pass** (`pytest tests/ -q`, ~3s).
 | Nạp dataset & phân loại auxetic | ✅ |
 | Định dạng CSV của logger | ✅ |
 | `pipeline/phase4_surrogate/` (model, dataset, evaluate, export, train) | ✅ |
-| `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**, **manufacturability**, **coverage_eval**) | ✅ |
+| `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**, **manufacturability**, **coverage_eval**, **bootstrap_ci**) | ✅ |
 
 > Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~3s) ở mọi nơi. Chưa có test tự động cho `seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/`.
 >
@@ -369,13 +372,66 @@ Trạng thái hiện tại: **194/194 test pass** (`pytest tests/ -q`, ~3s).
 
 ---
 
+## Giới hạn Đã biết / Known Limitations
+
+### Tiếng Việt
+
+Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết của dự án ở một chỗ, cho mục đích đánh giá khoa học (thay vì rải rác trong README/EXPERIMENT_LOG). Không có mục nào dưới đây là mới — tất cả đã được ghi nhận ở nơi khác trong tài liệu; đây là bản tổng hợp.
+
+1. **Các con số R²/tỷ lệ trúng của Phase 5 (best-of-N) đo trên cỡ mẫu rất nhỏ, khoảng tin cậy rộng.** Tập giữ riêng chỉ có 24 điều kiện (19 auxetic); biến thể `--require-manufacturable N=1500` chỉ đo trên **3 điều kiện** (chi phí FE ở N lớn quá tốn để mở rộng trong ngân sách đã thử). Bootstrap CI 95% (`pipeline/phase5_cvae/bootstrap_ci.py`, xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-5--bootstrap-ci-cho-r2-và-tỷ-lệ-trúng-của-best-of-n)):
+   - R² oracle: điểm ước lượng +0,5955, **CI [0,003, 0,845]** — cận dưới gần 0.
+   - R² manufacturability N=1500: điểm ước lượng +0,1871, **CI [−2,191, 0,903]** — gần như không có ý nghĩa thống kê ở n=3.
+   - Hit rate 100% (19/19, 3/3) không đồng nghĩa "luôn luôn trúng": CI Wilson dưới chỉ 83% (n=19) hoặc 44% (n=3).
+   - **Hệ quả:** các con số này nên được trình bày kèm CI, không phải chỉ điểm ước lượng, khi đưa vào báo cáo/bài báo. Trước khi công bố như một kết luận chính, nên mở rộng tập giữ riêng.
+
+2. **Khả năng chế tạo (manufacturability) rất thấp ở đầu ra gốc.** Chỉ 0–3,5% hình học sinh ra (không lọc) vừa đúng Poisson ratio vừa liên thông + ghép ô tuần hoàn được — đồng đều trên toàn không gian thuộc tính, không phải vùng chết cục bộ. Biện pháp giảm nhẹ (`--require-manufacturable` + N lớn) có tác dụng nhưng dựa trên cỡ mẫu rất nhỏ (mục 1) và đánh đổi R² thấp hơn đáng kể.
+
+3. **Mô hình sinh single-shot (1 lần gọi `cvae.generate()`, không lọc FE) hoàn toàn không đáng tin cậy** — R² qua FE thực âm sâu ở mọi mức gamma đã thử (1 đến 300), và khoảng cách surrogate-vs-FE-thực *nới rộng* khi gamma tăng (khai thác surrogate). Hai biện pháp khắc phục ở giai đoạn huấn luyện (self-play adversarial retraining, ensemble surrogate 3-mô hình) đã thử và **không** khắc phục được vấn đề trong ngân sách thời gian đã thử — đây không phải bằng chứng "không thể khắc phục được", chỉ là "chưa khắc phục được với nỗ lực đã bỏ ra". `best_of_n_eval.py` (sinh N, chọn bằng FE thật) là biện pháp **inference-time** né vấn đề bằng cách đổi tiêu chí thành công, không phải một bản sửa cho decoder.
+
+4. **Thành phần phạt `mu` trong hàm mục tiêu auxetic đang tắt (`mu=0.0`)** do có sai sót về mặt khái niệm chưa được thiết kế lại — toàn bộ 8 lô Phase 2 (7.920 mẫu) và các phase sau đều dùng cấu hình `mu=0.0`. Nếu `mu` được thiết kế lại và bật lên, kết quả downstream (Phase 2-5) sẽ cần chạy lại để phản ánh cấu hình mới.
+
+5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** — `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`. Dataset/surrogate/cVAE hiện tại chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved` làm target, không phải bộ target đầy đủ trong roadmap ban đầu.
+
+6. **Thiếu test tự động** cho `pipeline/seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/` — các module này chưa có coverage như `phase4_surrogate/`/`phase5_cvae/` (208/208 test hiện tại tập trung ở core SIMP + Phase 4/5).
+
+7. **Một số tài liệu trực quan (HTML dashboard) từng bị lỗi thời** so với kết quả đã xác thực — cụ thể `html/inverse_auxetic_report.html` (sinh ngày 2026-07-16) có bảng xếp hạng seed trái ngược hoàn toàn với dữ liệu Phase 2 đã xác thực; đã gắn banner cảnh báo rõ ràng ở đầu trang và tại mục Kết luận trỏ về `README.md` + báo cáo Phase 3-5 hiện hành (`html/reports/ml_pipeline_phase3to5.html`). Đây là rủi ro mang tính hệ thống (tài liệu trực quan không tự động đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
+
+8. **Ngôn ngữ tài liệu chủ yếu là tiếng Việt** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION). Người đọc quốc tế cần bản tóm tắt tiếng Anh riêng — xem bản dịch English bên dưới cho mục Limitations, nhưng các tài liệu chi tiết khác chưa có bản dịch đầy đủ.
+
+### English
+
+This section consolidates every known gap/limitation of the project in one place for scientific-review purposes (rather than scattered across README/EXPERIMENT_LOG). Nothing below is new information — all of it is documented elsewhere; this is a summary.
+
+1. **Phase 5 (best-of-N) R²/hit-rate numbers are measured on very small samples, with wide confidence intervals.** The held-out set has only 24 conditions (19 auxetic); the `--require-manufacturable N=1500` variant is measured on just **3 conditions** (FE cost at large N was too high to expand further within the time budget tried). 95% bootstrap CIs (`pipeline/phase5_cvae/bootstrap_ci.py`, see [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-5--bootstrap-ci-cho-r2-và-tỷ-lệ-trúng-của-best-of-n)):
+   - Oracle R²: point estimate +0.5955, **CI [0.003, 0.845]** — lower bound is nearly zero.
+   - Manufacturability N=1500 R²: point estimate +0.1871, **CI [−2.191, 0.903]** — essentially uninformative at n=3.
+   - 100% hit rate (19/19, 3/3) does not mean "always succeeds": the Wilson CI lower bound is only 83% (n=19) or 44% (n=3).
+   - **Implication:** these numbers should be reported with CIs, not point estimates alone, in any paper/report. The held-out set should be expanded before treating these as a headline conclusion.
+
+2. **Manufacturability of raw (unfiltered) output is very low.** Only 0–3.5% of generated geometries are simultaneously Poisson-accurate, connected, and periodic-tileable — uniformly low across the property space, not a localized dead zone. The mitigation (`--require-manufacturable` + large N) helps but rests on the very small samples in item 1 and trades off substantially lower R².
+
+3. **Single-shot generation (one call to `cvae.generate()`, no FE filtering) is fundamentally unreliable** — real-FE R² is deeply negative at every gamma tested (1 to 300), and the surrogate-vs-real-FE gap *widens* as gamma increases (surrogate exploitation). Two training-time remedies (self-play adversarial retraining, 3-model ensemble surrogate) were tried and **did not** fix this within the time budget attempted — this is not evidence the problem is unfixable, only that it wasn't fixed with the effort spent. `best_of_n_eval.py` (generate N, select with real FE) is an **inference-time** workaround that changes the success criterion, not a fix to the decoder itself.
+
+4. **The `mu` penalty term in the auxetic objective is disabled (`mu=0.0`)** due to an unresolved conceptual flaw — all 8 Phase 2 batches (7,920 samples) and every downstream phase use `mu=0.0`. If `mu` is redesigned and re-enabled, downstream results (Phase 2-5) would need to be regenerated to reflect the new configuration.
+
+5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** — `compute_homogenized_tensor()` does not yet export `E₁₁/E₀, E₂₂/E₀`. The current dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved` as targets, not the full target set originally planned.
+
+6. **No automated tests** for `pipeline/seeds/*.py`, `pipeline/multi_batch/*`, `pipeline/phase3/` — these modules lack the coverage that `phase4_surrogate/`/`phase5_cvae/` have (the current 208/208 passing tests concentrate on the core SIMP engine and Phase 4/5).
+
+7. **Some visual documentation (HTML dashboards) had gone stale** relative to validated results — specifically `html/inverse_auxetic_report.html` (generated 2026-07-16) contained a seed ranking table that directly contradicted the validated Phase 2 data; it now carries a clear warning banner at the top and in its Conclusion section pointing to `README.md` and the current Phase 3-5 report (`html/reports/ml_pipeline_phase3to5.html`). This is a systemic risk (visual docs don't auto-sync with code/data) worth watching when adding new dashboards.
+
+8. **Primary documentation is in Vietnamese** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION). International readers need a separate English summary — this Limitations section is translated, but the other detailed documents are not fully translated.
+
+---
+
 ## Tài liệu
 
 - `PROJECT_DOCUMENTATION.md` — tài liệu toàn diện của dự án (tiếng Việt)
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) — nhật ký thử nghiệm (bug, gamma-sweep, self-play, ensemble, khả năng chế tạo — kể cả biện pháp thất bại)
-- `docs/workflow.html` — dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
+- `html/dashboards/workflow.html` — dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
 - `html/index.html` — dashboard/báo cáo bổ sung (lưu ý: một số trang chỉ phản ánh screening Phase 1, chưa tái sinh theo Phase 2-5)
 - `INSTRUCTIONS.md` — hướng dẫn chạy gamma sweep Phase 5; `CHANGELOG.md` — lịch sử thay đổi theo phiên bản
+- [`REVIEW_ALGORITHMS_VI.md`](REVIEW_ALGORITHMS_VI.md) — báo cáo review thuật toán độc lập (2026-06-06, trước khi đổi tên sang AuxForge)
 - `outputs/{phase3,phase4,phase5}/` — báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `gamma_sweep_results/`, `self_play/`, v.v.)
 - `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` — notebook phân tích Phase 1-5 và tổng kết end-to-end
 

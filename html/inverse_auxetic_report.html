@@ -201,6 +201,13 @@
 </header>
 <div class="container">
 
+<div style="margin:20px 0 0;padding:18px 24px;background:#fff3cd;border:1px solid #f0c36d;border-left:6px solid #b8860b;border-radius:8px;color:#4a3b00;">
+    <strong>⚠️ Báo cáo sơ bộ, đã lỗi thời (generated 2026-07-16) — Preliminary report, superseded by later validated results.</strong>
+    <p style="margin:8px 0 0;">Báo cáo này chỉ phản ánh <strong>Phase 1 screening</strong> ban đầu — trước khi 3 lỗi tính toán gốc được sửa (công thức ν₁₂ tắt trực hướng khi xoay, chuyển vị FE trong đồng nhất hóa, chuẩn hóa hệ số phạt; xem <a href="../EXPERIMENT_LOG.md">EXPERIMENT_LOG.md</a>) và trước khi Phase 2 (8 lô, 7.920 mẫu, đã xác thực) hoàn thành. <strong>Xếp hạng seed ở Mục 8 (Kết luận) bên dưới trái ngược với dữ liệu đã xác thực hiện tại</strong>: hourglass/hexagonal/reentrant_bowtie được nêu là tốt nhất ở đây thực ra là 3 seed <em>kém nhất</em> (48,6–67,8% mẫu auxetic) trên toàn bộ 7.920 mẫu; xem bảng seed đầy đủ trong <a href="../README.md#các-seed-có-sẵn">README.md</a>. Kết quả Phase 3-5 (dataset, CNN surrogate R²=0,91, cVAE + best-of-N) đầy đủ và cập nhật xem tại <a href="reports/ml_pipeline_phase3to5.html">báo cáo Phase 3-5</a>.</p>
+    <p style="margin:8px 0 0;font-size:0.9em;opacity:0.85;">This report reflects only the initial Phase 1 screening, before three root-cause computation bugs were fixed and before the validated 7,920-sample Phase 2 run completed. <strong>The seed ranking in Conclusion §8 below is contradicted by current validated data</strong>: hourglass/hexagonal/reentrant_bowtie, listed here as top performers, are actually the three <em>worst</em>-performing seeds (48.6–67.8% auxetic) across the full 7,920-sample dataset — see the seed table in <a href="../README.md#các-seed-có-sẵn">README.md</a>. For current, validated Phase 3-5 results (dataset, CNN surrogate, cVAE + best-of-N), see the <a href="reports/ml_pipeline_phase3to5.html">Phase 3-5 report</a>.</p>
+</div>
+
+
 <!-- 1. Introduction -->
 <section>
     <h2>1. Introduction</h2>
@@ -351,9 +358,9 @@
 <section>
     <h2>8. Conclusion</h2>
     <p>This report demonstrated the inverse design pipeline for auxetic metamaterials: starting from parametric screening across 11 seed topologies, identifying high-performing candidates with \(\nu_{12} < -0.3\) using SIMP-driven topology optimization, and distilling actionable guidelines for Phase 2 refinement.</p>
-    <p>Key findings:</p>
+    <p>Key findings <em>(Phase 1 screening, pre-bugfix — see warning banner at top of page; superseded by the validated Phase 2 results below)</em>:</p>
     <ul>
-        <li><strong>Hourglass, hexagonal, reentrant_bowtie</strong> are the most promising seeds; on average 30–40% of their samples yield \(\nu_{12} < -0.2\).</li>
+        <li><s>Hourglass, hexagonal, reentrant_bowtie</s> are <strong>not</strong> the most promising seeds — on the validated 7,920-sample Phase 2 dataset they are the three <em>worst</em>-performing seeds (48.6–67.8% auxetic vs. 98–99% for nine_circle/grid_circular_voids). See <a href="../README.md#các-seed-có-sẵn">README.md's seed table</a> for the current ranking.</li>
         <li>Strong auxeticity correlates with <strong>moderate \(r_{\min}\) (3.5–5.0)</strong>, <strong>volfrac around 0.35</strong>, and <strong>\(\phi = 0\)</strong>.</li>
         <li>Void collapse occurs in 12% of samples — avoid extreme void_size_frac > 0.6.</li>
     </ul>

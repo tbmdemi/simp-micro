@@ -87,6 +87,30 @@ Hạ tầng đã sẵn sàng và có unit test (đã xác minh forward+backward 
 
 ---
 
+## Phase 5 — Bootstrap CI cho R2 và tỷ lệ trúng của best-of-N
+
+Liên quan tới [README § Pipeline / 5. Conditional VAE](README.md#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực). Thêm 2026-07-23.
+
+Các con số R²/hit_rate của `best_of_n_eval.py` (README §5) là điểm ước lượng đơn trên tập giữ riêng rất nhỏ (24 điều kiện, 19 auxetic; chỉ 3 điều kiện cho biến thể `--require-manufacturable N=1500`). `pipeline/phase5_cvae/bootstrap_ci.py` bổ sung khoảng tin cậy 95% mà **không cần chạy lại FE** — chỉ resample lại `per_condition` đã lưu sẵn trong các file JSON kết quả:
+
+- **R²(v12, FE thực):** percentile bootstrap (10.000 lần resample có hoàn lại trên các điều kiện).
+- **tỷ lệ trúng auxetic:** Wilson score interval (không dùng bootstrap thường — với tỷ lệ trúng 100% trên n nhỏ, bootstrap percentile thường suy biến về `[1.0, 1.0]` vì mọi lần resample lại đều toàn giá trị 1, che giấu mất sự bất định thực sự ở n nhỏ; Wilson không có vấn đề này).
+
+Kết quả (`outputs/phase5/self_play/bootstrap_ci_report.json`):
+
+| file | n điều kiện | R² điểm ước lượng | R² CI 95% | hit_rate điểm ước lượng | hit_rate CI 95% (Wilson) |
+|---|---|---|---|---|---|
+| `best_of_n_result.json` (oracle) | 24 (19 auxetic) | +0,5955 | [0,003, 0,845] | 1,000 | [0,832, 1,000] |
+| `best_of_n_k10_result.json` (thực dụng) | 24 (19 auxetic) | +0,4384 | [−0,372, 0,748] | 1,000 | [0,832, 1,000] |
+| `best_of_n_manuf_n300.json` | 6 (5 auxetic) | −1,9557 | [−13,741, 0,827] | 0,800 | [0,376, 0,964] |
+| `best_of_n_manuf_n1500.json` | 3 (3 auxetic) | +0,1871 | [−2,191, 0,903] | 1,000 | [0,439, 1,000] |
+
+**Nhận xét:** CI rộng ở mọi trường hợp — kể cả kết quả headline (+0,5955) có CI dưới gần bằng 0, nghĩa là "khả năng cải thiện thực = 0" vẫn nằm trong khoảng hợp lý thống kê ở n=24. Kết quả `N=1500 + require-manufacturable` (R²=+0,19) đo trên chỉ 3 điều kiện — CI [−2,19, 0,90] gần như vô nghĩa về mặt thống kê, chỉ nên đọc như tín hiệu sơ bộ, không phải kết luận. Trước khi trích dẫn các con số R² của Phase 5 trong báo cáo/bài báo, nên: (1) luôn kèm CI thay vì chỉ điểm ước lượng, và (2) mở rộng tập giữ riêng vượt quá 24 điều kiện (và vượt quá 3 điều kiện cho biến thể manufacturability) nếu ngân sách FE cho phép.
+
+Chạy lại: `python3 pipeline/phase5_cvae/bootstrap_ci.py <file1.json> <file2.json> ... --out <report.json>`.
+
+---
+
 ## Khả năng chế tạo — Biện pháp huấn luyện lại đã thử
 
 Liên quan tới [README § Pipeline / 5. Conditional VAE — Khả năng chế tạo](README.md#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực). Thử ngày 2026-07-23.

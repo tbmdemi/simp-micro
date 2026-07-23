@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+> Ghi chú: khối lượng công việc dưới đây (Phase 3-5 đầy đủ) đã hoàn thành và có mặt trong `main`/`FixLoss` từ lâu, nhưng chưa từng được ghi vào CHANGELOG — mục này bù lại khoảng trống đó. Chưa gắn số phiên bản mới vì đó là quyết định phát hành, không tự ý bump.
+
+### Added
+- **Phase 3 (`pipeline/phase3/`)**: pipeline build dataset (`scan_dataset.py`, `build_npz.py`, `augment_symmetry.py`, `finalize_dataset.py`) — 7.920 lần chạy SIMP → trường mật độ 64×64 + target (`v12`, `v21`, `volfrac_achieved`), chia 70/15/15 phân tầng theo seed, tăng cường đối xứng vật lý (train ×6 → 33.120 mẫu).
+- **Phase 4 (`pipeline/phase4_surrogate/`)**: CNN surrogate (`SurrogateCNN`) dự đoán (v12, v21, volfrac) từ trường mật độ. R² trên test set = 0,910 / 0,911 / 0,982.
+- **Phase 5 (`pipeline/phase5_cvae/`)**: conditional VAE cho thiết kế ngược (`dataset.py`, `model.py`, `losses.py`, `train.py`, `evaluate.py`, `sample.py`, `verify_fe.py`), cùng:
+  - gamma-sweep cho trọng số property-loss, kiểm chứng độc lập bằng FE thực (`verify_fe.py`) — phát hiện hiện tượng khai thác surrogate.
+  - hai biện pháp khắc phục ở giai đoạn huấn luyện (`self_play.py` self-play adversarial retraining, ensemble surrogate trong `losses.py`) — đã thử và không khắc phục được vấn đề single-shot trong ngân sách thời gian đã thử (xem EXPERIMENT_LOG.md).
+  - `best_of_n_eval.py`: sinh N + chọn bằng FE thực, nay là đường suy luận (inference) chính thức (R²=+0,44 đến +0,60, so với single-shot âm sâu).
+  - `manufacturability.py` + `coverage_eval.py`: kiểm tra liên thông/tuần hoàn (roadmap 6.2/6.3) và bản đồ độ phủ không gian thuộc tính (7.4).
+  - `bootstrap_ci.py`: khoảng tin cậy bootstrap/Wilson cho các con số R²/hit-rate best-of-N đo trên cỡ mẫu nhỏ.
+- Bộ test Phase 4/5 (`tests/test_phase4_*.py`, `tests/test_phase5_*.py`) — tổng 208 test (từ baseline Phase 0-3).
+- Mục "Giới hạn Đã biết / Known Limitations" trong README.md (song ngữ) gộp các khoảng trống đã biết: cỡ mẫu nhỏ, khả năng chế tạo thấp, `mu` tắt, `f1/f2` chưa có, v.v.
+
+### Changed
+- Đổi tên dự án từ "SIMP Analyst" thành **AuxForge** trên toàn bộ tài liệu và codebase.
+- README viết lại để phản ánh Phase 4/5 hoàn thành và quy trình thiết kế ngược best-of-N.
+
+### Fixed
+- Một số lỗi tính đúng ở Phase 4/5 phát hiện qua kiểm chứng FE (chi tiết nguyên nhân gốc: xem EXPERIMENT_LOG.md).
+- Đường dẫn lỗi thời `pipeline/phase3_dataset/` → `pipeline/phase3/` trong PROJECT_DOCUMENTATION.md và comment `.gitignore`.
+- `html/inverse_auxetic_report.html` (báo cáo sơ bộ Phase 1, sinh 2026-07-16) có bảng xếp hạng seed trái ngược dữ liệu Phase 2 đã xác thực — thêm banner cảnh báo.
+- Metadata packaging lỗi thời trong `pyproject.toml` (tên project, author, URL repository) còn sót lại từ trước khi đổi tên sang AuxForge.
+
+### Project structure
+- Di chuyển `docs/workflow.html` (trước đó chưa từng được commit — `docs/` bị gitignore như "personal docs") vào `html/dashboards/workflow.html` để được version-control và khớp với chính mô tả của nó trong README.
+- Di chuyển `pipeline/REVIEW_ALGORITHMS_VI.md` (báo cáo review độc lập, đã có ngày tháng cố định) ra khỏi thư mục code `pipeline/`, đưa về root cùng các tài liệu khác.
+
 ## [1.4.0] - 2026-07-10
 
 ### Fixed

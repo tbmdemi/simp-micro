@@ -84,7 +84,7 @@ Có `min_iter` để tránh dừng quá sớm. Trên 7.920 mẫu của Phase 2: 
 | **Dấu objective cho `first`/`second`** | OC update sai hướng cho các objective maximize | Đã loại bỏ, chỉ còn `auxetic` |
 | **`max` thay `min`** trong `aggregate_correlations.py` | Chọn nhầm giá trị objective *tệ nhất* làm "best" | Sửa `max(...)` → `min(...)` |
 
-Chi tiết đánh giá từng module xem `pipeline/REVIEW_ALGORITHMS_VI.md` (báo cáo review độc lập).
+Chi tiết đánh giá từng module xem [`REVIEW_ALGORITHMS_VI.md`](REVIEW_ALGORITHMS_VI.md) (báo cáo review độc lập, 2026-06-06 — dùng tên dự án cũ "Input_SIMP_Analyst", nay là AuxForge).
 
 ### 0.6 Chạy Phase 0 (1 lần chạy SIMP đơn lẻ)
 
@@ -189,7 +189,7 @@ python -m pipeline.multi_batch.main --phase1-summary outputs/pipeline/phase1
 ### Mục đích
 Chuyển 7.920 kết quả SIMP thô (PNG + CSV) thành dataset ML-ready: ảnh 64×64 chuẩn hóa + nhãn (targets) + train/val/test split + augmentation.
 
-### Pipeline (`pipeline/phase3_dataset/`)
+### Pipeline (`pipeline/phase3/`)
 1. **`scan_dataset.py`** → quét toàn bộ batch, tạo `manifest.csv` (đường dẫn ảnh + targets thô).
 2. **`build_npz.py --resolution 64`** → resize PNG gốc (616×616, render matplotlib `imshow` từ lưới `xPhys` 50×50 thô) xuống 64×64 bằng box-filter downsampling, đóng gói `dataset_64.npz`.
 3. **`augment_symmetry.py`** → augmentation dựa trên vật lý đối xứng (physics-aware), chỉ áp cho tập train.
@@ -205,9 +205,9 @@ Chuyển 7.920 kết quả SIMP thô (PNG + CSV) thành dataset ML-ready: ảnh 
 
 ### Cách chạy
 ```bash
-python3 pipeline/phase3_dataset/scan_dataset.py
-python3 pipeline/phase3_dataset/build_npz.py --resolution 64
-python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
+python3 pipeline/phase3/scan_dataset.py
+python3 pipeline/phase3/build_npz.py --resolution 64
+python3 pipeline/phase3/finalize_dataset.py --resolution 64
 ```
 
 **Điều kiện tiên quyết:** Toàn bộ 8 batch Phase 2 đã chạy xong (`outputs/multi_batch/batch_*`).
