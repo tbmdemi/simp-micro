@@ -31,6 +31,7 @@ import json
 import argparse
 import numpy as np
 import torch
+from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
 from dataset import CVAEDataset                                # noqa: E402
@@ -47,7 +48,8 @@ PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               device: str, seed: int = 123, k_fe_verify: int = None,
               surrogate_path: str = None, require_manufacturable: bool = False,
-              min_feature_px: int = 2, periodicity_tol: float = 0.1):
+              min_feature_px: int = 2, periodicity_tol: float = 0.1,
+              custom_condition: np.ndarray = None, save_best_png: str = None):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -58,12 +60,24 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     k_fe_verify=K (kiểu Deep-DRAM thật, xem docstring đầu file): dùng
     surrogate (rẻ, 1 forward pass batch) xếp hạng n_samples ứng viên theo
     |dự đoán - target|, CHỈ chạy FE thật (đắt) trên top-K gần nhất - mô
-    phỏng đúng chi phí thực tế triển khai (K lần FE thay vì N lần)."""
+    phỏng đúng chi phí thực tế triển khai (K lần FE thay vì N lần).
+
+    custom_condition: nếu truyền vào (vd np.array([v12, v21])), bỏ qua
+    test.npz, chỉ chạy best-of-N cho ĐÚNG 1 target này (dùng để test tay 1
+    target tuỳ ý qua CLI --v12/--v21, xem main()). n_conditions bị bỏ qua
+    trong trường hợp này.
+
+    save_best_png: nếu truyền vào (đường dẫn .png), lưu ảnh ứng viên tốt
+    nhất (chọn bởi FE thật) ra file - chỉ có ý nghĩa khi custom_condition
+    được dùng (1 condition duy nhất nên "ứng viên tốt nhất" không mơ hồ)."""
     torch.manual_seed(seed)
-    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
-    rng = np.random.default_rng(seed)
-    idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
-    conditions = [test_ds[i][1].numpy() for i in idxs]
+    if custom_condition is not None:
+        conditions = [np.asarray(custom_condition, dtype=np.float32)]
+    else:
+        test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
+        rng = np.random.default_rng(seed)
+        idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
+        conditions = [test_ds[i][1].numpy() for i in idxs]
 
     model = load_cvae(cvae_ckpt_path, device)
     surrogate = None
@@ -129,6 +143,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             fe_order = [pool[j] for j in order_within_pool]
 
         v12_reals = []
+        v12_reals_img_idx = []  # imgs[] index cho từng entry của v12_reals (loop bỏ qua exception nên KHÔNG khớp 1-1 với fe_order)
         for i in fe_order:
             img_bin = (imgs[i] > 0.5).astype(np.float32)
             img_fe = resize_to_fe_grid(img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"])
@@ -137,6 +152,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             except Exception:
                 continue
             v12_reals.append(v12_fe)
+            v12_reals_img_idx.append(i)
             n_fe_calls_total += 1
 
         if not v12_reals:
@@ -145,6 +161,11 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         v12_reals = np.array(v12_reals)
         best_idx = int(np.argmin(np.abs(v12_reals - cond[0])))
         v12_best = float(v12_reals[best_idx])
+        if save_best_png:
+            best_img_idx = v12_reals_img_idx[best_idx]
+            os.makedirs(os.path.dirname(save_best_png) or ".", exist_ok=True)
+            arr = ((imgs[best_img_idx] > 0.5).astype(np.float32) * 255).astype(np.uint8)
+            Image.fromarray(arr, mode="L").save(save_best_png)
         img_bin0 = (imgs[0] > 0.5).astype(np.float32)
         img_fe0 = resize_to_fe_grid(img_bin0, FE_PARAMS["nely"], FE_PARAMS["nelx"])
         try:
@@ -180,7 +201,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     mean_frac_manufacturable = float(np.mean([c["frac_manufacturable"] for c in per_condition]))
 
     return {
-        "n_conditions": n_conditions,
+        "n_conditions": len(conditions),
         "n_samples_per_condition": n_samples,
         "k_fe_verify": k_fe_verify if k_fe_verify is not None else n_samples,
         "n_fe_calls_total": n_fe_calls_total,
@@ -204,8 +225,11 @@ def main():
     parser.add_argument("--seed", type=int, default=123,
                          help="PHẢI giống seed mặc định của self_play.verify_round (123) "
                               "để so sánh cùng 1 tập condition.")
-    parser.add_argument("--out", type=str,
-                         default=os.path.join(PHASE5_DIR, "self_play", "best_of_n_result.json"))
+    parser.add_argument("--out", type=str, default=None,
+                         help="Mặc định: outputs/phase5/self_play/best_of_n_result.json, TRỪ "
+                              "khi dùng --v12/--v21 (test tay 1 target) thì mặc định đổi sang "
+                              "outputs/phase5/self_play/custom_test/ để KHÔNG ghi đè file "
+                              "benchmark 24-condition gốc đã commit vào git.")
     parser.add_argument("--k-fe-verify", type=int, default=None,
                          help="Chỉ chạy FE thật trên top-K ứng viên (xếp hạng bởi surrogate, "
                               "rẻ) trong N ứng viên sinh ra - kiểu Deep-DRAM thật (tiết kiệm "
@@ -226,14 +250,43 @@ def main():
     parser.add_argument("--periodicity-tol", type=float, default=0.1,
                          help="Tỉ lệ pixel-biên tối đa được phép không khớp khi ghép ô "
                               "tuần hoàn cho --require-manufacturable.")
+    parser.add_argument("--v12", type=float, default=None,
+                         help="Test tay 1 target tuỳ ý thay vì lấy ngẫu nhiên từ test.npz - "
+                              "PHẢI đi kèm --v21. Khi dùng, --n-conditions bị bỏ qua "
+                              "(chỉ chạy đúng 1 condition này) và ảnh ứng viên tốt nhất "
+                              "được lưu ra PNG (xem --png-out).")
+    parser.add_argument("--v21", type=float, default=None,
+                         help="Đi kèm --v12, xem help của --v12.")
+    parser.add_argument("--png-out", type=str, default=None,
+                         help="Đường dẫn lưu ảnh ứng viên tốt nhất (chỉ dùng khi --v12/--v21 "
+                              "được set). Mặc định: outputs/phase5/self_play/custom_test/"
+                              "v12_{v12}_v21_{v21}_best.png")
     args = parser.parse_args()
+    if (args.v12 is None) != (args.v21 is None):
+        parser.error("--v12 và --v21 phải đi cùng nhau")
+
+    custom_condition = None
+    save_best_png = None
+    if args.v12 is not None:
+        custom_condition = np.array([args.v12, args.v21], dtype=np.float32)
+        save_best_png = args.png_out or os.path.join(
+            PHASE5_DIR, "self_play", "custom_test",
+            f"v12_{args.v12:.3f}_v21_{args.v21:.3f}_best.png")
+        out_path = args.out or os.path.join(
+            PHASE5_DIR, "self_play", "custom_test",
+            f"v12_{args.v12:.3f}_v21_{args.v21:.3f}_result.json")
+    else:
+        out_path = args.out or os.path.join(PHASE5_DIR, "self_play", "best_of_n_result.json")
+    args.out = out_path
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     result = best_of_n(args.cvae_ckpt, args.n_conditions, args.n_samples, device, args.seed,
                         k_fe_verify=args.k_fe_verify, surrogate_path=args.surrogate_path,
                         require_manufacturable=args.require_manufacturable,
                         min_feature_px=args.min_feature_px,
-                        periodicity_tol=args.periodicity_tol)
+                        periodicity_tol=args.periodicity_tol,
+                        custom_condition=custom_condition,
+                        save_best_png=save_best_png)
 
     print(f"Checkpoint: {args.cvae_ckpt}")
     print(f"N condition: {result['n_conditions']} ({result['n_auxetic_targets']} auxetic target) "
@@ -241,6 +294,11 @@ def main():
           f"({result['n_fe_calls_total']} lần gọi FE thật tổng cộng)")
     print(f"  hit_rate (1 mẫu duy nhất, mẫu đầu)      = {result['hit_rate_single_shot']:.3f}")
     print(f"  hit_rate (best-of-N, chọn bởi FE oracle) = {result['hit_rate_best_of_n']:.3f}")
+    if custom_condition is not None and result["per_condition"]:
+        c = result["per_condition"][0]
+        print(f"  target v12={c['target_v12']:.4f} -> best_v12(FE thật)={c['v12_best']:.4f} "
+              f"(sai số {abs(c['v12_best']-c['target_v12']):.4f})")
+        print(f"  Ảnh ứng viên tốt nhất đã lưu: {save_best_png}")
     print(f"  R2(FE, best-of-N)                        = {result['r2_fe_v12_best_of_n']:.4f}")
     print(f"  frac manufacturable (6.2/6.3, TB các cond) = {result['mean_frac_manufacturable']:.3f}")
 

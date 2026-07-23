@@ -1,6 +1,6 @@
 # Nhật ký Thử nghiệm & Lỗi đã Sửa
 
-Tài liệu này chứa **lịch sử điều tra** (điều gì đã được thử, tại sao thất bại/thành công, dữ liệu đo được ở từng bước) cho các phase của SIMP Analyst. [`README.md`](README.md) chỉ mô tả **cách hệ thống hoạt động ở trạng thái hiện tại**; nếu muốn biết *tại sao* nó hoạt động như vậy — bao gồm các ngõ cụt đã thử — thì tài liệu này là nơi tra cứu.
+Tài liệu này chứa **lịch sử điều tra** (điều gì đã được thử, tại sao thất bại/thành công, dữ liệu đo được ở từng bước) cho các phase của AuxForge. [`README.md`](README.md) chỉ mô tả **cách hệ thống hoạt động ở trạng thái hiện tại**; nếu muốn biết *tại sao* nó hoạt động như vậy — bao gồm các ngõ cụt đã thử — thì tài liệu này là nơi tra cứu.
 
 > Quy ước: mỗi mục ghi ngày xác nhận (nếu có) và trỏ ngược tới mục tương ứng trong README bằng liên kết `README.md#...`.
 

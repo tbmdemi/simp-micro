@@ -253,7 +253,7 @@ footer {{
 </section>
 
 <footer>
-    <p>Được tạo bởi SIMP Analyst &mdash; v1.1.0</p>
+    <p>Được tạo bởi AuxForge &mdash; v1.1.0</p>
 </footer>
 </div>
 </body>

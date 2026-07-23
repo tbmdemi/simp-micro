@@ -1,4 +1,4 @@
-# BÁO CÁO ĐÁNH GIÁ THUẬT TOÁN & TÍNH TOÁN - SIMP Analyst
+# BÁO CÁO ĐÁNH GIÁ THUẬT TOÁN & TÍNH TOÁN - AuxForge
 
 **Tác giả đánh giá:** Feynman (Review Agent)
 **Ngày:** 2026-06-06
