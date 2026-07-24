@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase4_surrogate/export_for_phase5.py — export_surrogate().
+Tests for pipeline/phase4_surrogate/export_for_phase5.py - export_surrogate().
 """
 import json
 

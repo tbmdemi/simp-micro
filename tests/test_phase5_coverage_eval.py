@@ -82,7 +82,7 @@ class TestCoverageEvalGridAndHitLogic:
 
         # returns a value with the SAME sign as whatever the target is by
         # closing over the target via a mutable box that best_of_n-style
-        # tests can't easily do here — simplest deterministic stand-in:
+        # tests can't easily do here - simplest deterministic stand-in:
         # always return a small negative number, which is a hit for every
         # auxetic target in a grid restricted to v12 < 0.
         def always_negative(img_fe, fe_params):

@@ -1,8 +1,8 @@
 """
-Tests for pipeline/phase5_cvae/adversarial_dataset.py — load_cvae,
+Tests for pipeline/phase5_cvae/adversarial_dataset.py - load_cvae,
 generate_adversarial_npz.
 
-Imports are lazy inside each test — see tests/conftest.py docstring.
+Imports are lazy inside each test - see tests/conftest.py docstring.
 Uses tiny FE grids (via monkeypatched FE_PARAMS) so the real FE solve stays
 fast; this module's whole point is to score generated images with the real
 solver, so we exercise that path rather than mocking it away.

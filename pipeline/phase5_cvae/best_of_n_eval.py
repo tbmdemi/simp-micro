@@ -21,6 +21,13 @@ Roadmap 6.2/6.3 (manufacturability.py): đúng Poisson ratio (FE thật) không
 viên rời rạc/nét quá mảnh/không ghép ô tuần hoàn khỏi việc xếp hạng & chọn
 best-of-N. Mặc định TẮT (giữ hành vi gốc, chỉ tối ưu Poisson ratio).
 
+force_periodic() (manufacturability.py, thêm từ nhánh research/auxetic-
+breakthrough - xem EXPERIMENT_LOG.md mục "Phase 6"): ép cứng periodicity
+bằng 1 phép gán (không cần học) TRƯỚC khi chấm manufacturability/FE - đo
+được passes_all 1,7%->19,5% trên chính checkpoint cvae_gamma20.pt, chi phí
+sai số ν₁₂ trung bình ~0,02. Mặc định BẬT (--no-force-periodic để tắt, so
+sánh với hành vi gốc trước khi có cải tiến này).
+
 Cách chạy:
     python3 pipeline/phase5_cvae/best_of_n_eval.py \\
         --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
@@ -38,7 +45,7 @@ from dataset import CVAEDataset                                # noqa: E402
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
 from self_play import load_cvae                                # noqa: E402
 from losses import load_frozen_surrogate, SURROGATE_PATH        # noqa: E402
-from manufacturability import check_manufacturability           # noqa: E402
+from manufacturability import check_manufacturability, force_periodic  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
@@ -49,7 +56,8 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               device: str, seed: int = 123, k_fe_verify: int = None,
               surrogate_path: str = None, require_manufacturable: bool = False,
               min_feature_px: int = 2, periodicity_tol: float = 0.1,
-              custom_condition: np.ndarray = None, save_best_png: str = None):
+              custom_condition: np.ndarray = None, save_best_png: str = None,
+              apply_force_periodic: bool = True):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -69,7 +77,13 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
 
     save_best_png: nếu truyền vào (đường dẫn .png), lưu ảnh ứng viên tốt
     nhất (chọn bởi FE thật) ra file - chỉ có ý nghĩa khi custom_condition
-    được dùng (1 condition duy nhất nên "ứng viên tốt nhất" không mơ hồ)."""
+    được dùng (1 condition duy nhất nên "ứng viên tốt nhất" không mơ hồ).
+
+    apply_force_periodic: mặc định True - áp force_periodic() (xem
+    manufacturability.py) lên MỌI ứng viên trước khi chấm manufacturability
+    và FE, ép cứng periodicity bằng 1 phép gán thay vì phải trông chờ cVAE
+    học đúng. Đặt False để tái hiện hành vi gốc (trước khi có cải tiến
+    này) hoặc so sánh có/không."""
     torch.manual_seed(seed)
     if custom_condition is not None:
         conditions = [np.asarray(custom_condition, dtype=np.float32)]
@@ -106,6 +120,9 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             with torch.no_grad():
                 img = model.generate(cond_t, n_samples=1, device=device)
             imgs.append(img.squeeze().cpu().numpy().astype(np.float32))
+
+        if apply_force_periodic:
+            imgs = [force_periodic(img) for img in imgs]
 
         # roadmap 6.2/6.3: connectivity + min-feature-size + periodicity -
         # cấu trúc "sản xuất được" là điều kiện tách biệt với việc đạt đúng
@@ -210,6 +227,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         "hit_rate_best_of_n": hit_rate_best_of_n,
         "r2_fe_v12_best_of_n": r2_best_of_n,
         "require_manufacturable": require_manufacturable,
+        "apply_force_periodic": apply_force_periodic,
         "mean_frac_manufacturable": mean_frac_manufacturable,
         "per_condition": per_condition,
     }
@@ -250,6 +268,13 @@ def main():
     parser.add_argument("--periodicity-tol", type=float, default=0.1,
                          help="Tỉ lệ pixel-biên tối đa được phép không khớp khi ghép ô "
                               "tuần hoàn cho --require-manufacturable.")
+    parser.add_argument("--no-force-periodic", action="store_true",
+                         help="Tắt force_periodic() (xem manufacturability.py) - mặc định "
+                              "BẬT, ép cứng periodicity bằng 1 phép gán trước khi chấm "
+                              "manufacturability/FE (đo được passes_all 1,7%%->19,5%% trên "
+                              "cvae_gamma20.pt, chi phí sai số ν₁₂ trung bình ~0,02 - xem "
+                              "EXPERIMENT_LOG.md mục Phase 6). Dùng cờ này để tái hiện hành "
+                              "vi gốc trước khi có cải tiến.")
     parser.add_argument("--v12", type=float, default=None,
                          help="Test tay 1 target tuỳ ý thay vì lấy ngẫu nhiên từ test.npz - "
                               "PHẢI đi kèm --v21. Khi dùng, --n-conditions bị bỏ qua "
@@ -286,7 +311,8 @@ def main():
                         min_feature_px=args.min_feature_px,
                         periodicity_tol=args.periodicity_tol,
                         custom_condition=custom_condition,
-                        save_best_png=save_best_png)
+                        save_best_png=save_best_png,
+                        apply_force_periodic=not args.no_force_periodic)
 
     print(f"Checkpoint: {args.cvae_ckpt}")
     print(f"N condition: {result['n_conditions']} ({result['n_auxetic_targets']} auxetic target) "
@@ -300,7 +326,8 @@ def main():
               f"(sai số {abs(c['v12_best']-c['target_v12']):.4f})")
         print(f"  Ảnh ứng viên tốt nhất đã lưu: {save_best_png}")
     print(f"  R2(FE, best-of-N)                        = {result['r2_fe_v12_best_of_n']:.4f}")
-    print(f"  frac manufacturable (6.2/6.3, TB các cond) = {result['mean_frac_manufacturable']:.3f}")
+    print(f"  frac manufacturable (6.2/6.3, TB các cond) = {result['mean_frac_manufacturable']:.3f} "
+          f"(force_periodic={'BẬT' if result['apply_force_periodic'] else 'TẮT'})")
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     with open(args.out, "w") as f:

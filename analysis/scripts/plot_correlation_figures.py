@@ -250,7 +250,7 @@ def main() -> None:
     print("Drawing volcano plot…")
     draw_volcano(data, out_dir)
 
-    print(f"\nDone — all figures saved to {out_dir}/")
+    print(f"\nDone - all figures saved to {out_dir}/")
 
 
 if __name__ == "__main__":

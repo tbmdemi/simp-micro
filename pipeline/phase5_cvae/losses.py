@@ -19,6 +19,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+try:
+    # Khi losses.py được import theo đường dẫn dotted đầy đủ
+    # (pipeline.phase5_cvae.losses, vd tests/test_phase5_losses.py).
+    from .real_physics import RealPhysicsNu
+except ImportError:
+    # Khi losses.py được import bằng "from losses import ..." sau
+    # sys.path.insert(dirname(__file__)) (train.py/evaluate.py/best_of_n_eval.py)
+    # - xem README "bare-import landmine" note trong CLAUDE.md/memory.
+    from real_physics import RealPhysicsNu
+
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SURROGATE_PATH = os.path.join(REPO_ROOT, "outputs", "phase4", "surrogate_for_phase5.pt")
 
@@ -158,6 +168,78 @@ def periodicity_loss(recon: torch.Tensor) -> torch.Tensor:
     left, right = recon[:, :, :, 0], recon[:, :, :, -1]
     top, bottom = recon[:, :, 0, :], recon[:, :, -1, :]
     return F.mse_loss(left, right) + F.mse_loss(top, bottom)
+
+
+def real_physics_loss(
+    density: torch.Tensor,
+    condition: torch.Tensor,
+    fe_params: dict,
+    subsample: int = None,
+    n_workers: int = 0,
+) -> torch.Tensor:
+    """MSE(v12,v21) giữa FE-solve THẬT (real_physics.RealPhysicsNu, gradient
+    GIẢI TÍCH chính xác - xem docstring real_physics.py) và condition target -
+    thay cho property_consistency_loss() (qua surrogate CNN, có thể bị decoder
+    "đánh lừa" - xem cảnh báo đầu file). Không xấp xỉ, không mock: mỗi lần gọi
+    là 1 lần giải FE + đồng nhất hóa thật.
+
+    density: (B, 1, H, W) hoặc (B, H, W) trong [0,1] (ảnh mật độ, decode từ
+        cVAE - resolution H=W=64 mặc định, khác lưới FE nelx/nely trong
+        fe_params, resize bằng bilinear KHẢ VI (torch, không phải PIL) để
+        gradient chảy được về tận pixel gốc).
+    fe_params: dict {nelx, nely, penal, E0, Emin, nu, rho0} - dùng
+        verify_fe.FE_PARAMS làm mẫu (nelx=nely=50 khớp cách sinh dataset).
+    subsample: nếu đặt, chỉ tính trên `subsample` mẫu NGẪU NHIÊN trong batch
+        (chi phí FE-solve ~50-100ms/mẫu tuần tự - xem benchmark trong test -
+        quá chậm để chạy full batch mỗi step; loss trả về chỉ trên subset đó,
+        không lan ra cả batch).
+    n_workers: >0 để chạy song song qua multiprocessing.Pool (xem
+        real_physics._get_pool) - THẬN TRỌNG khi dùng chung với DataLoader
+        num_workers>0 (tiến trình chính đã đa luồng, fork() có nguy cơ
+        deadlock - xem cảnh báo trong real_physics.py).
+    """
+    if density.dim() == 4:
+        density = density.squeeze(1)
+    B = density.size(0)
+
+    if subsample is not None and subsample < B:
+        idx = torch.randperm(B, device=density.device)[:subsample]
+        density_sub = density[idx]
+        condition_sub = condition[idx]
+    else:
+        density_sub = density
+        condition_sub = condition
+
+    density_fe = F.interpolate(
+        density_sub.unsqueeze(1), size=(fe_params["nely"], fe_params["nelx"]),
+        mode="bilinear", align_corners=False,
+    ).squeeze(1)
+
+    pred = RealPhysicsNu.apply(
+        density_fe, fe_params.get("penal", 3.0), fe_params.get("E0", 199.0),
+        fe_params.get("Emin", 1e-9), fe_params.get("nu", 0.3),
+        fe_params.get("rho0", 1.0), n_workers,
+    )
+    return F.mse_loss(pred, condition_sub)
+
+
+def real_physics_prior_loss(
+    decoder, latent_dim: int, condition: torch.Tensor, fe_params: dict,
+    subsample: int = None, n_workers: int = 0,
+):
+    """Bản áp lên ảnh decode từ z ~ PRIOR N(0,1) (không qua encoder) - CÙNG
+    chế độ model.generate() dùng lúc inference, xem lý do trong docstring
+    prior_sample_regularization() (recon posterior đã gần-đúng sẵn, không
+    lộ đúng hành vi cần sửa). Đây là kênh chính để differentiable-physics
+    thực sự sửa exploitation, không phải real_physics_loss() áp lên recon.
+
+    Trả về MSE THÔ (không nhân PROP_LOSS_SCALE) - giống property_consistency_loss(),
+    caller (train.py::run_epoch) chịu trách nhiệm nhân PROP_LOSS_SCALE trước
+    khi cộng vào tổng loss, để --lambda-real-physics cùng thang đo với --gamma."""
+    bsz = condition.size(0)
+    z_prior = torch.randn(bsz, latent_dim, device=condition.device)
+    prior_recon = decoder(z_prior, condition)
+    return real_physics_loss(prior_recon, condition, fe_params, subsample=subsample, n_workers=n_workers)
 
 
 def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tensor,

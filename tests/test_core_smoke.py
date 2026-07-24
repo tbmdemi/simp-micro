@@ -10,16 +10,16 @@ import pytest
 
 
 class TestFEM:
-    """Smoke tests for core/fem.py — build_dof_mesh."""
+    """Smoke tests for core/fem.py - build_dof_mesh."""
 
     def test_build_dof_mesh_small(self):
         from simp.core.fem import build_dof_mesh
         nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(3, 3)
         # nodenrs: (nely+1) x (nelx+1)
         assert nodenrs.shape == (4, 4)
-        # edofVec: (nelx*nely,) — one entry per element
+        # edofVec: (nelx*nely,) - one entry per element
         assert len(edofVec) == 9
-        # edofMat: (nelx*nely, 8) — 8 DOFs per quad element
+        # edofMat: (nelx*nely, 8) - 8 DOFs per quad element
         assert edofMat.shape == (9, 8)
         # iK, jK: sparse index vectors for stiffness assembly
         assert len(iK) > 0
@@ -41,7 +41,7 @@ class TestFEM:
 
 
 class TestMaterial:
-    """Smoke tests for materials/isotropic.py — Material class."""
+    """Smoke tests for materials/isotropic.py - Material class."""
 
     def test_material_ke_shape(self):
         from simp.materials.isotropic import Material
@@ -69,7 +69,7 @@ class TestMaterial:
 
 
 class TestFilter:
-    """Smoke tests for core/filter.py — build_filter, apply_filter, apply_sensitivity_filter."""
+    """Smoke tests for core/filter.py - build_filter, apply_filter, apply_sensitivity_filter."""
 
     def test_build_filter_shape(self):
         from simp.core.filter import build_filter
@@ -106,7 +106,7 @@ class TestFilter:
 
 
 class TestSolver:
-    """Smoke tests for core/solver.py — solve_fe."""
+    """Smoke tests for core/solver.py - solve_fe."""
 
     def test_solve_fe_small_runs(self):
         """Verify that solve_fe returns outputs of correct shape on a tiny mesh."""
@@ -123,10 +123,10 @@ class TestSolver:
         xPhys = np.ones((nely, nelx)) * 0.5
         U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal=3.0, E0=199.0, Emin=1e-9)
 
-        # U: (2*(nelx+1)*(nely+1), 3) — 3 load cases
+        # U: (2*(nelx+1)*(nely+1), 3) - 3 load cases
         n_nodes = (nelx + 1) * (nely + 1)
         assert U.shape == (2 * n_nodes, 3), f"U shape = {U.shape}, expected {(2 * n_nodes, 3)}"
-        # U0: (2*n_nodes,) — thermal-like test strain
+        # U0: (2*n_nodes,) - thermal-like test strain
         assert len(U0) == 2 * n_nodes
 
     def test_solve_fe_uniform_density(self):
@@ -167,7 +167,7 @@ class TestSolver:
 
 
 class TestOC:
-    """Smoke tests for core/oc.py — oc_update."""
+    """Smoke tests for core/oc.py - oc_update."""
 
     def test_oc_update_basic(self):
         """OC update should produce output of same shape as input."""
@@ -278,7 +278,7 @@ class TestObjectives:
 
 
 class TestPBC:
-    """Smoke tests for core/pbc.py — build_pbc."""
+    """Smoke tests for core/pbc.py - build_pbc."""
 
     def test_build_pbc_shape(self):
         from simp.core.fem import build_dof_mesh
@@ -332,7 +332,7 @@ class TestHomogenization:
 
 
 class TestRunner:
-    """Smoke tests for runner.py — run_simp with tiny mesh."""
+    """Smoke tests for runner.py - run_simp with tiny mesh."""
 
     def test_run_simp_tiny(self):
         """Run SIMP on a tiny 4x4 mesh for 3 iterations. Should not crash."""
@@ -396,7 +396,7 @@ class TestRunner:
         assert result['Q'].shape == (3, 3)
 
     def test_run_simp_nan_guard(self):
-        """Verify NaN guard works — extreme params that could cause NaN should not crash return dict."""
+        """Verify NaN guard works - extreme params that could cause NaN should not crash return dict."""
         from simp.runner import run_simp
 
         params = {

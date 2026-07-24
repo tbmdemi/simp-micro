@@ -1,0 +1,18 @@
+{
+  "n_total": 550,
+  "n_unstable": 40,
+  "threshold": 0.15,
+  "per_seed_unstable_pct": {
+    "grid_circular_voids": 28.000000000000004,
+    "circle_half_quarter": 16.0,
+    "four_circle": 14.000000000000002,
+    "nine_circle": 4.0,
+    "cross_rectangular": 4.0,
+    "hexagonal": 4.0,
+    "hourglass": 4.0,
+    "circle": 2.0,
+    "reentrant_bowtie": 2.0,
+    "small_square_cross": 2.0,
+    "square": 0.0
+  }
+}

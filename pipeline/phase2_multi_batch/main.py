@@ -272,7 +272,7 @@ def main() -> None:
         if s.get('_is_mock'):
             print("\n" + "!" * 70)
             print("  ⚠️  MOCK DATA DETECTED in input summaries!")
-            print("  Results will be synthetic — NOT from actual SIMP execution.")
+            print("  Results will be synthetic - NOT from actual SIMP execution.")
             print("  Realistic timing and convergence analysis is not possible.")
             print("!" * 70 + "\n")
             break
@@ -298,7 +298,7 @@ def main() -> None:
     if fixed_params:
         print(f"Fixed parameters: {fixed_params}")
 
-    # Seeds & objectives — ưu tiên refined_parameters.json (nguồn thật từ
+    # Seeds & objectives - ưu tiên refined_parameters.json (nguồn thật từ
     # Phase 1); hardcode chỉ là fallback cuối cùng nếu thiếu field.
     seeds = refined_seeds or [
         'circle', 'square', 'hourglass', 'hexagonal', 'cross_rectangular',
@@ -336,7 +336,7 @@ def main() -> None:
     # Track narrowed parameter ranges across iterations (Issue #1 fix)
     effective_param_ranges: Dict[str, Tuple[float, float]] = dict(param_ranges)
 
-    # Định nghĩa vis_dir TRƯỚC vòng lặp — tránh UnboundLocalError khi dừng
+    # Định nghĩa vis_dir TRƯỚC vòng lặp - tránh UnboundLocalError khi dừng
     # ngay ở vòng lặp đầu (trước khi batch nào chạy xong).
     vis_dir = output_root / 'reports'
     vis_dir.mkdir(parents=True, exist_ok=True)
@@ -370,7 +370,7 @@ def main() -> None:
             # Build a simple PipelineConfig-like dict
             pipeline_cfg = _build_pipeline_config(
                 batch_summaries,
-                [batch_config],  # type: ignore  # noqa: F821 — only used for ref
+                [batch_config],  # type: ignore  # noqa: F821 - only used for ref
                 active_params_meta=active_params_meta,
                 active_seeds=seeds,
                 active_objectives=objectives,
@@ -463,7 +463,10 @@ def main() -> None:
             batch_id=batch_config.batch_id,
             seed_map=batch_config.seeds,
             objective_map=batch_config.objectives,
+            n_samples_per_seed=batch_config.n_samples_per_seed,
         )
+        if batch_config.n_samples_per_seed:
+            print(f"  Phân bổ mẫu theo seed (roadmap 6.2/6.3): {batch_config.n_samples_per_seed}")
 
         print(f"  Design has {len(design)} rows.")
 
@@ -539,7 +542,7 @@ def main() -> None:
             output_dir=str(vis_dir),
             all_results=all_results,
             sparse_regions=sparse_regions,
-            title=f'Coverage Analysis — After Batch {batch_id}',
+            title=f'Coverage Analysis - After Batch {batch_id}',
         )
         print(f"  Coverage plot: {coverage_page}")
 

@@ -1,0 +1,14 @@
+{
+  "outputs/phase5/self_play/best_of_n_clean_weighted_manuf_n1500.json": {
+    "n_conditions": 24,
+    "r2_point_estimate": 0.7450992024501072,
+    "r2_ci95_lo": 0.4431699854034446,
+    "r2_ci95_hi": 0.8635882735635986,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 21,
+    "hit_rate_point_estimate": 1.0,
+    "hit_rate_wilson_ci95_lo": 0.8453561767357979,
+    "hit_rate_wilson_ci95_hi": 0.9999999999999999
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "outputs/phase5/self_play/best_of_n_clean_weighted_randomk10_n300.json": {
+    "n_conditions": 300,
+    "r2_point_estimate": -0.5126746128608994,
+    "r2_ci95_lo": -0.8578684405013441,
+    "r2_ci95_hi": -0.24060088455359488,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 280,
+    "hit_rate_point_estimate": 0.9785714285714285,
+    "hit_rate_wilson_ci95_lo": 0.9540454876690332,
+    "hit_rate_wilson_ci95_hi": 0.9901431020232458
+  },
+  "outputs/phase5/self_play/best_of_n_gamma20_randomk10_n300.json": {
+    "n_conditions": 300,
+    "r2_point_estimate": -0.5379359879989716,
+    "r2_ci95_lo": -0.8627111533486903,
+    "r2_ci95_hi": -0.28777274112415574,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 280,
+    "hit_rate_point_estimate": 0.9857142857142858,
+    "hit_rate_wilson_ci95_lo": 0.9638499546619974,
+    "hit_rate_wilson_ci95_hi": 0.9944310020406144
+  }
+}

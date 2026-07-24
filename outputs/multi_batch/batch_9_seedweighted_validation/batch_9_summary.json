@@ -1,0 +1,102 @@
+{
+  "batch_id": 9,
+  "strategy": "design_df",
+  "n_samples": 99,
+  "n_total_tasks": 99,
+  "n_success": 99,
+  "n_converged": 99,
+  "n_workers": 10,
+  "elapsed_time": 200.7,
+  "output_dir": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/multi_batch/batch_9_seedweighted_validation",
+  "best_per_combo": {
+    "circle/auxetic": {
+      "sample_id": 4,
+      "seed": "circle",
+      "objective": "auxetic",
+      "obj_value": 0.5411273352105107,
+      "v12": -0.4526765480025273,
+      "v21": -0.49862959983954824
+    },
+    "square/auxetic": {
+      "sample_id": 16,
+      "seed": "square",
+      "objective": "auxetic",
+      "obj_value": 0.33444330864427274,
+      "v12": -0.4601255617236739,
+      "v21": -0.4623900600813136
+    },
+    "hourglass/auxetic": {
+      "sample_id": 22,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "obj_value": 1.2146907664253956,
+      "v12": -0.3719083144488772,
+      "v21": -0.3999350456530019
+    },
+    "four_circle/auxetic": {
+      "sample_id": 25,
+      "seed": "four_circle",
+      "objective": "auxetic",
+      "obj_value": 0.4450061556501731,
+      "v12": -0.44455654070259115,
+      "v21": -0.4774700330360453
+    },
+    "hexagonal/auxetic": {
+      "sample_id": 29,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "obj_value": 1.5088908527914322,
+      "v12": -0.08172790811219663,
+      "v21": -0.09037028460238458
+    },
+    "nine_circle/auxetic": {
+      "sample_id": 30,
+      "seed": "nine_circle",
+      "objective": "auxetic",
+      "obj_value": 0.22770537218713216,
+      "v12": -0.4765720998507516,
+      "v21": -0.4620475824244843
+    },
+    "cross_rectangular/auxetic": {
+      "sample_id": 43,
+      "seed": "cross_rectangular",
+      "objective": "auxetic",
+      "obj_value": 0.596358259826264,
+      "v12": -0.46133185367622676,
+      "v21": -0.4603139931465802
+    },
+    "grid_circular_voids/auxetic": {
+      "sample_id": 59,
+      "seed": "grid_circular_voids",
+      "objective": "auxetic",
+      "obj_value": 0.3687304964027537,
+      "v12": -0.45177117315802284,
+      "v21": -0.46059018213922787
+    },
+    "small_square_cross/auxetic": {
+      "sample_id": 62,
+      "seed": "small_square_cross",
+      "objective": "auxetic",
+      "obj_value": 0.28974801216927937,
+      "v12": -0.5052204561315397,
+      "v21": -0.520509944439851
+    },
+    "circle_half_quarter/auxetic": {
+      "sample_id": 77,
+      "seed": "circle_half_quarter",
+      "objective": "auxetic",
+      "obj_value": 0.5184329210266828,
+      "v12": -0.4252259355692107,
+      "v21": -0.4234991909683629
+    },
+    "reentrant_bowtie/auxetic": {
+      "sample_id": 86,
+      "seed": "reentrant_bowtie",
+      "objective": "auxetic",
+      "obj_value": 1.5832794878185588,
+      "v12": -0.22329378261675353,
+      "v21": -0.2669220463115433
+    }
+  },
+  "timestamp": "2026-07-24T08:34:14.533461"
+}

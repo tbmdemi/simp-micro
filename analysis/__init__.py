@@ -10,7 +10,7 @@ Core API:
     report:     HTML report generation.
     cli:        Command-line interface for the analysis pipeline.
 
-Standalone scripts live in ``analysis.scripts`` — run them via::
+Standalone scripts live in ``analysis.scripts`` - run them via::
 
     python -m analysis.scripts.aggregate_correlations
     python -m analysis.scripts.plot_correlation_figures

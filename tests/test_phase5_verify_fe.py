@@ -1,8 +1,8 @@
 """
-Tests for pipeline/phase5_cvae/verify_fe.py — resize_to_fe_grid,
+Tests for pipeline/phase5_cvae/verify_fe.py - resize_to_fe_grid,
 evaluate_density_field.
 
-Imports are lazy inside each test — verify_fe.py does `sys.path.insert(...)`
+Imports are lazy inside each test - verify_fe.py does `sys.path.insert(...)`
 + bare `from model import CVAE` / `from dataset import CVAEDataset` at
 import time (see tests/conftest.py docstring).
 """
@@ -34,7 +34,7 @@ class TestResizeToFeGrid:
         assert out.max() <= 1.0
 
     def test_nearest_neighbor_preserves_binary_values(self):
-        """Binarized images resized via NEAREST must stay exactly {0,1} —
+        """Binarized images resized via NEAREST must stay exactly {0,1} -
         any blurring here would corrupt the FE input silently."""
         from pipeline.phase5_cvae.verify_fe import resize_to_fe_grid
         rng = np.random.default_rng(1)
@@ -62,7 +62,7 @@ class TestEvaluateDensityField:
 
     def test_penal_changes_result(self):
         """`penal` (SIMP penalization exponent) must actually affect the
-        homogenized tensor — a stale/ignored fe_params['penal'] would make
+        homogenized tensor - a stale/ignored fe_params['penal'] would make
         every self-play/best-of-N call silently equivalent regardless of
         the penal value passed in."""
         from pipeline.phase5_cvae.verify_fe import evaluate_density_field

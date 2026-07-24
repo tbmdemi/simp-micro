@@ -132,9 +132,18 @@ def load_metadata(meta_path: Path) -> Optional[Dict[str, Any]]:
 
 
 def load_manifest_samples(manifest_path: Optional[Path] = None) -> pd.DataFrame:
-    """Load manifest-style phase outputs into a notebook-friendly DataFrame."""
+    """Load manifest-style phase outputs into a notebook-friendly DataFrame.
+
+    Ưu tiên đọc `manifest_quality.csv` (từ
+    analysis/scripts/audit_convergence_and_geometry.py) thay vì
+    `manifest.csv` gốc khi có sẵn - manifest_quality.csv có thêm n_iters
+    THẬT (không hardcode 150) và n_components/is_connected (quét
+    connectivity thật trên ảnh 64x64, xem manufacturability.check_connectivity).
+    Rơi về manifest.csv (không có 2 cột trên) nếu chưa chạy script audit.
+    """
     if manifest_path is None:
-        manifest_path = PHASE3_DIR / "manifest.csv"
+        quality_path = PHASE3_DIR / "manifest_quality.csv"
+        manifest_path = quality_path if quality_path.exists() else PHASE3_DIR / "manifest.csv"
     manifest_path = Path(manifest_path)
     if not manifest_path.exists():
         raise FileNotFoundError(f"Manifest not found: {manifest_path}")
@@ -158,8 +167,23 @@ def load_manifest_samples(manifest_path: Optional[Path] = None) -> pd.DataFrame:
     df['sample_path'] = df['image_path'].apply(lambda p: str(Path(p).parent) if pd.notna(p) else np.nan)
     df['seed'] = df.get('seed', pd.Series([np.nan] * len(df)))
     df['sample_id'] = df.get('sample_id', pd.Series([np.nan] * len(df)))
-    df['n_iter'] = 150
-    df['converged_flag'] = df.get('converged', False).fillna(False).astype(bool)
+    if 'n_iters' in df.columns:
+        # n_iters thật từ batch_{i}_results.csv (join trong audit script) -
+        # converged_flag = hội tụ SỚM vì tolerance, KHÔNG phải cột 'converged'
+        # gốc (cột đó cũng =True khi chạm max_iter, xem
+        # simp/core/convergence.py::ConvergenceChecker.should_stop() và
+        # EXPERIMENT_LOG.md mục audit hội tụ 2026-07-24).
+        df['n_iter'] = df['n_iters']
+        df['converged_flag'] = (df['n_iters'] < df['max_iter']).fillna(False).astype(bool)
+    else:
+        # Fallback khi chưa chạy audit script: giữ hành vi cũ (kém chính
+        # xác - n_iter không có sẵn trong manifest.csv gốc, và cột
+        # 'converged' không phân biệt được hội tụ thật vs chạm trần).
+        df['n_iter'] = 150
+        df['converged_flag'] = df.get('converged', False).fillna(False).astype(bool)
+    if 'is_connected' in df.columns:
+        df['n_components'] = df['n_components']
+        df['disconnected_flag'] = (~df['is_connected'].astype(bool)).fillna(False)
     df['void_flag'] = (df['final_VF'] < VOID_THRESHOLD).fillna(False)
     df['nu_valid_flag'] = (
         df['final_nu12'].notna() & (NU_LOWER < df['final_nu12']) & (df['final_nu12'] < NU_UPPER)
@@ -251,7 +275,10 @@ def load_all_samples(
         return df
 
     if PHASE3_DIR.exists() and (PHASE3_DIR / "manifest.csv").exists():
-        df = load_manifest_samples(PHASE3_DIR / "manifest.csv")
+        # manifest_path=None -> load_manifest_samples() tự ưu tiên
+        # manifest_quality.csv nếu đã chạy audit_convergence_and_geometry.py
+        # (xem docstring load_manifest_samples), rơi về manifest.csv nếu chưa.
+        df = load_manifest_samples(None)
         if drop_void and not df.empty:
             df = df[~df["void_flag"]].copy()
         return df

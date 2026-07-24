@@ -42,7 +42,7 @@ def export_surrogate(src: str, dst: str, eval_report_path: str = None):
         with open(eval_report_path) as f:
             eval_report = json.load(f)
     else:
-        print("CẢNH BÁO: chưa tìm thấy evaluation_report.json — hãy chạy "
+        print("CẢNH BÁO: chưa tìm thấy evaluation_report.json - hãy chạy "
               "evaluate.py trước để ghi lại độ tin cậy của surrogate vào "
               "gói export này (Phase 5 cần biết R2 để đánh giá độ tin cậy).")
 

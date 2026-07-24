@@ -70,6 +70,16 @@ def compute_homogenized_tensor(
     # dQ_ij/dx_e = (1/|Ω|) * d(k_e)/dx_e * (Ue^i)^T * KE * (Ue^j)
     dk_e = rho0 * penal * x_flat ** (penal - 1) * (E0 - Emin)
     dQ_flat = np.einsum('e,emi,mn,enj->eij', dk_e, Ue, KE, Ue) / (nelx * nely)
-    dQ = dQ_flat.transpose(1, 2, 0).reshape(3, 3, nely, nelx)
+    # BUG FIX (2026-07-24): chỉ số phần tử e được xây dựng theo order='F'
+    # (khớp x_flat = xPhys.flatten('F') ở trên, và toàn bộ codebase - xem
+    # solve_fe()). reshape() mặc định dùng order='C', khiến dQ[:,:,i,j] bị
+    # HOÁN VỊ (với lưới vuông nelx=nely, tương đương transpose dQ[:,:,j,i])
+    # so với pixel thật - đã xác nhận bằng finite-difference (xem
+    # tests/test_phase5_real_physics.py::TestGradientCorrectness). Với
+    # density field đối xứng qua đường chéo thì vô hại (transpose không đổi
+    # gì), nhưng SAI với field bất đối xứng (hourglass, hexagonal,
+    # reentrant_bowtie trong số 11 seed hiện có) - dc/oc_update() nhận
+    # sensitivity map sai hướng suốt cả quá trình tối ưu.
+    dQ = dQ_flat.transpose(1, 2, 0).reshape(3, 3, nely, nelx, order='F')
 
     return Q, dQ, Ue

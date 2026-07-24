@@ -91,6 +91,12 @@ class BatchConfig:
     param_ranges: Dict[str, Tuple[float, float]] = field(default_factory=dict)
     """Parameter ranges for this batch (name -> (low, high)). Overrides global ranges if set."""
 
+    n_samples_per_seed: Optional[Dict[str, int]] = None
+    """Roadmap 6.2/6.3 (xem adaptive.py::compute_seed_sample_allocation): phân bổ
+    số mẫu LỆCH theo seed (vd ưu tiên seed manufacturability tốt hơn), thay vì
+    n_samples đều cho mọi seed. None (mặc định) = giữ hành vi gốc (chia đều
+    n_samples cho mọi seed, xem sampling.py::generate_design)."""
+
     output_dir: str = ""
     """Output directory override. If empty, uses default."""
 

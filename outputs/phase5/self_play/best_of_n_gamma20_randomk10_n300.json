@@ -1,0 +1,1510 @@
+{
+  "n_conditions": 300,
+  "n_auxetic_targets": 280,
+  "hit_rate_best_of_n": 0.9857142857142858,
+  "r2_fe_v12_best_of_n": -0.5379359879989716,
+  "k": 10,
+  "selection": "random",
+  "per_condition": [
+    {
+      "target_v12": -0.29336926341056824,
+      "is_auxetic_target": true,
+      "v12_best": -0.10289429508208323
+    },
+    {
+      "target_v12": -0.5787476301193237,
+      "is_auxetic_target": true,
+      "v12_best": -0.08357038064020912
+    },
+    {
+      "target_v12": -0.40077272057533264,
+      "is_auxetic_target": true,
+      "v12_best": -0.1570619926623624
+    },
+    {
+      "target_v12": -0.43225860595703125,
+      "is_auxetic_target": true,
+      "v12_best": -0.14636292951265867
+    },
+    {
+      "target_v12": -0.3375312089920044,
+      "is_auxetic_target": true,
+      "v12_best": -0.20149002441962335
+    },
+    {
+      "target_v12": -0.08857361227273941,
+      "is_auxetic_target": true,
+      "v12_best": -0.06340720245258762
+    },
+    {
+      "target_v12": -0.4285373091697693,
+      "is_auxetic_target": true,
+      "v12_best": -0.057737084540875984
+    },
+    {
+      "target_v12": 0.10510864108800888,
+      "is_auxetic_target": false,
+      "v12_best": 0.08046102097224486
+    },
+    {
+      "target_v12": -0.6470327377319336,
+      "is_auxetic_target": true,
+      "v12_best": -0.22575265668317937
+    },
+    {
+      "target_v12": -0.2573665976524353,
+      "is_auxetic_target": true,
+      "v12_best": -0.08462930202421856
+    },
+    {
+      "target_v12": -0.28331246972084045,
+      "is_auxetic_target": true,
+      "v12_best": -0.05888367027326268
+    },
+    {
+      "target_v12": -0.3361356556415558,
+      "is_auxetic_target": true,
+      "v12_best": -0.22563092904331142
+    },
+    {
+      "target_v12": -0.6081469058990479,
+      "is_auxetic_target": true,
+      "v12_best": -0.951417001782661
+    },
+    {
+      "target_v12": -0.636911928653717,
+      "is_auxetic_target": true,
+      "v12_best": -0.024204269329218205
+    },
+    {
+      "target_v12": -0.35983943939208984,
+      "is_auxetic_target": true,
+      "v12_best": -0.07180331351654588
+    },
+    {
+      "target_v12": -0.6792440414428711,
+      "is_auxetic_target": true,
+      "v12_best": -0.21760087012730264
+    },
+    {
+      "target_v12": -0.274527907371521,
+      "is_auxetic_target": true,
+      "v12_best": -0.2799400609247999
+    },
+    {
+      "target_v12": -0.39275413751602173,
+      "is_auxetic_target": true,
+      "v12_best": -0.16735168625543445
+    },
+    {
+      "target_v12": -0.4440571665763855,
+      "is_auxetic_target": true,
+      "v12_best": -0.21318990996971898
+    },
+    {
+      "target_v12": -0.2859330177307129,
+      "is_auxetic_target": true,
+      "v12_best": -0.20646641526095683
+    },
+    {
+      "target_v12": -0.46146130561828613,
+      "is_auxetic_target": true,
+      "v12_best": -0.15775728795474805
+    },
+    {
+      "target_v12": 0.024687422439455986,
+      "is_auxetic_target": false,
+      "v12_best": 0.04142369845430631
+    },
+    {
+      "target_v12": -0.3338128924369812,
+      "is_auxetic_target": true,
+      "v12_best": -0.1291573375057589
+    },
+    {
+      "target_v12": -0.12003923207521439,
+      "is_auxetic_target": true,
+      "v12_best": -0.09141087351631251
+    },
+    {
+      "target_v12": -0.2725604176521301,
+      "is_auxetic_target": true,
+      "v12_best": -0.19447754442323678
+    },
+    {
+      "target_v12": -0.6448642611503601,
+      "is_auxetic_target": true,
+      "v12_best": -0.1483302697857429
+    },
+    {
+      "target_v12": -0.44515910744667053,
+      "is_auxetic_target": true,
+      "v12_best": -0.20559697131516308
+    },
+    {
+      "target_v12": 0.05801813304424286,
+      "is_auxetic_target": false,
+      "v12_best": 0.05573528169336583
+    },
+    {
+      "target_v12": -0.16481897234916687,
+      "is_auxetic_target": true,
+      "v12_best": -0.04296988983994955
+    },
+    {
+      "target_v12": -0.47125959396362305,
+      "is_auxetic_target": true,
+      "v12_best": -0.16788885484204405
+    },
+    {
+      "target_v12": -0.3063024580478668,
+      "is_auxetic_target": true,
+      "v12_best": -0.47306401280144944
+    },
+    {
+      "target_v12": -0.441310316324234,
+      "is_auxetic_target": true,
+      "v12_best": -0.2044695379566316
+    },
+    {
+      "target_v12": -0.15574656426906586,
+      "is_auxetic_target": true,
+      "v12_best": -0.14990122271876222
+    },
+    {
+      "target_v12": -0.13082070648670197,
+      "is_auxetic_target": true,
+      "v12_best": -0.09295223001024666
+    },
+    {
+      "target_v12": -0.4082978367805481,
+      "is_auxetic_target": true,
+      "v12_best": -0.13841054551548276
+    },
+    {
+      "target_v12": -0.6691169142723083,
+      "is_auxetic_target": true,
+      "v12_best": -0.21457189755555459
+    },
+    {
+      "target_v12": -0.37155604362487793,
+      "is_auxetic_target": true,
+      "v12_best": -0.11102754799270914
+    },
+    {
+      "target_v12": -0.40630391240119934,
+      "is_auxetic_target": true,
+      "v12_best": -0.32104681513538347
+    },
+    {
+      "target_v12": -0.3243466913700104,
+      "is_auxetic_target": true,
+      "v12_best": -0.062347887485418065
+    },
+    {
+      "target_v12": 5.4912237951176834e-12,
+      "is_auxetic_target": false,
+      "v12_best": 0.020295082906890204
+    },
+    {
+      "target_v12": -0.27240994572639465,
+      "is_auxetic_target": true,
+      "v12_best": -0.2401376261415879
+    },
+    {
+      "target_v12": -0.2357306033372879,
+      "is_auxetic_target": true,
+      "v12_best": -0.2827962008665908
+    },
+    {
+      "target_v12": -0.44729259610176086,
+      "is_auxetic_target": true,
+      "v12_best": -0.1432063717403489
+    },
+    {
+      "target_v12": -0.3824006915092468,
+      "is_auxetic_target": true,
+      "v12_best": -0.11061194449040973
+    },
+    {
+      "target_v12": -0.279823362827301,
+      "is_auxetic_target": true,
+      "v12_best": -0.10845882034827897
+    },
+    {
+      "target_v12": -0.38599780201911926,
+      "is_auxetic_target": true,
+      "v12_best": -0.2746308869366728
+    },
+    {
+      "target_v12": -0.6053153276443481,
+      "is_auxetic_target": true,
+      "v12_best": -0.2950230020583608
+    },
+    {
+      "target_v12": -0.32395514845848083,
+      "is_auxetic_target": true,
+      "v12_best": -0.288091551473387
+    },
+    {
+      "target_v12": -0.1002642810344696,
+      "is_auxetic_target": true,
+      "v12_best": -0.09480320316215533
+    },
+    {
+      "target_v12": -0.19136150181293488,
+      "is_auxetic_target": true,
+      "v12_best": -0.06192406374112763
+    },
+    {
+      "target_v12": -0.34802010655403137,
+      "is_auxetic_target": true,
+      "v12_best": -0.11065980675696961
+    },
+    {
+      "target_v12": -0.3440729081630707,
+      "is_auxetic_target": true,
+      "v12_best": -0.343656724719568
+    },
+    {
+      "target_v12": -0.6662669777870178,
+      "is_auxetic_target": true,
+      "v12_best": -0.29608948977970456
+    },
+    {
+      "target_v12": -0.6041790843009949,
+      "is_auxetic_target": true,
+      "v12_best": -0.19555369574532955
+    },
+    {
+      "target_v12": 0.11430112272500992,
+      "is_auxetic_target": false,
+      "v12_best": 0.08946779306862154
+    },
+    {
+      "target_v12": -0.19354459643363953,
+      "is_auxetic_target": true,
+      "v12_best": -0.13546603275916852
+    },
+    {
+      "target_v12": 0.08039507269859314,
+      "is_auxetic_target": false,
+      "v12_best": 0.06339614413730278
+    },
+    {
+      "target_v12": -0.28973492980003357,
+      "is_auxetic_target": true,
+      "v12_best": -0.17618862510414285
+    },
+    {
+      "target_v12": -0.17206299304962158,
+      "is_auxetic_target": true,
+      "v12_best": -0.12238851130039982
+    },
+    {
+      "target_v12": 0.037379320710897446,
+      "is_auxetic_target": false,
+      "v12_best": 0.03497391495824157
+    },
+    {
+      "target_v12": -0.4960942268371582,
+      "is_auxetic_target": true,
+      "v12_best": -0.11490465555222086
+    },
+    {
+      "target_v12": -0.3877555727958679,
+      "is_auxetic_target": true,
+      "v12_best": -0.017504861934925817
+    },
+    {
+      "target_v12": -0.03288017213344574,
+      "is_auxetic_target": true,
+      "v12_best": -0.008823352100320274
+    },
+    {
+      "target_v12": -0.6184201240539551,
+      "is_auxetic_target": true,
+      "v12_best": -0.269594172138928
+    },
+    {
+      "target_v12": -0.29440224170684814,
+      "is_auxetic_target": true,
+      "v12_best": -0.11314755535928932
+    },
+    {
+      "target_v12": -0.47877877950668335,
+      "is_auxetic_target": true,
+      "v12_best": -0.41426387328377823
+    },
+    {
+      "target_v12": -0.3900845944881439,
+      "is_auxetic_target": true,
+      "v12_best": -0.36401790237335596
+    },
+    {
+      "target_v12": -0.31809327006340027,
+      "is_auxetic_target": true,
+      "v12_best": -0.44349736962185415
+    },
+    {
+      "target_v12": -0.3521556258201599,
+      "is_auxetic_target": true,
+      "v12_best": -0.26503467830952787
+    },
+    {
+      "target_v12": -0.6142785549163818,
+      "is_auxetic_target": true,
+      "v12_best": -0.19067081944485573
+    },
+    {
+      "target_v12": -0.5627009868621826,
+      "is_auxetic_target": true,
+      "v12_best": -0.14423829746238628
+    },
+    {
+      "target_v12": -0.4193762540817261,
+      "is_auxetic_target": true,
+      "v12_best": -0.4253595631407299
+    },
+    {
+      "target_v12": -0.326560914516449,
+      "is_auxetic_target": true,
+      "v12_best": -0.29536655104670345
+    },
+    {
+      "target_v12": -0.5225670337677002,
+      "is_auxetic_target": true,
+      "v12_best": -0.47783762016648984
+    },
+    {
+      "target_v12": 0.06655419617891312,
+      "is_auxetic_target": false,
+      "v12_best": 0.06698765992741543
+    },
+    {
+      "target_v12": -0.390277624130249,
+      "is_auxetic_target": true,
+      "v12_best": -0.07800356930862272
+    },
+    {
+      "target_v12": -0.25375768542289734,
+      "is_auxetic_target": true,
+      "v12_best": -0.29346854657786753
+    },
+    {
+      "target_v12": 0.06108032912015915,
+      "is_auxetic_target": false,
+      "v12_best": 0.05639063365966505
+    },
+    {
+      "target_v12": -0.4597001075744629,
+      "is_auxetic_target": true,
+      "v12_best": -0.6474612561221033
+    },
+    {
+      "target_v12": -0.051868144422769547,
+      "is_auxetic_target": true,
+      "v12_best": -0.0840345037765111
+    },
+    {
+      "target_v12": 0.02743845246732235,
+      "is_auxetic_target": false,
+      "v12_best": 0.03308518287601028
+    },
+    {
+      "target_v12": -0.1984124332666397,
+      "is_auxetic_target": true,
+      "v12_best": -0.06805021408778807
+    },
+    {
+      "target_v12": -0.3087553381919861,
+      "is_auxetic_target": true,
+      "v12_best": -0.06276954447814495
+    },
+    {
+      "target_v12": -0.44767695665359497,
+      "is_auxetic_target": true,
+      "v12_best": -0.1270946660861571
+    },
+    {
+      "target_v12": -0.3451400697231293,
+      "is_auxetic_target": true,
+      "v12_best": -0.24046130664510748
+    },
+    {
+      "target_v12": 0.016608892008662224,
+      "is_auxetic_target": false,
+      "v12_best": 0.02390274999907208
+    },
+    {
+      "target_v12": -0.514053225517273,
+      "is_auxetic_target": true,
+      "v12_best": -0.35080058230598504
+    },
+    {
+      "target_v12": -0.5905240774154663,
+      "is_auxetic_target": true,
+      "v12_best": -0.26140014019258245
+    },
+    {
+      "target_v12": -0.3047339916229248,
+      "is_auxetic_target": true,
+      "v12_best": -0.03741174787611624
+    },
+    {
+      "target_v12": -0.3758600652217865,
+      "is_auxetic_target": true,
+      "v12_best": -0.43915768890253665
+    },
+    {
+      "target_v12": -0.20649877190589905,
+      "is_auxetic_target": true,
+      "v12_best": -0.11234428131660792
+    },
+    {
+      "target_v12": -0.20325979590415955,
+      "is_auxetic_target": true,
+      "v12_best": -0.04662265587794159
+    },
+    {
+      "target_v12": -0.2791479825973511,
+      "is_auxetic_target": true,
+      "v12_best": -0.15923409883582287
+    },
+    {
+      "target_v12": -0.22093848884105682,
+      "is_auxetic_target": true,
+      "v12_best": -0.10687512763797709
+    },
+    {
+      "target_v12": -0.289739191532135,
+      "is_auxetic_target": true,
+      "v12_best": -0.08687749275282132
+    },
+    {
+      "target_v12": -0.636638879776001,
+      "is_auxetic_target": true,
+      "v12_best": -0.2513550744262309
+    },
+    {
+      "target_v12": -0.4300990700721741,
+      "is_auxetic_target": true,
+      "v12_best": -0.030110976958162394
+    },
+    {
+      "target_v12": -0.2780642807483673,
+      "is_auxetic_target": true,
+      "v12_best": -0.22976067755017465
+    },
+    {
+      "target_v12": -0.24969306588172913,
+      "is_auxetic_target": true,
+      "v12_best": -0.10465285538670209
+    },
+    {
+      "target_v12": -0.24388742446899414,
+      "is_auxetic_target": true,
+      "v12_best": -0.0904074856717866
+    },
+    {
+      "target_v12": -0.4588564336299896,
+      "is_auxetic_target": true,
+      "v12_best": -0.5050141001885506
+    },
+    {
+      "target_v12": -0.14674367010593414,
+      "is_auxetic_target": true,
+      "v12_best": -0.05142076617969928
+    },
+    {
+      "target_v12": -0.27823615074157715,
+      "is_auxetic_target": true,
+      "v12_best": -0.12644852113541816
+    },
+    {
+      "target_v12": -0.17138725519180298,
+      "is_auxetic_target": true,
+      "v12_best": -0.14699901398186196
+    },
+    {
+      "target_v12": -0.15465740859508514,
+      "is_auxetic_target": true,
+      "v12_best": -0.10703155548708758
+    },
+    {
+      "target_v12": -0.5491350293159485,
+      "is_auxetic_target": true,
+      "v12_best": -0.10161157663628348
+    },
+    {
+      "target_v12": -0.4753963053226471,
+      "is_auxetic_target": true,
+      "v12_best": -0.24624315418925616
+    },
+    {
+      "target_v12": -0.21430304646492004,
+      "is_auxetic_target": true,
+      "v12_best": -0.032249494886023855
+    },
+    {
+      "target_v12": -0.7212860584259033,
+      "is_auxetic_target": true,
+      "v12_best": -0.2592191578153023
+    },
+    {
+      "target_v12": -0.28752365708351135,
+      "is_auxetic_target": true,
+      "v12_best": 0.0545299167879918
+    },
+    {
+      "target_v12": -0.33967921137809753,
+      "is_auxetic_target": true,
+      "v12_best": -0.14443827137171755
+    },
+    {
+      "target_v12": -0.392352819442749,
+      "is_auxetic_target": true,
+      "v12_best": -0.15043289832390344
+    },
+    {
+      "target_v12": -0.1591319441795349,
+      "is_auxetic_target": true,
+      "v12_best": -0.05507648527250723
+    },
+    {
+      "target_v12": -0.3939606845378876,
+      "is_auxetic_target": true,
+      "v12_best": -0.29247344404971476
+    },
+    {
+      "target_v12": -0.3538084030151367,
+      "is_auxetic_target": true,
+      "v12_best": -0.23016526559194528
+    },
+    {
+      "target_v12": -0.5005122423171997,
+      "is_auxetic_target": true,
+      "v12_best": -0.1324557337789369
+    },
+    {
+      "target_v12": -0.2634609639644623,
+      "is_auxetic_target": true,
+      "v12_best": -0.23824787305090878
+    },
+    {
+      "target_v12": -0.6269060969352722,
+      "is_auxetic_target": true,
+      "v12_best": -0.3040861563118337
+    },
+    {
+      "target_v12": -0.3141917884349823,
+      "is_auxetic_target": true,
+      "v12_best": -0.132931548095317
+    },
+    {
+      "target_v12": -0.24580705165863037,
+      "is_auxetic_target": true,
+      "v12_best": -0.25575259644216936
+    },
+    {
+      "target_v12": -0.07932572811841965,
+      "is_auxetic_target": true,
+      "v12_best": -0.05680820642544992
+    },
+    {
+      "target_v12": -0.45085209608078003,
+      "is_auxetic_target": true,
+      "v12_best": -0.21483186522883865
+    },
+    {
+      "target_v12": -0.07810951769351959,
+      "is_auxetic_target": true,
+      "v12_best": -0.044122131960415575
+    },
+    {
+      "target_v12": -0.4276723861694336,
+      "is_auxetic_target": true,
+      "v12_best": -0.11958525283138549
+    },
+    {
+      "target_v12": 0.11511074751615524,
+      "is_auxetic_target": false,
+      "v12_best": 0.13443524178726915
+    },
+    {
+      "target_v12": -0.33790481090545654,
+      "is_auxetic_target": true,
+      "v12_best": -0.29765167111185276
+    },
+    {
+      "target_v12": -0.6765763163566589,
+      "is_auxetic_target": true,
+      "v12_best": -0.3032377759939805
+    },
+    {
+      "target_v12": -0.3636489808559418,
+      "is_auxetic_target": true,
+      "v12_best": -0.28359205624414624
+    },
+    {
+      "target_v12": -0.5174083709716797,
+      "is_auxetic_target": true,
+      "v12_best": -0.10306934213091946
+    },
+    {
+      "target_v12": -0.4180375039577484,
+      "is_auxetic_target": true,
+      "v12_best": -0.314161628639755
+    },
+    {
+      "target_v12": -0.28829753398895264,
+      "is_auxetic_target": true,
+      "v12_best": -0.10694179170915297
+    },
+    {
+      "target_v12": -0.2075674831867218,
+      "is_auxetic_target": true,
+      "v12_best": -0.1989121593165778
+    },
+    {
+      "target_v12": -0.346006840467453,
+      "is_auxetic_target": true,
+      "v12_best": -0.12880548122765856
+    },
+    {
+      "target_v12": -0.3555889427661896,
+      "is_auxetic_target": true,
+      "v12_best": -0.21034774941995782
+    },
+    {
+      "target_v12": -0.26920774579048157,
+      "is_auxetic_target": true,
+      "v12_best": -0.1453837664518187
+    },
+    {
+      "target_v12": -0.3525104224681854,
+      "is_auxetic_target": true,
+      "v12_best": -0.1153884872720539
+    },
+    {
+      "target_v12": -0.07938247919082642,
+      "is_auxetic_target": true,
+      "v12_best": 2.3207726859431437e-11
+    },
+    {
+      "target_v12": -0.3359888195991516,
+      "is_auxetic_target": true,
+      "v12_best": -0.1323219923306145
+    },
+    {
+      "target_v12": -0.2793024480342865,
+      "is_auxetic_target": true,
+      "v12_best": -0.11102412377095743
+    },
+    {
+      "target_v12": -0.022633105516433716,
+      "is_auxetic_target": true,
+      "v12_best": -0.020312606389800376
+    },
+    {
+      "target_v12": -0.28021612763404846,
+      "is_auxetic_target": true,
+      "v12_best": -0.16187948954854647
+    },
+    {
+      "target_v12": -0.5478387475013733,
+      "is_auxetic_target": true,
+      "v12_best": -0.1632208740477245
+    },
+    {
+      "target_v12": -0.3516247868537903,
+      "is_auxetic_target": true,
+      "v12_best": -0.1537429660259583
+    },
+    {
+      "target_v12": -0.1354018747806549,
+      "is_auxetic_target": true,
+      "v12_best": -0.19383749702696518
+    },
+    {
+      "target_v12": -0.08597911894321442,
+      "is_auxetic_target": true,
+      "v12_best": -0.10640219956815927
+    },
+    {
+      "target_v12": -0.079991415143013,
+      "is_auxetic_target": true,
+      "v12_best": -0.06192023553968432
+    },
+    {
+      "target_v12": -0.21058893203735352,
+      "is_auxetic_target": true,
+      "v12_best": -0.1399152124828491
+    },
+    {
+      "target_v12": -0.2990720868110657,
+      "is_auxetic_target": true,
+      "v12_best": -0.12374688707406803
+    },
+    {
+      "target_v12": -0.42526084184646606,
+      "is_auxetic_target": true,
+      "v12_best": -0.0254074277358987
+    },
+    {
+      "target_v12": -0.6552516222000122,
+      "is_auxetic_target": true,
+      "v12_best": -0.1526293932293889
+    },
+    {
+      "target_v12": -0.257827490568161,
+      "is_auxetic_target": true,
+      "v12_best": -0.13540593220542158
+    },
+    {
+      "target_v12": -0.11953429132699966,
+      "is_auxetic_target": true,
+      "v12_best": -0.11050738723969963
+    },
+    {
+      "target_v12": -0.3827466666698456,
+      "is_auxetic_target": true,
+      "v12_best": -0.09541430172583883
+    },
+    {
+      "target_v12": -0.6703379154205322,
+      "is_auxetic_target": true,
+      "v12_best": -0.15231270958480905
+    },
+    {
+      "target_v12": -0.37323784828186035,
+      "is_auxetic_target": true,
+      "v12_best": -0.04733845004120475
+    },
+    {
+      "target_v12": -0.6260757446289062,
+      "is_auxetic_target": true,
+      "v12_best": -0.24214964857496543
+    },
+    {
+      "target_v12": -0.3485186696052551,
+      "is_auxetic_target": true,
+      "v12_best": -0.5433404628985841
+    },
+    {
+      "target_v12": -0.1859644055366516,
+      "is_auxetic_target": true,
+      "v12_best": -0.16635877344968755
+    },
+    {
+      "target_v12": -0.2351551055908203,
+      "is_auxetic_target": true,
+      "v12_best": -0.07215963479697794
+    },
+    {
+      "target_v12": -0.2909061014652252,
+      "is_auxetic_target": true,
+      "v12_best": -0.16838127114252271
+    },
+    {
+      "target_v12": -0.06758434325456619,
+      "is_auxetic_target": true,
+      "v12_best": -0.011094647639748743
+    },
+    {
+      "target_v12": -0.5365461707115173,
+      "is_auxetic_target": true,
+      "v12_best": -0.3374876406786803
+    },
+    {
+      "target_v12": -0.1812916398048401,
+      "is_auxetic_target": true,
+      "v12_best": -0.1077995029899895
+    },
+    {
+      "target_v12": 0.010584033094346523,
+      "is_auxetic_target": false,
+      "v12_best": 0.008025670246948596
+    },
+    {
+      "target_v12": -0.5535476803779602,
+      "is_auxetic_target": true,
+      "v12_best": -0.618208072094436
+    },
+    {
+      "target_v12": -0.3083171546459198,
+      "is_auxetic_target": true,
+      "v12_best": -0.1969930494505991
+    },
+    {
+      "target_v12": -0.4201853573322296,
+      "is_auxetic_target": true,
+      "v12_best": -0.10008658352423963
+    },
+    {
+      "target_v12": -0.31186410784721375,
+      "is_auxetic_target": true,
+      "v12_best": -0.19675243020967262
+    },
+    {
+      "target_v12": -0.3558158576488495,
+      "is_auxetic_target": true,
+      "v12_best": -0.13964086059523306
+    },
+    {
+      "target_v12": -0.296124130487442,
+      "is_auxetic_target": true,
+      "v12_best": -0.14683830820344027
+    },
+    {
+      "target_v12": -0.43338391184806824,
+      "is_auxetic_target": true,
+      "v12_best": -0.07669757015919422
+    },
+    {
+      "target_v12": -0.3014369606971741,
+      "is_auxetic_target": true,
+      "v12_best": -0.13027471882418137
+    },
+    {
+      "target_v12": -0.6381959915161133,
+      "is_auxetic_target": true,
+      "v12_best": -0.22373275115418922
+    },
+    {
+      "target_v12": -0.19589316844940186,
+      "is_auxetic_target": true,
+      "v12_best": -0.06988991379262417
+    },
+    {
+      "target_v12": -0.18883392214775085,
+      "is_auxetic_target": true,
+      "v12_best": -0.15745681613688145
+    },
+    {
+      "target_v12": -0.6282328367233276,
+      "is_auxetic_target": true,
+      "v12_best": -0.17784993900631715
+    },
+    {
+      "target_v12": -0.3002314865589142,
+      "is_auxetic_target": true,
+      "v12_best": -0.23791981653049943
+    },
+    {
+      "target_v12": -0.43077024817466736,
+      "is_auxetic_target": true,
+      "v12_best": -0.28212927532418286
+    },
+    {
+      "target_v12": -0.27523982524871826,
+      "is_auxetic_target": true,
+      "v12_best": -0.23456700305529088
+    },
+    {
+      "target_v12": -0.2759465277194977,
+      "is_auxetic_target": true,
+      "v12_best": -0.07088888342263472
+    },
+    {
+      "target_v12": -0.7071207165718079,
+      "is_auxetic_target": true,
+      "v12_best": -0.30068693344464953
+    },
+    {
+      "target_v12": -0.20020030438899994,
+      "is_auxetic_target": true,
+      "v12_best": -0.11103874284296707
+    },
+    {
+      "target_v12": -0.28115591406822205,
+      "is_auxetic_target": true,
+      "v12_best": -0.12677837626043958
+    },
+    {
+      "target_v12": -0.2812272310256958,
+      "is_auxetic_target": true,
+      "v12_best": -0.013587660288812973
+    },
+    {
+      "target_v12": 0.06900051236152649,
+      "is_auxetic_target": false,
+      "v12_best": 0.07587238674577844
+    },
+    {
+      "target_v12": -0.3274112343788147,
+      "is_auxetic_target": true,
+      "v12_best": -0.09884087442912094
+    },
+    {
+      "target_v12": -0.8515912890434265,
+      "is_auxetic_target": true,
+      "v12_best": -0.4558946626483831
+    },
+    {
+      "target_v12": -0.3276655375957489,
+      "is_auxetic_target": true,
+      "v12_best": -0.3061678382216228
+    },
+    {
+      "target_v12": -0.3154735863208771,
+      "is_auxetic_target": true,
+      "v12_best": -0.18591216604458288
+    },
+    {
+      "target_v12": -0.03851160407066345,
+      "is_auxetic_target": true,
+      "v12_best": -0.07692169299282048
+    },
+    {
+      "target_v12": -0.3610108196735382,
+      "is_auxetic_target": true,
+      "v12_best": -0.07543196474939184
+    },
+    {
+      "target_v12": -0.32338541746139526,
+      "is_auxetic_target": true,
+      "v12_best": -0.23440807204937072
+    },
+    {
+      "target_v12": -0.4020995497703552,
+      "is_auxetic_target": true,
+      "v12_best": -0.059228783850456344
+    },
+    {
+      "target_v12": -0.6208361387252808,
+      "is_auxetic_target": true,
+      "v12_best": -0.2457008164901357
+    },
+    {
+      "target_v12": -0.26067274808883667,
+      "is_auxetic_target": true,
+      "v12_best": -0.21278383407898133
+    },
+    {
+      "target_v12": -0.4334590435028076,
+      "is_auxetic_target": true,
+      "v12_best": -0.4300047340476151
+    },
+    {
+      "target_v12": -0.30233824253082275,
+      "is_auxetic_target": true,
+      "v12_best": -0.029823291930294066
+    },
+    {
+      "target_v12": -0.24702998995780945,
+      "is_auxetic_target": true,
+      "v12_best": -0.37340233744753726
+    },
+    {
+      "target_v12": -0.34315025806427,
+      "is_auxetic_target": true,
+      "v12_best": -0.24899073481424147
+    },
+    {
+      "target_v12": -0.3441472351551056,
+      "is_auxetic_target": true,
+      "v12_best": -0.2232871482549445
+    },
+    {
+      "target_v12": 0.09016981720924377,
+      "is_auxetic_target": false,
+      "v12_best": 0.0671641061371785
+    },
+    {
+      "target_v12": -0.3880685567855835,
+      "is_auxetic_target": true,
+      "v12_best": -0.3272891269890615
+    },
+    {
+      "target_v12": -0.40185612440109253,
+      "is_auxetic_target": true,
+      "v12_best": -0.08504725705677585
+    },
+    {
+      "target_v12": -0.29295194149017334,
+      "is_auxetic_target": true,
+      "v12_best": -0.23673796853111903
+    },
+    {
+      "target_v12": 0.0645299181342125,
+      "is_auxetic_target": false,
+      "v12_best": 0.060797249312432085
+    },
+    {
+      "target_v12": -0.30119484663009644,
+      "is_auxetic_target": true,
+      "v12_best": -0.022580205177024002
+    },
+    {
+      "target_v12": -0.38686302304267883,
+      "is_auxetic_target": true,
+      "v12_best": -0.1477964887605712
+    },
+    {
+      "target_v12": -0.22897449135780334,
+      "is_auxetic_target": true,
+      "v12_best": -0.23371761099972685
+    },
+    {
+      "target_v12": -0.5803266167640686,
+      "is_auxetic_target": true,
+      "v12_best": -0.3159193599608804
+    },
+    {
+      "target_v12": -0.24827741086483002,
+      "is_auxetic_target": true,
+      "v12_best": -0.16657375034206126
+    },
+    {
+      "target_v12": -0.3463951051235199,
+      "is_auxetic_target": true,
+      "v12_best": -0.13713359386898832
+    },
+    {
+      "target_v12": -0.26968058943748474,
+      "is_auxetic_target": true,
+      "v12_best": -0.2339172296359475
+    },
+    {
+      "target_v12": -0.26506268978118896,
+      "is_auxetic_target": true,
+      "v12_best": -0.05464831032545817
+    },
+    {
+      "target_v12": -0.35493385791778564,
+      "is_auxetic_target": true,
+      "v12_best": -0.31793968132860295
+    },
+    {
+      "target_v12": -0.2808481454849243,
+      "is_auxetic_target": true,
+      "v12_best": -0.40697164263309654
+    },
+    {
+      "target_v12": -0.2512522339820862,
+      "is_auxetic_target": true,
+      "v12_best": -0.21645889394193
+    },
+    {
+      "target_v12": -0.3773658871650696,
+      "is_auxetic_target": true,
+      "v12_best": -0.24909233220240756
+    },
+    {
+      "target_v12": -0.6159334182739258,
+      "is_auxetic_target": true,
+      "v12_best": -0.3947294177176632
+    },
+    {
+      "target_v12": -0.23580102622509003,
+      "is_auxetic_target": true,
+      "v12_best": -0.21752611691981488
+    },
+    {
+      "target_v12": -0.26145434379577637,
+      "is_auxetic_target": true,
+      "v12_best": -0.10986176897465194
+    },
+    {
+      "target_v12": -0.26537463068962097,
+      "is_auxetic_target": true,
+      "v12_best": -0.05450764969589367
+    },
+    {
+      "target_v12": -0.4113541543483734,
+      "is_auxetic_target": true,
+      "v12_best": -0.19665307110000171
+    },
+    {
+      "target_v12": -0.6142557263374329,
+      "is_auxetic_target": true,
+      "v12_best": -0.16096835098121343
+    },
+    {
+      "target_v12": -0.25317662954330444,
+      "is_auxetic_target": true,
+      "v12_best": -0.1017792971917136
+    },
+    {
+      "target_v12": -0.63758784532547,
+      "is_auxetic_target": true,
+      "v12_best": -0.12700386479545858
+    },
+    {
+      "target_v12": -0.5094839930534363,
+      "is_auxetic_target": true,
+      "v12_best": -0.16263735475464286
+    },
+    {
+      "target_v12": -0.30887821316719055,
+      "is_auxetic_target": true,
+      "v12_best": -0.17458331868521795
+    },
+    {
+      "target_v12": -0.3758375942707062,
+      "is_auxetic_target": true,
+      "v12_best": -0.10337109782269888
+    },
+    {
+      "target_v12": -0.13567392528057098,
+      "is_auxetic_target": true,
+      "v12_best": -0.09584250143983765
+    },
+    {
+      "target_v12": -0.3182739019393921,
+      "is_auxetic_target": true,
+      "v12_best": -0.21319376358855863
+    },
+    {
+      "target_v12": -0.6750958561897278,
+      "is_auxetic_target": true,
+      "v12_best": -0.09162536979704446
+    },
+    {
+      "target_v12": -0.42569035291671753,
+      "is_auxetic_target": true,
+      "v12_best": -0.10429283635999834
+    },
+    {
+      "target_v12": -0.3805980980396271,
+      "is_auxetic_target": true,
+      "v12_best": -0.16611581831559813
+    },
+    {
+      "target_v12": -0.5763665437698364,
+      "is_auxetic_target": true,
+      "v12_best": -0.14413762949631004
+    },
+    {
+      "target_v12": -0.2497536838054657,
+      "is_auxetic_target": true,
+      "v12_best": -0.20382287807324187
+    },
+    {
+      "target_v12": -0.3005852997303009,
+      "is_auxetic_target": true,
+      "v12_best": -0.2506594780687194
+    },
+    {
+      "target_v12": -0.15730059146881104,
+      "is_auxetic_target": true,
+      "v12_best": -0.07195043922449121
+    },
+    {
+      "target_v12": -0.19512757658958435,
+      "is_auxetic_target": true,
+      "v12_best": -0.14141252026767367
+    },
+    {
+      "target_v12": -0.3154623508453369,
+      "is_auxetic_target": true,
+      "v12_best": -0.13662623321163136
+    },
+    {
+      "target_v12": -0.4316644072532654,
+      "is_auxetic_target": true,
+      "v12_best": -0.249702529622938
+    },
+    {
+      "target_v12": -0.46860748529434204,
+      "is_auxetic_target": true,
+      "v12_best": -0.17594760510876875
+    },
+    {
+      "target_v12": -0.6706178188323975,
+      "is_auxetic_target": true,
+      "v12_best": -0.13788198209553684
+    },
+    {
+      "target_v12": -0.22829633951187134,
+      "is_auxetic_target": true,
+      "v12_best": -0.2389581276928907
+    },
+    {
+      "target_v12": -0.5812271237373352,
+      "is_auxetic_target": true,
+      "v12_best": -0.31671817650808376
+    },
+    {
+      "target_v12": -0.10240768641233444,
+      "is_auxetic_target": true,
+      "v12_best": -0.1012503801684476
+    },
+    {
+      "target_v12": -0.35138756036758423,
+      "is_auxetic_target": true,
+      "v12_best": -0.1448068853126845
+    },
+    {
+      "target_v12": -0.3584762513637543,
+      "is_auxetic_target": true,
+      "v12_best": -0.24476702235411296
+    },
+    {
+      "target_v12": -0.1941051483154297,
+      "is_auxetic_target": true,
+      "v12_best": -0.1490138060454752
+    },
+    {
+      "target_v12": -0.06514440476894379,
+      "is_auxetic_target": true,
+      "v12_best": -0.08441755246965661
+    },
+    {
+      "target_v12": -0.63704913854599,
+      "is_auxetic_target": true,
+      "v12_best": -0.22448802921639263
+    },
+    {
+      "target_v12": -0.20878715813159943,
+      "is_auxetic_target": true,
+      "v12_best": -0.003929479081096859
+    },
+    {
+      "target_v12": -0.3780146837234497,
+      "is_auxetic_target": true,
+      "v12_best": -0.05310548185029722
+    },
+    {
+      "target_v12": -0.33494189381599426,
+      "is_auxetic_target": true,
+      "v12_best": -0.2711035165529952
+    },
+    {
+      "target_v12": -0.4103715419769287,
+      "is_auxetic_target": true,
+      "v12_best": -0.28719332484356813
+    },
+    {
+      "target_v12": -0.09662656486034393,
+      "is_auxetic_target": true,
+      "v12_best": 0.014622973256535483
+    },
+    {
+      "target_v12": -0.6521432399749756,
+      "is_auxetic_target": true,
+      "v12_best": -0.26468609586705544
+    },
+    {
+      "target_v12": -0.2715494930744171,
+      "is_auxetic_target": true,
+      "v12_best": -0.2815851202237232
+    },
+    {
+      "target_v12": -0.3554268181324005,
+      "is_auxetic_target": true,
+      "v12_best": -0.17545425004521045
+    },
+    {
+      "target_v12": -0.22192391753196716,
+      "is_auxetic_target": true,
+      "v12_best": -0.15699549530584786
+    },
+    {
+      "target_v12": -0.34685298800468445,
+      "is_auxetic_target": true,
+      "v12_best": -0.03726978756858661
+    },
+    {
+      "target_v12": -0.35111913084983826,
+      "is_auxetic_target": true,
+      "v12_best": -0.22249143491626527
+    },
+    {
+      "target_v12": -0.2790222764015198,
+      "is_auxetic_target": true,
+      "v12_best": -0.04952445417921367
+    },
+    {
+      "target_v12": -0.4029921889305115,
+      "is_auxetic_target": true,
+      "v12_best": -0.06789380359249281
+    },
+    {
+      "target_v12": -0.2848973572254181,
+      "is_auxetic_target": true,
+      "v12_best": -0.1158902623965869
+    },
+    {
+      "target_v12": -0.4877086877822876,
+      "is_auxetic_target": true,
+      "v12_best": -0.35136869383336844
+    },
+    {
+      "target_v12": -0.007665280252695084,
+      "is_auxetic_target": true,
+      "v12_best": -0.012318666792438104
+    },
+    {
+      "target_v12": 0.07859885692596436,
+      "is_auxetic_target": false,
+      "v12_best": 0.06908237018965023
+    },
+    {
+      "target_v12": -0.04502442851662636,
+      "is_auxetic_target": true,
+      "v12_best": -0.006516449345091029
+    },
+    {
+      "target_v12": -0.30799558758735657,
+      "is_auxetic_target": true,
+      "v12_best": -0.12831690266785117
+    },
+    {
+      "target_v12": -0.35713186860084534,
+      "is_auxetic_target": true,
+      "v12_best": -0.07525185732836498
+    },
+    {
+      "target_v12": -0.32501843571662903,
+      "is_auxetic_target": true,
+      "v12_best": -0.10524927299217347
+    },
+    {
+      "target_v12": -0.502031683921814,
+      "is_auxetic_target": true,
+      "v12_best": -0.04073140861889253
+    },
+    {
+      "target_v12": -0.6115413904190063,
+      "is_auxetic_target": true,
+      "v12_best": -0.2131464333339188
+    },
+    {
+      "target_v12": -0.43903443217277527,
+      "is_auxetic_target": true,
+      "v12_best": -0.2692600084211708
+    },
+    {
+      "target_v12": -0.14734412729740143,
+      "is_auxetic_target": true,
+      "v12_best": -0.04898799014200932
+    },
+    {
+      "target_v12": -0.32341253757476807,
+      "is_auxetic_target": true,
+      "v12_best": -0.26128134369779443
+    },
+    {
+      "target_v12": -0.4640284776687622,
+      "is_auxetic_target": true,
+      "v12_best": -0.12570273754796832
+    },
+    {
+      "target_v12": -0.4167649447917938,
+      "is_auxetic_target": true,
+      "v12_best": -0.20965782679346912
+    },
+    {
+      "target_v12": -0.6053784489631653,
+      "is_auxetic_target": true,
+      "v12_best": 0.013970242122641216
+    },
+    {
+      "target_v12": -0.22918321192264557,
+      "is_auxetic_target": true,
+      "v12_best": -0.2846068366972624
+    },
+    {
+      "target_v12": -0.4404679536819458,
+      "is_auxetic_target": true,
+      "v12_best": -0.3058335672244764
+    },
+    {
+      "target_v12": -0.21305352449417114,
+      "is_auxetic_target": true,
+      "v12_best": -0.23857244844890863
+    },
+    {
+      "target_v12": 0.044088903814554214,
+      "is_auxetic_target": false,
+      "v12_best": 0.04753342750123311
+    },
+    {
+      "target_v12": -0.43994954228401184,
+      "is_auxetic_target": true,
+      "v12_best": -0.26054192395936004
+    },
+    {
+      "target_v12": 0.011252021417021751,
+      "is_auxetic_target": false,
+      "v12_best": -0.0025937784583819233
+    },
+    {
+      "target_v12": 0.06848747283220291,
+      "is_auxetic_target": false,
+      "v12_best": 0.06507028534317043
+    },
+    {
+      "target_v12": -0.3971596956253052,
+      "is_auxetic_target": true,
+      "v12_best": -0.22426132425148754
+    },
+    {
+      "target_v12": -0.4994971454143524,
+      "is_auxetic_target": true,
+      "v12_best": -0.08992580329398232
+    },
+    {
+      "target_v12": -0.2764069139957428,
+      "is_auxetic_target": true,
+      "v12_best": -0.19222475250303625
+    },
+    {
+      "target_v12": -0.26010456681251526,
+      "is_auxetic_target": true,
+      "v12_best": -0.13174034115212355
+    },
+    {
+      "target_v12": -0.43009376525878906,
+      "is_auxetic_target": true,
+      "v12_best": -0.31900694648966
+    },
+    {
+      "target_v12": -0.08942210674285889,
+      "is_auxetic_target": true,
+      "v12_best": -0.12980847090522382
+    },
+    {
+      "target_v12": -0.6680780053138733,
+      "is_auxetic_target": true,
+      "v12_best": -0.3487730167116925
+    },
+    {
+      "target_v12": -0.5875430703163147,
+      "is_auxetic_target": true,
+      "v12_best": -0.2479015853522846
+    },
+    {
+      "target_v12": -0.4559966027736664,
+      "is_auxetic_target": true,
+      "v12_best": -0.1270410580182997
+    },
+    {
+      "target_v12": -0.64427649974823,
+      "is_auxetic_target": true,
+      "v12_best": -0.17453211141736033
+    },
+    {
+      "target_v12": -0.4320085942745209,
+      "is_auxetic_target": true,
+      "v12_best": -0.1685318723644815
+    },
+    {
+      "target_v12": -0.2094336450099945,
+      "is_auxetic_target": true,
+      "v12_best": -0.1812003493639138
+    },
+    {
+      "target_v12": -0.3735634684562683,
+      "is_auxetic_target": true,
+      "v12_best": -0.11870078590297924
+    },
+    {
+      "target_v12": -0.27732327580451965,
+      "is_auxetic_target": true,
+      "v12_best": -0.09511550575220408
+    }
+  ]
+}

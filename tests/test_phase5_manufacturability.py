@@ -96,6 +96,51 @@ class TestPeriodicity:
         assert result_strict["periodic_ok"] is False
 
 
+class TestForcePeriodic:
+    """force_periodic() (thêm từ nhánh research/auxetic-breakthrough, xem
+    EXPERIMENT_LOG.md mục "Phase 6") - ép cứng left==right, top==bottom
+    bằng 1 phép gán, đảm bảo periodic_ok=True TUYỆT ĐỐI, không phải thứ có
+    thể "gần đúng"."""
+
+    def test_edges_match_exactly_after_forcing(self):
+        m = _import_manufacturability()
+        rng = np.random.default_rng(0)
+        img = rng.random((64, 64)).astype(np.float32)
+        out = m.force_periodic(img)
+        assert np.array_equal(out[:, 0], out[:, -1])
+        assert np.array_equal(out[0, :], out[-1, :])
+
+    def test_shape_and_dtype_preserved(self):
+        m = _import_manufacturability()
+        img = np.random.default_rng(1).random((64, 64)).astype(np.float32)
+        out = m.force_periodic(img)
+        assert out.shape == img.shape
+        assert out.dtype == img.dtype
+
+    def test_interior_untouched(self):
+        m = _import_manufacturability()
+        img = np.random.default_rng(2).random((64, 64)).astype(np.float32)
+        out = m.force_periodic(img)
+        assert np.array_equal(out[1:-1, 1:-1], img[1:-1, 1:-1])
+
+    def test_passes_periodicity_check(self):
+        m = _import_manufacturability()
+        rng = np.random.default_rng(3)
+        img = rng.random((64, 64)).astype(np.float32)
+        out = m.force_periodic(img)
+        result = m.check_periodicity((out > 0.5).astype(np.float32))
+        assert result["periodic_ok"] is True
+        assert result["edge_mismatch_lr"] == 0.0
+        assert result["edge_mismatch_tb"] == 0.0
+
+    def test_does_not_mutate_input(self):
+        m = _import_manufacturability()
+        img = np.random.default_rng(4).random((64, 64)).astype(np.float32)
+        img_copy = img.copy()
+        m.force_periodic(img)
+        assert np.array_equal(img, img_copy)
+
+
 class TestCombined:
     def test_check_manufacturability_combines_both(self):
         m = _import_manufacturability()

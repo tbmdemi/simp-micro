@@ -114,7 +114,7 @@ def solve_fe(
     K_pbc_free = K_pbc[free_dofs, :][:, free_dofs]
     F_free = F[free_dofs, :]
 
-    # Giải cho mỗi trường hợp tải — factorize LU MỘT LẦN (K_pbc_free giống
+    # Giải cho mỗi trường hợp tải - factorize LU MỘT LẦN (K_pbc_free giống
     # nhau cho cả 3 case, chỉ RHS khác) thay vì spsolve() riêng lẻ 3 lần
     # (mỗi lần tự phân rã LU lại từ đầu → lãng phí ~3x chi phí factorization).
     U_reduced_free = np.zeros((len(free_dofs), n_cases))

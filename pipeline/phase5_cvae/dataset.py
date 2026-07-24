@@ -10,12 +10,14 @@ Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21], seed_vec
 (n_seeds,) one-hot, volfrac scalar.
 """
 import os
+import json
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
+V12_WEIGHTS_PATH = os.path.join(PHASE3_DIR, "v12_bin_weights.json")
 
 
 class CVAEDataset(Dataset):
@@ -47,6 +49,41 @@ class CVAEDataset(Dataset):
         seed_vec = torch.from_numpy(self.seed_onehot[idx])
         volfrac = torch.tensor(self.volfrac_achieved[idx], dtype=torch.float32)
         return image, condition, seed_vec, volfrac
+
+
+def compute_v12_bin_weights(v12: np.ndarray, bin_edges: np.ndarray, alpha: float = 0.5) -> np.ndarray:
+    """weight(bin) = (1/count(bin))^alpha, chuẩn hoá mean=1 - xem
+    analysis/scripts/analyze_auxetic_distribution.py (nguồn phân tích gốc,
+    yêu cầu advisor 2026-07-24: gán trọng số cao hơn cho vùng v12 thưa mẫu
+    để dataloader lấy mẫu đều hơn qua toàn phổ auxetic thay vì chỉ học tốt
+    vùng mode [-0.45,-0.30) chiếm ~38% dữ liệu). alpha=0 tắt (mọi bin weight
+    =1), alpha=1 nghịch đảo tần suất hoàn toàn, alpha=0.5 (mặc định) làm
+    mượt bằng sqrt để tránh few-sample bin nhận trọng số cực đoan."""
+    counts, _ = np.histogram(v12, bins=bin_edges)
+    counts_safe = np.maximum(counts, 1)
+    raw_weight = counts_safe.astype(np.float64) ** (-alpha)
+    return raw_weight / raw_weight.mean()
+
+
+def compute_v12_sample_weights(v12: np.ndarray, weights_path: str = V12_WEIGHTS_PATH,
+                                alpha: float = 0.5) -> np.ndarray:
+    """Trọng số per-sample cho WeightedRandomSampler (train.py --weighted-sampling),
+    dựa trên bin của v12 mỗi mẫu. Ưu tiên đọc bin_edges/bin_weight đã lưu sẵn
+    ở `weights_path` (từ analyze_auxetic_distribution.py, chạy 1 lần trên
+    train.npz) - nếu file không tồn tại, tính lại tại chỗ với bin rộng 0.05
+    trên đúng range của `v12` truyền vào (fallback, vd khi dùng tập dữ liệu
+    khác chưa chạy script phân tích)."""
+    if weights_path and os.path.exists(weights_path):
+        with open(weights_path) as f:
+            saved = json.load(f)
+        bin_edges = np.array(saved["bin_edges"])
+        bin_weight = np.array(saved["bin_weight"])
+    else:
+        bin_edges = np.arange(v12.min() - 0.05, v12.max() + 0.05, 0.05)
+        bin_weight = compute_v12_bin_weights(v12, bin_edges, alpha=alpha)
+
+    bin_idx = np.clip(np.digitize(v12, bin_edges) - 1, 0, len(bin_weight) - 1)
+    return bin_weight[bin_idx].astype(np.float32)
 
 
 if __name__ == "__main__":

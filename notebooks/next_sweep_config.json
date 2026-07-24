@@ -9,9 +9,9 @@
     "generated_by": "Notebook 3"
   },
   "seed_target": [
+    "hourglass",
     "grid_circular_voids",
-    "nine_circle",
-    "four_circle"
+    "nine_circle"
   ],
   "rmin_range": [
     1.0,
@@ -31,8 +31,8 @@
     "move": 0.2,
     "rotation_deg": 0
   },
-  "n_samples_per_seed": 717,
-  "total_samples": 2151,
+  "n_samples_per_seed": 719,
+  "total_samples": 2157,
   "recommendations": {
     "focus_seeds": "Focus on top-performing seeds that consistently produce nu < -0.3",
     "avoid_high_rmin": "rmin > 2.5 rarely produces auxetic behavior \u2014 cap the upper bound",

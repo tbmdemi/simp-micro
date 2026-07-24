@@ -1,0 +1,44 @@
+{
+  "n_total": 7920,
+  "convergence_audit": {
+    "n_matched": 7920,
+    "n_true_converged_early": 1874,
+    "n_hit_cap": 6046,
+    "frac_hit_cap": 0.7633838383838384,
+    "n_iters_mean": 134.65694444444443,
+    "n_iters_median": 150.0,
+    "per_seed_hit_cap_frac": {
+      "small_square_cross": 0.9444444444444444,
+      "circle_half_quarter": 0.9347222222222222,
+      "circle": 0.9263888888888889,
+      "cross_rectangular": 0.9208333333333333,
+      "square": 0.9208333333333333,
+      "four_circle": 0.8333333333333334,
+      "hexagonal": 0.7291666666666666,
+      "grid_circular_voids": 0.6819444444444445,
+      "nine_circle": 0.6763888888888889,
+      "reentrant_bowtie": 0.4375,
+      "hourglass": 0.39166666666666666
+    }
+  },
+  "geometry_audit": {
+    "n_missing_img": 0,
+    "n_disconnected": 1891,
+    "frac_disconnected": 0.23876262626262626,
+    "n_degenerate": 3,
+    "frac_degenerate": 0.0003787878787878788,
+    "per_seed_disconnected_frac": {
+      "grid_circular_voids": 0.4666666666666667,
+      "nine_circle": 0.44722222222222224,
+      "four_circle": 0.4222222222222222,
+      "square": 0.2916666666666667,
+      "cross_rectangular": 0.24027777777777778,
+      "small_square_cross": 0.2361111111111111,
+      "circle": 0.23333333333333334,
+      "circle_half_quarter": 0.16527777777777777,
+      "hexagonal": 0.05555555555555555,
+      "reentrant_bowtie": 0.05277777777777778,
+      "hourglass": 0.015277777777777777
+    }
+  }
+}

@@ -1,8 +1,9 @@
 """
 Tests for pipeline/phase5_cvae/losses.py.
 
-losses.py itself only imports torch/torch.nn/torch.nn.functional at module
-level (the phase4-surrogate import is done lazily via importlib inside
+losses.py imports torch/torch.nn/torch.nn.functional plus real_physics
+(RealPhysicsNu - safe leaf module, no sys.path tricks of its own) at module
+level; the phase4-surrogate import is done lazily via importlib inside
 load_frozen_surrogate(), specifically to dodge the bare-import collision
 documented in tests/conftest.py), so a top-level import here is safe.
 """
@@ -17,6 +18,8 @@ from pipeline.phase5_cvae.losses import (
     prior_sample_regularization,
     property_consistency_loss,
     property_consistency_loss_ensemble,
+    real_physics_loss,
+    real_physics_prior_loss,
     reconstruction_loss,
     tv_loss,
 )
@@ -62,7 +65,7 @@ class TestReconstructionLoss:
         assert reconstruction_loss(bad, target) > reconstruction_loss(good, target)
 
     def test_scales_by_batch_not_by_all_elements(self):
-        # sum-per-pixel / batch_size (not mean over everything) — batch of 1
+        # sum-per-pixel / batch_size (not mean over everything) - batch of 1
         # vs batch of 2 with identical per-sample content should give the
         # same per-sample loss value.
         img = torch.full((1, 1, 4, 4), 0.7)
@@ -263,6 +266,81 @@ class TestPriorSampleRegularization:
             decoder, latent_dim=4, condition=condition, lambda_periodic=1.0,
         )
         assert stats_a["prior_periodic"].item() != stats_b["prior_periodic"].item()
+
+
+FE_PARAMS_SMALL = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+
+
+class TestRealPhysicsLoss:
+    """real_physics_loss() dùng FE-solve THẬT (không surrogate) - kiểm tra
+    'ống dẫn' (shape/dtype/differentiability/resize/subsample), KHÔNG lặp
+    lại kiểm chứng công thức đạo hàm (đã có ở
+    tests/test_phase5_real_physics.py::TestGradientCorrectness)."""
+
+    def test_is_differentiable_wrt_density(self):
+        density = torch.rand(2, 1, 8, 8, requires_grad=True)
+        condition = torch.zeros(2, 2)
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL)
+        assert loss.dim() == 0
+        loss.backward()
+        assert density.grad is not None
+        assert torch.all(torch.isfinite(density.grad))
+
+    def test_accepts_3d_density_without_channel_dim(self):
+        density = torch.rand(2, 8, 8, requires_grad=True)
+        condition = torch.zeros(2, 2)
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL)
+        loss.backward()
+        assert density.grad is not None
+
+    def test_subsample_restricts_batch(self):
+        """subsample=1 chỉ nên lan gradient tới 1 trong 3 mẫu trong batch -
+        2 mẫu còn lại phải có gradient đúng bằng 0."""
+        torch.manual_seed(0)
+        density = torch.rand(3, 1, 8, 8, requires_grad=True)
+        condition = torch.zeros(3, 2)
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL, subsample=1)
+        loss.backward()
+        n_nonzero_samples = (density.grad.abs().sum(dim=(1, 2, 3)) > 0).sum().item()
+        assert n_nonzero_samples == 1
+
+    def test_resize_handles_mismatched_resolution(self):
+        """decoder output (vd 16x16) khác lưới FE (6x6 trong FE_PARAMS_SMALL) -
+        phải resize khả vi (F.interpolate) chứ không lỗi shape."""
+        density = torch.rand(1, 1, 16, 16, requires_grad=True)
+        condition = torch.zeros(1, 2)
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL)
+        assert torch.isfinite(loss)
+        loss.backward()
+        assert density.grad.shape == density.shape
+
+
+class TestRealPhysicsPriorLoss:
+    """real_physics_prior_loss() - áp lên ảnh decode từ z ~ PRIOR (cùng chế
+    độ model.generate()), cùng lý do với prior_sample_regularization()."""
+
+    def _make_decoder(self, latent_dim=4, resolution=8):
+        from pipeline.phase5_cvae.model import Decoder
+        return Decoder(condition_dim=2, latent_dim=latent_dim,
+                        channels=(8, 4), resolution=resolution)
+
+    def test_gradient_flows_to_decoder_params(self):
+        decoder = self._make_decoder()
+        condition = torch.zeros(2, 2)
+        loss = real_physics_prior_loss(decoder, latent_dim=4, condition=condition,
+                                        fe_params=FE_PARAMS_SMALL)
+        loss.backward()
+        assert any(p.grad is not None and p.grad.abs().sum() > 0
+                   for p in decoder.parameters())
+
+    def test_uses_fresh_random_z_each_call(self):
+        decoder = self._make_decoder()
+        condition = torch.zeros(2, 2)
+        loss_a = real_physics_prior_loss(decoder, latent_dim=4, condition=condition,
+                                          fe_params=FE_PARAMS_SMALL)
+        loss_b = real_physics_prior_loss(decoder, latent_dim=4, condition=condition,
+                                          fe_params=FE_PARAMS_SMALL)
+        assert loss_a.item() != loss_b.item()
 
 
 class TestCvaeLoss:

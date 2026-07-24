@@ -1,0 +1,14 @@
+{
+  "outputs/phase5/self_play/best_of_n_gamma20_manuf_n1500_fp.json": {
+    "n_conditions": 24,
+    "r2_point_estimate": 0.08973685882949511,
+    "r2_ci95_lo": -0.9310625330709137,
+    "r2_ci95_hi": 0.5529571821014551,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 21,
+    "hit_rate_point_estimate": 0.9047619047619048,
+    "hit_rate_wilson_ci95_lo": 0.7108541613925933,
+    "hit_rate_wilson_ci95_hi": 0.9734817912030528
+  }
+}

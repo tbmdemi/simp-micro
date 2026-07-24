@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase5_cvae/best_of_n_eval.py — the "fix that works" for
+Tests for pipeline/phase5_cvae/best_of_n_eval.py - the "fix that works" for
 Phase 5 surrogate exploitation (best-of-N + real-FE selection at inference;
 see README §5 and outputs/phase5/self_play/best_of_n_result.json). This is
 the highest-priority file to protect from regression: it is now the
@@ -8,7 +8,7 @@ officially recommended way to get a trustworthy geometry out of the cVAE
 here (wrong best-candidate selection, wrong hit-rate/R2 bookkeeping, wrong
 FE-call budget in --k-fe-verify mode) would be worse than a crash.
 
-Imports are lazy inside each test — best_of_n_eval.py does
+Imports are lazy inside each test - best_of_n_eval.py does
 `sys.path.insert(...)` + bare `from dataset import X` / `from self_play
 import load_cvae` / etc. at import time (see tests/conftest.py docstring).
 """
@@ -36,7 +36,7 @@ def _write_cvae_checkpoint(path, latent_dim=4, resolution=64,
 def _write_test_npz(path, v12_values, n_seeds=1):
     """Write a test.npz with EXACTLY len(v12_values) samples, so
     `rng.choice(len(test_ds), size=n_conditions, replace=False)` is forced
-    to select all of them (in some order) — makes which target conditions
+    to select all of them (in some order) - makes which target conditions
     get used in the test fully deterministic regardless of the RNG seed."""
     n = len(v12_values)
     seed_classes = np.array([f"seed{i}" for i in range(n_seeds)], dtype=object)
@@ -86,7 +86,7 @@ class TestBestOfNOracleSelectionLogic:
 
         # Preset FE results, consumed in call order. best_of_n() iterates
         # conditions in the order returned by np.random.default_rng(seed)
-        # .choice(...) — with exactly 2 samples in test.npz requesting 2,
+        # .choice(...) - with exactly 2 samples in test.npz requesting 2,
         # both are always selected, but order can vary; key by target value
         # instead of call position so the test doesn't depend on that order.
         fe_results_by_target = {
@@ -96,7 +96,7 @@ class TestBestOfNOracleSelectionLogic:
         current_target = {}
         # best_of_n() re-evaluates FE on imgs[0] a SECOND time (as
         # `v12_first`, after already scoring it once inside the `fe_order`
-        # loop) — real FE is deterministic given the same image, so index
+        # loop) - real FE is deterministic given the same image, so index
         # by per-target call count and replay values[0] once the preset
         # sequence for that target is exhausted, instead of a pop() queue
         # (which would desync on that extra call).
@@ -122,7 +122,7 @@ class TestBestOfNOracleSelectionLogic:
         # `model` module that best_of_n_eval.py's own call chain actually
         # uses (self_play -> adversarial_dataset -> bare `from model import
         # CVAE`, per tests/conftest.py's docstring) are TWO DISTINCT module
-        # objects/class objects for the same file — patching the dotted
+        # objects/class objects for the same file - patching the dotted
         # CVAE would silently patch a class nothing at runtime uses. Import
         # boe_mod first (already done above) to trigger the bare-import
         # chain, then grab the CVAE class from sys.modules["model"].
@@ -151,7 +151,7 @@ class TestBestOfNOracleSelectionLogic:
         assert result["k_fe_verify"] == 3  # defaults to n_samples when not set
 
         # target_v12 in the result retains float32 storage precision (e.g.
-        # -0.3 -> -0.30000001192092896) — round for lookup, same as
+        # -0.3 -> -0.30000001192092896) - round for lookup, same as
         # tracking_generate() above.
         by_target = {round(c["target_v12"], 3): c for c in result["per_condition"]}
         assert by_target[-0.5]["v12_best"] == pytest.approx(-0.55)
@@ -161,7 +161,7 @@ class TestBestOfNOracleSelectionLogic:
 
 class TestBestOfNPracticalMode:
     """k_fe_verify=K: only K (of N) candidates should ever reach the real
-    FE solver — the whole point of the 'practical' mode is bounding FE cost."""
+    FE solver - the whole point of the 'practical' mode is bounding FE cost."""
 
     def test_k_fe_verify_bounds_real_fe_call_count(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import best_of_n_eval as boe_mod
@@ -185,7 +185,7 @@ class TestBestOfNPracticalMode:
 
         assert result["k_fe_verify"] == 4
         # <= because a real FE solve can (rarely) fail on a tiny/degenerate
-        # grid and get skipped — but it must never exceed the K budget.
+        # grid and get skipped - but it must never exceed the K budget.
         assert result["n_fe_calls_total"] <= 3 * 4
         assert result["n_fe_calls_total"] > 0
 
@@ -195,7 +195,7 @@ class TestBestOfNPracticalMode:
         """With k_fe_verify < n_samples, evaluate_density_field must be
         called close to K times (K from the ranked loop, +1 for the
         separate `v12_first` re-scoring of candidate 0 that best_of_n()
-        always does) rather than N times — regression guard against
+        always does) rather than N times - regression guard against
         silently falling back to scoring every candidate (which would
         defeat the whole cost-saving point of --k-fe-verify)."""
         from pipeline.phase5_cvae import best_of_n_eval as boe_mod
@@ -281,7 +281,7 @@ class TestRequireManufacturable:
     """Roadmap 6.2/6.3: --require-manufacturable should restrict the
     candidate pool (ranking + FE verification) to images that pass
     manufacturability.check_manufacturability(), while still reporting
-    v12_first (single-shot baseline) unfiltered — see best_of_n_eval.py."""
+    v12_first (single-shot baseline) unfiltered - see best_of_n_eval.py."""
 
     def test_filters_candidate_pool_to_manufacturable_only(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import best_of_n_eval as boe_mod

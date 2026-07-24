@@ -1,0 +1,59 @@
+{
+  "n_total_raw": 7920,
+  "n_dropped_degenerate": 3,
+  "n_train_before_augment": 5541,
+  "n_train_after_augment": 33246,
+  "n_val": 1188,
+  "n_test": 1188,
+  "seed_distribution_train": {
+    "circle": 504,
+    "circle_half_quarter": 504,
+    "cross_rectangular": 503,
+    "four_circle": 503,
+    "grid_circular_voids": 504,
+    "hexagonal": 504,
+    "hourglass": 504,
+    "nine_circle": 504,
+    "reentrant_bowtie": 504,
+    "small_square_cross": 504,
+    "square": 503
+  },
+  "seed_distribution_val": {
+    "circle": 108,
+    "circle_half_quarter": 108,
+    "cross_rectangular": 108,
+    "four_circle": 108,
+    "grid_circular_voids": 108,
+    "hexagonal": 108,
+    "hourglass": 108,
+    "nine_circle": 108,
+    "reentrant_bowtie": 108,
+    "small_square_cross": 108,
+    "square": 108
+  },
+  "seed_distribution_test": {
+    "circle": 108,
+    "circle_half_quarter": 108,
+    "cross_rectangular": 108,
+    "four_circle": 108,
+    "grid_circular_voids": 108,
+    "hexagonal": 108,
+    "hourglass": 108,
+    "nine_circle": 108,
+    "reentrant_bowtie": 108,
+    "small_square_cross": 108,
+    "square": 108
+  },
+  "v12_range_train": [
+    -1.9527226686477661,
+    0.6358908414840698
+  ],
+  "v12_range_val": [
+    -0.7492191195487976,
+    0.23561657965183258
+  ],
+  "v12_range_test": [
+    -0.8260668516159058,
+    0.19599904119968414
+  ]
+}
