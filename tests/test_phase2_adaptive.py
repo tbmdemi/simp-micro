@@ -15,6 +15,7 @@ from pipeline.phase2_multi_batch.adaptive import (
     _load_accumulated_results,
     _narrow_params,
     _relative_improvement,
+    compute_seed_sample_allocation,
     decide_next_action,
 )
 from pipeline.phase2_multi_batch.params import BatchMode, PipelineConfig
@@ -71,6 +72,98 @@ class TestFillSeeds:
         seeds = ["circle", "square", "hourglass", "four_circle", "hexagonal", "nine_circle"]
         assert _fill_seeds(seeds) == seeds
 
+    def test_none_seed_scores_preserves_original_fixed_order(self):
+        """seed_scores=None (mặc định) phải cho kết quả GIỐNG HỆT hành vi
+        gốc (không truyền seed_scores) - tương thích ngược 100%."""
+        assert _fill_seeds(["circle"], seed_scores=None) == _fill_seeds(["circle"])
+
+    def test_seed_scores_prioritizes_higher_score_seeds(self):
+        """Roadmap 6.2/6.3: khi có seed_scores, seed điểm cao phải được
+        thêm TRƯỚC seed điểm thấp, bất kể thứ tự trong _ALL_SEEDS."""
+        from pipeline.phase2_multi_batch.adaptive import _ALL_SEEDS
+        # hexagonal đứng SAU circle/square trong _ALL_SEEDS nhưng cho điểm
+        # cao nhất - phải được ưu tiên thêm trước nếu seed_scores tôn trọng.
+        scores = {s: 0.0 for s in _ALL_SEEDS}
+        scores["hexagonal"] = 0.9
+        result = _fill_seeds([], seed_scores=scores)
+        assert len(result) == 5
+        assert result[0] == "hexagonal"
+
+    def test_empty_seed_scores_dict_behaves_like_none(self):
+        """seed_scores={} (vd chưa có dữ liệu manufacturability nào) phải
+        rơi về đúng thứ tự cố định gốc - {} là falsy trong Python."""
+        assert _fill_seeds(["circle"], seed_scores={}) == _fill_seeds(["circle"])
+
+
+class TestComputeSeedSampleAllocation:
+    def _results(self, seed, n, auxetic_frac, manuf_frac_among_auxetic):
+        """n mẫu cho 1 seed: auxetic_frac tỷ lệ v12<0, và trong nhóm auxetic
+        đó, manuf_frac_among_auxetic tỷ lệ passes_all=True (mô phỏng đúng
+        joint_rate = auxetic AND manufacturable đồng thời)."""
+        rows = []
+        n_aux = int(n * auxetic_frac)
+        n_aux_manuf = int(n_aux * manuf_frac_among_auxetic)
+        for i in range(n):
+            is_aux = i < n_aux
+            passes = is_aux and (i < n_aux_manuf)
+            rows.append({
+                "success": True, "seed": seed,
+                "v12": -0.5 if is_aux else 0.3,
+                "passes_all": passes,
+            })
+        return rows
+
+    def test_preserves_total_budget(self):
+        """Tổng số mẫu phân bổ phải xấp xỉ n_samples_baseline * len(seeds) -
+        đây là ĐIỂM MẤU CHỐT: không được làm giảm tổng kích thước batch so
+        với hành vi chia đều gốc."""
+        results = (
+            self._results("circle_half_quarter", 100, 0.6, 0.9)
+            + self._results("hexagonal", 100, 0.6, 0.1)
+        )
+        allocation = compute_seed_sample_allocation(
+            results, ["circle_half_quarter", "hexagonal"], n_samples_baseline=80,
+        )
+        assert sum(allocation.values()) == pytest.approx(160, abs=5)
+
+    def test_better_seed_gets_more_samples(self):
+        results = (
+            self._results("circle_half_quarter", 100, 0.6, 0.9)  # joint_rate cao
+            + self._results("hexagonal", 100, 0.6, 0.1)           # joint_rate thấp
+        )
+        allocation = compute_seed_sample_allocation(
+            results, ["circle_half_quarter", "hexagonal"], n_samples_baseline=80,
+        )
+        assert allocation["circle_half_quarter"] > allocation["hexagonal"]
+
+    def test_no_seed_reduced_below_floor(self):
+        """min_weight_frac đảm bảo seed tệ nhất vẫn nhận >= floor * uniform_share,
+        không bị loại hoàn toàn (đa dạng hình học vẫn cần cho dataset ML)."""
+        results = (
+            self._results("circle_half_quarter", 100, 0.6, 1.0)
+            + self._results("hexagonal", 100, 0.6, 0.0)  # joint_rate = 0 tuyệt đối
+        )
+        allocation = compute_seed_sample_allocation(
+            results, ["circle_half_quarter", "hexagonal"], n_samples_baseline=80,
+            min_weight_frac=0.3,
+        )
+        assert allocation["hexagonal"] >= 1
+
+    def test_unknown_seed_gets_neutral_score_not_penalized(self):
+        """Seed hoàn toàn mới (chưa có dữ liệu) không bị phạt oan - nhận
+        điểm trung lập (trung bình các seed đã biết)."""
+        results = self._results("circle_half_quarter", 100, 0.6, 0.9)
+        allocation = compute_seed_sample_allocation(
+            results, ["circle_half_quarter", "brand_new_seed"], n_samples_baseline=80,
+        )
+        assert allocation["brand_new_seed"] >= 1
+
+    def test_no_data_at_all_falls_back_to_uniform(self):
+        allocation = compute_seed_sample_allocation(
+            [], ["circle", "square", "hexagonal"], n_samples_baseline=80,
+        )
+        assert allocation == {"circle": 80, "square": 80, "hexagonal": 80}
+
 
 class TestNarrowParams:
     def _valid_results(self, n=30, seed=0):
@@ -104,6 +197,42 @@ class TestNarrowParams:
         gentle_span = gentle["volfrac"]["range"][1] - gentle["volfrac"]["range"][0]
         aggressive_span = aggressive["volfrac"]["range"][1] - aggressive["volfrac"]["range"][0]
         assert aggressive_span <= gentle_span + 1e-9
+
+    def test_backward_compatible_when_passes_all_absent(self):
+        """Kết quả cũ/mock (không có field passes_all) phải cho kết quả
+        giống hệt trước khi thêm sort theo manufacturability - None coi là
+        trung lập, không phải bị phạt."""
+        current = {"volfrac": {"range": [0.3, 0.7]}}
+        results = self._valid_results(n=60)  # không có passes_all key
+        result = _narrow_params(results, current, n_batches_completed=2)
+        # so sánh với sort thuần v12 (hành vi gốc) - phải khớp hệt nhau
+        rng_check = sorted(results, key=lambda x: x["v12"])
+        n_best = max(5, int(len(rng_check) * 0.20))
+        expected_vals = [r["params"]["volfrac"] for r in rng_check[:n_best]]
+        assert result["volfrac"]["range"][0] == pytest.approx(
+            np.percentile(expected_vals, 15)
+        )
+
+    def test_prefers_manufacturable_samples_over_pure_v12(self):
+        """Với đủ mẫu manufacturable, narrow phải ưu tiên chọn TỪ NHÓM
+        manufacturable trước, dù có mẫu non-manufacturable v12 tốt hơn."""
+        current = {"volfrac": {"range": [0.0, 1.0]}}
+        # 10 mẫu "manufacturable" (v12 kém hơn, volfrac quanh 0.5) +
+        # 10 mẫu "không manufacturable" (v12 tốt hơn NHIỀU, volfrac quanh 0.9)
+        manuf_group = [
+            {"success": True, "v12": -0.3, "passes_all": True, "params": {"volfrac": 0.5}}
+            for _ in range(10)
+        ]
+        non_manuf_group = [
+            {"success": True, "v12": -0.9, "passes_all": False, "params": {"volfrac": 0.9}}
+            for _ in range(10)
+        ]
+        results = manuf_group + non_manuf_group
+        result = _narrow_params(results, current, n_batches_completed=2)
+        lo, hi = result["volfrac"]["range"]
+        # Vùng narrow phải nằm quanh 0.5 (nhóm manufacturable), KHÔNG lệch
+        # về 0.9 (nhóm v12 tốt hơn nhưng không manufacturable).
+        assert lo < 0.6
 
 
 class TestEstimateTotalBins:

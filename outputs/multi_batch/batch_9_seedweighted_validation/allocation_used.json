@@ -1,0 +1,13 @@
+{
+  "circle": 8,
+  "square": 9,
+  "hourglass": 6,
+  "four_circle": 4,
+  "hexagonal": 3,
+  "nine_circle": 12,
+  "cross_rectangular": 8,
+  "grid_circular_voids": 12,
+  "small_square_cross": 7,
+  "circle_half_quarter": 14,
+  "reentrant_bowtie": 16
+}

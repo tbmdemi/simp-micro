@@ -463,7 +463,10 @@ def main() -> None:
             batch_id=batch_config.batch_id,
             seed_map=batch_config.seeds,
             objective_map=batch_config.objectives,
+            n_samples_per_seed=batch_config.n_samples_per_seed,
         )
+        if batch_config.n_samples_per_seed:
+            print(f"  Phân bổ mẫu theo seed (roadmap 6.2/6.3): {batch_config.n_samples_per_seed}")
 
         print(f"  Design has {len(design)} rows.")
 

@@ -239,6 +239,7 @@ def generate_design(
     batch_id: int,
     seed_map: List[str],
     objective_map: List[str],
+    n_samples_per_seed: Optional[Dict[str, int]] = None,
 ) -> "pd.DataFrame":
     """Generate a full factorial design DataFrame across seeds x objectives x samples.
 
@@ -247,12 +248,18 @@ def generate_design(
     with columns for parameters, ``seed``, ``objective``, and ``batch_id``.
 
     Args:
-        n_samples: Number of parameter samples per (seed, objective) pair.
+        n_samples: Number of parameter samples per (seed, objective) pair -
+            dùng làm fallback cho seed không có trong n_samples_per_seed.
         param_ranges: Dict mapping param name -> (low, high).
         strategy: SamplingStrategy enum value.
         batch_id: Batch identifier for tracking.
         seed_map: List of seed shape names.
         objective_map: List of objective function names.
+        n_samples_per_seed: Roadmap 6.2/6.3 (xem adaptive.py::
+            compute_seed_sample_allocation) - nếu truyền vào, ghi đè
+            n_samples riêng cho từng seed (vd ưu tiên seed manufacturability
+            tốt hơn). None (mặc định) = chia đều n_samples cho mọi seed,
+            đúng hành vi gốc - tương thích ngược 100%.
 
     Returns:
         DataFrame with columns: seed, objective, batch_id, *params.
@@ -278,14 +285,15 @@ def generate_design(
 
     rows = []
     for seed in seed_map:
+        n_for_seed = (n_samples_per_seed or {}).get(seed, n_samples)
         for obj in objective_map:
             samples_dict = generate_samples(
-                n=n_samples,
+                n=n_for_seed,
                 active_params=active_params,
                 strategy=strategy_str,
                 seed=(hash(f"{batch_id}_{seed}_{obj}") & 0x7FFFFFFF),
             )
-            for i in range(n_samples):
+            for i in range(n_for_seed):
                 row = {
                     "seed": seed,
                     "objective": obj,

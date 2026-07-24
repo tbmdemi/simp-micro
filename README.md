@@ -50,7 +50,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 |-------|-----------|--------|-------|
 | 0 | Core SIMP Engine | ✅ Ổn định | 11 loại seed, mục tiêu auxetic, PBC, đồng nhất hóa dựa trên năng lượng |
 | 1 | LHS Screening | ✅ Hoàn thành | Phân tích độ nhạy: `volfrac` là tham số chi phối (r ≈ 0,87–0,96). Lịch sử debug lần chạy đầu (0 mẫu auxetic): xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-1--lhs-screening) |
-| 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành | **8/8 lô (batch)**, 7.920 mẫu, **82,1% auxetic**, ν₁₂ tốt nhất = −0,807. Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu |
+| 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability | **8/8 lô (batch)**, 7.920 mẫu, **82,1% auxetic**, ν₁₂ tốt nhất = −0,807. Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: phân tích ngược xác nhận SEED (không phải tham số DOE liên tục) chi phối manufacturability — thêm phân bổ mẫu theo seed, validate bằng 1 lô thật (99 mẫu): tỷ lệ đồng thời auxetic+manufacturable tăng ×1,44-1,76 so với lịch sử. Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2---hoàn-thành) bên dưới |
 | 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành | 7.920 mẫu → trường mật độ 64×64, lọc outlier, chia tập 70/15/15 theo phân tầng seed, tăng cường đối xứng theo vật lý (train: 33.120 mẫu) |
 | 4 | CNN Surrogate Model | ✅ Hoàn thành | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set: ν₁₂ = 0,910, ν₂₁ = 0,911, volfrac = 0,982 (MAE 0,037 / 0,036 / 0,007). Xem [Phase 4](#4-cnn-surrogate-model-phase-4---hoàn-thành) bên dưới |
 | 5 | Conditional VAE | ✅ Thiết kế ngược qua best-of-N + FE thực | Một mẫu cVAE đơn lẻ (single-shot) không đáng tin cậy về auxeticity (khai thác surrogate). Quy trình chính thức: sinh N ứng viên, chọn ứng viên tốt nhất bằng **FE thực** — R²(v12, FE thực) = **+0,44 đến +0,60**, tỷ lệ trúng auxetic thực = **100%**. Hình học sinh ra cũng hiếm khi *khả thi để chế tạo* kể cả khi chính xác — giảm nhẹ bằng lọc ở bước inference (`--require-manufacturable`, N lớn) với cái giá về R². Xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực) bên dưới; toàn bộ quá trình thử-sai (gamma-sweep, self-play, ensemble, regularization) xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) |
@@ -202,6 +202,20 @@ python -m pipeline.phase2_multi_batch.main --phase1-summary outputs/pipeline/pha
 | 8 | Optimized LHS (tinh chỉnh) | 1.056 | 87,8% | **−0,807** |
 
 Khoảng `volfrac` hội tụ từ `[0,45, 0,70]` xuống `[0,50, 0,58]` ở lô 8; pipeline tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu (độ thưa ổn định ~18,5%).
+
+**Cập nhật 2026-07-24 — manufacturability đưa vào chính DOE (không chỉ lọc ở cuối như Phase 5):** phân tích ngược 7.920 mẫu ở trên cho thấy tham số DOE liên tục (`volfrac, penal, rmin, move, void_size_frac`) hầu như KHÔNG tương quan với manufacturability (|Spearman r| < 0,12 mọi trường hợp, kể cả tách riêng từng seed) — biến giải thích chi phối là **SEED** (7,9% ở `hexagonal` tới 62,8% ở `reentrant_bowtie`, chênh lệch 8 lần). `_narrow_params()` (chỉ narrow tham số liên tục) vì vậy không phải đòn bẩy đúng. Đã thêm:
+- Đo manufacturability **tại thời điểm sinh** (`runner.py`, miễn phí, không tốn FE thêm) cho mọi mẫu tương lai.
+- `compute_seed_sample_allocation()` (`adaptive.py`): phân bổ ngân sách mẫu **lệch theo seed** (ưu tiên seed vừa auxetic vừa manufacturable) thay vì chia đều 1/11 như trước đây (100% các batch 1-8 đều chia đều).
+
+**Validate bằng 1 batch thật (99 mẫu, real FE, cùng khoảng tham số đã narrow ở lô 8 — chỉ đổi đúng 1 biến: trọng số seed):**
+
+| | passes_all (tổng) | passes_all (trong nhóm auxetic) | auxetic ∧ manufacturable (joint) |
+|---|---|---|---|
+| Lịch sử lô 1-8 (n=7.920) | 22,4% | 17,5% | 14,4% |
+| Lô 8 riêng (n=1.056, mốc so sánh công bằng nhất) | – | – | 17,6% |
+| **Lô 9 mới (seed-weighted, n=99)** | **35,4%** | **32,1%** | **25,3%** |
+
+Đánh đổi: tỷ lệ auxetic tổng thể của lô 9 thấp hơn lô 8 (78,8% so với 87,8%, vì giảm tỷ trọng `nine_circle`/`grid_circular_voids` — 2 seed auxetic gần như tuyệt đối nhưng manufacturability kém), bù lại bằng manufacturability trong nhóm auxetic tăng gần gấp đôi. Xem toàn bộ phân tích + code + test: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-2--manufacturability-đưa-vào-chính-doe).
 
 ### 3. Dataset Build (Phase 3) — ✅ hoàn thành
 
@@ -357,7 +371,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **307/307 test pass** (`pytest tests/ -q`, ~4s).
+Trạng thái hiện tại: **342/342 test pass** (`pytest tests/ -q`, ~4s).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -399,7 +413,7 @@ Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết củ
 
 5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** — `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`. Dataset/surrogate/cVAE hiện tại chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved` làm target, không phải bộ target đầy đủ trong roadmap ban đầu.
 
-6. **Test tự động cho `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` mới chỉ phủ logic thuần** (quyết định ACTIVE/FIXED, sampling Sobol/LHS, coverage/adaptive stop-refine-expand, augment đối xứng, stratify chống rò rỉ dữ liệu — 99 test mới, tổng 307/307). Vẫn **chưa có test** cho `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O gọi FE thật (`screening_parallel.py`'s main loop, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`).
+6. **Test tự động cho `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` mới chỉ phủ logic thuần** (quyết định ACTIVE/FIXED, sampling Sobol/LHS, coverage/adaptive stop-refine-expand, augment đối xứng, stratify chống rò rỉ dữ liệu — 99 test; cộng thêm 35 test mới cho `force_periodic()` và phân bổ mẫu theo seed ở Phase 2, tổng 342/342). `multi_batch/runner.py::evaluate_single` giờ có test cho phần logic manufacturability mới thêm (`run_simp` được mock, không gọi FE thật) — nhưng bản thân lệnh gọi SIMP FE thật bên trong vẫn **chưa có test**, cũng như `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O khác (`screening_parallel.py`'s main loop, `visualize.py`).
 
 7. **Một số tài liệu trực quan (HTML dashboard) từng bị lỗi thời** so với kết quả đã xác thực — cụ thể `html/inverse_auxetic_report.html` (sinh ngày 2026-07-16) có bảng xếp hạng seed trái ngược hoàn toàn với dữ liệu Phase 2 đã xác thực; đã gắn banner cảnh báo rõ ràng ở đầu trang và tại mục Kết luận trỏ về `README.md` + báo cáo Phase 3-5 hiện hành (`html/reports/ml_pipeline_phase3to5.html`). Đây là rủi ro mang tính hệ thống (tài liệu trực quan không tự động đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
 
@@ -423,7 +437,7 @@ This section consolidates every known gap/limitation of the project in one place
 
 5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** — `compute_homogenized_tensor()` does not yet export `E₁₁/E₀, E₂₂/E₀`. The current dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved` as targets, not the full target set originally planned.
 
-6. **Automated tests for `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` cover pure logic only** (ACTIVE/FIXED decisions, Sobol/LHS sampling, coverage/adaptive stop-refine-expand, symmetry augmentation, leakage-safe stratification — 99 new tests, 307/307 total). Still **no tests** for `pipeline/seeds/*.py` or the I/O-heavy CLI/orchestration functions that call real FE (`screening_parallel.py`'s main loop, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`).
+6. **Automated tests for `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` cover pure logic only** (ACTIVE/FIXED decisions, Sobol/LHS sampling, coverage/adaptive stop-refine-expand, symmetry augmentation, leakage-safe stratification — 99 tests; plus 35 newer tests for `force_periodic()` and seed-weighted sample allocation in Phase 2, 342/342 total). `multi_batch/runner.py::evaluate_single` now has tests for the new manufacturability-logging logic (`run_simp` is mocked, no real FE call) — but the actual SIMP FE call inside it is still **untested**, as are `pipeline/seeds/*.py` and other I/O-heavy CLI/orchestration functions (`screening_parallel.py`'s main loop, `visualize.py`).
 
 7. **Some visual documentation (HTML dashboards) had gone stale** relative to validated results — specifically `html/inverse_auxetic_report.html` (generated 2026-07-16) contained a seed ranking table that directly contradicted the validated Phase 2 data; it now carries a clear warning banner at the top and in its Conclusion section pointing to `README.md` and the current Phase 3-5 report (`html/reports/ml_pipeline_phase3to5.html`). This is a systemic risk (visual docs don't auto-sync with code/data) worth watching when adding new dashboards.
 

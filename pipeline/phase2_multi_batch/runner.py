@@ -6,6 +6,18 @@ Wraps simp.runner.run_simp with:
   - Multiprocessing Pool execution
   - CSV/JSON result persistence
   - Progress tracking per batch
+  - Manufacturability đo TẠI THỜI ĐIỂM SINH (roadmap 6.2/6.3 - xem
+    pipeline/phase5_cvae/manufacturability.py) - miễn phí, không tốn FE
+    thêm, vì đọc lại đúng file PNG cuối cùng mà run_simp() đã lưu (cùng
+    file Phase 3's build_npz.py sẽ đọc để xây dataset ML) - đảm bảo con số
+    đo được ở đây khớp CHÍNH XÁC với những gì downstream (surrogate/cVAE)
+    sẽ thấy, thay vì tính lại trên xPhys thô (sẽ lệch 1 chút so với ảnh đã
+    qua matplotlib render + BOX resize mà Phase 3 thực sự dùng). Phát hiện
+    dẫn tới thay đổi này: phân tích ngược 7.920 mẫu Phase 2 đã có cho thấy
+    tham số DOE liên tục (volfrac/penal/rmin/move/void_size_frac) hầu như
+    không tương quan với manufacturability (|r|<0.12 mọi trường hợp), trong
+    khi SEED giải thích chênh lệch tới 8 lần (7,9%-62,8%) - xem
+    EXPERIMENT_LOG.md mục "Phase 2 — Manufacturability".
 """
 
 import json
@@ -17,10 +29,34 @@ from multiprocessing import Pool, cpu_count
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from simp.runner import run_simp
+from pipeline.phase5_cvae.manufacturability import check_manufacturability
+
+MANUF_RESOLUTION = 64  # khớp pipeline/phase3_dataset/build_npz.py mặc định
+
+
+def _compute_manufacturability_from_saved_png(sample_dir: str, n_iters: int) -> Optional[Dict]:
+    """Đọc lại iteration_{n_iters:05d}.png (đã lưu bởi run_simp() qua
+    simp/io/visualizer.py::save_density_image - LUÔN lưu ảnh cuối cùng bất
+    kể save_every, xem simp/runner.py) rồi resize 64x64 bằng PIL BOX -
+    ĐÚNG HỆT logic pipeline/phase3_dataset/build_npz.py::load_and_resize() -
+    để manufacturability đo ở đây khớp chính xác với ảnh Phase 3 sẽ dùng.
+    Trả về None nếu không tìm thấy/đọc được file (không nên chặn cả batch
+    vì 1 mẫu lỗi I/O hiếm gặp)."""
+    png_path = os.path.join(sample_dir, f'iteration_{n_iters:05d}.png')
+    if not os.path.exists(png_path):
+        return None
+    try:
+        im = Image.open(png_path).convert('L')
+        im = im.resize((MANUF_RESOLUTION, MANUF_RESOLUTION), Image.BOX)
+        arr = np.asarray(im, dtype=np.float32) / 255.0
+        return check_manufacturability((arr > 0.5).astype(np.float32))
+    except Exception:
+        return None
 
 # Default fixed parameters (override from config)
 DEFAULT_FIXED: Dict[str, float] = {
@@ -101,6 +137,13 @@ def evaluate_single(task: Tuple[Dict, int]) -> Dict:
         'elapsed_time': None,
         'success': False,
         'error': None,
+        # roadmap 6.2/6.3 - None nếu FE thất bại hoặc không đọc được PNG
+        # (xem _compute_manufacturability_from_saved_png).
+        'is_connected': None,
+        'min_feature_ok': None,
+        'manufacturable': None,
+        'periodic_ok': None,
+        'passes_all': None,
     }
 
     try:
@@ -113,6 +156,16 @@ def evaluate_single(task: Tuple[Dict, int]) -> Dict:
         result['converged'] = bool(output['converged'])
         result['elapsed_time'] = round(elapsed, 2)
         result['success'] = True
+
+        manuf = _compute_manufacturability_from_saved_png(
+            params['output_dir'], result['n_iters'],
+        )
+        if manuf is not None:
+            result['is_connected'] = manuf['is_connected']
+            result['min_feature_ok'] = manuf['min_feature_ok']
+            result['manufacturable'] = manuf['manufacturable']
+            result['periodic_ok'] = manuf['periodic_ok']
+            result['passes_all'] = manuf['passes_all']
     except Exception as e:
         elapsed = time.time() - t0
         result['elapsed_time'] = round(elapsed, 2)

@@ -36,6 +36,12 @@ class TestBatchConfig:
         b = BatchConfig(batch_id=2, output_dir="custom/dir")
         assert b.get_output_dir("outputs/pipeline") == "custom/dir"
 
+    def test_n_samples_per_seed_defaults_to_none(self):
+        """Roadmap 6.2/6.3 (xem adaptive.py::compute_seed_sample_allocation) -
+        mặc định None = giữ hành vi chia đều gốc, tương thích ngược."""
+        b = BatchConfig(batch_id=1)
+        assert b.n_samples_per_seed is None
+
 
 class TestPipelineConfigRoundTrip:
     def test_save_load_preserves_batches_and_enums(self, tmp_path):
@@ -54,6 +60,20 @@ class TestPipelineConfigRoundTrip:
         # Enums must round-trip as enum instances, not raw strings.
         assert loaded.batches[0].strategy == SamplingStrategy.LHS
         assert loaded.batches[0].mode == BatchMode.REFINE
+
+    def test_save_load_preserves_n_samples_per_seed(self, tmp_path):
+        config = PipelineConfig()
+        config.add_batch(BatchConfig(
+            batch_id=1, n_samples=80,
+            n_samples_per_seed={"circle_half_quarter": 40, "hexagonal": 10},
+        ))
+        path = tmp_path / "pipeline_config.json"
+        config.save(str(path))
+
+        loaded = PipelineConfig.load(str(path))
+        assert loaded.batches[0].n_samples_per_seed == {
+            "circle_half_quarter": 40, "hexagonal": 10,
+        }
 
     def test_save_produces_valid_json_with_expected_top_level_keys(self, tmp_path):
         config = default_config()

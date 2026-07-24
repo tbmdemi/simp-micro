@@ -8,6 +8,20 @@ Decision logic:
   - Sparsity > 30% of property space -> EXPAND (new seeds/objectives).
   - Sparsity < 10% but objective still improving -> REFINE (narrow bounds
     around best samples).
+
+Manufacturability (roadmap 6.2/6.3, xem runner.py::evaluate_single):
+    Phân tích ngược 7.920 mẫu Phase 2 đã có (EXPERIMENT_LOG.md mục "Phase 2
+    — Manufacturability") cho thấy tham số DOE liên tục (volfrac, penal,
+    rmin, move, void_size_frac) hầu như KHÔNG tương quan với
+    manufacturability (|Spearman r|<0,12 mọi trường hợp, kể cả khi tách
+    riêng từng seed) - trong khi SEED giải thích chênh lệch tới 8 lần
+    (7,9% ở hexagonal tới 62,8% ở reentrant_bowtie). Vì vậy _narrow_params()
+    (vốn chỉ narrow tham số liên tục) không phải đòn bẩy đúng cho
+    manufacturability - đòn bẩy đúng là TRỌNG SỐ SEED, thêm ở
+    compute_seed_sample_allocation() bên dưới. _narrow_params() vẫn được
+    sửa nhẹ (ưu tiên mẫu manufacturable khi chọn "best" để narrow) để không
+    vô tình lệch tham số theo hướng ngược lại, nhưng đây không phải sửa
+    chính.
 """
 
 from copy import deepcopy
@@ -19,6 +33,7 @@ from pipeline.phase2_multi_batch.coverage import (
     coverage_report,
     find_sparse_regions,
     recommend_new_samples,
+    seed_manufacturability_report,
 )
 from pipeline.phase2_multi_batch.params import BatchConfig, BatchMode, SamplingStrategy
 
@@ -80,15 +95,93 @@ def _relative_improvement(curr: float, prev: float) -> float:
     return (prev - curr) / denom
 
 
-def _fill_seeds(expanded_seeds: List[str]) -> List[str]:
-    """Add seeds from _ALL_SEEDS until we have at least 5."""
+def _fill_seeds(expanded_seeds: List[str],
+                 seed_scores: Optional[Dict[str, float]] = None) -> List[str]:
+    """Add seeds from _ALL_SEEDS until we have at least 5.
+
+    seed_scores: nếu truyền vào (xem seed_manufacturability_report/
+    compute_seed_sample_allocation), ưu tiên thêm seed điểm cao hơn trước
+    thay vì theo thứ tự cố định trong _ALL_SEEDS. None (mặc định) giữ đúng
+    hành vi gốc (thứ tự cố định) - tương thích ngược 100%.
+    """
     result = list(expanded_seeds)
-    for s in _ALL_SEEDS:
+    candidates = [s for s in _ALL_SEEDS if s not in result]
+    if seed_scores:
+        candidates = sorted(candidates, key=lambda s: seed_scores.get(s, 0.0), reverse=True)
+    for s in candidates:
         if len(result) >= 5:
             break
-        if s not in result:
-            result.append(s)
+        result.append(s)
     return result
+
+
+def compute_seed_sample_allocation(
+    all_results: List[Dict],
+    seeds: List[str],
+    n_samples_baseline: int,
+    min_weight_frac: float = 0.3,
+    min_n_for_score: int = 20,
+) -> Dict[str, int]:
+    """Phân bổ LẠI ngân sách mẫu giữa các seed, LỆCH theo hiệu năng thay vì
+    chia đều 1/n_seeds (hành vi gốc trước đây - xem sampling.py::
+    generate_design, luôn cho mỗi seed đúng n_samples mẫu). Tổng ngân sách
+    được BẢO TOÀN (== n_samples_baseline * len(seeds), giống hệt tổng số
+    mẫu hành vi gốc sẽ tạo ra), chỉ phân bổ khác nhau giữa các seed - KHÔNG
+    làm giảm tổng kích thước batch.
+
+    n_samples_baseline: số mẫu MỖI seed sẽ nhận nếu chia đều (đúng ý nghĩa
+    BatchConfig.n_samples gốc truyền vào generate_design()).
+
+    Điểm mỗi seed = joint_rate (đồng thời auxetic VÀ manufacturable, xem
+    seed_manufacturability_report) nếu đã có đủ dữ liệu (>= min_n_for_score
+    mẫu VÀ có dữ liệu manufacturability), fallback về auxetic_rate nếu chưa
+    có dữ liệu manufacturability, fallback về điểm trung lập (trung bình
+    các seed đã biết) nếu seed hoàn toàn mới/quá ít dữ liệu - để không phạt
+    oan 1 seed mới thêm vào.
+
+    min_weight_frac: sàn trọng số tối thiểu (tỷ lệ so với phần chia đều
+    1/n_seeds) - đảm bảo KHÔNG seed nào bị loại hoàn toàn (mỗi seed vẫn góp
+    phần đa dạng hình học cho dataset ML dù joint_rate đo được ở 1 batch
+    nhỏ tình cờ bằng 0 - tránh phạt nặng vì nhiễu thống kê ở mẫu nhỏ).
+
+    Returns:
+        Dict seed -> n_samples (>= 1 mỗi seed), tổng xấp xỉ
+        n_samples_baseline * len(seeds) (có thể lệch vài đơn vị do làm tròn).
+    """
+    seed_report = seed_manufacturability_report(all_results)
+
+    raw_scores: Dict[str, Optional[float]] = {}
+    for s in seeds:
+        info = seed_report.get(s)
+        if info is None or info['n'] < min_n_for_score:
+            raw_scores[s] = None
+            continue
+        raw_scores[s] = (
+            info['joint_rate'] if info['joint_rate'] is not None else info['auxetic_rate']
+        )
+
+    known = [v for v in raw_scores.values() if v is not None]
+    neutral = float(np.mean(known)) if known else 0.2  # 0.2: giả định trung lập khi chưa có gì
+
+    scores = {s: (v if v is not None else neutral) for s, v in raw_scores.items()}
+
+    uniform_share = sum(scores.values()) / len(scores) if scores else 0.0
+    floor = min_weight_frac * uniform_share
+    adjusted = {s: max(v, floor) for s, v in scores.items()}
+
+    total_budget = n_samples_baseline * len(seeds)
+    total_score = sum(adjusted.values())
+    if total_score <= 0:
+        # tất cả điểm bằng 0 (không nên xảy ra vì floor > 0 khi uniform_share > 0,
+        # nhưng phòng trường hợp toàn bộ scores=0.0 và floor cũng =0) -> chia đều.
+        return {s: n_samples_baseline for s in seeds}
+
+    allocation = {}
+    for s in seeds:
+        frac = adjusted[s] / total_score
+        allocation[s] = max(1, round(frac * total_budget))
+
+    return allocation
 
 
 def decide_next_action(
@@ -131,6 +224,15 @@ def decide_next_action(
 
     # ── 1. Load results ──
     all_results = _load_accumulated_results(summaries)
+
+    # ── 1b. Seed-level manufacturability (roadmap 6.2/6.3 - xem docstring
+    # đầu file: đây là đòn bẩy chính cho manufacturability, không phải
+    # narrow tham số liên tục) ──
+    seed_report = seed_manufacturability_report(all_results)
+    seed_scores = {
+        s: (info['joint_rate'] if info['joint_rate'] is not None else info['auxetic_rate'])
+        for s, info in seed_report.items()
+    }
 
     # ── 2. Coverage analysis ──
     cov = coverage_report(all_results, dims=property_dims)
@@ -199,6 +301,7 @@ def decide_next_action(
         'reason': '',
         'next_config': None,
         'sparse_targeted_params': [],
+        'seed_manufacturability': seed_report,
     }
 
     # 4a. Stop conditions — batch limit reached
@@ -259,7 +362,7 @@ def decide_next_action(
 
         next_id = n_completed + 1
         expanded_seeds = list(config.get('active_seeds', [])) if isinstance(config, dict) else (list(config.active_seeds) if hasattr(config, 'active_seeds') else [])
-        expanded_seeds = _fill_seeds(expanded_seeds)
+        expanded_seeds = _fill_seeds(expanded_seeds, seed_scores=seed_scores)
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
@@ -287,7 +390,7 @@ def decide_next_action(
 
         next_id = n_completed + 1
         expanded_seeds = list(config.get('active_seeds', [])) if isinstance(config, dict) else (list(config.active_seeds) if hasattr(config, 'active_seeds') else [])
-        expanded_seeds = _fill_seeds(expanded_seeds)
+        expanded_seeds = _fill_seeds(expanded_seeds, seed_scores=seed_scores)
 
         expanded_objectives = list(config.get('active_objectives', [])) if isinstance(config, dict) else (list(config.active_objectives) if hasattr(config, 'active_objectives') else [])
         if len(expanded_objectives) < 3:
@@ -403,6 +506,14 @@ def decide_next_action(
         config.active_seeds if hasattr(config, 'active_seeds') else ['circle']
     )
 
+    # roadmap 6.2/6.3: phân bổ mẫu LỆCH theo seed thay vì chia đều 1/n_seeds
+    # (xem compute_seed_sample_allocation docstring + module docstring đầu
+    # file) - đây là đòn bẩy chính cho manufacturability, refine mode là
+    # nơi hợp lý nhất để áp dụng (mode "tập trung vào vùng đã biết là tốt").
+    n_samples_per_seed = compute_seed_sample_allocation(
+        all_results, ref_seeds, total_n,
+    )
+
     decision['next_config'] = BatchConfig(
         batch_id=next_id,
         n_samples=total_n,
@@ -411,6 +522,7 @@ def decide_next_action(
         objectives=ref_objectives,
         seeds=ref_seeds,
         param_ranges=narrowed_param_ranges,  # Use narrowed ranges, not original!
+        n_samples_per_seed=n_samples_per_seed,
     )
     # Attach metadata for the caller
     decision['next_config'].narrowed_params = narrowed_active
@@ -481,8 +593,13 @@ def _narrow_params(
         # Default percentiles for manual quantile
         lo_pct, hi_pct = 15, 85
 
-    # Sort by objective (lower = better)
-    sorted_results = sorted(valid, key=lambda x: x['v12'])
+    # Sort by objective (lower = better), ưu tiên mẫu manufacturable trước
+    # (roadmap 6.2/6.3) - chỉ phạt khi passes_all TƯỜNG MINH là False; None
+    # (kết quả cũ/mock chưa có instrumentation này) coi như trung lập, giữ
+    # đúng hành vi gốc (sort thuần theo v12) khi không có dữ liệu manuf.
+    sorted_results = sorted(
+        valid, key=lambda x: (x.get('passes_all') is False, x['v12'])
+    )
     n_best = max(5, int(len(sorted_results) * quantile))
     best = sorted_results[:n_best]
 

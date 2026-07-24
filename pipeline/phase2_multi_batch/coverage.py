@@ -10,6 +10,14 @@ Key functions:
   - find_sparse_regions: locate low-density hyperrectangles
   - coverage_report: textual + dict summary of coverage quality
   - recommend_new_samples: produce parameter hints for next batch
+  - seed_manufacturability_report: per-seed auxetic/manufacturable rates
+    (roadmap 6.2/6.3, xem runner.py::evaluate_single - 'passes_all' được đo
+    TẠI THỜI ĐIỂM SINH, miễn phí, không tốn FE thêm). Kết quả phân tích
+    ngược 7.920 mẫu Phase 2 (xem EXPERIMENT_LOG.md mục "Phase 2 —
+    Manufacturability") cho thấy SEED là biến giải thích chi phối
+    manufacturability (7,9%-62,8% tuỳ seed), không phải tham số DOE liên
+    tục (|r|<0,12 mọi trường hợp) - hàm này tồn tại để adaptive.py dùng
+    SEED làm đòn bẩy chính, thay vì chỉ narrow tham số liên tục như trước.
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -342,6 +350,71 @@ def coverage_report(
                     c = np.corrcoef(v1[:min_len], v2[:min_len])[0, 1]
                     corr_matrix[f'{d1}_vs_{d2}'] = float(c)
         report['correlations'] = corr_matrix
+
+    # roadmap 6.2/6.3 - chỉ tính trên kết quả CÓ dữ liệu manufacturability
+    # (results cũ/mock trước khi thêm instrumentation này có passes_all=None
+    # hoặc thiếu hẳn field - bỏ qua thay vì coi là 0/False, tránh làm sai
+    # lệch số liệu).
+    with_manuf = [r for r in valid if r.get('passes_all') is not None]
+    if with_manuf:
+        report['manufacturability'] = {
+            'n_with_data': len(with_manuf),
+            'frac_manufacturable': round(
+                float(np.mean([bool(r['passes_all']) for r in with_manuf])), 4
+            ),
+            'frac_connected': round(
+                float(np.mean([bool(r['is_connected']) for r in with_manuf])), 4
+            ),
+            'frac_periodic': round(
+                float(np.mean([bool(r['periodic_ok']) for r in with_manuf])), 4
+            ),
+        }
+
+    return report
+
+
+def seed_manufacturability_report(results: List[Dict]) -> Dict[str, Dict]:
+    """Per-seed auxetic rate, manufacturable rate, và joint rate (auxetic
+    VÀ manufacturable đồng thời) - dùng bởi adaptive.py để quyết định
+    trọng số seed. Bỏ qua kết quả thiếu 'passes_all' (dữ liệu cũ/mock chưa
+    có instrumentation này) khỏi phần manufacturability, nhưng vẫn tính
+    auxetic_rate nếu có v12 (không phụ thuộc lẫn nhau).
+
+    Returns:
+        Dict seed -> {n, auxetic_rate, manufacturable_rate, joint_rate,
+        n_with_manuf_data}.
+    """
+    by_seed: Dict[str, List[Dict]] = {}
+    for r in results:
+        if not r.get('success') or r.get('v12') is None:
+            continue
+        seed = r.get('seed')
+        if not seed:
+            continue
+        by_seed.setdefault(seed, []).append(r)
+
+    report: Dict[str, Dict] = {}
+    for seed, rows in by_seed.items():
+        n = len(rows)
+        auxetic_rate = float(np.mean([r['v12'] < 0 for r in rows]))
+
+        with_manuf = [r for r in rows if r.get('passes_all') is not None]
+        if with_manuf:
+            manufacturable_rate = float(np.mean([bool(r['passes_all']) for r in with_manuf]))
+            joint_rate = float(np.mean([
+                bool(r['passes_all']) and r['v12'] < 0 for r in with_manuf
+            ]))
+        else:
+            manufacturable_rate = None
+            joint_rate = None
+
+        report[seed] = {
+            'n': n,
+            'auxetic_rate': round(auxetic_rate, 4),
+            'manufacturable_rate': round(manufacturable_rate, 4) if manufacturable_rate is not None else None,
+            'joint_rate': round(joint_rate, 4) if joint_rate is not None else None,
+            'n_with_manuf_data': len(with_manuf),
+        }
 
     return report
 

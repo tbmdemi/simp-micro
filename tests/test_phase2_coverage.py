@@ -11,6 +11,7 @@ from pipeline.phase2_multi_batch.coverage import (
     _to_array,
     coverage_report,
     find_sparse_regions,
+    seed_manufacturability_report,
 )
 
 
@@ -113,3 +114,68 @@ class TestCoverageReport:
         report = coverage_report(results, dims=("v12", "v21"))
         assert report["n_total"] == 10
         assert report["success_rate_pct"] == 80.0
+
+    def test_manufacturability_absent_when_no_data(self):
+        results = _make_results(8)
+        report = coverage_report(results, dims=("v12", "v21"))
+        assert "manufacturability" not in report
+
+    def test_manufacturability_aggregated_when_present(self):
+        results = _make_results(8)
+        for i, r in enumerate(results):
+            r["passes_all"] = i < 3          # 3/8 pass
+            r["is_connected"] = i < 5        # 5/8 connected
+            r["periodic_ok"] = i < 2         # 2/8 periodic
+        report = coverage_report(results, dims=("v12", "v21"))
+        assert report["manufacturability"]["n_with_data"] == 8
+        assert report["manufacturability"]["frac_manufacturable"] == pytest.approx(3 / 8)
+        assert report["manufacturability"]["frac_connected"] == pytest.approx(5 / 8)
+        assert report["manufacturability"]["frac_periodic"] == pytest.approx(2 / 8)
+
+    def test_manufacturability_ignores_entries_missing_the_field(self):
+        results = _make_results(4)
+        results[0]["passes_all"] = True
+        results[1]["passes_all"] = False
+        # results[2], results[3] never get a passes_all key -> excluded
+        for r in results:
+            r.setdefault("is_connected", True)
+            r.setdefault("periodic_ok", True)
+        report = coverage_report(results, dims=("v12", "v21"))
+        assert report["manufacturability"]["n_with_data"] == 2
+        assert report["manufacturability"]["frac_manufacturable"] == pytest.approx(0.5)
+
+
+class TestSeedManufacturabilityReport:
+    def test_computes_per_seed_rates(self):
+        results = [
+            {"success": True, "seed": "circle", "v12": -0.5, "passes_all": True},
+            {"success": True, "seed": "circle", "v12": -0.5, "passes_all": False},
+            {"success": True, "seed": "circle", "v12": 0.3, "passes_all": True},
+            {"success": True, "seed": "hexagonal", "v12": -0.2, "passes_all": False},
+        ]
+        report = seed_manufacturability_report(results)
+        assert report["circle"]["n"] == 3
+        assert report["circle"]["auxetic_rate"] == pytest.approx(2 / 3, abs=1e-4)
+        assert report["circle"]["manufacturable_rate"] == pytest.approx(2 / 3, abs=1e-4)
+        # joint: auxetic AND manufacturable -> only the first row qualifies
+        assert report["circle"]["joint_rate"] == pytest.approx(1 / 3, abs=1e-4)
+        assert report["hexagonal"]["joint_rate"] == pytest.approx(0.0, abs=1e-4)
+
+    def test_missing_manufacturability_data_gives_none_rates(self):
+        results = [
+            {"success": True, "seed": "circle", "v12": -0.5},
+            {"success": True, "seed": "circle", "v12": 0.2},
+        ]
+        report = seed_manufacturability_report(results)
+        assert report["circle"]["auxetic_rate"] == pytest.approx(0.5)
+        assert report["circle"]["manufacturable_rate"] is None
+        assert report["circle"]["joint_rate"] is None
+
+    def test_ignores_failed_and_seedless_results(self):
+        results = [
+            {"success": False, "seed": "circle", "v12": -0.5, "passes_all": True},
+            {"success": True, "seed": "circle", "v12": None, "passes_all": True},
+            {"success": True, "v12": -0.5, "passes_all": True},  # no seed key
+        ]
+        report = seed_manufacturability_report(results)
+        assert report == {}

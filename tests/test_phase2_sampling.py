@@ -89,3 +89,45 @@ class TestGenerateDesign:
             objective_map=["auxetic"],
         )
         assert df["volfrac"].between(0.3, 0.7).all()
+
+    def test_n_samples_per_seed_overrides_uniform_count(self):
+        """Roadmap 6.2/6.3 (xem adaptive.py::compute_seed_sample_allocation):
+        mỗi seed có thể nhận số mẫu KHÁC nhau, không còn bắt buộc chia đều."""
+        param_ranges = {"volfrac": (0.3, 0.7)}
+        df = generate_design(
+            n_samples=5,  # fallback, không dùng vì cả 2 seed đều có trong override
+            param_ranges=param_ranges,
+            strategy=SamplingStrategy.SOBOL,
+            batch_id=1,
+            seed_map=["circle_half_quarter", "hexagonal"],
+            objective_map=["auxetic"],
+            n_samples_per_seed={"circle_half_quarter": 20, "hexagonal": 5},
+        )
+        assert (df["seed"] == "circle_half_quarter").sum() == 20
+        assert (df["seed"] == "hexagonal").sum() == 5
+
+    def test_n_samples_per_seed_none_matches_uniform_behavior(self):
+        """n_samples_per_seed=None (mặc định) phải cho kết quả GIỐNG HỆT
+        không truyền tham số này - tương thích ngược 100%."""
+        param_ranges = {"volfrac": (0.3, 0.7)}
+        kwargs = dict(
+            n_samples=5, param_ranges=param_ranges, strategy=SamplingStrategy.SOBOL,
+            batch_id=1, seed_map=["circle", "square"], objective_map=["auxetic"],
+        )
+        df_explicit_none = generate_design(n_samples_per_seed=None, **kwargs)
+        df_default = generate_design(**kwargs)
+        assert df_explicit_none.equals(df_default)
+
+    def test_seed_missing_from_override_falls_back_to_n_samples(self):
+        param_ranges = {"volfrac": (0.3, 0.7)}
+        df = generate_design(
+            n_samples=7,
+            param_ranges=param_ranges,
+            strategy=SamplingStrategy.SOBOL,
+            batch_id=1,
+            seed_map=["circle", "hexagonal"],
+            objective_map=["auxetic"],
+            n_samples_per_seed={"circle": 20},  # hexagonal not overridden
+        )
+        assert (df["seed"] == "circle").sum() == 20
+        assert (df["seed"] == "hexagonal").sum() == 7
