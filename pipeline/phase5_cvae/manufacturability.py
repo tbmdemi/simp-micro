@@ -100,3 +100,33 @@ def check_manufacturability(img_bin: np.ndarray, min_feature_px: int = 2,
         **period,
         "passes_all": bool(conn["manufacturable"] and period["periodic_ok"]),
     }
+
+
+def force_periodic(img: np.ndarray) -> np.ndarray:
+    """Ép img[:, -1]=img[:, 0] và img[0, :]=img[-1, :] (trung bình rồi gán
+    lại cả 2 cạnh) - đảm bảo periodic_ok=True TUYỆT ĐỐI (edge_mismatch=0)
+    theo đúng định nghĩa periodicity ở check_periodicity() phía trên: ô kề
+    bên khi lát là BẢN SAO Y HỆT ô này (tịnh tiến), nên cạnh phải của ô
+    PHẢI bằng cạnh trái của CHÍNH NÓ - đây không phải 1 ràng buộc cần model
+    generate() học, mà là hệ quả toán học trực tiếp của phép lát, ép được
+    bằng đúng 1 phép gán, không cần train lại.
+
+    Phát hiện thực nghiệm (nhánh research/auxetic-breakthrough, xem
+    EXPERIMENT_LOG.md mục "Phase 6"): áp trực tiếp hàm này lên ảnh cVAE
+    sinh ra (checkpoint cvae_gamma20.pt, KHÔNG train lại) đưa passes_all từ
+    1,7% lên 19,5% (đo trên 600 mẫu, 6 condition x 100 mẫu, seed=123) -
+    cùng bậc cải thiện đo được trên kiến trúc diffusion thử nghiệm (1,8%->
+    35,2%). Chi phí sai số property: mean |Δv12| (FE thật, 10 mẫu) = 0,0193
+    - chỉ ghi đè ~3% số pixel (1 hàng + 1 cột trong lưới 64x64) nên tác
+    động lên tensor độ cứng đồng nhất hóa toàn cục thường nhỏ, nhưng có thể
+    lớn hơn ở mẫu có cơ cấu bản lề/re-entrant chạm đúng biên ô - nên đọc
+    kèm CI/kiểm tra từng mẫu khi cần độ chính xác cao, không chỉ trung bình.
+    """
+    img = img.copy()
+    avg_col = (img[:, 0] + img[:, -1]) / 2
+    img[:, 0] = avg_col
+    img[:, -1] = avg_col
+    avg_row = (img[0, :] + img[-1, :]) / 2
+    img[0, :] = avg_row
+    img[-1, :] = avg_row
+    return img

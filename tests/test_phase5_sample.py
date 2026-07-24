@@ -48,18 +48,52 @@ class TestLoadModel:
 
 class TestSavePng:
     def test_save_png_roundtrip(self, tmp_path):
+        """apply_force_periodic=False here: img's top half is solid and
+        bottom half is void, so force_periodic (default True - see
+        TestSavePngForcePeriodic below) would average row 0 with row -1 and
+        change both to 0.5 - this test isolates the pure tensor->PNG
+        conversion, not the periodicity post-processing."""
         from pipeline.phase5_cvae.sample import save_png
         img = torch.zeros(1, 64, 64)
         img[:, :32, :] = 1.0
         out_path = tmp_path / "sample.png"
 
-        save_png(img, str(out_path))
+        save_png(img, str(out_path), apply_force_periodic=False)
 
         assert out_path.exists()
         loaded = np.array(Image.open(str(out_path)))
         assert loaded.shape == (64, 64)
         assert loaded[:32, :].min() == 255
         assert loaded[32:, :].max() == 0
+
+
+class TestSavePngForcePeriodic:
+    """force_periodic (thêm từ nhánh research/auxetic-breakthrough, xem
+    EXPERIMENT_LOG.md mục "Phase 6") - mặc định BẬT trong save_png()."""
+
+    def test_default_forces_matching_edges(self, tmp_path):
+        from pipeline.phase5_cvae.sample import save_png
+        img = torch.zeros(1, 64, 64)
+        img[:, :32, :] = 1.0  # top half solid, bottom half void -> mismatched edges
+        out_path = tmp_path / "sample.png"
+
+        save_png(img, str(out_path))  # apply_force_periodic defaults to True
+
+        loaded = np.array(Image.open(str(out_path)))
+        assert np.array_equal(loaded[0, :], loaded[-1, :])
+        assert np.array_equal(loaded[:, 0], loaded[:, -1])
+
+    def test_no_force_periodic_flag_preserves_raw_edges(self, tmp_path):
+        from pipeline.phase5_cvae.sample import save_png
+        img = torch.zeros(1, 64, 64)
+        img[:, :32, :] = 1.0
+        out_path = tmp_path / "sample.png"
+
+        save_png(img, str(out_path), apply_force_periodic=False)
+
+        loaded = np.array(Image.open(str(out_path)))
+        assert loaded[0, 0] == 255    # top row, untouched -> stays solid
+        assert loaded[-1, 0] == 0     # bottom row, untouched -> stays void
 
 
 class TestMainCli:

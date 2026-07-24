@@ -41,6 +41,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
 from model import CVAE  # noqa: E402
+from manufacturability import force_periodic  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
@@ -59,8 +60,17 @@ def load_model(device="cpu", ckpt_path=CKPT_PATH):
     return model
 
 
-def save_png(image_tensor: torch.Tensor, path: str):
-    arr = (image_tensor.squeeze().cpu().numpy() * 255).astype(np.uint8)
+def save_png(image_tensor: torch.Tensor, path: str, apply_force_periodic: bool = True):
+    """apply_force_periodic (mặc định True): ép cứng periodicity bằng 1
+    phép gán (xem manufacturability.py::force_periodic) trước khi lưu ảnh -
+    đo được passes_all 1,7%->19,5% trên cvae_gamma20.pt (nhánh research/
+    auxetic-breakthrough, xem EXPERIMENT_LOG.md mục "Phase 6"), chi phí sai
+    số ν₁₂ trung bình ~0,02. Không thay đổi hành vi generate() của model -
+    chỉ hậu xử lý ảnh trước khi ghi file."""
+    img = image_tensor.squeeze().cpu().numpy()
+    if apply_force_periodic:
+        img = force_periodic(img)
+    arr = (img * 255).astype(np.uint8)
     Image.fromarray(arr, mode="L").save(path)
 
 
@@ -74,6 +84,9 @@ def main():
     parser.add_argument("--ckpt", type=str, default=CKPT_PATH,
                          help="checkpoint cVAE (.pt) để load - mặc định outputs/phase5/"
                               "cvae_best.pt. Giống --cvae-ckpt của best_of_n_eval.py.")
+    parser.add_argument("--no-force-periodic", action="store_true",
+                         help="Tắt force_periodic() (mặc định BẬT - xem manufacturability.py "
+                              "và EXPERIMENT_LOG.md mục Phase 6) trước khi lưu ảnh.")
     args = parser.parse_args()
 
     if not os.path.exists(args.ckpt):
@@ -105,7 +118,8 @@ def main():
     )
     os.makedirs(out_dir, exist_ok=True)
     for i in range(args.n):
-        save_png(samples[i], os.path.join(out_dir, f"sample_{i:02d}.png"))
+        save_png(samples[i], os.path.join(out_dir, f"sample_{i:02d}.png"),
+                 apply_force_periodic=not args.no_force_periodic)
 
     print(f"Đã sinh {args.n} mẫu cho target v12={args.v12}, v21={args.v21}")
     print(f"Lưu tại: {out_dir}")

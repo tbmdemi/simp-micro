@@ -123,7 +123,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 ├── analysis/                 # Phân tích độ nhạy (ANOVA, Sobol, regression), Pareto front, dataset QC
 ├── notebooks/, html/         # Jupyter notebook + dashboard/báo cáo (xem html/index.html)
 ├── html/dashboards/workflow.html        # Dashboard workflow toàn dự án (chi tiết từng phase con)
-├── tests/                     # Bộ kiểm thử PyTest (208 test)
+├── tests/                     # Bộ kiểm thử PyTest (307 test)
 ├── outputs/                   # Dữ liệu sinh ra — phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
 ├── PROJECT_DOCUMENTATION.md, EXPERIMENT_LOG.md, INSTRUCTIONS.md, CHANGELOG.md   # xem mục Tài liệu
 └── pyproject.toml, requirements.txt, README.md
@@ -225,13 +225,15 @@ python3 pipeline/phase4_surrogate/export_for_phase5.py
 
 Kiến trúc (baseline "Phương án A"): 4× khối `Conv(3x3) + BatchNorm + ReLU + MaxPool` → global average pool → nối với one-hot của seed → 2 lớp FC → 3 đầu ra (ν₁₂, ν₂₁, volfrac_achieved). Huấn luyện trên `outputs/phase3/train.npz`, xác thực trên `val.npz`.
 
-**Hiệu năng trên test set** (`outputs/phase4/evaluation_report.json`, `test.npz` giữ riêng, không rò rỉ dữ liệu):
+**Hiệu năng trên test set** (`outputs/phase4/evaluation_report.json`, `test.npz` giữ riêng — **1.184 mẫu**, không rò rỉ dữ liệu):
 
-| Target | R² | MAE |
-|---|---|---|
-| ν₁₂ | 0,910 | 0,037 |
-| ν₂₁ | 0,911 | 0,036 |
-| volfrac_achieved | 0,982 | 0,007 |
+| Target | R² | 95% CI (bootstrap, n=1.184) | MAE |
+|---|---|---|---|
+| ν₁₂ | 0,910 | [0,896, 0,923] | 0,037 |
+| ν₂₁ | 0,911 | [0,892, 0,926] | 0,036 |
+| volfrac_achieved | 0,982 | [0,979, 0,984] | 0,007 |
+
+CI tính bằng `pipeline/phase4_surrogate/bootstrap_ci.py` (percentile bootstrap trên 1.184 mẫu test — không cần train lại). Khác hẳn Phase 5 (CI rất rộng do chỉ 19-24 điều kiện, xem [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)), CI ở đây **hẹp** vì cỡ mẫu lớn — con số R²=0,91 đáng tin cậy, không phải một điểm ước lượng may rủi.
 
 MAE theo seed dao động 0,021–0,048, không seed nào kém nghiêm trọng. Nếu R² < 0,90 trên bất kỳ target nào, thử mở rộng `channels` trong `SurrogateCNN` trước khi đổi kiến trúc.
 
@@ -271,6 +273,8 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30 --k-fe-verify 10  
 ```bash
 python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 --require-manufacturable
 ```
+
+**Cập nhật 2026-07-24 — `force_periodic()`:** đã thêm hậu xử lý mới, **mặc định BẬT** trong `best_of_n_eval.py`/`sample.py` (cờ `--no-force-periodic` để tắt, tái hiện đúng số 0-3,5% ở trên): ép cứng periodicity bằng 1 phép gán thay vì trông chờ cVAE học đúng (cạnh phải của 1 ô PHẢI bằng cạnh trái của chính nó khi lát tịnh tiến - không cần train lại). Đo trên `cvae_gamma20.pt`: `passes_all` **1,7% → 19,5%**, chi phí sai số ν₁₂ trung bình chỉ ~0,02. Vì vậy **chạy `best_of_n_eval.py` hôm nay sẽ cho manufacturability cao hơn hẳn bảng số liệu 0-3,5% phía trên** (đo trước khi có cải tiến này) trừ khi dùng `--no-force-periodic`. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#khả-năng-chế-tạo--force_periodic-ép-cứng-periodicity-bằng-1-phép-gán-không-cần-train).
 
 **Kết luận:** dùng best-of-N mặc định khi cần độ chính xác Poisson; thêm `--require-manufacturable` + N lớn khi cần đảm bảo khả thi chế tạo (đổi lấy R² thấp hơn). Chi tiết & biện pháp huấn luyện lại đã thử: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#khả-năng-chế-tạo--biện-pháp-huấn-luyện-lại-đã-thử).
 
@@ -353,7 +357,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **208/208 test pass** (`pytest tests/ -q`, ~4s).
+Trạng thái hiện tại: **307/307 test pass** (`pytest tests/ -q`, ~4s).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -363,10 +367,13 @@ Trạng thái hiện tại: **208/208 test pass** (`pytest tests/ -q`, ~4s).
 | Smoke test lõi (FEM, vật liệu, filter, OC, solver, PBC) | ✅ |
 | Nạp dataset & phân loại auxetic | ✅ |
 | Định dạng CSV của logger | ✅ |
-| `pipeline/phase4_surrogate/` (model, dataset, evaluate, export, train) | ✅ |
+| `pipeline/phase4_surrogate/` (model, dataset, evaluate, export, train, **bootstrap_ci**) | ✅ |
 | `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**, **manufacturability**, **coverage_eval**, **bootstrap_ci**) | ✅ |
+| `pipeline/phase1_screening/` (refine_params: quyết định ACTIVE/FIXED; analyst: Spearman, top3, đếm success/converged) | ✅ |
+| `pipeline/phase2_multi_batch/` (params, sampling: Sobol/LHS/random, coverage: sparse-region + coverage_report, adaptive: stop/refine/expand) | ✅ |
+| `pipeline/phase3_dataset/` (augment_symmetry: swap ν₁₂↔ν₂₁ khi xoay 90/270°, finalize_dataset: stratify chống rò rỉ dữ liệu, scan_dataset, build_npz) | ✅ |
 
-> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~3s) ở mọi nơi. Chưa có test tự động cho `seeds/*.py`, `pipeline/phase2_multi_batch/*`, `pipeline/phase3_dataset/`.
+> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~4s) ở mọi nơi. `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O (`screening_parallel.py`'s main loop, `multi_batch/main.py`, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`) vẫn chưa có test — coverage mới thêm cho phase1/2/3 tập trung vào logic thuần (quyết định ACTIVE/FIXED, sampling, coverage/adaptive, augment/stratify), không phải toàn bộ pipeline end-to-end.
 >
 > **Lưu ý khi thêm test:** `phase4_surrogate/` và `phase5_cvae/` định nghĩa module con trùng tên (`dataset.py`, `model.py`...) qua import trần (`sys.path.insert` + `from dataset import X`) — import 2 module cùng tên từ *phase khác nhau* trong 1 tiến trình sẽ đè cache `sys.modules`. Fixture `_isolate_pipeline_bare_imports` (`tests/conftest.py`) reset cache này, nhưng chỉ hoạt động nếu import nằm **bên trong** hàm test (không phải top-level file) — luôn import trễ (lazy).
 
@@ -392,7 +399,7 @@ Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết củ
 
 5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** — `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`. Dataset/surrogate/cVAE hiện tại chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved` làm target, không phải bộ target đầy đủ trong roadmap ban đầu.
 
-6. **Thiếu test tự động** cho `pipeline/seeds/*.py`, `pipeline/phase2_multi_batch/*`, `pipeline/phase3_dataset/` — các module này chưa có coverage như `phase4_surrogate/`/`phase5_cvae/` (208/208 test hiện tại tập trung ở core SIMP + Phase 4/5).
+6. **Test tự động cho `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` mới chỉ phủ logic thuần** (quyết định ACTIVE/FIXED, sampling Sobol/LHS, coverage/adaptive stop-refine-expand, augment đối xứng, stratify chống rò rỉ dữ liệu — 99 test mới, tổng 307/307). Vẫn **chưa có test** cho `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O gọi FE thật (`screening_parallel.py`'s main loop, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`).
 
 7. **Một số tài liệu trực quan (HTML dashboard) từng bị lỗi thời** so với kết quả đã xác thực — cụ thể `html/inverse_auxetic_report.html` (sinh ngày 2026-07-16) có bảng xếp hạng seed trái ngược hoàn toàn với dữ liệu Phase 2 đã xác thực; đã gắn banner cảnh báo rõ ràng ở đầu trang và tại mục Kết luận trỏ về `README.md` + báo cáo Phase 3-5 hiện hành (`html/reports/ml_pipeline_phase3to5.html`). Đây là rủi ro mang tính hệ thống (tài liệu trực quan không tự động đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
 
@@ -416,7 +423,7 @@ This section consolidates every known gap/limitation of the project in one place
 
 5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** — `compute_homogenized_tensor()` does not yet export `E₁₁/E₀, E₂₂/E₀`. The current dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved` as targets, not the full target set originally planned.
 
-6. **No automated tests** for `pipeline/seeds/*.py`, `pipeline/phase2_multi_batch/*`, `pipeline/phase3_dataset/` — these modules lack the coverage that `phase4_surrogate/`/`phase5_cvae/` have (the current 208/208 passing tests concentrate on the core SIMP engine and Phase 4/5).
+6. **Automated tests for `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` cover pure logic only** (ACTIVE/FIXED decisions, Sobol/LHS sampling, coverage/adaptive stop-refine-expand, symmetry augmentation, leakage-safe stratification — 99 new tests, 307/307 total). Still **no tests** for `pipeline/seeds/*.py` or the I/O-heavy CLI/orchestration functions that call real FE (`screening_parallel.py`'s main loop, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`).
 
 7. **Some visual documentation (HTML dashboards) had gone stale** relative to validated results — specifically `html/inverse_auxetic_report.html` (generated 2026-07-16) contained a seed ranking table that directly contradicted the validated Phase 2 data; it now carries a clear warning banner at the top and in its Conclusion section pointing to `README.md` and the current Phase 3-5 report (`html/reports/ml_pipeline_phase3to5.html`). This is a systemic risk (visual docs don't auto-sync with code/data) worth watching when adding new dashboards.
 
