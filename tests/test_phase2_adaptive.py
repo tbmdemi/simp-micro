@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase2_multi_batch/adaptive.py — the stop/refine/expand
+Tests for pipeline/phase2_multi_batch/adaptive.py - the stop/refine/expand
 decision loop that closes the Phase 2 DOE loop. This is the highest-value
 module to protect: a wrong decision here means running (or not running)
 thousands of expensive SIMP samples.
@@ -31,7 +31,7 @@ class TestRelativeImprovement:
 
     def test_near_zero_prev_does_not_blow_up(self):
         """Fix L2 in the source: denominator uses max(|prev|,|curr|,eps), not
-        just |prev| — with the old (buggy) denom=|prev|, two tiny values
+        just |prev| - with the old (buggy) denom=|prev|, two tiny values
         (prev=1e-12, curr=1e-11) would divide by ~1e-12 and blow up to a
         huge ratio; with the fix, denom=max(1e-12,1e-11,1e-10)=1e-10 keeps
         the result small and bounded."""
@@ -53,7 +53,7 @@ class TestFillSeeds:
         """Regression guard for Fix H1: reentrant_bowtie was missing from
         _ALL_SEEDS entirely, so it could never be introduced by this
         fallback. It's listed last in _ALL_SEEDS, and _fill_seeds() stops
-        as soon as it has 5 seeds — so in practice it's only ever added
+        as soon as it has 5 seeds - so in practice it's only ever added
         when the other 10 named seeds are unavailable, not guaranteed on
         every call. This test only guards the narrower regression: the
         name must at least be present in the pool `_fill_seeds` draws

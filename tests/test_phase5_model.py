@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase5_cvae/model.py — CVAE / Encoder / Decoder.
+Tests for pipeline/phase5_cvae/model.py - CVAE / Encoder / Decoder.
 """
 import torch
 
@@ -18,7 +18,7 @@ class TestCVAEForward:
         assert logvar.shape == (3, 16)
 
     def test_recon_in_unit_range(self):
-        """Decoder ends in Sigmoid — output must stay in [0, 1]."""
+        """Decoder ends in Sigmoid - output must stay in [0, 1]."""
         model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
                       channels=(4, 8, 16, 32))
         img = torch.rand(2, 1, 64, 64)

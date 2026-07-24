@@ -29,14 +29,15 @@ import json
 import argparse
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 
 sys.path.insert(0, os.path.dirname(__file__))
 from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset            # noqa: E402
+from dataset import CVAEDataset, compute_v12_sample_weights  # noqa: E402
 from losses import (                       # noqa: E402
     cvae_loss, kl_beta_schedule, load_frozen_surrogate,
     load_frozen_surrogate_ensemble, prior_sample_regularization,
+    real_physics_prior_loss, PROP_LOSS_SCALE,
 )
 from verify_fe import (                    # noqa: E402
     FE_PARAMS, resize_to_fe_grid, evaluate_density_field,
@@ -81,14 +82,18 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
 
 def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
               lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0,
-              lambda_periodic=0.0, regularize_prior_samples=False):
+              lambda_periodic=0.0, regularize_prior_samples=False,
+              lambda_real_physics=0.0, real_physics_every=1,
+              real_physics_subsample=None, real_physics_workers=0, fe_params=None):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
               "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
               "periodic": 0.0, "disagreement": 0.0,
               "prior_tv": 0.0, "prior_binarization": 0.0, "prior_periodic": 0.0}
     n = 0
-    for image, condition, seed_vec, _volfrac in loader:
+    real_physics_sum = 0.0
+    real_physics_n = 0
+    for step, (image, condition, seed_vec, _volfrac) in enumerate(loader):
         image = image.to(device)
         condition = condition.to(device)
         seed_vec = seed_vec.to(device)
@@ -114,10 +119,32 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
             else:
                 losses.update({"prior_tv": torch.tensor(0.0), "prior_binarization": torch.tensor(0.0),
                                 "prior_periodic": torch.tensor(0.0)})
+
+            # Differentiable-physics (xem losses.real_physics_prior_loss,
+            # EXPERIMENT_LOG.md "differentiable-physics"): chỉ áp lúc train
+            # (không nhân đôi chi phí FE-solve thật vốn đắt trên tập val,
+            # đã có --fe-eval-every riêng cho mục đích đo real-R2 định kỳ).
+            # Nhân PROP_LOSS_SCALE giống hệt property-consistency loss
+            # (gamma * PROP_LOSS_SCALE * prop_l trong cvae_loss()) - real_physics_loss()
+            # trả về MSE thô CÙNG thang đo với prop_l (cả hai đều MSE(v12,v21)),
+            # nên --lambda-real-physics có thể chọn cùng khoảng giá trị với
+            # --gamma (vd thử = gamma) thay vì phải tự dò thang đo riêng.
+            rp_loss = None
+            if train and lambda_real_physics > 0 and step % real_physics_every == 0:
+                rp_loss = real_physics_prior_loss(
+                    model.decoder, model.latent_dim, condition, fe_params,
+                    subsample=real_physics_subsample, n_workers=real_physics_workers,
+                )
+                losses["total"] = losses["total"] + lambda_real_physics * PROP_LOSS_SCALE * rp_loss
+
             if train:
                 optimizer.zero_grad()
                 losses["total"].backward()
                 optimizer.step()
+
+            if rp_loss is not None:
+                real_physics_sum += rp_loss.item() * bsz
+                real_physics_n += bsz
 
         totals["total"] += losses["total"].item() * bsz
         totals["recon"] += losses["recon"].item() * bsz
@@ -133,7 +160,9 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         totals["prior_periodic"] += losses["prior_periodic"].item() * bsz
         n += bsz
 
-    return {k: v / n for k, v in totals.items()}
+    result = {k: v / n for k, v in totals.items()}
+    result["real_physics"] = real_physics_sum / real_physics_n if real_physics_n > 0 else float("nan")
+    return result
 
 
 def main():
@@ -202,6 +231,48 @@ def main():
     parser.add_argument("--output-name", type=str, default="cvae_best.pt",
                          help="Tên checkpoint lưu trong outputs/phase5/ - đổi tên này để "
                               "không ghi đè cvae_best.pt chính (self-play).")
+    parser.add_argument("--lambda-real-physics", type=float, default=0.0,
+                         help="Differentiable-physics (xem losses.real_physics_prior_loss, "
+                              "pipeline/phase5_cvae/real_physics.py): trọng số MSE(v12,v21) "
+                              "đo bằng FE-solve THẬT + gradient GIẢI TÍCH (không qua surrogate "
+                              "CNN, không thể bị decoder đánh lừa). CÙNG thang đo với --gamma "
+                              "(cả hai đều nhân PROP_LOSS_SCALE=1000 trước khi cộng vào total) "
+                              "- thử bắt đầu bằng giá trị gần với --gamma đang dùng. 0.0 = tắt "
+                              "(mặc định, giữ hành vi cũ). FE-solve thật ~50-100ms/mẫu (lưới "
+                              "50x50) - CHẬM HƠN surrogate rất nhiều, xem "
+                              "--real-physics-subsample/--real-physics-every để giữ chi phí "
+                              "hợp lý.")
+    parser.add_argument("--real-physics-every", type=int, default=1,
+                         help="Chỉ áp real-physics loss mỗi N step train (1 = mọi step). "
+                              "Tăng lên nếu --lambda-real-physics làm training quá chậm.")
+    parser.add_argument("--real-physics-subsample", type=int, default=None,
+                         help="Chỉ tính real-physics loss trên N mẫu ngẫu nhiên/batch thay vì "
+                              "cả batch (giảm chi phí FE-solve). None = cả batch.")
+    parser.add_argument("--real-physics-workers", type=int, default=0,
+                         help="Số tiến trình song song cho FE-solve thật (multiprocessing.Pool, "
+                              "xem real_physics._get_pool). 0 = tuần tự. THẬN TRỌNG khi "
+                              "DataLoader num_workers>0 đã đa luồng - xem cảnh báo fork() trong "
+                              "real_physics.py.")
+    parser.add_argument("--weighted-sampling", action="store_true",
+                         help="Yêu cầu advisor 2026-07-24 (xem "
+                              "analysis/scripts/analyze_auxetic_distribution.py, "
+                              "dataset.compute_v12_sample_weights): lấy mẫu train theo "
+                              "WeightedRandomSampler thay vì shuffle đều - trọng số nghịch "
+                              "đảo mật độ bin v12, để dataloader thấy đều các vùng auxetic "
+                              "thưa mẫu (v12 rất âm hoặc gần 0/dương) thay vì chỉ học tốt "
+                              "vùng mode [-0.45,-0.30) chiếm ~38%% train set. Mặc định tắt "
+                              "(giữ hành vi cũ, shuffle đều).")
+    parser.add_argument("--sampling-weights-path", type=str,
+                         default=os.path.join(PHASE3_DIR, "v12_bin_weights.json"),
+                         help="File bin_edges/bin_weight JSON (từ "
+                              "analyze_auxetic_distribution.py) dùng khi --weighted-sampling. "
+                              "Nếu không tồn tại, tính lại tại chỗ trên train.npz với "
+                              "--sampling-alpha.")
+    parser.add_argument("--sampling-alpha", type=float, default=0.5,
+                         help="Power làm mượt inverse-frequency khi tính lại bin weight tại "
+                              "chỗ (chỉ dùng nếu --sampling-weights-path không tồn tại). "
+                              "0=tắt (weight đều), 1=nghịch đảo tần suất hoàn toàn, "
+                              "0.5=sqrt (mặc định, tránh trọng số quá cực đoan ở bin ít mẫu).")
     args = parser.parse_args()
 
     if args.select_by == "fe_r2" and args.fe_eval_every <= 0:
@@ -213,8 +284,23 @@ def main():
 
     train_ds = CVAEDataset(os.path.join(PHASE3_DIR, "train.npz"))
     val_ds = CVAEDataset(os.path.join(PHASE3_DIR, "val.npz"))
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                               num_workers=2, drop_last=True)
+    if args.weighted_sampling:
+        sample_weights = compute_v12_sample_weights(
+            train_ds.v12, weights_path=args.sampling_weights_path,
+            alpha=args.sampling_alpha,
+        )
+        sampler = WeightedRandomSampler(
+            torch.from_numpy(sample_weights).double(), num_samples=len(train_ds),
+            replacement=True,
+        )
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size, sampler=sampler,
+                                   num_workers=2, drop_last=True)
+        print(f"Weighted sampling BẬT (weights={args.sampling_weights_path}, "
+              f"alpha={args.sampling_alpha}, min={sample_weights.min():.3f}, "
+              f"max={sample_weights.max():.3f})")
+    else:
+        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
+                                   num_workers=2, drop_last=True)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                              num_workers=2)
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
@@ -273,6 +359,11 @@ def main():
             lambda_disagreement=args.lambda_disagreement,
             lambda_periodic=args.lambda_periodic,
             regularize_prior_samples=args.regularize_prior_samples,
+            lambda_real_physics=args.lambda_real_physics,
+            real_physics_every=args.real_physics_every,
+            real_physics_subsample=args.real_physics_subsample,
+            real_physics_workers=args.real_physics_workers,
+            fe_params=FE_PARAMS,
         )
         val_stats = run_epoch(
             model, val_loader, surrogate, target_names,
@@ -281,6 +372,7 @@ def main():
             lambda_disagreement=args.lambda_disagreement,
             lambda_periodic=args.lambda_periodic,
             regularize_prior_samples=args.regularize_prior_samples,
+            fe_params=FE_PARAMS,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
@@ -294,7 +386,8 @@ def main():
               f"bin={train_stats['binarization']:.4f} periodic={train_stats['periodic']:.4f} "
               f"prior[tv={train_stats['prior_tv']:.4f} bin={train_stats['prior_binarization']:.4f} "
               f"periodic={train_stats['prior_periodic']:.4f}] "
-              f"disagree={train_stats['disagreement']:.5f} || "
+              f"disagree={train_stats['disagreement']:.5f} "
+              f"real_physics={train_stats['real_physics']:.4f} || "
               f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
               f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
               f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
@@ -367,6 +460,10 @@ def main():
     metric_name = "R2(FE)" if args.select_by == "fe_r2" else "val_loss"
     print(f"Đã lưu checkpoint tốt nhất: outputs/phase5/{args.output_name} "
           f"({metric_name}={best_val:.4f})")
+
+    if args.real_physics_workers > 0:
+        from real_physics import shutdown_pool
+        shutdown_pool()
 
 
 if __name__ == "__main__":

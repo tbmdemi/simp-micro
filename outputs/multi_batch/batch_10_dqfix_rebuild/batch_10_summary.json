@@ -1,0 +1,38 @@
+{
+  "batch_id": 10,
+  "strategy": "design_df",
+  "n_samples": 90,
+  "n_total_tasks": 90,
+  "n_success": 90,
+  "n_converged": 90,
+  "n_workers": 10,
+  "elapsed_time": 154.2,
+  "output_dir": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/multi_batch/batch_10_dqfix_rebuild",
+  "best_per_combo": {
+    "hourglass/auxetic": {
+      "sample_id": 14,
+      "seed": "hourglass",
+      "objective": "auxetic",
+      "obj_value": 0.17209203652156713,
+      "v12": -0.6828583909795091,
+      "v21": -0.42529166813323527
+    },
+    "hexagonal/auxetic": {
+      "sample_id": 51,
+      "seed": "hexagonal",
+      "objective": "auxetic",
+      "obj_value": 0.33725646925806085,
+      "v12": -0.5784153080204616,
+      "v21": -0.28082950325186623
+    },
+    "reentrant_bowtie/auxetic": {
+      "sample_id": 60,
+      "seed": "reentrant_bowtie",
+      "objective": "auxetic",
+      "obj_value": 0.2369540136440843,
+      "v12": -0.7473520093604782,
+      "v21": -0.5478860758925046
+    }
+  },
+  "timestamp": "2026-07-24T10:05:40.667971"
+}

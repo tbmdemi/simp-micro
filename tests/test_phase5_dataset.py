@@ -1,9 +1,12 @@
 """
-Tests for pipeline/phase5_cvae/dataset.py — CVAEDataset.
+Tests for pipeline/phase5_cvae/dataset.py - CVAEDataset.
 """
+import numpy as np
 import torch
 
-from pipeline.phase5_cvae.dataset import CVAEDataset
+from pipeline.phase5_cvae.dataset import (
+    CVAEDataset, compute_v12_bin_weights, compute_v12_sample_weights,
+)
 
 
 class TestCVAEDataset:
@@ -40,3 +43,48 @@ class TestCVAEDataset:
         assert image.shape[0] == 5
         assert condition.shape == (5, 2)
         assert isinstance(image, torch.Tensor)
+
+
+class TestV12BinWeights:
+    def test_sparse_bin_gets_higher_weight_than_dense_bin(self):
+        # bin [0,1) mật độ cao (900 mẫu), bin [1,2) thưa (10 mẫu).
+        v12 = np.concatenate([np.full(900, 0.5), np.full(10, 1.5)])
+        bin_edges = np.array([0.0, 1.0, 2.0])
+        w = compute_v12_bin_weights(v12, bin_edges, alpha=0.5)
+        assert w[1] > w[0]
+
+    def test_alpha_zero_gives_uniform_weight(self):
+        v12 = np.concatenate([np.full(900, 0.5), np.full(10, 1.5)])
+        bin_edges = np.array([0.0, 1.0, 2.0])
+        w = compute_v12_bin_weights(v12, bin_edges, alpha=0.0)
+        np.testing.assert_allclose(w, [1.0, 1.0])
+
+    def test_mean_weight_is_one(self):
+        v12 = np.random.RandomState(0).uniform(-0.5, 0.3, size=500)
+        bin_edges = np.arange(-0.5, 0.35, 0.05)
+        counts, _ = np.histogram(v12, bins=bin_edges)
+        w = compute_v12_bin_weights(v12, bin_edges, alpha=0.5)
+        # mean cân theo count per-bin (không phải mean thô trên các bin) vì
+        # per-sample weight thực tế được lặp lại count[i] lần cho bin i.
+        weighted_mean = (w * counts).sum() / counts.sum()
+        assert abs(weighted_mean - 1.0) < 0.05
+
+    def test_sample_weights_shape_and_fallback_no_file(self, tmp_path):
+        v12 = np.array([-0.6, -0.4, -0.4, -0.4, 0.1], dtype=np.float32)
+        missing_path = str(tmp_path / "does_not_exist.json")
+        weights = compute_v12_sample_weights(v12, weights_path=missing_path, alpha=0.5)
+        assert weights.shape == v12.shape
+        assert weights.dtype == np.float32
+        assert (weights > 0).all()
+
+    def test_sample_weights_from_saved_json(self, tmp_path):
+        import json
+        weights_path = tmp_path / "weights.json"
+        weights_path.write_text(json.dumps({
+            "bin_edges": [0.0, 1.0, 2.0],
+            "bin_weight": [0.5, 2.0],
+        }))
+        v12 = np.array([0.2, 1.5], dtype=np.float32)
+        weights = compute_v12_sample_weights(v12, weights_path=str(weights_path))
+        assert weights[0] == 0.5
+        assert weights[1] == 2.0

@@ -17,7 +17,7 @@ Wraps simp.runner.run_simp with:
     tham số DOE liên tục (volfrac/penal/rmin/move/void_size_frac) hầu như
     không tương quan với manufacturability (|r|<0.12 mọi trường hợp), trong
     khi SEED giải thích chênh lệch tới 8 lần (7,9%-62,8%) - xem
-    EXPERIMENT_LOG.md mục "Phase 2 — Manufacturability".
+    EXPERIMENT_LOG.md mục "Phase 2 - Manufacturability".
 """
 
 import json

@@ -1,7 +1,7 @@
 """
-Tests for pipeline/phase4_surrogate/train.py — weighted_mse, run_epoch.
+Tests for pipeline/phase4_surrogate/train.py - weighted_mse, run_epoch.
 
-Imports done lazily inside each test — see tests/conftest.py docstring.
+Imports done lazily inside each test - see tests/conftest.py docstring.
 """
 import torch
 from torch.utils.data import DataLoader

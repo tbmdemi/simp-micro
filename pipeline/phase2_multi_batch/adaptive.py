@@ -11,7 +11,7 @@ Decision logic:
 
 Manufacturability (roadmap 6.2/6.3, xem runner.py::evaluate_single):
     Phân tích ngược 7.920 mẫu Phase 2 đã có (EXPERIMENT_LOG.md mục "Phase 2
-    — Manufacturability") cho thấy tham số DOE liên tục (volfrac, penal,
+    - Manufacturability") cho thấy tham số DOE liên tục (volfrac, penal,
     rmin, move, void_size_frac) hầu như KHÔNG tương quan với
     manufacturability (|Spearman r|<0,12 mọi trường hợp, kể cả khi tách
     riêng từng seed) - trong khi SEED giải thích chênh lệch tới 8 lần
@@ -81,7 +81,7 @@ def _relative_improvement(curr: float, prev: float) -> float:
     """Compute relative improvement when minimizing (lower = better).
 
     Positive return value means the objective improved. Fractional, relative
-    to max(|prev|, |curr|, 1e-10) — see Fix L2 above.
+    to max(|prev|, |curr|, 1e-10) - see Fix L2 above.
 
     Args:
         curr: Current best objective value.
@@ -186,7 +186,7 @@ def compute_seed_sample_allocation(
 
 def decide_next_action(
     summaries: List[Dict],
-    config: 'PipelineConfig',  # noqa: F821 — forward ref
+    config: 'PipelineConfig',  # noqa: F821 - forward ref
     property_dims: Tuple[str, ...] = ('v12', 'v21', 'obj_value'),
     max_batches: int = 5,
     improvement_patience: int = 2,
@@ -304,7 +304,7 @@ def decide_next_action(
         'seed_manufacturability': seed_report,
     }
 
-    # 4a. Stop conditions — batch limit reached
+    # 4a. Stop conditions - batch limit reached
     if n_completed >= max_batches:
         decision['action'] = 'stop'
         decision['reason'] = (f'Reached max batches ({max_batches}). '
@@ -382,7 +382,7 @@ def decide_next_action(
         )
         return decision
 
-    # 4g. Expand: high sparsity — add more seeds/objectives or wider ranges
+    # 4g. Expand: high sparsity - add more seeds/objectives or wider ranges
     if sparsity_frac > sparsity_expand_threshold:
         decision['action'] = 'expand'
         decision['reason'] = (f'High sparsity ({sparsity_frac:.1%}). '

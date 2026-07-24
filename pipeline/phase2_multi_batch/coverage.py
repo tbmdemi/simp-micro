@@ -13,7 +13,7 @@ Key functions:
   - seed_manufacturability_report: per-seed auxetic/manufacturable rates
     (roadmap 6.2/6.3, xem runner.py::evaluate_single - 'passes_all' được đo
     TẠI THỜI ĐIỂM SINH, miễn phí, không tốn FE thêm). Kết quả phân tích
-    ngược 7.920 mẫu Phase 2 (xem EXPERIMENT_LOG.md mục "Phase 2 —
+    ngược 7.920 mẫu Phase 2 (xem EXPERIMENT_LOG.md mục "Phase 2 -
     Manufacturability") cho thấy SEED là biến giải thích chi phối
     manufacturability (7,9%-62,8% tuỳ seed), không phải tham số DOE liên
     tục (|r|<0,12 mọi trường hợp) - hàm này tồn tại để adaptive.py dùng
@@ -311,11 +311,11 @@ def coverage_report(
 
     # Human-readable interpretation
     if spat_frac < 0.3:
-        report['interpretation'] = 'LOW spatial coverage — property space is poorly explored'
+        report['interpretation'] = 'LOW spatial coverage - property space is poorly explored'
     elif spat_frac < 0.7:
-        report['interpretation'] = 'MODERATE spatial coverage — significant gaps remain'
+        report['interpretation'] = 'MODERATE spatial coverage - significant gaps remain'
     else:
-        report['interpretation'] = 'HIGH spatial coverage — well-explored property space'
+        report['interpretation'] = 'HIGH spatial coverage - well-explored property space'
 
     if n == 0:
         return report

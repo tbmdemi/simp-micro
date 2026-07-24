@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase3_dataset/build_npz.py — load_and_resize(), the
+Tests for pipeline/phase3_dataset/build_npz.py - load_and_resize(), the
 box-filter downsample used to turn raw SIMP PNG renders into the 64x64
 (or any RESOLUTION) density fields stored in dataset_{RES}.npz.
 """
@@ -41,7 +41,7 @@ class TestLoadAndResize:
 
     def test_downsampling_averages_rather_than_subsamples(self, tmp_path):
         """BOX resize should average a checkerboard toward mid-gray rather
-        than aliasing to pure black/white — this is the whole reason the
+        than aliasing to pure black/white - this is the whole reason the
         module docstring specifies Image.BOX over nearest/bilinear."""
         checkerboard = np.indices((64, 64)).sum(axis=0) % 2 * 255
         img = Image.fromarray(checkerboard.astype("uint8"))

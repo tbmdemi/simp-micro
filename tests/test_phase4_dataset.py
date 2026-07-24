@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase4_surrogate/dataset.py — AuxeticDataset.
+Tests for pipeline/phase4_surrogate/dataset.py - AuxeticDataset.
 """
 import numpy as np
 import torch

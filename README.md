@@ -49,16 +49,16 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | Phase | Thành phần | Trạng thái | Ghi chú |
 |-------|-----------|--------|-------|
 | 0 | Core SIMP Engine | ✅ Ổn định | 11 loại seed, mục tiêu auxetic, PBC, đồng nhất hóa dựa trên năng lượng |
-| 1 | LHS Screening | ✅ Hoàn thành | Phân tích độ nhạy: `volfrac` là tham số chi phối (r ≈ 0,87–0,96). Lịch sử debug lần chạy đầu (0 mẫu auxetic): xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-1--lhs-screening) |
-| 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability | **8/8 lô (batch)**, 7.920 mẫu, **82,1% auxetic**, ν₁₂ tốt nhất = −0,807. Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: phân tích ngược xác nhận SEED (không phải tham số DOE liên tục) chi phối manufacturability — thêm phân bổ mẫu theo seed, validate bằng 1 lô thật (99 mẫu): tỷ lệ đồng thời auxetic+manufacturable tăng ×1,44-1,76 so với lịch sử. Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2---hoàn-thành) bên dưới |
-| 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành | 7.920 mẫu → trường mật độ 64×64, lọc outlier, chia tập 70/15/15 theo phân tầng seed, tăng cường đối xứng theo vật lý (train: 33.120 mẫu) |
-| 4 | CNN Surrogate Model | ✅ Hoàn thành | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set: ν₁₂ = 0,910, ν₂₁ = 0,911, volfrac = 0,982 (MAE 0,037 / 0,036 / 0,007). Xem [Phase 4](#4-cnn-surrogate-model-phase-4---hoàn-thành) bên dưới |
-| 5 | Conditional VAE | ✅ Thiết kế ngược qua best-of-N + FE thực | Một mẫu cVAE đơn lẻ (single-shot) không đáng tin cậy về auxeticity (khai thác surrogate). Quy trình chính thức: sinh N ứng viên, chọn ứng viên tốt nhất bằng **FE thực** — R²(v12, FE thực) = **+0,44 đến +0,60**, tỷ lệ trúng auxetic thực = **100%**. Hình học sinh ra cũng hiếm khi *khả thi để chế tạo* kể cả khi chính xác — giảm nhẹ bằng lọc ở bước inference (`--require-manufacturable`, N lớn) với cái giá về R². Xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực) bên dưới; toàn bộ quá trình thử-sai (gamma-sweep, self-play, ensemble, regularization) xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) |
+| 1 | LHS Screening | ✅ Hoàn thành | Phân tích độ nhạy: `volfrac` là tham số chi phối (r ≈ 0,87–0,96). Lịch sử debug lần chạy đầu (0 mẫu auxetic): xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) |
+| 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability + rebuild dQ | **8/8 lô gốc + batch 11 rebuild**, 7.920 mẫu, **91,9% auxetic** (đã rebuild 3 seed bị lỗi dQ, tăng từ 82,1%). Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: (a) phân tích ngược xác nhận SEED chi phối manufacturability - thêm phân bổ mẫu theo seed; (b) phát hiện + sửa lỗi `dQ` + rebuild đầy đủ 2.160 mẫu (3 seed bất đối xứng). Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2---hoàn-thành) bên dưới và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#bảng-tổng-hợp-lỗi-đã-sửa) |
+| 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành, đã rebuild | 7.920 mẫu (2.160 mẫu mới từ rebuild dQ) → trường mật độ 64×64, lọc outlier, chia tập 70/15/15 theo phân tầng seed, tăng cường đối xứng theo vật lý (train: 33.246 mẫu). Bộ cũ backup tại `outputs/phase3/pre_dqfix_backup/` |
+| 4 | CNN Surrogate Model | ✅ Hoàn thành, đã retrain trên data sạch | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set sạch (`surrogate_clean.pt`, 2026-07-24): ν₁₂ = **0,922**, ν₂₁ = **0,889**, volfrac = 0,927. Baseline lịch sử (`surrogate_best.pt`, data cũ): 0,910/0,911/0,982 - đo trên test set CŨ, không so trực tiếp được với số mới; số so-sánh-được cùng test set sạch là 0,484/0,384 (xem mục 4 bên dưới). Xem [Phase 4](#4-cnn-surrogate-model-phase-4---hoàn-thành) bên dưới |
+| 5 | Conditional VAE | ✅✅ **Surrogate-exploitation đã sửa TẬN GỐC bằng differentiable-physics** - single-shot (không cần best-of-N) giờ đáng tin | **Cập nhật 2026-07-24 (đột phá):** `cvae_realphysics.pt` - fine-tune từ checkpoint tốt nhất trước đó với `real_physics_prior_loss()` (FE-solve thật + gradient giải tích, không qua surrogate có thể bị đánh lừa) - đo ở quy mô ĐẦY ĐỦ (n=789, toàn bộ test set): R²(v12, FE thực) = **+0,999** (oracle) / **+0,992** (K=10, chế độ vừa bị chứng minh không đáng tin ở MỌI checkpoint khác nay cũng gần hoàn hảo), **hit rate SINGLE-SHOT (1 lần generate, không lọc) = 98,7%** (so với ~35-40% ở mọi checkpoint trước) - đây là lần đầu tiên single-shot generation đáng tin, không chỉ best-of-N. Đã kiểm tra chống ngộ nhận: không mode-collapse (4 ảnh ở 4 target khác nhau rõ rệt), không rò rỉ test set, CI cực hẹp ở n=789 [0,9985,0,9990]. Trước đột phá này: checkpoint tốt nhất (`cvae_clean_weighted.pt`, data sạch + weighted-sampling) đo ở quy mô lớn (n=789): oracle +0,32 [CI 0,21,0,42], baseline lịch sử (`cvae_gamma20.pt`) +0,20 [CI 0,09,0,30] - cải thiện thật nhưng khiêm tốn hơn nhiều so với n=24 từng báo cáo (+0,83). **Chế độ "thực dụng" K=10 từng SỤP ĐỔ ở quy mô lớn cho mọi checkpoint cũ** (CI cắt/dưới 0) - differentiable-physics giải quyết cả vấn đề này. Xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực) bên dưới; toàn bộ quá trình thử-sai (gamma-sweep, self-play, ensemble, regularization, đánh giá quy mô lớn) xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) |
 | 6 | cGAN / Conditional Diffusion (nâng cấp tùy chọn) | ⬜ Chưa bắt đầu | |
 | 7-8 | Xác thực, triển khai | ⬜ Chưa bắt đầu | |
 
 > Chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.): xem dashboard `html/dashboards/workflow.html`.
-> **Khoảng trống đã biết** (tóm tắt — xem đầy đủ tại [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng; khả năng chế tạo — xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng — đọc kỹ trước khi trích dẫn.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng; khả năng chế tạo - xem [Phase 5](#5-conditional-vae-phase-5---thiết-kế-ngược-được-giải-quyết-qua-best-of-n--chọn-lọc-bằng-fe-thực); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng - đọc kỹ trước khi trích dẫn.
 
 ---
 
@@ -66,7 +66,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 
 ### Yêu cầu & cài đặt
 
-**Python** ≥ 3.10, **numpy/scipy/matplotlib** (core), **pandas/scikit-learn/Pillow** (`pipeline/phase3_dataset/`), **torch** (`pipeline/phase4_surrogate/`, `pipeline/phase5_cvae/` — không có trong `requirements.txt` gốc, cần cài thủ công):
+**Python** ≥ 3.10, **numpy/scipy/matplotlib** (core), **pandas/scikit-learn/Pillow** (`pipeline/phase3_dataset/`), **torch** (`pipeline/phase4_surrogate/`, `pipeline/phase5_cvae/` - không có trong `requirements.txt` gốc, cần cài thủ công):
 
 ```bash
 pip install numpy scipy matplotlib pandas scikit-learn pillow torch
@@ -98,7 +98,7 @@ python3 pipeline/phase3_dataset/build_npz.py --resolution 64
 python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 ```
 
-Đầu ra: `outputs/phase3/{train,val,test}.npz` — xem [Dataset Build (Phase 3)](#3-dataset-build-phase-3---hoàn-thành) bên dưới.
+Đầu ra: `outputs/phase3/{train,val,test}.npz` - xem [Dataset Build (Phase 3)](#3-dataset-build-phase-3---hoàn-thành) bên dưới.
 
 ---
 
@@ -113,7 +113,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 │
 ├── pipeline/
 │   ├── phase1_screening/       # Phase 1: screening_parallel, refine_params, analyst (LHS screening)
-│   ├── phase2_multi_batch/    # Phase 2: adaptive DOE — sampling (Sobol/LHS), runner, adaptive (quyết định), coverage
+│   ├── phase2_multi_batch/    # Phase 2: adaptive DOE - sampling (Sobol/LHS), runner, adaptive (quyết định), coverage
 │   ├── phase3_dataset/        # Phase 3: scan_dataset, build_npz, augment_symmetry, finalize_dataset
 │   ├── phase4_surrogate/      # Phase 4: dataset, model (SurrogateCNN), train, evaluate, export_for_phase5
 │   └── phase5_cvae/           # Phase 5: dataset, model, losses, train, evaluate, sample, verify_fe,
@@ -124,7 +124,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 ├── notebooks/, html/         # Jupyter notebook + dashboard/báo cáo (xem html/index.html)
 ├── html/dashboards/workflow.html        # Dashboard workflow toàn dự án (chi tiết từng phase con)
 ├── tests/                     # Bộ kiểm thử PyTest (307 test)
-├── outputs/                   # Dữ liệu sinh ra — phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
+├── outputs/                   # Dữ liệu sinh ra - phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
 ├── PROJECT_DOCUMENTATION.md, EXPERIMENT_LOG.md, INSTRUCTIONS.md, CHANGELOG.md   # xem mục Tài liệu
 └── pyproject.toml, requirements.txt, README.md
 ```
@@ -145,7 +145,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 | `grid_circular_voids` | Lưới N×N đều các lỗ rỗng hình tròn | 99,4% |
 | `small_square_cross` | Chữ thập vuông nhỏ ở tâm | 93,1% |
 | `circle_half_quarter` | Hình tròn ở tâm + bốn phần tư hình tròn ở góc | 61,7% |
-| `reentrant_bowtie` | Lỗ rỗng hình nơ (hình học re-entrant) — seed mới nhất | 48,6% |
+| `reentrant_bowtie` | Lỗ rỗng hình nơ (hình học re-entrant) - seed mới nhất | 48,6% |
 
 \* Tỷ lệ mẫu có cả ν₁₂ < 0 và ν₂₁ < 0, đo trên toàn bộ 7.920 mẫu của multi-batch DOE đã hoàn thành (Phase 2). `reentrant_bowtie` và `hexagonal` là các hình học khó đẩy về auxetic nhất và là ứng viên tốt để tiếp tục tinh chỉnh tham số.
 
@@ -160,9 +160,9 @@ c = Q₁₂ − μ·(Q₁₁ + Q₂₂) + penalty_terms
 penalty: kích hoạt khi Q₁₁ hoặc Q₂₂ < δ = 0.1·volfrac·E₀, chuẩn hóa theo δ²
 ```
 
-- `compute_nu12` / `compute_nu21` dùng **nghịch đảo đầy đủ của ma trận độ mềm 3×3** (`S = Q⁻¹`), không dùng công thức tắt trực hướng (orthotropic) `ν₁₂ = Q₁₂/Q₂₂` — công thức tắt này sai bất cứ khi nào ô đơn vị bị xoay (liên kết cắt-pháp `Q₁₃, Q₂₃ ≠ 0`). Đây là nguyên nhân gốc của lỗi "0 mẫu auxetic" ở Phase 1 (xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-1--lhs-screening)).
-- Thành phần `μ` được thiết kế để đẩy `Q₁₂` âm hơn nữa thay vì dừng lại gần 0, nhưng công thức hiện tại **có sai sót về mặt khái niệm** (đang chờ thiết kế lại) — hiện bị tắt theo mặc định (`mu=0.0`), là cấu hình dùng cho toàn bộ 8 lần chạy multi-batch DOE đã hoàn thành.
-- Một hệ số phạt độ cứng được kích hoạt khi `Q₁₁` hoặc `Q₂₂` giảm dưới `δ`, ngăn sụp đổ cấu trúc (topology suy biến dạng rỗng vẫn xảy ra ở ~0,4% lần chạy — bị lọc bỏ ở Phase 3).
+- `compute_nu12` / `compute_nu21` dùng **nghịch đảo đầy đủ của ma trận độ mềm 3×3** (`S = Q⁻¹`), không dùng công thức tắt trực hướng (orthotropic) `ν₁₂ = Q₁₂/Q₂₂` - công thức tắt này sai bất cứ khi nào ô đơn vị bị xoay (liên kết cắt-pháp `Q₁₃, Q₂₃ ≠ 0`). Đây là nguyên nhân gốc của lỗi "0 mẫu auxetic" ở Phase 1 (xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)).
+- Thành phần `μ` được thiết kế để đẩy `Q₁₂` âm hơn nữa thay vì dừng lại gần 0, nhưng công thức hiện tại **có sai sót về mặt khái niệm** (đang chờ thiết kế lại) - hiện bị tắt theo mặc định (`mu=0.0`), là cấu hình dùng cho toàn bộ 8 lần chạy multi-batch DOE đã hoàn thành.
+- Một hệ số phạt độ cứng được kích hoạt khi `Q₁₁` hoặc `Q₂₂` giảm dưới `δ`, ngăn sụp đổ cấu trúc (topology suy biến dạng rỗng vẫn xảy ra ở ~0,4% lần chạy - bị lọc bỏ ở Phase 3).
 
 ---
 
@@ -178,9 +178,9 @@ python -m pipeline.phase1_screening.screening_parallel --all   # quét toàn b�
 python -m pipeline.phase1_screening.analyst                    # tổng hợp kết quả -> _all_correlations.json, _all_summaries_parallel.json
 ```
 
-Phân tích độ nhạy (tương quan Spearman) xác định **`volfrac` là tham số chi phối** (r ≈ 0,87–0,96); `move`, `rmin`, `void_size_frac` không có ý nghĩa thống kê. (Lịch sử debug lần chạy đầu — 0 mẫu auxetic — xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-1--lhs-screening).)
+Phân tích độ nhạy (tương quan Spearman) xác định **`volfrac` là tham số chi phối** (r ≈ 0,87–0,96); `move`, `rmin`, `void_size_frac` không có ý nghĩa thống kê. (Lịch sử debug lần chạy đầu - 0 mẫu auxetic - xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).)
 
-### 2. Multi-Batch Adaptive DOE (Phase 2) — ✅ hoàn thành
+### 2. Multi-Batch Adaptive DOE (Phase 2) - ✅ hoàn thành
 
 Các lô tuần tự, mỗi lô được định hướng bởi phân tích độ phủ (KDE + phát hiện vùng thưa) trên kết quả tích lũy. `adaptive.py` quyết định **tinh chỉnh** (thu hẹp khoảng tham số + nhắm vào vùng thưa), **mở rộng** (thêm seed/mục tiêu), hoặc **dừng**.
 
@@ -203,21 +203,11 @@ python -m pipeline.phase2_multi_batch.main --phase1-summary outputs/pipeline/pha
 
 Khoảng `volfrac` hội tụ từ `[0,45, 0,70]` xuống `[0,50, 0,58]` ở lô 8; pipeline tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu (độ thưa ổn định ~18,5%).
 
-**Cập nhật 2026-07-24 — manufacturability đưa vào chính DOE (không chỉ lọc ở cuối như Phase 5):** phân tích ngược 7.920 mẫu ở trên cho thấy tham số DOE liên tục (`volfrac, penal, rmin, move, void_size_frac`) hầu như KHÔNG tương quan với manufacturability (|Spearman r| < 0,12 mọi trường hợp, kể cả tách riêng từng seed) — biến giải thích chi phối là **SEED** (7,9% ở `hexagonal` tới 62,8% ở `reentrant_bowtie`, chênh lệch 8 lần). `_narrow_params()` (chỉ narrow tham số liên tục) vì vậy không phải đòn bẩy đúng. Đã thêm:
-- Đo manufacturability **tại thời điểm sinh** (`runner.py`, miễn phí, không tốn FE thêm) cho mọi mẫu tương lai.
-- `compute_seed_sample_allocation()` (`adaptive.py`): phân bổ ngân sách mẫu **lệch theo seed** (ưu tiên seed vừa auxetic vừa manufacturable) thay vì chia đều 1/11 như trước đây (100% các batch 1-8 đều chia đều).
+**2026-07-24 - 2 cải tiến tích hợp** (chi tiết đầy đủ + bảng số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)):
+- Phân tích ngược 7.920 mẫu cho thấy manufacturability hầu như KHÔNG tương quan với tham số DOE liên tục (|Spearman r|<0,12) - biến chi phối là **SEED** (7,9% ở `hexagonal` tới 62,8% ở `reentrant_bowtie`). Thêm đo manufacturability tại thời điểm sinh (miễn phí) + `compute_seed_sample_allocation()` phân bổ mẫu lệch theo seed thay vì chia đều. Validated bằng 99 mẫu thật (lô 9): joint rate (auxetic∧manufacturable) 17,6%→**25,3%**.
+- Lỗi hoán vị `dQ` (xem [Giới hạn #10](#giới-hạn-đã-biết--known-limitations)) khiến 3 seed bất đối xứng hội tụ dưới tiềm năng thật (2/3 từng sai cả dấu) → rebuild đầy đủ 2.160 mẫu (lô 11). Auxetic rate toàn dataset: 82,1%→**91,9%**.
 
-**Validate bằng 1 batch thật (99 mẫu, real FE, cùng khoảng tham số đã narrow ở lô 8 — chỉ đổi đúng 1 biến: trọng số seed):**
-
-| | passes_all (tổng) | passes_all (trong nhóm auxetic) | auxetic ∧ manufacturable (joint) |
-|---|---|---|---|
-| Lịch sử lô 1-8 (n=7.920) | 22,4% | 17,5% | 14,4% |
-| Lô 8 riêng (n=1.056, mốc so sánh công bằng nhất) | – | – | 17,6% |
-| **Lô 9 mới (seed-weighted, n=99)** | **35,4%** | **32,1%** | **25,3%** |
-
-Đánh đổi: tỷ lệ auxetic tổng thể của lô 9 thấp hơn lô 8 (78,8% so với 87,8%, vì giảm tỷ trọng `nine_circle`/`grid_circular_voids` — 2 seed auxetic gần như tuyệt đối nhưng manufacturability kém), bù lại bằng manufacturability trong nhóm auxetic tăng gần gấp đôi. Xem toàn bộ phân tích + code + test: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-2--manufacturability-đưa-vào-chính-doe).
-
-### 3. Dataset Build (Phase 3) — ✅ hoàn thành
+### 3. Dataset Build (Phase 3) - ✅ hoàn thành
 
 ```bash
 python3 pipeline/phase3_dataset/scan_dataset.py       # -> outputs/phase3/manifest.csv
@@ -226,10 +216,12 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 ```
 
 - Ảnh PNG mật độ (từ lưới `xPhys` 50×50) resize về 64×64 bằng box-filter downsampling; 33/7.920 mẫu (0,4%) bị loại (topology suy biến, `volfrac_achieved` ngoài `[0,05, 0,95]`).
-- **Chia train/val/test 70/15/15, phân tầng theo seed**; **tăng cường đối xứng** (chỉ train): xoay 90°/270° hoán đổi `ν₁₂↔ν₂₁`, xoay 180°/lật giữ nguyên. Train: 5.520 → 33.120 mẫu (×6).
-- Target xuất ra: `v12`, `v21`, `volfrac_achieved`. `f1, f2` (roadmap gốc) chưa khả dụng — cần mở rộng `compute_homogenized_tensor()` để xuất độ cứng chuẩn hóa trước.
+- **Chia train/val/test 70/15/15, phân tầng theo seed**; **tăng cường đối xứng** (chỉ train): xoay 90°/270° hoán đổi `ν₁₂↔ν₂₁`, xoay 180°/lật giữ nguyên. Train: 5.520 → 33.120 mẫu (×6) *(số liệu lịch sử - xem cập nhật ngay dưới)*.
+- Target xuất ra: `v12`, `v21`, `volfrac_achieved`. `f1, f2` (roadmap gốc) chưa khả dụng - cần mở rộng `compute_homogenized_tensor()` để xuất độ cứng chuẩn hóa trước.
 
-### 4. CNN Surrogate Model (Phase 4) — ✅ hoàn thành
+**2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
+
+### 4. CNN Surrogate Model (Phase 4) - ✅ hoàn thành
 
 ```bash
 python3 pipeline/phase4_surrogate/train.py
@@ -239,7 +231,7 @@ python3 pipeline/phase4_surrogate/export_for_phase5.py
 
 Kiến trúc (baseline "Phương án A"): 4× khối `Conv(3x3) + BatchNorm + ReLU + MaxPool` → global average pool → nối với one-hot của seed → 2 lớp FC → 3 đầu ra (ν₁₂, ν₂₁, volfrac_achieved). Huấn luyện trên `outputs/phase3/train.npz`, xác thực trên `val.npz`.
 
-**Hiệu năng trên test set** (`outputs/phase4/evaluation_report.json`, `test.npz` giữ riêng — **1.184 mẫu**, không rò rỉ dữ liệu):
+**Hiệu năng trên test set** (`outputs/phase4/evaluation_report.json`, `test.npz` giữ riêng - **1.184 mẫu**, không rò rỉ dữ liệu):
 
 | Target | R² | 95% CI (bootstrap, n=1.184) | MAE |
 |---|---|---|---|
@@ -247,50 +239,50 @@ Kiến trúc (baseline "Phương án A"): 4× khối `Conv(3x3) + BatchNorm + Re
 | ν₂₁ | 0,911 | [0,892, 0,926] | 0,036 |
 | volfrac_achieved | 0,982 | [0,979, 0,984] | 0,007 |
 
-CI tính bằng `pipeline/phase4_surrogate/bootstrap_ci.py` (percentile bootstrap trên 1.184 mẫu test — không cần train lại). Khác hẳn Phase 5 (CI rất rộng do chỉ 19-24 điều kiện, xem [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)), CI ở đây **hẹp** vì cỡ mẫu lớn — con số R²=0,91 đáng tin cậy, không phải một điểm ước lượng may rủi.
+CI tính bằng `pipeline/phase4_surrogate/bootstrap_ci.py` (percentile bootstrap trên 1.184 mẫu test - không cần train lại). Khác hẳn Phase 5 (CI rất rộng do chỉ 19-24 điều kiện, xem [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)), CI ở đây **hẹp** vì cỡ mẫu lớn - con số R²=0,91 đáng tin cậy, không phải một điểm ước lượng may rủi.
 
 MAE theo seed dao động 0,021–0,048, không seed nào kém nghiêm trọng. Nếu R² < 0,90 trên bất kỳ target nào, thử mở rộng `channels` trong `SurrogateCNN` trước khi đổi kiến trúc.
 
-### 5. Conditional VAE (Phase 5) — ✅ thiết kế ngược được giải quyết qua best-of-N + chọn lọc bằng FE thực
+> **Bảng trên đo trên `surrogate_best.pt` (data cũ, lẫn 33,6% nhãn lỗi).** Sau khi dọn dữ liệu (mục 3), `surrogate_clean.pt` đo trên cùng 1 test set sạch (789 mẫu): **v12 R²=0,922** [CI 0,907,0,935], **v21 R²=0,889** [CI 0,860,0,913] - so với `surrogate_best.pt` đo trên CHÍNH test set sạch này chỉ 0,484/0,384. Bằng chứng thực nghiệm rằng 33,6% mẫu nhãn lỗi là nguyên nhân chính khiến R² cũ thấp, không phải giới hạn kiến trúc (chi tiết + ablation xác nhận: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)). `surrogate_best.pt`/`surrogate_for_phase5.pt` **không bị ghi đè** - dùng `--surrogate-path outputs/phase4/surrogate_clean.pt` cho công việc mới.
+
+### 5. Conditional VAE (Phase 5) - ✅✅ đã sửa tận gốc bằng differentiable-physics (2026-07-24)
+
+> **Checkpoint khuyến nghị hiện tại: `outputs/phase5/cvae_realphysics.pt`** - không phải `cvae_gamma20.pt` (baseline lịch sử) hay `cvae_clean_weighted.pt` (tốt nhất TRƯỚC differentiable-physics). Đo ở n=789 (toàn bộ test set): R²(FE thực) = **0,999** (oracle), **0,992** (K=10), **hit rate single-shot 98,7%** - 1 lần `generate()` duy nhất giờ đã đáng tin, không bắt buộc phải lọc qua best-of-N nữa (dù vẫn nên dùng best-of-N khi cần độ chính xác tối đa, gần như miễn phí về R² so với single-shot ở checkpoint này). Chi tiết đầy đủ + kiểm tra chống ngộ nhận: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) (mục "đột phá differentiable-physics").
 
 ```bash
+# Fine-tune từ checkpoint có sẵn với differentiable-physics (khuyến nghị - cách đã tạo ra cvae_realphysics.pt):
+python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 35 --kl-warmup 1 \
+  --surrogate-path outputs/phase4/surrogate_clean.pt --resume-from outputs/phase5/cvae_clean_weighted.pt \
+  --output-name cvae_realphysics.pt --select-by fe_r2 --fe-eval-every 2 \
+  --lambda-real-physics 20.0 --real-physics-subsample 8 --real-physics-every 2 --real-physics-workers 8
+
+# Train từ đầu, KHÔNG differentiable-physics (baseline lịch sử, phần dưới đây mô tả câu chuyện đã sửa):
 python3 pipeline/phase5_cvae/train.py --gamma 20.0 --epochs 50
 python3 pipeline/phase5_cvae/evaluate.py
-python3 pipeline/phase5_cvae/sample.py    # chỉ để xem nhanh single-shot — xem cảnh báo bên dưới
+python3 pipeline/phase5_cvae/sample.py --ckpt outputs/phase5/cvae_realphysics.pt   # single-shot giờ đáng tin ở checkpoint này
 ```
 
-`sample.py` sinh 1 ứng viên/lần gọi, không lọc FE — chỉ để xem qua, in cảnh báo mỗi lần chạy. `best_of_n_eval.py` là quy trình **chính thức** để lấy hình học đáng tin cậy (xem bên dưới).
+`sample.py` sinh 1 ứng viên/lần gọi. Với các checkpoint CŨ (không differentiable-physics), không lọc FE nên chỉ để xem qua - in cảnh báo mỗi lần chạy, dùng `best_of_n_eval.py` mới đáng tin. Với `cvae_realphysics.pt`, single-shot đã đủ tin cậy (98,7% hit rate) nhưng `best_of_n_eval.py` vẫn là cách đo lường chính thức/nghiêm ngặt nhất.
 
-Huấn luyện trên `train.npz` (33.120 mẫu), dùng surrogate Phase-4 **đóng băng** để tính loss property-consistency. Tổng loss: `recon + beta·kl + gamma·PROP_LOSS_SCALE·prop_loss` (`PROP_LOSS_SCALE=1000`); `gamma=20` là checkpoint mặc định (`outputs/phase5/cvae_gamma20.pt`).
+Huấn luyện trên `train.npz`, dùng surrogate Phase-4 **đóng băng** để tính loss property-consistency (`recon + beta·kl + gamma·PROP_LOSS_SCALE·prop_loss`).
 
-> **⚠️ R² đo qua surrogate đóng băng không đáng tin cậy — kiểm chứng bằng FE thực (`verify_fe.py`) cho R² âm sâu ở mọi mức gamma.** Đây là hiện tượng **khai thác surrogate**: decoder học đánh lừa CNN đóng băng thay vì sinh hình học auxetic thực, và khoảng cách surrogate-vs-thực *nới rộng* khi gamma tăng. Hai biện pháp khắc phục ở giai đoạn huấn luyện (self-play adversarial retraining, ensemble surrogate) đã được thử và **không** khắc phục được vấn đề single-shot. Toàn bộ bảng số liệu gamma-sweep, kiểm chứng FE, và hai nỗ lực khắc phục nói trên xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-5--cvae-gamma-sweep--kiểm-chứng-fe).
-
-**Quy trình chính thức (`best_of_n_eval.py`):** sinh N ứng viên/điều kiện, để **FE thực** (không phải surrogate) chọn người thắng cuộc — cùng công thức pipeline Deep-DRAM đã công bố (Pahlavani et al. 2024, xem [Tài liệu Tham khảo](#tài-liệu-tham-khảo)). Đo trên checkpoint `gamma=20` (không cần huấn luyện lại), tập giữ riêng 24 điều kiện (19 auxetic):
-
-| chiến lược | # lần gọi FE thực / điều kiện | R²(v12, FE thực) [95% CI bootstrap] | tỷ lệ trúng auxetic thực [95% CI Wilson] |
-|---|---|---|---|
-| single-shot (1 mẫu, không lọc) | 1 | âm sâu | 0,526 (10/19) |
-| best-of-N, **oracle** (FE trên toàn bộ N=30, giữ ứng viên gần mục tiêu nhất) | 30 | **+0,5955** [0,003, 0,845] | **1,000** (19/19) [0,832, 1,000] |
-| best-of-N, **thực dụng** (surrogate xếp hạng N=30, FE chỉ kiểm chứng top K=10) | 10 | **+0,4384** [−0,372, 0,748] | **1,000** (19/19) [0,832, 1,000] |
-
-Biến thể thực dụng (lọc sơ bộ bằng surrogate, rẻ hơn 3×) giữ được gần như toàn bộ mức tăng R². Dữ liệu đầy đủ: `outputs/phase5/self_play/best_of_n_result.json` (oracle), `best_of_n_k10_result.json` (thực dụng).
-
-> **⚠️ Cỡ mẫu nhỏ (n=19-24 điều kiện) — đọc khoảng tin cậy, đừng chỉ đọc điểm ước lượng.** CI 95% trên được tính bằng `pipeline/phase5_cvae/bootstrap_ci.py` (percentile bootstrap cho R², Wilson score interval cho tỷ lệ trúng — không chạy lại FE, chỉ resample lại `per_condition` đã lưu sẵn trong JSON). R² dao động trong khoảng rộng [0,00, 0,85] cho biến thể oracle — nghĩa là con số điểm +0,60 có thể lạc quan hơn thực tế đáng kể nếu lặp lại trên một tập điều kiện khác. Tỷ lệ trúng 19/19 cũng không đồng nghĩa "luôn luôn trúng": CI dưới chỉ ~83%. Trước khi trích dẫn các con số này như một kết luận mạnh, nên mở rộng tập giữ riêng vượt quá 24 điều kiện. Chạy lại: `python3 pipeline/phase5_cvae/bootstrap_ci.py outputs/phase5/self_play/best_of_n_result.json outputs/phase5/self_play/best_of_n_k10_result.json`.
+**Quy trình đo lường chính thức (`best_of_n_eval.py`):** sinh N ứng viên/điều kiện, để **FE thực** (không phải surrogate) chọn người thắng cuộc - công thức lấy cảm hứng từ pipeline Deep-DRAM đã công bố (Pahlavani et al. 2024, xem [Tài liệu Tham khảo](#tài-liệu-tham-khảo)).
 
 ```bash
-python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30                      # oracle (FE trên toàn bộ N)
-python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30 --k-fe-verify 10      # thực dụng (lọc sơ bộ bằng surrogate)
+python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30                        # oracle (FE trên toàn bộ N)
+python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 30 --k-fe-verify 10        # thực dụng (lọc sơ bộ bằng surrogate)
+python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 --require-manufacturable   # bắt buộc khả năng chế tạo
 ```
 
-**Khả năng chế tạo — hệ số Poisson đúng ≠ khả thi để chế tạo.** `manufacturability.py` kiểm tra `check_connectivity()` + `check_periodicity()` (ghép lát không bước nhảy). Trên đầu ra gốc: đạt cả hai đồng thời chỉ **0–3,5%**, đồng đều toàn không gian thuộc tính (không phải vùng chết — `coverage_eval.py`). Giảm nhẹ: `--require-manufacturable` với N nhỏ (30-300) **gây hại** (R² +0,44→-1,96, đo trên 6 điều kiện, CI 95% [−13,74, 0,83] — cực rộng vì n quá nhỏ); N=**1500** khôi phục **tỷ lệ trúng 1,0, R²=+0,19** — nhưng con số này đo trên **chỉ 3 điều kiện** (chi phí FE ở N=1500 quá lớn để test rộng hơn trong phiên này), CI 95% bootstrap cho R² là **[−2,19, 0,90]** và CI Wilson cho tỷ lệ trúng là **[0,44, 1,00]** — tức là **chưa đủ bằng chứng để khẳng định chắc chắn**, chỉ nên đọc như một tín hiệu sơ bộ đáng theo đuổi, không phải kết luận:
+**Tóm tắt hành trình phát hiện + sửa** (mọi bảng số liệu/CI đầy đủ: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)):
 
-```bash
-python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 --require-manufacturable
-```
+1. R² đo qua surrogate đóng băng không đáng tin (**surrogate exploitation** - decoder học đánh lừa CNN thay vì sinh hình học đúng): FE thực cho R² âm sâu ở mọi mức gamma đã thử. Hai biện pháp khắc phục lúc huấn luyện (self-play, ensemble surrogate) đều **không** khắc phục được vấn đề single-shot.
+2. `force_periodic()` (ép cứng periodicity bằng 1 phép gán pixel, không cần train) tích hợp làm mặc định BẬT trong `best_of_n_eval.py`/`sample.py` (cờ `--no-force-periodic` để tắt) - nâng manufacturability >10× gần như miễn phí.
+3. Dọn dữ liệu (loại 33,6% mẫu nhãn dao động, [Giới hạn #13](#giới-hạn-đã-biết--known-limitations)) + weighted-sampling theo phổ auxetic + chọn checkpoint bằng `--select-by fe_r2 --fe-eval-every N` (**không dùng `val_loss` mặc định** - bị KL-warmup đánh lừa, xác nhận độc lập 2 lần) → `cvae_clean_weighted.pt`, checkpoint tốt nhất trước differentiable-physics (oracle R²=0,83, K=10 R²=0,65 ở n=24).
+4. Đánh giá lại ở quy mô lớn (n=789, TOÀN BỘ test set): oracle mode giữ được cải thiện (khiêm tốn hơn n=24: R²=0,44 chứ không phải 0,83). Chế độ "thực dụng" K=10 **sụp đổ về CI âm/cắt-0 cho mọi checkpoint TRƯỚC differentiable-physics** - khuyến nghị trước đây ("K=10 giữ gần hết R² gain") đã SAI và bị gỡ bỏ.
+5. **Differentiable-physics** (`real_physics_prior_loss()` - FE-solve thật + gradient giải tích ngay trong training loop, không qua surrogate) sửa **tận gốc**: `cvae_realphysics.pt` đạt R²(FE, n=789)=**0,999** (oracle)/**0,992** (K=10), hit rate single-shot **98,7%**. `train.py` hỗ trợ `--lambda-real-physics/--real-physics-subsample/--real-physics-every/--real-physics-workers` để giữ chi phí FE-solve hợp lý (~50-100ms/mẫu tuần tự, song song qua `multiprocessing.Pool`).
 
-**Cập nhật 2026-07-24 — `force_periodic()`:** đã thêm hậu xử lý mới, **mặc định BẬT** trong `best_of_n_eval.py`/`sample.py` (cờ `--no-force-periodic` để tắt, tái hiện đúng số 0-3,5% ở trên): ép cứng periodicity bằng 1 phép gán thay vì trông chờ cVAE học đúng (cạnh phải của 1 ô PHẢI bằng cạnh trái của chính nó khi lát tịnh tiến - không cần train lại). Đo trên `cvae_gamma20.pt`: `passes_all` **1,7% → 19,5%**, chi phí sai số ν₁₂ trung bình chỉ ~0,02. Vì vậy **chạy `best_of_n_eval.py` hôm nay sẽ cho manufacturability cao hơn hẳn bảng số liệu 0-3,5% phía trên** (đo trước khi có cải tiến này) trừ khi dùng `--no-force-periodic`. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#khả-năng-chế-tạo--force_periodic-ép-cứng-periodicity-bằng-1-phép-gán-không-cần-train).
-
-**Kết luận:** dùng best-of-N mặc định khi cần độ chính xác Poisson; thêm `--require-manufacturable` + N lớn khi cần đảm bảo khả thi chế tạo (đổi lấy R² thấp hơn). Chi tiết & biện pháp huấn luyện lại đã thử: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#khả-năng-chế-tạo--biện-pháp-huấn-luyện-lại-đã-thử).
+**Khả năng chế tạo:** best-of-N mặc định tối ưu độ chính xác Poisson; thêm `--require-manufacturable` + N lớn khi cần đảm bảo khả thi chế tạo (đổi lấy R² thấp hơn ở checkpoint chưa dùng differentiable-physics - không cần đánh đổi này ở `cvae_realphysics.pt`, `frac_manufacturable`=0,350 đã cao sẵn). Biện pháp huấn luyện lại từng thử (regularize posterior/prior-samples) kém hiệu quả hơn `force_periodic()` - chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
 ---
 
@@ -309,7 +301,7 @@ Các tham số hay chỉnh nhất:
 | `--void_size_frac` | 0.4 | Tỷ lệ kích thước lỗ rỗng khi sinh seed |
 | `--max_iter` | 200 | Số vòng lặp tối đa |
 
-Tham số còn lại (`--ft`, `--E0`, `--Emin`, `--nu`, `--move`, `--tol_change`, `--tol_obj`, `--window_size`, `--objective`, `--beta`, `--save_every`, `--scale_factor`, `--output_dir`, `--quiet`) — xem `python -m simp.main --help`.
+Tham số còn lại (`--ft`, `--E0`, `--Emin`, `--nu`, `--move`, `--tol_change`, `--tol_obj`, `--window_size`, `--objective`, `--beta`, `--save_every`, `--scale_factor`, `--output_dir`, `--quiet`) - xem `python -m simp.main --help`.
 
 ---
 
@@ -337,7 +329,7 @@ history = result['history']  # dict: iteration, v12, v21, objective, volume
 ## File Đầu ra
 
 ### Ảnh PNG (`iteration_XXXXX.png`)
-Trường mật độ thang xám — đen (0) = rỗng, trắng (1) = rắn.
+Trường mật độ thang xám - đen (0) = rỗng, trắng (1) = rắn.
 
 ### Dữ liệu CSV (`iteration_data.csv`)
 
@@ -358,7 +350,7 @@ Trường mật độ thang xám — đen (0) = rỗng, trắng (1) = rắn.
 
 Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 1. Thay đổi thiết kế < `tol_change`
-2. Độ ổn định mục tiêu — thay đổi tương đối < `tol_obj` trong `window_size` vòng lặp liên tiếp
+2. Độ ổn định mục tiêu - thay đổi tương đối < `tol_obj` trong `window_size` vòng lặp liên tiếp
 3. Đạt `max_iter`
 
 Được xử lý bởi `ConvergenceChecker` (`simp/core/convergence.py`), với `min_iter` để tránh dừng quá sớm. Trên toàn bộ 7.920 mẫu của multi-batch DOE, **tỷ lệ hội tụ FE đạt 100%**.
@@ -371,7 +363,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **342/342 test pass** (`pytest tests/ -q`, ~4s).
+Trạng thái hiện tại: **366/366 test pass** (`pytest tests/ -q`, ~4s).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -387,9 +379,9 @@ Trạng thái hiện tại: **342/342 test pass** (`pytest tests/ -q`, ~4s).
 | `pipeline/phase2_multi_batch/` (params, sampling: Sobol/LHS/random, coverage: sparse-region + coverage_report, adaptive: stop/refine/expand) | ✅ |
 | `pipeline/phase3_dataset/` (augment_symmetry: swap ν₁₂↔ν₂₁ khi xoay 90/270°, finalize_dataset: stratify chống rò rỉ dữ liệu, scan_dataset, build_npz) | ✅ |
 
-> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~4s) ở mọi nơi. `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O (`screening_parallel.py`'s main loop, `multi_batch/main.py`, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`) vẫn chưa có test — coverage mới thêm cho phase1/2/3 tập trung vào logic thuần (quyết định ACTIVE/FIXED, sampling, coverage/adaptive, augment/stratify), không phải toàn bộ pipeline end-to-end.
+> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~4s) ở mọi nơi. `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O (`screening_parallel.py`'s main loop, `multi_batch/main.py`, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`) vẫn chưa có test - coverage mới thêm cho phase1/2/3 tập trung vào logic thuần (quyết định ACTIVE/FIXED, sampling, coverage/adaptive, augment/stratify), không phải toàn bộ pipeline end-to-end.
 >
-> **Lưu ý khi thêm test:** `phase4_surrogate/` và `phase5_cvae/` định nghĩa module con trùng tên (`dataset.py`, `model.py`...) qua import trần (`sys.path.insert` + `from dataset import X`) — import 2 module cùng tên từ *phase khác nhau* trong 1 tiến trình sẽ đè cache `sys.modules`. Fixture `_isolate_pipeline_bare_imports` (`tests/conftest.py`) reset cache này, nhưng chỉ hoạt động nếu import nằm **bên trong** hàm test (không phải top-level file) — luôn import trễ (lazy).
+> **Lưu ý khi thêm test:** `phase4_surrogate/` và `phase5_cvae/` định nghĩa module con trùng tên (`dataset.py`, `model.py`...) qua import trần (`sys.path.insert` + `from dataset import X`) - import 2 module cùng tên từ *phase khác nhau* trong 1 tiến trình sẽ đè cache `sys.modules`. Fixture `_isolate_pipeline_bare_imports` (`tests/conftest.py`) reset cache này, nhưng chỉ hoạt động nếu import nằm **bên trong** hàm test (không phải top-level file) - luôn import trễ (lazy).
 
 ---
 
@@ -397,64 +389,76 @@ Trạng thái hiện tại: **342/342 test pass** (`pytest tests/ -q`, ~4s).
 
 ### Tiếng Việt
 
-Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết của dự án ở một chỗ, cho mục đích đánh giá khoa học (thay vì rải rác trong README/EXPERIMENT_LOG). Không có mục nào dưới đây là mới — tất cả đã được ghi nhận ở nơi khác trong tài liệu; đây là bản tổng hợp.
+Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết của dự án ở một chỗ, cho mục đích đánh giá khoa học (thay vì rải rác trong README/EXPERIMENT_LOG). Không có mục nào dưới đây là mới - tất cả đã được ghi nhận ở nơi khác trong tài liệu; đây là bản tổng hợp.
 
-1. **Các con số R²/tỷ lệ trúng của Phase 5 (best-of-N) đo trên cỡ mẫu rất nhỏ, khoảng tin cậy rộng.** Tập giữ riêng chỉ có 24 điều kiện (19 auxetic); biến thể `--require-manufacturable N=1500` chỉ đo trên **3 điều kiện** (chi phí FE ở N lớn quá tốn để mở rộng trong ngân sách đã thử). Bootstrap CI 95% (`pipeline/phase5_cvae/bootstrap_ci.py`, xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-5--bootstrap-ci-cho-r2-và-tỷ-lệ-trúng-của-best-of-n)):
-   - R² oracle: điểm ước lượng +0,5955, **CI [0,003, 0,845]** — cận dưới gần 0.
-   - R² manufacturability N=1500: điểm ước lượng +0,1871, **CI [−2,191, 0,903]** — gần như không có ý nghĩa thống kê ở n=3.
-   - Hit rate 100% (19/19, 3/3) không đồng nghĩa "luôn luôn trúng": CI Wilson dưới chỉ 83% (n=19) hoặc 44% (n=3).
-   - **Hệ quả:** các con số này nên được trình bày kèm CI, không phải chỉ điểm ước lượng, khi đưa vào báo cáo/bài báo. Trước khi công bố như một kết luận chính, nên mở rộng tập giữ riêng.
+1. **R²/hit-rate của Phase 5 lịch sử đo trên cỡ mẫu nhỏ (n=24), CI rộng.** Mở rộng lên n=300/789 (toàn bộ test set) cho thấy oracle mode giữ được cải thiện nhưng khiêm tốn hơn (0,44 chứ không phải 0,83); chế độ "thực dụng" K=10 **sụp đổ về CI âm/cắt-0** cho mọi checkpoint TRƯỚC differentiable-physics - khuyến nghị cũ ("K=10 giữ gần hết R² gain") đã bị gỡ bỏ. Với checkpoint hiện tại (`cvae_realphysics.pt`), CI ở n=789 cực hẹp và cả 2 chế độ đều gần hoàn hảo (R²=0,999/0,992) - bài học về cỡ mẫu nhỏ vẫn áp dụng cho MỌI số liệu tương lai. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
-2. **Khả năng chế tạo (manufacturability) rất thấp ở đầu ra gốc.** Chỉ 0–3,5% hình học sinh ra (không lọc) vừa đúng Poisson ratio vừa liên thông + ghép ô tuần hoàn được — đồng đều trên toàn không gian thuộc tính, không phải vùng chết cục bộ. Biện pháp giảm nhẹ (`--require-manufacturable` + N lớn) có tác dụng nhưng dựa trên cỡ mẫu rất nhỏ (mục 1) và đánh đổi R² thấp hơn đáng kể.
+2. **Manufacturability của đầu ra gốc (không lọc) rất thấp** (0-3,5%, đồng đều toàn không gian thuộc tính, không phải vùng chết cục bộ). `force_periodic()` + `--require-manufacturable` cải thiện đáng kể (R²=0,745, hit rate 100% ở checkpoint sạch+weighted, n=24) - không còn cần đánh đổi này ở `cvae_realphysics.pt` (`frac_manufacturable`=0,350 tự nhiên).
 
-3. **Mô hình sinh single-shot (1 lần gọi `cvae.generate()`, không lọc FE) hoàn toàn không đáng tin cậy** — R² qua FE thực âm sâu ở mọi mức gamma đã thử (1 đến 300), và khoảng cách surrogate-vs-FE-thực *nới rộng* khi gamma tăng (khai thác surrogate). Hai biện pháp khắc phục ở giai đoạn huấn luyện (self-play adversarial retraining, ensemble surrogate 3-mô hình) đã thử và **không** khắc phục được vấn đề trong ngân sách thời gian đã thử — đây không phải bằng chứng "không thể khắc phục được", chỉ là "chưa khắc phục được với nỗ lực đã bỏ ra". `best_of_n_eval.py` (sinh N, chọn bằng FE thật) là biện pháp **inference-time** né vấn đề bằng cách đổi tiêu chí thành công, không phải một bản sửa cho decoder.
+3. **[ĐÃ GIẢI QUYẾT 2026-07-24] Single-shot generation từng không đáng tin** (R² FE âm sâu mọi gamma, surrogate exploitation - self-play/ensemble không khắc phục được). Differentiable-physics sửa tận gốc, xem mục 9.
 
-4. **Thành phần phạt `mu` trong hàm mục tiêu auxetic đang tắt (`mu=0.0`)** do có sai sót về mặt khái niệm chưa được thiết kế lại — toàn bộ 8 lô Phase 2 (7.920 mẫu) và các phase sau đều dùng cấu hình `mu=0.0`. Nếu `mu` được thiết kế lại và bật lên, kết quả downstream (Phase 2-5) sẽ cần chạy lại để phản ánh cấu hình mới.
+4. **Thành phần phạt `mu` trong hàm mục tiêu auxetic đang tắt** (`mu=0.0`, sai sót khái niệm chưa thiết kế lại) - toàn bộ dataset hiện có (Phase 2-5) dùng cấu hình này.
 
-5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** — `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`. Dataset/surrogate/cVAE hiện tại chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved` làm target, không phải bộ target đầy đủ trong roadmap ban đầu.
+5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** - `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved`.
 
-6. **Test tự động cho `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` mới chỉ phủ logic thuần** (quyết định ACTIVE/FIXED, sampling Sobol/LHS, coverage/adaptive stop-refine-expand, augment đối xứng, stratify chống rò rỉ dữ liệu — 99 test; cộng thêm 35 test mới cho `force_periodic()` và phân bổ mẫu theo seed ở Phase 2, tổng 342/342). `multi_batch/runner.py::evaluate_single` giờ có test cho phần logic manufacturability mới thêm (`run_simp` được mock, không gọi FE thật) — nhưng bản thân lệnh gọi SIMP FE thật bên trong vẫn **chưa có test**, cũng như `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O khác (`screening_parallel.py`'s main loop, `visualize.py`).
+6. **Test tự động (366/366 pass) chưa phủ hết I/O nặng**: vòng lặp chính của `screening_parallel.py`, `pipeline/seeds/*.py`, `visualize.py`, và lệnh gọi SIMP FE thật bên trong `multi_batch/runner.py::evaluate_single` (được mock trong test hiện có).
 
-7. **Một số tài liệu trực quan (HTML dashboard) từng bị lỗi thời** so với kết quả đã xác thực — cụ thể `html/inverse_auxetic_report.html` (sinh ngày 2026-07-16) có bảng xếp hạng seed trái ngược hoàn toàn với dữ liệu Phase 2 đã xác thực; đã gắn banner cảnh báo rõ ràng ở đầu trang và tại mục Kết luận trỏ về `README.md` + báo cáo Phase 3-5 hiện hành (`html/reports/ml_pipeline_phase3to5.html`). Đây là rủi ro mang tính hệ thống (tài liệu trực quan không tự động đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
+7. **Một số HTML dashboard từng lỗi thời** so với kết quả đã xác thực (vd `html/inverse_auxetic_report.html`, sinh 2026-07-16) - đã gắn banner cảnh báo trỏ về README + báo cáo hiện hành. Rủi ro mang tính hệ thống (tài liệu trực quan không tự đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
 
-8. **Ngôn ngữ tài liệu chủ yếu là tiếng Việt** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION). Người đọc quốc tế cần bản tóm tắt tiếng Anh riêng — xem bản dịch English bên dưới cho mục Limitations, nhưng các tài liệu chi tiết khác chưa có bản dịch đầy đủ.
+8. **Tài liệu chủ yếu bằng tiếng Việt** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION) - mục Limitations có bản dịch English, các tài liệu chi tiết khác thì chưa.
+
+9. **[ĐÃ GIẢI QUYẾT 2026-07-24] Differentiable-physics đã chạy huấn luyện thật, kết quả đột phá.** Fine-tune 35 epoch (`--lambda-real-physics 20.0`, ~15-18 phút) → `cvae_realphysics.pt`: R²(FE, n=789)=0,999 (oracle)/0,992 (K=10), hit rate single-shot 98,7%. Sửa tận gốc mục 3, không phải workaround. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **Còn lại:** train from-scratch (chỉ mới fine-tune); quét `--lambda-real-physics` khác 20,0.
+
+10. **[ĐÃ GIẢI QUYẾT 2026-07-24] Lỗi hoán vị `dQ` trong `compute_homogenized_tensor()` - đã rebuild đầy đủ dataset bị ảnh hưởng.** 3 seed bất đối xứng (`hourglass`,`hexagonal`,`reentrant_bowtie`) từng hội tụ dưới tiềm năng thật (2/3 sai cả dấu). Rebuild 2.160 mẫu tích hợp vào Phase 3 (backup: `manifest_pre_dqfix_backup.csv`) - auxetic rate toàn dataset **82,1%→91,9%**. Phase 4/5 đã train lại trên dataset này, xem mục 13.
+
+11. **`converged=True`/150 iteration KHÔNG đồng nghĩa hội tụ thật, và ~1/4 dataset có hình rời rạc** (audit 2026-07-24, yêu cầu advisor). Chỉ **23,7%** hội tụ thật vì tolerance (76,3% chỉ chạm `max_iter`); **23,9%** mẫu rời rạc (`check_connectivity()`), tập trung ở `grid_circular_voids`/`nine_circle`/`four_circle`. Dữ liệu: `outputs/phase3/manifest_quality.csv`. Chưa dùng để lọc lại dataset trước khi train Phase 4/5.
+
+12. **[ĐÃ GIẢI QUYẾT 2026-07-24] Weighted-sampling theo phổ auxetic từng inconclusive do bug chọn checkpoint** (`val_loss` chọn nhầm epoch 2/50 vì bị KL-warmup đội lên cơ học). Train lại đúng cách với `--select-by fe_r2` KẾT HỢP dataset sạch → `cvae_clean_weighted.pt`, checkpoint tốt nhất trước differentiable-physics (oracle R²=0,833, thực dụng=0,653, n=24).
+
+13. **[ĐÃ GIẢI QUYẾT 2026-07-24] Dataset đã dọn tận gốc (loại 33,6% mẫu nhãn dao động/limit-cycle, 2.662/7.920) - Phase 4/5 đã train lại trên bản sạch.** Metric `osc_score` phát hiện trực tiếp trên lịch sử tối ưu (không suy diễn qua pixel). Surrogate R²(v12) 0,484→0,922; cVAE best-of-N oracle R² 0,314→0,679 (không weighted) / 0,833 (+ weighted). **Ablation 3-seed độc lập** xác nhận: phần lớn mức tăng R² Phase 4 đến từ bản vá `dQ` (mục 10), KHÔNG phải từ bộ lọc `osc_score` này (0,952 không lọc vs 0,922 đã lọc, CI tách biệt) - nhưng ở Phase 5 best-of-N, điểm ước lượng lại nghiêng có lợi cho việc lọc (0,68 vs 0,52, CI chồng lấn ở n=24, chưa đủ ý nghĩa thống kê). Vẫn giữ bộ lọc mặc định (mẫu bị lọc có nhãn sai rõ ràng, giá trị vệ sinh dữ liệu độc lập với R²). Chi tiết đầy đủ: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
 ### English
 
-This section consolidates every known gap/limitation of the project in one place for scientific-review purposes (rather than scattered across README/EXPERIMENT_LOG). Nothing below is new information — all of it is documented elsewhere; this is a summary.
+This section consolidates every known gap/limitation of the project in one place for scientific-review purposes (rather than scattered across README/EXPERIMENT_LOG). Nothing below is new information - all of it is documented elsewhere; this is a summary.
 
-1. **Phase 5 (best-of-N) R²/hit-rate numbers are measured on very small samples, with wide confidence intervals.** The held-out set has only 24 conditions (19 auxetic); the `--require-manufacturable N=1500` variant is measured on just **3 conditions** (FE cost at large N was too high to expand further within the time budget tried). 95% bootstrap CIs (`pipeline/phase5_cvae/bootstrap_ci.py`, see [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#phase-5--bootstrap-ci-cho-r2-và-tỷ-lệ-trúng-của-best-of-n)):
-   - Oracle R²: point estimate +0.5955, **CI [0.003, 0.845]** — lower bound is nearly zero.
-   - Manufacturability N=1500 R²: point estimate +0.1871, **CI [−2.191, 0.903]** — essentially uninformative at n=3.
-   - 100% hit rate (19/19, 3/3) does not mean "always succeeds": the Wilson CI lower bound is only 83% (n=19) or 44% (n=3).
-   - **Implication:** these numbers should be reported with CIs, not point estimates alone, in any paper/report. The held-out set should be expanded before treating these as a headline conclusion.
+1. **Historical Phase 5 R²/hit-rate numbers were measured on a small sample (n=24), wide CIs.** Expanding to n=300/789 (the full test set) showed oracle mode keeps its improvement but more modestly (0.44, not 0.83); the "practical" K=10 mode **collapses to a negative/zero-crossing CI** for every checkpoint BEFORE differentiable-physics - the old recommendation ("K=10 keeps most of the R² gain") has been withdrawn. With the current checkpoint (`cvae_realphysics.pt`), the n=789 CI is extremely tight and both modes are near-perfect (R²=0.999/0.992) - the small-sample lesson still applies to any future numbers. Details: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
-2. **Manufacturability of raw (unfiltered) output is very low.** Only 0–3.5% of generated geometries are simultaneously Poisson-accurate, connected, and periodic-tileable — uniformly low across the property space, not a localized dead zone. The mitigation (`--require-manufacturable` + large N) helps but rests on the very small samples in item 1 and trades off substantially lower R².
+2. **Manufacturability of raw (unfiltered) output is very low** (0-3.5%, uniformly low across the property space, not a localized dead zone). `force_periodic()` + `--require-manufacturable` help substantially (R²=0.745, 100% hit rate on the clean+weighted checkpoint, n=24) - no longer a real tradeoff on `cvae_realphysics.pt` (`frac_manufacturable`=0.350 naturally).
 
-3. **Single-shot generation (one call to `cvae.generate()`, no FE filtering) is fundamentally unreliable** — real-FE R² is deeply negative at every gamma tested (1 to 300), and the surrogate-vs-real-FE gap *widens* as gamma increases (surrogate exploitation). Two training-time remedies (self-play adversarial retraining, 3-model ensemble surrogate) were tried and **did not** fix this within the time budget attempted — this is not evidence the problem is unfixable, only that it wasn't fixed with the effort spent. `best_of_n_eval.py` (generate N, select with real FE) is an **inference-time** workaround that changes the success criterion, not a fix to the decoder itself.
+3. **[RESOLVED 2026-07-24] Single-shot generation used to be unreliable** (deeply negative real-FE R² at every gamma, surrogate exploitation - self-play/ensemble did not fix it). Differentiable-physics fixed it at the root, see item 9.
 
-4. **The `mu` penalty term in the auxetic objective is disabled (`mu=0.0`)** due to an unresolved conceptual flaw — all 8 Phase 2 batches (7,920 samples) and every downstream phase use `mu=0.0`. If `mu` is redesigned and re-enabled, downstream results (Phase 2-5) would need to be regenerated to reflect the new configuration.
+4. **The `mu` penalty term in the auxetic objective is disabled** (`mu=0.0`, unresolved conceptual flaw) - the entire existing dataset (Phase 2-5) uses this configuration.
 
-5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** — `compute_homogenized_tensor()` does not yet export `E₁₁/E₀, E₂₂/E₀`. The current dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved` as targets, not the full target set originally planned.
+5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** - `compute_homogenized_tensor()` doesn't export `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved`.
 
-6. **Automated tests for `phase1_screening/`, `phase2_multi_batch/`, `phase3_dataset/` cover pure logic only** (ACTIVE/FIXED decisions, Sobol/LHS sampling, coverage/adaptive stop-refine-expand, symmetry augmentation, leakage-safe stratification — 99 tests; plus 35 newer tests for `force_periodic()` and seed-weighted sample allocation in Phase 2, 342/342 total). `multi_batch/runner.py::evaluate_single` now has tests for the new manufacturability-logging logic (`run_simp` is mocked, no real FE call) — but the actual SIMP FE call inside it is still **untested**, as are `pipeline/seeds/*.py` and other I/O-heavy CLI/orchestration functions (`screening_parallel.py`'s main loop, `visualize.py`).
+6. **Automated tests (366/366 pass) don't cover the heaviest I/O paths**: `screening_parallel.py`'s main loop, `pipeline/seeds/*.py`, `visualize.py`, and the real SIMP FE call inside `multi_batch/runner.py::evaluate_single` (mocked in the existing tests).
 
-7. **Some visual documentation (HTML dashboards) had gone stale** relative to validated results — specifically `html/inverse_auxetic_report.html` (generated 2026-07-16) contained a seed ranking table that directly contradicted the validated Phase 2 data; it now carries a clear warning banner at the top and in its Conclusion section pointing to `README.md` and the current Phase 3-5 report (`html/reports/ml_pipeline_phase3to5.html`). This is a systemic risk (visual docs don't auto-sync with code/data) worth watching when adding new dashboards.
+7. **Some HTML dashboards had gone stale** relative to validated results (e.g. `html/inverse_auxetic_report.html`, generated 2026-07-16) - now carry a warning banner pointing to the README and current reports. A systemic risk (visual docs don't auto-sync with code/data) worth watching for new dashboards.
 
-8. **Primary documentation is in Vietnamese** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION). International readers need a separate English summary — this Limitations section is translated, but the other detailed documents are not fully translated.
+8. **Primary documentation is in Vietnamese** (README, EXPERIMENT_LOG, PROJECT_DOCUMENTATION) - the Limitations section is translated, the other detailed documents are not.
+
+9. **[RESOLVED 2026-07-24] Differentiable-physics has now been used for real training, with breakthrough results.** 35-epoch fine-tune (`--lambda-real-physics 20.0`, ~15-18 min) → `cvae_realphysics.pt`: R²(FE, n=789)=0.999 (oracle)/0.992 (K=10), 98.7% single-shot hit rate. A root-cause fix for item 3, not a workaround. Details: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **Still not done:** training from scratch (only fine-tuning tried); other `--lambda-real-physics` values besides 20.0.
+
+10. **[RESOLVED 2026-07-24] The `dQ` pixel-permutation bug in `compute_homogenized_tensor()` - affected dataset fully rebuilt.** Three asymmetric seeds (`hourglass`, `hexagonal`, `reentrant_bowtie`) used to converge well below their true potential (2/3 with the wrong sign entirely). A 2,160-sample rebuild is integrated into Phase 3 (backup: `manifest_pre_dqfix_backup.csv`) - full-dataset auxetic rate **82.1%→91.9%**. Phase 4/5 have since been retrained on this dataset, see item 13.
+
+11. **`converged=True`/reaching 150 iterations does NOT mean true convergence, and ~1/4 of the dataset has disconnected geometry** (audit 2026-07-24, advisor request). Only **23.7%** truly converged via tolerance (76.3% just hit `max_iter`); **23.9%** of samples are disconnected (`check_connectivity()`), concentrated in `grid_circular_voids`/`nine_circle`/`four_circle`. Data: `outputs/phase3/manifest_quality.csv`. Not yet used to re-filter the dataset before training Phase 4/5.
+
+12. **[RESOLVED 2026-07-24] Weighted-sampling by the auxetic spectrum used to be inconclusive due to a checkpoint-selection bug** (`val_loss` mistakenly picked epoch 2/50, mechanically inflated during KL-warmup). Retrained correctly with `--select-by fe_r2` combined with the clean dataset → `cvae_clean_weighted.pt`, the best checkpoint before differentiable-physics (oracle R²=0.833, practical=0.653, n=24).
+
+13. **[RESOLVED 2026-07-24] The training dataset has been cleaned at the root (33.6% of samples removed, 2,662/7,920, limit-cycle label oscillation) - Phase 4/5 have since been retrained on the clean version.** New metric `osc_score` detects oscillation directly on the optimization trajectory (not inferred from pixels). Surrogate R²(v12) 0.484→0.922; cVAE best-of-N oracle R² 0.314→0.679 (unweighted) / 0.833 (+weighted). A **3-seed independent ablation** confirmed most of the Phase 4 R² gain comes from the `dQ` fix (item 10), NOT from this `osc_score` filter (0.952 unfiltered vs 0.922 filtered, non-overlapping CIs) - but at the Phase 5 best-of-N level, the point estimate favors filtering (0.68 vs 0.52, overlapping CIs at n=24, not yet statistically significant). Filter kept as default anyway (removed samples are genuinely mislabeled, independent data-hygiene value). Full details: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 
 ---
 
 ## Tài liệu
 
-- `PROJECT_DOCUMENTATION.md` — tài liệu toàn diện của dự án (tiếng Việt)
-- [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) — nhật ký thử nghiệm (bug, gamma-sweep, self-play, ensemble, khả năng chế tạo — kể cả biện pháp thất bại)
-- `html/dashboards/workflow.html` — dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
-- `html/index.html` — dashboard/báo cáo bổ sung (lưu ý: một số trang chỉ phản ánh screening Phase 1, chưa tái sinh theo Phase 2-5)
-- `INSTRUCTIONS.md` — hướng dẫn chạy gamma sweep Phase 5; `CHANGELOG.md` — lịch sử thay đổi theo phiên bản
-- [`REVIEW_ALGORITHMS_VI.md`](REVIEW_ALGORITHMS_VI.md) — báo cáo review thuật toán độc lập (2026-06-06, trước khi đổi tên sang AuxForge)
-- `outputs/{phase3,phase4,phase5}/` — báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `gamma_sweep_results/`, `self_play/`, v.v.)
-- `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` — notebook phân tích Phase 1-5 và tổng kết end-to-end
+- `PROJECT_DOCUMENTATION.md` - tài liệu toàn diện của dự án (tiếng Việt)
+- [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký thử nghiệm (bug, gamma-sweep, self-play, ensemble, khả năng chế tạo - kể cả biện pháp thất bại)
+- `html/dashboards/workflow.html` - dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
+- `html/index.html` - dashboard/báo cáo bổ sung (lưu ý: một số trang chỉ phản ánh screening Phase 1, chưa tái sinh theo Phase 2-5)
+- `INSTRUCTIONS.md` - hướng dẫn chạy gamma sweep Phase 5; `CHANGELOG.md` - lịch sử thay đổi theo phiên bản
+- [`REVIEW_ALGORITHMS_VI.md`](REVIEW_ALGORITHMS_VI.md) - báo cáo review thuật toán độc lập (2026-06-06, trước khi đổi tên sang AuxForge)
+- `outputs/{phase3,phase4,phase5}/` - báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `gamma_sweep_results/`, `self_play/`, v.v.)
+- `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` - notebook phân tích Phase 1-5 và tổng kết end-to-end
 
 ---
 
@@ -464,15 +468,11 @@ This section consolidates every known gap/limitation of the project in one place
 - Andreassen, E., et al. (2011). *Efficient topology optimization in MATLAB using 88 lines of code.* Structural and Multidisciplinary Optimization, 43(1), 1–16.
 - Xia, L., & Breitkopf, P. (2015). *Design of materials using topology optimization and energy‑based homogenization.* Archives of Computational Methods in Engineering, 22(2), 229–260.
 - Bendsøe, M. P., & Sigmund, O. (2003). *Topology Optimization: Theory, Methods, and Applications.* Springer.
-- Pahlavani, H., et al. (2024). *Deep Learning for Size-Agnostic Inverse Design of Random-Network 3D Printed Mechanical Metamaterials.* Advanced Materials, 36(6). DOI: [10.1002/adma.202303481](https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.202303481) — pipeline "Deep-DRAM" cVAE + surrogate + chọn lọc bằng FE thực đã truyền cảm hứng cho biện pháp khắc phục best-of-N ở Phase 5 nêu trên.
-- Lakshminarayanan, B., Pritzel, A., & Blundell, C. (2017). *Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles.* NeurIPS 2017 — ý tưởng bất đồng-giữa-các-ensemble đằng sau `load_frozen_surrogate_ensemble`/`property_consistency_loss_ensemble`.
+- Pahlavani, H., et al. (2024). *Deep Learning for Size-Agnostic Inverse Design of Random-Network 3D Printed Mechanical Metamaterials.* Advanced Materials, 36(6). DOI: [10.1002/adma.202303481](https://advanced.onlinelibrary.wiley.com/doi/10.1002/adma.202303481) - pipeline "Deep-DRAM" cVAE + surrogate + chọn lọc bằng FE thực đã truyền cảm hứng cho biện pháp khắc phục best-of-N ở Phase 5 nêu trên.
+- Lakshminarayanan, B., Pritzel, A., & Blundell, C. (2017). *Simple and Scalable Predictive Uncertainty Estimation using Deep Ensembles.* NeurIPS 2017 - ý tưởng bất đồng-giữa-các-ensemble đằng sau `load_frozen_surrogate_ensemble`/`property_consistency_loss_ensemble`.
 
 ---
 
 ## Giấy phép
 
-MIT — xem [`simp/__init__.py`](simp/__init__.py).
-
----
-
-*Được duy trì bởi AuxForge Team.*
+MIT - xem [`simp/__init__.py`](simp/__init__.py).

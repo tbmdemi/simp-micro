@@ -1,9 +1,9 @@
 """
-Tests for pipeline/phase1_screening/analyst.py — Spearman aggregation and
+Tests for pipeline/phase1_screening/analyst.py - Spearman aggregation and
 sample counting. `compute_correlations`'s `best_obj_value = df['obj_value'].min()`
 is a direct regression guard for the historical bug logged in
 EXPERIMENT_LOG.md ("Dùng `max` thay vì `min` trong aggregate_correlations.py"
-— picking max selected the *worst* objective value instead of the best,
+- picking max selected the *worst* objective value instead of the best,
 since every objective in this pipeline is a minimization).
 """
 import json

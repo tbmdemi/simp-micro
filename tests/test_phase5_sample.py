@@ -1,7 +1,7 @@
 """
-Tests for pipeline/phase5_cvae/sample.py — load_model, save_png, main().
+Tests for pipeline/phase5_cvae/sample.py - load_model, save_png, main().
 
-Imports are lazy inside each test — sample.py does `sys.path.insert(...)` +
+Imports are lazy inside each test - sample.py does `sys.path.insert(...)` +
 bare `from model import CVAE` at import time (see tests/conftest.py
 docstring).
 """
@@ -116,7 +116,7 @@ class TestMainCli:
         assert len(pngs) == 3
 
     def test_main_warns_single_shot_is_unreliable(self, tmp_path, monkeypatch, capsys):
-        """sample.py generates ONE candidate with no FE filtering — the CLI
+        """sample.py generates ONE candidate with no FE filtering - the CLI
         must steer users toward best_of_n_eval.py (the actual, FE-verified
         pipeline; see README Phase 5 / outputs/phase5/fe_verification_report.json),
         not let them silently trust a single-shot sample."""

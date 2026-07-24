@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase2_multi_batch/coverage.py — property-space
+Tests for pipeline/phase2_multi_batch/coverage.py - property-space
 coverage analysis: sparse-region detection and the coverage_report used
 by adaptive.py to decide stop/refine/expand.
 """

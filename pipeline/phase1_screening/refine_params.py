@@ -6,13 +6,13 @@ p-value Spearman thu được từ 11 seeds ở Phase 1.
 
 QUY TẮC: một tham số giữ ACTIVE nếu có ÍT NHẤT 1 seed đạt p < 0.10. Ngưỡng
 lỏng (0.10 thay vì 0.05 chuẩn) để không bỏ sót tín hiệu borderline như `penal`
-ở seed `reentrant_bowtie` (p≈0.06) — các seed có cơ chế đạt auxetic khác nhau
+ở seed `reentrant_bowtie` (p≈0.06) - các seed có cơ chế đạt auxetic khác nhau
 (vd bowtie dựa vào góc re-entrant hơn volfrac thuần túy), nên một tham số
 "im lặng" ở 10 seed nhưng có tín hiệu ở 1 seed vẫn đáng giữ ACTIVE thay vì
 cố định cứng.
 
 Tham số FIXED được đặt ở TRUNG ĐIỂM range đã khảo sát trong pipeline/params.py
-PARAM_SPACE — lựa chọn trung tính khi không có bằng chứng thống kê để chọn
+PARAM_SPACE - lựa chọn trung tính khi không có bằng chứng thống kê để chọn
 giá trị cụ thể hơn (correlation không cho biết hướng tối ưu cục bộ chính xác).
 
 Output schema (khớp pipeline/phase2_multi_batch/params.py::load_refined_parameters):

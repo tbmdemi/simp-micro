@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase3_dataset/finalize_dataset.py — `_seed_only_stratify`,
+Tests for pipeline/phase3_dataset/finalize_dataset.py - `_seed_only_stratify`,
 the fixed-bin stratification helper that fixes a data-leakage bug (percentile
 bins computed over the whole dataset would leak test-set information into
 the train split; see the function's own docstring).
@@ -30,7 +30,7 @@ class TestSeedOnlyStratify:
 
     def test_falls_back_to_seed_only_when_a_combined_class_is_singleton(self):
         """If seed+bin produces a class with only 1 member, train_test_split
-        would raise — the function must fall back to seed-only labels."""
+        would raise - the function must fall back to seed-only labels."""
         from pipeline.phase3_dataset.finalize_dataset import _seed_only_stratify
         seed_names = np.array(["circle"] * 9 + ["square"])  # square has n=1
         v12 = np.random.default_rng(0).uniform(-0.9, 0.4, size=10)

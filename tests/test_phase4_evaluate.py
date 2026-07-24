@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase4_surrogate/evaluate.py — r2_score.
+Tests for pipeline/phase4_surrogate/evaluate.py - r2_score.
 
 Import is done lazily inside each test (not at module top) because
 evaluate.py does `sys.path.insert(...)` + bare `from dataset import X` /

@@ -1,9 +1,9 @@
 """
-Tests for pipeline/phase2_multi_batch/runner.py — manufacturability
+Tests for pipeline/phase2_multi_batch/runner.py - manufacturability
 instrumentation (roadmap 6.2/6.3) added at generation time, xem
-EXPERIMENT_LOG.md mục "Phase 2 — Manufacturability".
+EXPERIMENT_LOG.md mục "Phase 2 - Manufacturability".
 
-evaluate_single()'s actual physics call (run_simp) is monkeypatched — this
+evaluate_single()'s actual physics call (run_simp) is monkeypatched - this
 suite covers the new manufacturability wiring, not the SIMP solve itself
 (still untested I/O-heavy code, see README Known Limitations #6).
 """
@@ -114,7 +114,7 @@ class TestEvaluateSinglePopulatesManufacturability:
         self, tmp_path, monkeypatch,
     ):
         """run_simp succeeding but NOT writing the expected PNG (shouldn't
-        happen in practice, but evaluate_single must not crash) — success
+        happen in practice, but evaluate_single must not crash) - success
         stays True (FE itself succeeded), manufacturability fields stay None."""
         from pipeline.phase2_multi_batch import runner as runner_mod
 

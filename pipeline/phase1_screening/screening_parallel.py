@@ -185,7 +185,7 @@ def save_results(results: List[Dict], analysis: Dict, output_dir: str,
     Args:
         best_obj_value: Giá trị objective tốt nhất tìm được (từ summary,
             None nếu chưa có mẫu thành công nào).
-        elapsed_time: Tổng thời gian chạy (giây) — KHÔNG phải timestamp.
+        elapsed_time: Tổng thời gian chạy (giây) - KHÔNG phải timestamp.
         n_workers: Số worker song song đã dùng.
     """
     os.makedirs(output_dir, exist_ok=True)
@@ -597,7 +597,7 @@ def aggregate_all_data(base_dir: str, objective: str) -> None:
     thẳng analyst.py, tự động discover seed trên đĩa nên hết rủi ro đó.
 
     `objective` hiện chưa dùng (analyst.py tự phát hiện objective từ
-    tên file/metadata) — giữ tham số để không phá vỡ chữ ký gọi hàm hiện có.
+    tên file/metadata) - giữ tham số để không phá vỡ chữ ký gọi hàm hiện có.
     """
     from pipeline.phase1_screening.analyst import main as run_analyst
     run_analyst(root_dir=base_dir)

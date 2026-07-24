@@ -1,10 +1,10 @@
 """
-Tests for pipeline/phase5_cvae/bootstrap_ci.py — adds confidence intervals on
+Tests for pipeline/phase5_cvae/bootstrap_ci.py - adds confidence intervals on
 top of best_of_n_eval.py's point-estimate R2/hit_rate, which are computed on
 very small n (19-24 conditions, sometimes as few as 3 for the
 --require-manufacturable N=1500 result). No bare sys.path/torch imports here
 (pure numpy/json/math), so none of the phase4/phase5 bare-import landmine
-concerns from tests/conftest.py apply — plain top-level imports are safe.
+concerns from tests/conftest.py apply - plain top-level imports are safe.
 """
 import json
 import math

@@ -83,7 +83,7 @@ def main():
     seed_names_all = data["seed_names"][idx_all]
     v12_all = data["v12"][idx_all]
 
-    # Stratify theo seed + fixed v12 bins — KHÔNG dùng percentile toàn bộ dữ liệu
+    # Stratify theo seed + fixed v12 bins - KHÔNG dùng percentile toàn bộ dữ liệu
     # (fix: data leakage khi percentile leak thông tin test set vào train set)
     strat_labels = _seed_only_stratify(seed_names_all, v12_all, n_bins=5)
 

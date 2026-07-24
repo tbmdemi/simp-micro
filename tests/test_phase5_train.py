@@ -1,7 +1,7 @@
 """
-Tests for pipeline/phase5_cvae/train.py — run_epoch, real_fe_r2.
+Tests for pipeline/phase5_cvae/train.py - run_epoch, real_fe_r2.
 
-Imports are lazy inside each test — see tests/conftest.py docstring.
+Imports are lazy inside each test - see tests/conftest.py docstring.
 """
 import numpy as np
 import torch
@@ -26,7 +26,7 @@ class TestRunEpoch:
         model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
                       channels=(4, 8, 16, 32))
         before = [p.clone() for p in model.parameters()]
-        # Small lr — this net + gamma*PROP_LOSS_SCALE-weighted loss is prone
+        # Small lr - this net + gamma*PROP_LOSS_SCALE-weighted loss is prone
         # to exploding on a tiny random batch at high lr; the point here is
         # just to confirm run_epoch(train=True) updates weights, not to
         # exercise convergence behavior.
@@ -84,6 +84,81 @@ class TestRunEpoch:
             device="cpu", train=True, lambda_disagreement=0.1,
         )
         assert np.isfinite(stats["total"])
+
+
+class TestRunEpochRealPhysics:
+    """run_epoch(lambda_real_physics>0) - differentiable-physics đầu-cuối
+    qua toàn bộ vòng lặp train thật (không chỉ unit test losses.py riêng
+    lẻ) - dùng lưới FE 6x6 nhỏ cho nhanh (thay vì 50x50 sản xuất)."""
+
+    def test_train_mode_with_real_physics_updates_decoder_params(self, phase3_npz_path):
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        ds = CVAEDataset(phase3_npz_path)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        before = [p.clone() for p in model.decoder.parameters()]
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+        tiny_fe_params = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            lambda_real_physics=1.0, real_physics_every=1,
+            real_physics_subsample=2, fe_params=tiny_fe_params,
+        )
+
+        assert "real_physics" in stats
+        assert np.isfinite(stats["real_physics"])
+        after = list(model.decoder.parameters())
+        assert any(not torch.allclose(b, a) for b, a in zip(before, after))
+
+    def test_eval_mode_skips_real_physics(self, phase3_npz_path):
+        """Thiết kế: real-physics chỉ áp lúc train (xem comment trong
+        run_epoch) - val_stats['real_physics'] phải là NaN (không đo)."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        ds = CVAEDataset(phase3_npz_path)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+        tiny_fe_params = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=False,
+            lambda_real_physics=1.0, real_physics_every=1,
+            real_physics_subsample=2, fe_params=tiny_fe_params,
+        )
+        assert np.isnan(stats["real_physics"])
+
+    def test_lambda_zero_matches_baseline_behavior(self, phase3_npz_path):
+        """lambda_real_physics=0.0 (mặc định) - real_physics không được đo,
+        hành vi giống hệt trước khi thêm tính năng này."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        ds = CVAEDataset(phase3_npz_path)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+        )
+        assert np.isnan(stats["real_physics"])
 
 
 class TestRealFeR2:

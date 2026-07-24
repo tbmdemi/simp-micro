@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase3_dataset/scan_dataset.py — locating the final
+Tests for pipeline/phase3_dataset/scan_dataset.py - locating the final
 iteration PNG and reading the final volume fraction for each SIMP sample
 directory. These are filesystem-facing helpers, tested against tmp_path
 fixtures instead of the real (gitignored) outputs/multi_batch/ tree.

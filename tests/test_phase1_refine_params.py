@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase1_screening/refine_params.py — the ACTIVE/FIXED
+Tests for pipeline/phase1_screening/refine_params.py - the ACTIVE/FIXED
 parameter decision logic that feeds Phase 2's sampling ranges. A wrong
 decision here means Phase 2 either wastes samples on a parameter that
 doesn't matter, or fixes one that actually does (see README: `volfrac`

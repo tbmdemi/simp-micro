@@ -1,12 +1,12 @@
 """
-Tests for pipeline/phase4_surrogate/bootstrap_ci.py — adds a confidence
+Tests for pipeline/phase4_surrogate/bootstrap_ci.py - adds a confidence
 interval on top of evaluate.py's point-estimate R2 (test.npz has 1,184
 samples, so we expect a much tighter CI than Phase 5's best_of_n_eval.py,
 which only has 19-24 conditions; see pipeline/phase5_cvae/bootstrap_ci.py).
 
 Import is done lazily inside each test (not at module top) because
 bootstrap_ci.py does `sys.path.insert(...)` + bare `from dataset import X`
-/ `from model import X` at import time — same phase4/phase5 bare-import
+/ `from model import X` at import time - same phase4/phase5 bare-import
 landmine as evaluate.py (see tests/test_phase4_evaluate.py docstring and
 tests/conftest.py's `_isolate_pipeline_bare_imports`).
 """
@@ -73,7 +73,7 @@ class TestBootstrapR2:
     def test_larger_n_gives_narrower_ci_than_smaller_n(self):
         """Core motivation for this script: Phase 4's test set (1,184
         samples) should give a much tighter CI than Phase 5's 19-24
-        conditions — verify the mechanism actually behaves that way."""
+        conditions - verify the mechanism actually behaves that way."""
         from pipeline.phase4_surrogate.bootstrap_ci import bootstrap_r2
         rng = np.random.default_rng(2)
 

@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase4_surrogate/model.py — SurrogateCNN.
+Tests for pipeline/phase4_surrogate/model.py - SurrogateCNN.
 """
 import torch
 
@@ -49,7 +49,7 @@ class TestSurrogateCNN:
         assert not torch.isinf(out).any()
 
     def test_gradients_flow(self):
-        """Backward pass should populate gradients on all parameters —
+        """Backward pass should populate gradients on all parameters -
         guards against an accidental detach/no_grad creeping into forward()."""
         model = SurrogateCNN(n_seeds=3)
         img = torch.randn(2, 1, 64, 64)

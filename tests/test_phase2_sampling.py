@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase2_multi_batch/sampling.py — sample generation
+Tests for pipeline/phase2_multi_batch/sampling.py - sample generation
 strategies (Sobol/LHS/random) and the seed x objective factorial design.
 """
 import pytest

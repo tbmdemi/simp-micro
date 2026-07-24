@@ -1,0 +1,26 @@
+{
+  "v12": {
+    "n_samples": 789,
+    "r2_point_estimate": 0.9215575456619263,
+    "r2_ci95_lo": 0.9064911812543869,
+    "r2_ci95_hi": 0.9345055475831032,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000
+  },
+  "v21": {
+    "n_samples": 789,
+    "r2_point_estimate": 0.8891663551330566,
+    "r2_ci95_lo": 0.8598607018589973,
+    "r2_ci95_hi": 0.9125956803560257,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000
+  },
+  "volfrac_achieved": {
+    "n_samples": 789,
+    "r2_point_estimate": 0.9271860122680664,
+    "r2_ci95_lo": 0.9157607898116111,
+    "r2_ci95_hi": 0.9366769373416901,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000
+  }
+}

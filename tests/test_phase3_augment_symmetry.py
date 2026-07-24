@@ -1,5 +1,5 @@
 """
-Tests for pipeline/phase3_dataset/augment_symmetry.py — the physics-aware
+Tests for pipeline/phase3_dataset/augment_symmetry.py - the physics-aware
 symmetry augmentation that gives the train split its x6 multiplier
 (README: "Train: 5.520 -> 33.120 mẫu"). Getting the v12<->v21 swap under
 90/270-degree rotation wrong here would silently mislabel a third of the

@@ -27,7 +27,7 @@ echo "============================================================"
 
 # --- Kiểm tra tiền điều kiện ---
 if [ ! -f "outputs/phase3/train.npz" ] || [ ! -f "outputs/phase3/val.npz" ] || [ ! -f "outputs/phase3/test.npz" ]; then
-    echo "LỖI: thiếu outputs/phase3/{train,val,test}.npz — không thể train." >&2
+    echo "LỖI: thiếu outputs/phase3/{train,val,test}.npz - không thể train." >&2
     exit 1
 fi
 if [ ! -f "outputs/phase4/surrogate_for_phase5.pt" ]; then
@@ -58,7 +58,7 @@ for GAMMA in "${GAMMAS[@]}"; do
     cp outputs/phase5/train_history.json  "${RESULTS_DIR}/train_history_gamma${GAMMA}.json"
     cp outputs/phase5/evaluation_report.json "${RESULTS_DIR}/eval_gamma${GAMMA}.json"
     # Diagnostics images (diversity_*.png, interpolation_*.png) cũng bị ghi đè
-    # mỗi lần evaluate.py chạy — PHẢI backup riêng theo gamma, nếu không sẽ mất.
+    # mỗi lần evaluate.py chạy - PHẢI backup riêng theo gamma, nếu không sẽ mất.
     mkdir -p "${RESULTS_DIR}/diagnostics_gamma${GAMMA}"
     cp outputs/phase5/diagnostics/*.png "${RESULTS_DIR}/diagnostics_gamma${GAMMA}/" 2>/dev/null || \
         echo "  [gamma=${GAMMA}] CẢNH BÁO: không tìm thấy ảnh diagnostics để backup"

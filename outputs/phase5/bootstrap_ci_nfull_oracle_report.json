@@ -1,0 +1,26 @@
+{
+  "outputs/phase5/self_play/best_of_n_clean_weighted_nfull_result.json": {
+    "n_conditions": 789,
+    "r2_point_estimate": 0.319767668454767,
+    "r2_ci95_lo": 0.21440725667736077,
+    "r2_ci95_hi": 0.41727948242522195,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 759,
+    "hit_rate_point_estimate": 0.9986824769433466,
+    "hit_rate_wilson_ci95_lo": 0.9925749229477291,
+    "hit_rate_wilson_ci95_hi": 0.9997673929406546
+  },
+  "outputs/phase5/self_play/best_of_n_gamma20_nfull_result.json": {
+    "n_conditions": 789,
+    "r2_point_estimate": 0.20154086187807752,
+    "r2_ci95_lo": 0.09463397960201475,
+    "r2_ci95_hi": 0.2967260934065548,
+    "n_boot_valid": 10000,
+    "n_boot_total": 10000,
+    "n_auxetic_conditions": 759,
+    "hit_rate_point_estimate": 1.0,
+    "hit_rate_wilson_ci95_lo": 0.9949640921522894,
+    "hit_rate_wilson_ci95_hi": 0.9999999999999999
+  }
+}

@@ -1,9 +1,9 @@
 """
-Tests for pipeline/phase5_cvae/self_play.py — verify_round (the FE-based
+Tests for pipeline/phase5_cvae/self_play.py - verify_round (the FE-based
 checkpoint scoring function; the orchestration in run()/main() spawns real
 training subprocesses and is intentionally out of scope for a unit test).
 
-Imports are lazy inside each test — see tests/conftest.py docstring.
+Imports are lazy inside each test - see tests/conftest.py docstring.
 """
 import numpy as np
 import torch
@@ -65,7 +65,7 @@ class TestVerifyRound:
 
     def test_same_seed_is_reproducible(self, tmp_path, monkeypatch):
         """verify_round MUST give identical results across repeated calls
-        with the same seed — self-play's round-over-round comparison is
+        with the same seed - self-play's round-over-round comparison is
         only meaningful if this holds (see module docstring: this was
         previously broken by an unseeded torch.randn() inside
         model.generate(), which made even scoring the SAME checkpoint twice

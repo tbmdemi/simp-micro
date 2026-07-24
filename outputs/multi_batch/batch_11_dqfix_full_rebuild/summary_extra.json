@@ -1,0 +1,12 @@
+{
+  "batch_id": 11,
+  "strategy": "design_df",
+  "n_samples": 2160,
+  "n_total_tasks": 2160,
+  "n_success": 2160,
+  "n_converged": 2160,
+  "n_workers": 10,
+  "elapsed_time": 3333.6,
+  "output_dir": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/multi_batch/batch_11_dqfix_full_rebuild",
+  "timestamp": "2026-07-24T11:06:46.372237"
+}

@@ -1,9 +1,9 @@
 """
-Tests for pipeline/phase2_multi_batch/params.py — BatchConfig/PipelineConfig
+Tests for pipeline/phase2_multi_batch/params.py - BatchConfig/PipelineConfig
 dataclasses, JSON round-trip, and the Phase-1-summary merging helper.
 
 No bare sys.path imports here (plain `from pipeline.phase2_multi_batch...`
-throughout the module), so top-level imports are safe — unlike
+throughout the module), so top-level imports are safe - unlike
 phase4_surrogate/phase5_cvae's bare-import landmine (see tests/conftest.py).
 """
 import json

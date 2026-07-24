@@ -1,9 +1,9 @@
 """
-Phase 1 Analyst — Aggregation Script.
+Phase 1 Analyst - Aggregation Script.
 
 Quét toàn bộ dữ liệu Phase 1 (outputs/pipeline/phase1/) và tạo hai file tổng hợp:
-  1. _all_correlations.json — hệ số tương quan Spearman cho mỗi cặp (seed, objective)
-  2. _all_summaries_parallel.json — tóm tắt gọn: top 3 tham số, best obj, elapsed time...
+  1. _all_correlations.json - hệ số tương quan Spearman cho mỗi cặp (seed, objective)
+  2. _all_summaries_parallel.json - tóm tắt gọn: top 3 tham số, best obj, elapsed time...
 
 Luồng xử lý: phát hiện seeds -> tìm CSV tổng hợp phase1_{seed}_{objective}.csv
 (fallback đọc từ thư mục sample_* nếu thiếu) -> tự động phát hiện param_names ->
@@ -81,7 +81,7 @@ def discover_configs(seed_dir: str, seed: str) -> List[Dict[str, Any]]:
     # Các objective đã biết trong pipeline Phase 1
     KNOWN_OBJECTIVES = ['auxetic', 'first', 'second']
 
-    # Tìm file CSV tổng hợp — pattern phase1_{seed}_{objective}.csv
+    # Tìm file CSV tổng hợp - pattern phase1_{seed}_{objective}.csv
     # Vì seed có thể chứa underscore (vd: circle_half_quarter) nên không thể
     # split('_') đơn giản. Thay vào đó, thử từng known objective làm suffix.
     csv_files = glob(os.path.join(seed_dir, 'phase1_*.csv'))
@@ -204,7 +204,7 @@ def load_run_metadata(csv_path: str) -> Dict[str, Optional[float]]:
     CSV tổng hợp `phase1_{seed}_{objective}.csv` luôn đi kèm file JSON cùng
     tên (`.json`) do `save_results()` trong phase1_screening/screening_parallel.py ghi
     ra. File JSON này chứa `metadata.elapsed_time` (tổng thời gian chạy,
-    đơn vị giây) và `metadata.n_workers` — không thể suy ra 2 giá trị này
+    đơn vị giây) và `metadata.n_workers` - không thể suy ra 2 giá trị này
     một cách đáng tin cậy chỉ từ CSV, nên đọc trực tiếp từ JSON nếu có.
 
     Args:
@@ -359,7 +359,7 @@ def compute_correlations(
     """Tính Spearman correlation giữa từng param và obj_value.
 
     Dùng Spearman (rank-based) thay vì Pearson vì quan hệ giữa tham số SIMP
-    và obj_value không được giả định là tuyến tính — khớp với phương pháp
+    và obj_value không được giả định là tuyến tính - khớp với phương pháp
     dùng trong pipeline/phase1_screening/screening_parallel.py (nguồn dữ liệu thật).
 
     Args:
@@ -391,7 +391,7 @@ def compute_correlations(
     top3 = [[name, r, p] for name, r, p in top_candidates[:3]]
 
     # Best obj_value: mọi objective hiện tại trong pipeline đều MINIMIZE.
-    # 'auxetic': c = Q12 - mu*(Q11+Q22) + penalty — Q12 càng âm càng tốt,
+    # 'auxetic': c = Q12 - mu*(Q11+Q22) + penalty - Q12 càng âm càng tốt,
     # nên "best" = giá trị NHỎ NHẤT, không phải lớn nhất.
     best_obj_value = float(df['obj_value'].min())
 
