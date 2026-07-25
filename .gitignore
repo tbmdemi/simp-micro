@@ -58,6 +58,18 @@ simp_result_*/
 outputs/phase3/*.npz
 outputs/phase3/manifest.csv
 
+# phase3_v2: dataset regeneration thử nghiệm (xem analysis/scripts/generate_production_batch.py)
+outputs/phase3_v2/*.npz
+outputs/phase3_v2/manifest.csv
+outputs/phase3_v2/split_report.json
+
+# raw pool scratch (ảnh + manifest thô trước khi lọc) - KHÔNG dùng /tmp (tmpfs,
+# mất dữ liệu qua reboot - đã xảy ra thật, mất ~3.5h compute, xem EXPERIMENT_LOG.md)
+outputs/phase3_v2_raw/
+
+# backup outputs/phase3/*.npz gốc trước khi thay bằng phase3_v2 (có thể khôi phục)
+outputs/phase3_backup/
+
 # --- LaTeX build artifacts ---
 *.aux
 *.log

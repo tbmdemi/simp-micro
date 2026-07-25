@@ -12,6 +12,7 @@ Cách chạy:
 import os
 import sys
 import json
+import argparse
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -32,7 +33,10 @@ def r2_score(y_true, y_pred):
 
 
 def main():
-    ckpt_path = os.path.join(PHASE4_DIR, "surrogate_best.pt")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ckpt", type=str, default=os.path.join(PHASE4_DIR, "surrogate_best.pt"))
+    args = parser.parse_args()
+    ckpt_path = args.ckpt
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -26,6 +26,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--Emin', type=float, help='Young-modulus of void material')
     parser.add_argument('--nu', type=float, help='Poisson ratio for the base material')
     parser.add_argument('--move', type=float, help='Move limit for OC update')
+    parser.add_argument('--move_min', type=float,
+                         help='Experimental: linearly decay --move down to this floor '
+                              'over max_iter iterations (default: unset, move stays fixed)')
+    parser.add_argument('--penal_init', type=float,
+                         help='Experimental: linearly ramp --penal up from this starting value '
+                              'over max_iter iterations (continuation, default: unset, penal stays fixed)')
     parser.add_argument('--max_iter', type=int, help='Maximum number of optimization iterations')
     parser.add_argument('--tol_change', type=float, help='Tolerance for design change convergence')
     parser.add_argument('--tol_obj', type=float, help='Tolerance for objective stability convergence')

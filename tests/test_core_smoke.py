@@ -417,3 +417,170 @@ class TestRunner:
         assert 'xPhys' in result
         assert 'Q' in result
         assert 'v12' in result or 'v12' in result or True  # benign
+
+
+class TestMoveAtIteration:
+    """move_at_iteration() - thử nghiệm giảm dần move limit để chống
+    oscillation/limit-cycle (osc_score, xem
+    analysis/scripts/audit_label_stability.py). Pure function, không cần
+    chạy SIMP thật."""
+
+    def test_move_min_none_returns_constant_move(self):
+        from simp.runner import move_at_iteration
+        for loop in (1, 50, 150):
+            assert move_at_iteration(0.2, None, loop, 150) == 0.2
+
+    def test_first_iteration_returns_full_move(self):
+        from simp.runner import move_at_iteration
+        assert move_at_iteration(0.2, 0.02, 1, 150) == pytest.approx(0.2)
+
+    def test_last_iteration_returns_move_min(self):
+        from simp.runner import move_at_iteration
+        assert move_at_iteration(0.2, 0.02, 150, 150) == pytest.approx(0.02)
+
+    def test_midpoint_is_roughly_halfway(self):
+        from simp.runner import move_at_iteration
+        # loop=76 trong [1,150] xấp xỉ trung điểm (frac~0.503)
+        mid = move_at_iteration(0.2, 0.02, 76, 150)
+        assert 0.02 < mid < 0.2
+        assert mid == pytest.approx(0.02 + (0.2 - 0.02) * (1 - 75 / 149), abs=1e-9)
+
+    def test_monotonically_non_increasing(self):
+        from simp.runner import move_at_iteration
+        values = [move_at_iteration(0.2, 0.02, loop, 150) for loop in range(1, 151)]
+        assert all(a >= b for a, b in zip(values, values[1:]))
+
+    def test_never_goes_below_move_min(self):
+        from simp.runner import move_at_iteration
+        for loop in range(1, 151):
+            assert move_at_iteration(0.2, 0.02, loop, 150) >= 0.02 - 1e-12
+
+    def test_max_iter_one_returns_move_min(self):
+        from simp.runner import move_at_iteration
+        assert move_at_iteration(0.2, 0.02, 1, 1) == 0.02
+
+
+class TestRunnerMoveDecay:
+    """run_simp(params) với move_min - kiểm tra tích hợp đầu-cuối (không chỉ
+    unit test move_at_iteration() riêng lẻ): history['move'] phải phản ánh
+    đúng lịch trình giảm dần, và move_min=None (mặc định) phải giữ nguyên
+    hành vi cũ (move cố định, không có key mới nào phá vỡ code hiện có)."""
+
+    def _base_params(self, tmp_path, **overrides):
+        params = {
+            'nelx': 4, 'nely': 4, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
+            'ft': 2, 'E0': 199.0, 'Emin': 1e-9, 'nu': 0.3, 'move': 0.2,
+            'max_iter': 5, 'tol_change': 1e-6, 'tol_obj': 1e-6, 'window_size': 5,
+            'seed': 'circle', 'objective': 'auxetic', 'void_size_frac': 0.4,
+            'rotation_deg': 0.0, 'beta': 0.8, 'save_every': 999, 'scale_factor': 1,
+            'output_dir': str(tmp_path / 'run'),
+        }
+        params.update(overrides)
+        return params
+
+    def test_default_move_min_none_keeps_move_constant(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path))
+        assert all(m == 0.2 for m in result['history']['move'])
+
+    def test_move_min_set_decays_over_history(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path, move_min=0.02))
+        move_history = result['history']['move']
+        assert move_history[0] == 0.2  # placeholder trước vòng lặp đầu
+        # sau khi vòng lặp bắt đầu, move phải <= giá trị bắt đầu và không tăng
+        assert all(a >= b for a, b in zip(move_history, move_history[1:]))
+        if len(move_history) > 1:
+            assert move_history[-1] < move_history[0]
+
+    def test_move_min_does_not_break_result_shape(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path, move_min=0.02))
+        assert result['xPhys'].shape == (4, 4)
+        assert result['Q'].shape == (3, 3)
+        assert 'move' in result['history']
+        assert len(result['history']['move']) == len(result['history']['iteration'])
+
+
+class TestPenalAtIteration:
+    """penal_at_iteration() - continuation kinh điển (tăng dần penal đầu vòng
+    lặp) để tránh local minima sớm, bổ trợ move_at_iteration(). Pure function."""
+
+    def test_penal_init_none_returns_constant_penal(self):
+        from simp.runner import penal_at_iteration
+        for loop in (1, 50, 150):
+            assert penal_at_iteration(3.0, None, loop, 150) == 3.0
+
+    def test_first_iteration_returns_penal_init(self):
+        from simp.runner import penal_at_iteration
+        assert penal_at_iteration(3.0, 1.0, 1, 150) == pytest.approx(1.0)
+
+    def test_last_iteration_returns_final_penal(self):
+        from simp.runner import penal_at_iteration
+        assert penal_at_iteration(3.0, 1.0, 150, 150) == pytest.approx(3.0)
+
+    def test_midpoint_is_roughly_halfway(self):
+        from simp.runner import penal_at_iteration
+        mid = penal_at_iteration(3.0, 1.0, 76, 150)
+        assert 1.0 < mid < 3.0
+        assert mid == pytest.approx(1.0 + (3.0 - 1.0) * (75 / 149), abs=1e-9)
+
+    def test_monotonically_non_decreasing(self):
+        from simp.runner import penal_at_iteration
+        values = [penal_at_iteration(3.0, 1.0, loop, 150) for loop in range(1, 151)]
+        assert all(a <= b for a, b in zip(values, values[1:]))
+
+    def test_never_exceeds_final_penal(self):
+        from simp.runner import penal_at_iteration
+        for loop in range(1, 151):
+            assert penal_at_iteration(3.0, 1.0, loop, 150) <= 3.0 + 1e-12
+
+    def test_max_iter_one_returns_final_penal(self):
+        from simp.runner import penal_at_iteration
+        assert penal_at_iteration(3.0, 1.0, 1, 1) == 3.0
+
+
+class TestRunnerPenalContinuation:
+    """run_simp(params) với penal_init - kiểm tra tích hợp đầu-cuối:
+    history['penal'] phải phản ánh đúng lịch trình tăng dần, và
+    penal_init=None (mặc định) phải giữ nguyên hành vi cũ."""
+
+    def _base_params(self, tmp_path, **overrides):
+        params = {
+            'nelx': 4, 'nely': 4, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
+            'ft': 2, 'E0': 199.0, 'Emin': 1e-9, 'nu': 0.3, 'move': 0.2,
+            'max_iter': 5, 'tol_change': 1e-6, 'tol_obj': 1e-6, 'window_size': 5,
+            'seed': 'circle', 'objective': 'auxetic', 'void_size_frac': 0.4,
+            'rotation_deg': 0.0, 'beta': 0.8, 'save_every': 999, 'scale_factor': 1,
+            'output_dir': str(tmp_path / 'run'),
+        }
+        params.update(overrides)
+        return params
+
+    def test_default_penal_init_none_keeps_penal_constant(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path))
+        assert all(p == 3.0 for p in result['history']['penal'])
+
+    def test_penal_init_set_ramps_up_over_history(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path, penal_init=1.0))
+        penal_history = result['history']['penal']
+        assert penal_history[0] == 1.0  # placeholder trước vòng lặp đầu
+        assert all(a <= b for a, b in zip(penal_history, penal_history[1:]))
+        if len(penal_history) > 1:
+            assert penal_history[-1] > penal_history[0]
+
+    def test_penal_init_does_not_break_result_shape(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path, penal_init=1.0))
+        assert result['xPhys'].shape == (4, 4)
+        assert result['Q'].shape == (3, 3)
+        assert 'penal' in result['history']
+        assert len(result['history']['penal']) == len(result['history']['iteration'])
+
+    def test_combined_move_min_and_penal_init(self, tmp_path):
+        from simp.runner import run_simp
+        result = run_simp(self._base_params(tmp_path, move_min=0.02, penal_init=1.0))
+        assert result['history']['move'][-1] < result['history']['move'][0]
+        assert result['history']['penal'][-1] > result['history']['penal'][0]
