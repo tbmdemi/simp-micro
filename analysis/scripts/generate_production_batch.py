@@ -10,9 +10,11 @@ label thật, xem osc_score gần 0 ở batch hourglass thử nghiệm dù hit_c
   hexagonal         676/720 = 93.9%
   reentrant_bowtie  556/720 = 77.2%
 
-Ghi vào /tmp (scratch, KHÔNG phải outputs/ của repo - outputs/phase3_v2/
-chưa có rule gitignore, hàng nghìn PNG sẽ làm bẩn git status). Chỉ npz cuối
-cùng (sau khi build+split+augment) mới ghi vào outputs/phase3_v2/.
+Ghi vào outputs/phase3_v2_raw/ (đĩa thật, ĐÃ có rule gitignore) - KHÔNG dùng
+/tmp (tmpfs, mất dữ liệu qua reboot - đã xảy ra thật, mất ~10.700 mẫu/~3,5h
+compute trong phiên rebuild v2, xem EXPERIMENT_LOG.md 2026-07-25). Chỉ npz
+cuối cùng (sau khi build+split+augment, xem assemble_phase3_v2.py) mới ghi
+vào outputs/phase3_v2/ rồi copy đè outputs/phase3/ khi chốt làm production.
 
 Cách chạy:
     python3 analysis/scripts/generate_production_batch.py --n-raw 60  # test nhỏ

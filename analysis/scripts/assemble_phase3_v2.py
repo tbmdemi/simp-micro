@@ -1,7 +1,8 @@
 """
-Lắp ráp dataset_v2: gộp manifest sạch từ batch mới (/tmp/phase3_v2_raw) +
-manifest sạch cũ (outputs/phase3/manifest_quality.csv), build npz 64x64,
-split 70/15/15 (stratify seed+v12), augment train x6.
+Lắp ráp dataset_v2: gộp manifest sạch từ batch mới (outputs/phase3_v2_raw/,
+xem generate_production_batch.py) + manifest sạch cũ
+(outputs/phase3/manifest_quality.csv), build npz 64x64, split 70/15/15
+(stratify seed+v12), augment train x6.
 
 Tiêu chí "sạch" THỐNG NHẤT cho cả 2 nguồn (xem phiên làm việc: hit_cap KHÔNG
 dùng để lọc - mislabeling bug đã biết ở ConvergenceChecker):

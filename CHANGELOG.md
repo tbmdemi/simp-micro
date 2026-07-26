@@ -58,6 +58,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - README.md/EXPERIMENT_LOG.md rút gọn đáng kể (EXPERIMENT_LOG: 708→70 dòng), chuẩn hóa dùng `-` thay cho em-dash `—` trên toàn bộ `.md`/`.py`/`.sh`.
 - Khuyến nghị "K=10 giữ gần hết mức tăng R²" (dựa trên n=24) bị rút lại sau khi đánh giá ở n=789 cho thấy nó sụp đổ về CI âm/cắt-0 với mọi checkpoint trước differentiable-physics.
 
+### 2026-07-25 - Rebuild dataset v2 + retrain Phase 4/5 (chưa gắn số phiên bản)
+
+> Chi tiết đầy đủ (triệu chứng/nguyên nhân/sửa/số liệu): [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Mục này chỉ tóm tắt theo định dạng changelog.
+
+#### Added
+- `analysis/scripts/generate_production_batch.py` - sinh raw sample song song (`multiprocessing.Pool`), độc lập với `pipeline/phase2_multi_batch/`, dùng range tham số theo seed (`SEED_PARAM_RANGES`).
+- `analysis/scripts/assemble_phase3_v2.py` - gộp pool raw mới + pool sạch cũ, build/split/augment thành dataset v2.
+- `outputs/phase4/surrogate_v2.pt`, `outputs/phase5/cvae_v2_base.pt`/`cvae_v2_finetuned.pt` - checkpoint retrain trên dataset v2.
+- `--ckpt` (`evaluate.py`), `--src/--dst/--eval-report` (`export_for_phase5.py`) - tham số CLI, trước đó hardcode hoàn toàn.
+
+#### Fixed
+- **Range tham số quá rộng cho `reentrant_bowtie`/`hexagonal`** trong script sinh dữ liệu mới - dùng nguyên `ACTIVE_PARAMETERS` (0,3-0,7/0,1-0,4) thay vì dải hẹp lịch sử (0,50-0,58/0,28-0,38) khiến yield sập xuống 1,4%.
+- **`beta=0,8` thay vì mặc định production `1,0`** trong script sinh dữ liệu mới (nghiêm trọng hơn) - khiến `reentrant_bowtie` suy biến hoàn toàn (kẹt ~13/150 iteration). Production pipeline gốc (`pipeline/phase2_multi_batch/`) không bị ảnh hưởng - không bao giờ set `beta` nên luôn dùng đúng mặc định `1.0`.
+- Mất ~10.700 mẫu raw (~3,5h compute) do ghi tạm vào `/tmp` (tmpfs, xoá qua reboot) - từ nay mọi output raw ghi vào `outputs/` (đĩa thật).
+
+#### Changed
+- **Dataset production thay hoàn toàn**: `outputs/phase3/{train,val,test,dataset_64}.npz` - train 57.216 mẫu (từ 22.080), val/test 2.044 mẫu (từ 789). Bộ cũ backup nguyên vẹn tại `outputs/phase3_backup/`.
+- Phase 4 surrogate retrain trên dataset v2: R²(v12/v21/volfrac) 0,922/0,889/- → **0,974/0,964/0,983**.
+- Phase 5 cVAE retrain trên dataset v2 (`cvae_v2_finetuned.pt`, recipe 2-stage bắt buộc - train from-scratch với real-physics loss ngay từ đầu thất bại): R²(FE, n=300)=0,9953, hit rate single-shot=99,7% - ngang ngửa `cvae_realphysics.pt` (checkpoint cũ, R²=0,9984/98,3%, đo lại trên cùng test set v2). Cả 2 checkpoint được giữ, khuyến nghị dùng bản v2 cho nhất quán với dataset hiện tại.
+
 ## [1.4.0] - 2026-07-10
 
 ### Fixed
