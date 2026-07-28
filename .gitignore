@@ -70,6 +70,9 @@ outputs/phase3_v2_raw/
 # backup outputs/phase3/*.npz gốc trước khi thay bằng phase3_v2 (có thể khôi phục)
 outputs/phase3_backup/
 
+# pilot use_sqrt/move_min/penal_init (2026-07-26, xem EXPERIMENT_LOG.md) - scratch, không phải dataset
+outputs/pilot_damping_decay/
+
 # --- LaTeX build artifacts ---
 *.aux
 *.log

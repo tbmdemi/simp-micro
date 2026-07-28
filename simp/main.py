@@ -32,6 +32,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--penal_init', type=float,
                          help='Experimental: linearly ramp --penal up from this starting value '
                               'over max_iter iterations (continuation, default: unset, penal stays fixed)')
+    parser.add_argument('--use_sqrt', action='store_true',
+                         help='Experimental: use classic OC damping exponent eta=0.5 '
+                              '(x*sqrt(ratio)) instead of x*ratio (default: off)')
     parser.add_argument('--max_iter', type=int, help='Maximum number of optimization iterations')
     parser.add_argument('--tol_change', type=float, help='Tolerance for design change convergence')
     parser.add_argument('--tol_obj', type=float, help='Tolerance for objective stability convergence')
