@@ -8,6 +8,19 @@ Thực hiện thuật toán cập nhật OC (Optimality Criteria) cổ điển
 import numpy as np
 from scipy.sparse import csr_matrix
 
+from .filter import apply_heaviside_projection
+
+# X_MIN: sàn dưới của biến thiết kế x - khớp giá trị chuẩn tham chiếu Sigmund
+# (2001) 99-line MATLAB (`xnew = max(0.001, ...)`), KHÔNG phải 0.0. Lý do:
+# dc/dx (dQ) ∝ x^(penal-1) (xem homogenization/compute.py) -> TẠI x=0 CHÍNH
+# XÁC, độ nhạy = 0 (với penal>1), khiến x*ratio giữ nguyên 0 MÃI MÃI (cập
+# nhật nhân, không phải cộng) - một trạng thái "hấp thụ" toán học không thể
+# thoát ra dù có thêm bất kỳ ràng buộc/phạt nào khác (đã kiểm chứng: bug FIX
+# 2026-07-29 dùng x_min=0.0 khiến `hexagonal`/`reentrant_bowtie` sụp về vol~0
+# vĩnh viễn chỉ trong ~10 vòng lặp đầu, xem EXPERIMENT_LOG.md). Dùng 0.001
+# giữ độ nhạy khác 0 tại "gần-void", cho phép phần tử hồi phục nếu cần.
+X_MIN = 0.001
+
 
 def oc_update(
     x: np.ndarray,
@@ -21,6 +34,9 @@ def oc_update(
     Q: np.ndarray | None = None,
     delta: float | None = None,
     use_sqrt: bool = False,
+    projection: str | None = None,
+    beta_proj: float = 8.0,
+    eta_proj: float = 0.5,
 ):
     """Cập nhật biến thiết kế dùng tiêu chí tối ưu (OC).
 
@@ -44,11 +60,18 @@ def oc_update(
         use_sqrt: Nếu True, dùng x * sqrt(-dc/(dv*lmid)) (Sigmund 2001 heuristic).
                    Nếu False, dùng x * (-dc/(dv*lmid)) (MATLAB reference).
                    Mặc định False để khớp MATLAB.
+        projection: None (mặc định) hoặc 'heaviside'. Nếu 'heaviside', ràng buộc
+            thể tích trong bisection nhắm vào mean(x̂) = mean(apply_heaviside_
+            projection(xPhys, beta_proj, eta_proj)), không phải mean(xPhys) thô
+            (xPhys ở đây là x̃, trường đã lọc nhưng chưa qua projection).
+        beta_proj, eta_proj: Tham số Heaviside projection (chỉ dùng khi
+            projection='heaviside'), xem core/filter.py::apply_heaviside_projection().
 
     Returns:
         Bộ (xnew, xPhys) với:
             xnew : Mảng (nely, nelx) biến thiết kế mới (chưa lọc).
-            xPhys: Mảng (nely, nelx) mật độ vật lý (đã lọc).
+            xPhys: Mảng (nely, nelx) mật độ x̃ đã lọc (CHƯA projection - caller
+                tự áp projection để có x̂, giống hành vi cũ).
     """
     nely, nelx = x.shape
     l1 = 0.0
@@ -67,7 +90,7 @@ def oc_update(
         if use_sqrt:
             ratio = np.sqrt(ratio)
         xnew = np.maximum(
-            0.0,
+            X_MIN,
             np.maximum(
                 x - move,
                 np.minimum(
@@ -90,7 +113,16 @@ def oc_update(
         # Q được evaluate tại x cũ, không phải xnew - approximation chuẩn của
         # OC update (Sigmund 2001, Andreassen 2011), chấp nhận được với move
         # limit nhỏ (0.05-0.2).
-        vol = np.mean(xPhys)
+        # FIX (xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục B1): khi có
+        # projection, ràng buộc thể tích phải nhắm vào mean(x̂) (SAU projection,
+        # trường thật sự dùng ở FE/chế tạo), không phải mean(x̃) (TRƯỚC
+        # projection) - vì projection không bảo toàn thể tích tuyệt đối, dùng
+        # x̃ để bisection gây lệch volfrac có hệ thống (đo được trong pilot).
+        if projection == 'heaviside':
+            x_hat = apply_heaviside_projection(xPhys, beta_proj, eta_proj)
+            vol = np.mean(x_hat)
+        else:
+            vol = np.mean(xPhys)
 
         # MATLAB-style: mean(xPhys) > volfrac && Q(1,1) >= delta && Q(2,2) >= delta
         if has_stiffness_constraint:

@@ -41,6 +41,10 @@ def build_parser() -> argparse.ArgumentParser:
                               '(default: unset, off - identity, same as before)')
     parser.add_argument('--beta_proj', type=float,
                          help='Heaviside projection sharpness (only used with --projection heaviside, default 8.0)')
+    parser.add_argument('--beta_proj_init', type=float,
+                         help='Experimental: linearly ramp --beta_proj up from this starting value over '
+                              'max_iter iterations (continuation, only used with --projection heaviside, '
+                              'default: unset, beta_proj stays fixed)')
     parser.add_argument('--eta', type=float,
                          help='Heaviside projection threshold (only used with --projection heaviside, default 0.5)')
     parser.add_argument('--enforce_connectivity', action='store_true',
@@ -50,6 +54,10 @@ def build_parser() -> argparse.ArgumentParser:
                          help='Iteration interval for --enforce_connectivity (default 10)')
     parser.add_argument('--connectivity_floor', type=float,
                          help='Design-variable floor value for nudged island pixels (default 0.01)')
+    parser.add_argument('--connectivity_min_relative_size', type=float,
+                         help='Fraction of the largest component size below which a disconnected '
+                              'island is treated as noise and nudged (default 0.15); larger islands '
+                              'are left alone to allow natural reconnection')
     parser.add_argument('--objective_variant', type=str, choices=['q12', 'normalized'],
                          help="Experimental: 'normalized' minimizes Q12/sqrt(Q11*Q22) instead of "
                               "raw Q12 (default: unset, 'q12' - same as before)")

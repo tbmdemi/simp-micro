@@ -16,29 +16,29 @@ trên sai lệch; compute_nu12()/compute_nu21() luôn dùng nghịch đảo ma t
 import numpy as np
 
 
-def compute_nu12(Q: np.ndarray, rotation_tol: float = 1e-3) -> float:
+def stiffness_delta(volfrac: float, E0: float) -> float:
+    """Ngưỡng stiffness tối thiểu δ = 10% độ cứng vật liệu nền theo tỉ lệ thể
+    tích thiết kế - dùng làm ngưỡng chung cho CẢ phạt mềm (bên dưới, trong c/dc)
+    LẪN ràng buộc cứng trong oc_update() (xem simp/runner.py, FIX 2026-07-29
+    B_stiffness) - một nguồn duy nhất để tránh 2 nơi tính delta lệch nhau."""
+    return 0.1 * volfrac * E0
+
+
+def compute_nu12(Q: np.ndarray) -> float:
     """Tính nu12 chính xác từ tensor Q (không giả định orthotropic).
 
-    Dùng nghịch đảo ma trận 3x3 đầy đủ: nu12 = -S12/S11 với S = Q^-1.
+    Dùng nghịch đảo ma trận 3x3 đầy đủ: nu12 = -S12/S11 với S = Q^-1. Luôn
+    đúng bất kể coupling cắt-pháp (Q13/Q23, do rotation) - khác công thức rút
+    gọn Q12/Q22 (chỉ đúng khi Q13=Q23=0).
 
     Args:
         Q: Tensor độ cứng đồng nhất hóa (3x3), thứ tự Voigt [11, 22, 12].
-        rotation_tol: Ngưỡng tương đối để cảnh báo coupling shear-normal
-            đáng kể (|Q13|, |Q23| so với sqrt(Q11*Q22)).
 
     Returns:
         nu12 (float) tính chính xác.
     """
     S = np.linalg.inv(Q)
     nu12 = -S[0, 1] / S[0, 0]
-
-    scale = np.sqrt(max(Q[0, 0] * Q[1, 1], 1e-12))
-    coupling = max(abs(Q[0, 2]), abs(Q[1, 2])) / scale
-    if coupling > rotation_tol:
-        # Coupling đáng kể - công thức rút gọn Q12/Q22 sẽ sai, nhưng giá trị
-        # trả về ở đây (qua S=Q^-1) vẫn luôn đúng.
-        pass
-
     return float(nu12)
 
 def compute_nu21(Q: np.ndarray) -> float:
@@ -78,7 +78,7 @@ def compute_auxetic_q12_objective(
             c : Giá trị hàm mục tiêu (vô hướng).
             dc: Mảng (nely, nelx) đạo hàm.
     """
-    delta = 0.1 * volfrac * E0
+    delta = stiffness_delta(volfrac, E0)
     delta_sq = max(delta ** 2, 1e-12)  # tránh chia 0
 
     # mu > 0 tạo áp lực kéo Q12 xuống âm vì Q11+Q22 luôn dương.
@@ -130,7 +130,7 @@ def compute_auxetic_normalized_objective(
     Returns:
         (c, dc) - cùng shape với compute_auxetic_q12_objective().
     """
-    delta = 0.1 * volfrac * E0
+    delta = stiffness_delta(volfrac, E0)
     delta_sq = max(delta ** 2, 1e-12)
 
     eps = 1e-9

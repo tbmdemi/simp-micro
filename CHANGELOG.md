@@ -80,7 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 2026-07-29 - Audit độc lập toàn diện + fix (chưa gắn số phiên bản)
 
-> Chi tiết đầy đủ (bằng chứng số, severity, đề xuất): [AUDIT_REPORT_INDEPENDENT_2026-07-29.md](AUDIT_REPORT_INDEPENDENT_2026-07-29.md). Mục này chỉ tóm tắt theo định dạng changelog.
+> Chi tiết đầy đủ (bằng chứng số, severity, đề xuất): [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Mục này chỉ tóm tắt theo định dạng changelog.
 
 #### Fixed
 - **Bug scaling `Q` trong `compute_homogenized_tensor()`** - `k_e` thiếu chia `E0` (double-counting, `KE` đã chứa sẵn `E0`) + chia dư `/(nelx*nely)` khi `U0` đã dùng tọa độ chuẩn hóa `[0,1]` (diện tích miền=1). `Q_cũ = Q_đúng * E0/nele` - đã kiểm chứng bằng bài test chuẩn "ô cơ sở đặc → Q=D" (2 mesh size, rtol<1e-6). KHÔNG ảnh hưởng `ν₁₂/ν₂₁` (bất biến với hệ số nhân đồng đều), nhưng ngưỡng phạt cứng `delta` trong `objectives/auxetic.py` từng lệch lên **~46%** độ cứng thay vì 10% thiết kế - giờ đúng lại.

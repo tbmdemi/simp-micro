@@ -271,6 +271,79 @@ class TestOC:
         assert np.all(xPhys >= 0.0)
         assert np.all(xPhys <= 1.0)
 
+    def test_oc_update_never_reaches_exact_zero(self):
+        """FIX 2026-07-29: xnew phải sàn ở X_MIN=0.001 (khớp Sigmund 2001
+        99-line MATLAB), KHÔNG PHẢI 0.0 - nếu để 0.0, dc/dx=0 tại x=0 (penal>1)
+        biến x=0 thành trạng thái hấp thụ vĩnh viễn (x*ratio giữ nguyên 0 mãi
+        mãi vì cập nhật OC là phép NHÂN, không phải cộng) - đã kiểm chứng gây
+        sụp cấu trúc thật (vol->~0.005) trên seed hexagonal/reentrant_bowtie
+        trong pilot thật, xem EXPERIMENT_LOG.md."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update, X_MIN
+
+        nely, nelx = 6, 6
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.05)  # đã gần void, move lớn dễ đẩy về 0
+        dc = -np.random.rand(nely, nelx) * 0.01  # gradient rất yếu (gần suy biến)
+        dv = np.ones((nely, nelx))
+
+        xnew, xPhys = oc_update(x, dc, dv, volfrac=0.5, move=0.2, H=H, Hs=Hs, ft=2)
+        assert X_MIN > 0.0
+        assert np.all(xnew >= X_MIN)
+
+    def test_oc_update_hard_stiffness_gate_biases_toward_more_material(self):
+        """FIX 2026-07-29: khi Q dưới delta (vi phạm ràng buộc cứng), bisection
+        phải thiên về giữ NHIỀU vật liệu hơn (lmid nhỏ hơn -> ratio lớn hơn)
+        so với khi không có ràng buộc - đây là cơ chế đã có sẵn trong oc_update
+        (khớp MATLAB topK_Hourglass.m) nhưng trước đây simp/runner.py không
+        bao giờ truyền Q/delta vào (orphaned), khiến seed hexagonal/
+        reentrant_bowtie mất bảo vệ chống sụp cấu trúc sau khi sửa bug A1
+        (Q-scaling). Test này xác nhận CƠ CHẾ hoạt động đúng ở mức unit,
+        độc lập với test tích hợp run_simp() đầy đủ."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update
+
+        nely, nelx = 8, 8
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.3)
+        dc = -np.random.rand(nely, nelx) - 0.1
+        dv = np.ones((nely, nelx))
+
+        xnew_free, _ = oc_update(x.copy(), dc, dv, volfrac=0.3, move=0.2, H=H, Hs=Hs, ft=2)
+        # Q vi phạm cả 2 ràng buộc (Q11, Q22 < delta) -> phải thiên về nhiều
+        # vật liệu hơn so với không ràng buộc.
+        Q_violating = np.diag([1.0, 1.0, 1.0])
+        xnew_constrained, _ = oc_update(x.copy(), dc, dv, volfrac=0.3, move=0.2, H=H, Hs=Hs, ft=2,
+                                         Q=Q_violating, delta=10.0)
+        assert np.mean(xnew_constrained) >= np.mean(xnew_free)
+
+    def test_oc_update_projection_targets_projected_volume(self):
+        """FIX 2026-07-29 (B1): với projection='heaviside', bisection phải nhắm
+        vào mean(x̂) (SAU projection), không phải mean(x̃) (TRƯỚC projection) -
+        trước khi sửa, mean(xPhys) trả về (x̃) có thể lệch xa volfrac vì
+        projection không bảo toàn thể tích."""
+        from simp.core.filter import build_filter, apply_heaviside_projection
+        from simp.core.oc import oc_update
+
+        nely, nelx = 8, 8
+        H, Hs = build_filter(nelx, nely, 1.5)
+
+        x = np.full((nely, nelx), 0.5)
+        rng = np.random.default_rng(0)
+        dc = -rng.random((nely, nelx)) - 0.1
+        dv = np.ones((nely, nelx))
+
+        xnew, x_tilde = oc_update(
+            x, dc, dv, volfrac=0.4, move=0.2, H=H, Hs=Hs, ft=2,
+            projection='heaviside', beta_proj=8.0, eta_proj=0.5,
+        )
+        x_hat = apply_heaviside_projection(x_tilde, beta_proj=8.0, eta=0.5)
+        # Trường VẬT LÝ (sau projection) phải khớp volfrac, không phải x_tilde.
+        assert abs(np.mean(x_hat) - 0.4) < 1e-4
+        # x_tilde (trước projection) thường lệch khỏi volfrac do bù trừ phi
+        # tuyến của phép chiếu - đây chính là hiện tượng đã sửa.
+        assert xnew.shape == (nely, nelx)
+
 
 class TestObjectives:
     """Smoke tests for objective functions."""
@@ -469,6 +542,34 @@ class TestNudgeDisconnectedIslands:
         x[8:10, 8:10] = 0.3  # x đã thấp hơn floor=0.5 -> không nên bị NÂNG lên
         result = nudge_disconnected_islands(x, xPhys, floor=0.5)
         assert np.allclose(result[8:10, 8:10], 0.3)
+
+    def test_large_fragment_not_nudged_like_noise(self):
+        """FIX 2026-07-29 (regression B2 four_circle): một mảnh chiếm >15%
+        kích thước mảnh lớn nhất là cấu trúc thật (đang hình thành cầu nối),
+        KHÔNG phải nhiễu - không được nudge, khác hành vi cũ (dìm mọi mảnh
+        không phải lớn nhất, gây khóa cứng winner-take-all)."""
+        from simp.runner import nudge_disconnected_islands
+        xPhys = np.zeros((10, 12))
+        xPhys[1:7, 1:7] = 0.9        # mảnh lớn nhất, 36 pixel
+        xPhys[1:5, 9:12] = 0.9       # mảnh "cánh" thật, 12 pixel (33% mảnh lớn nhất)
+        x = xPhys.copy()
+        result = nudge_disconnected_islands(x, xPhys, floor=0.01, min_relative_size=0.15)
+        # Mảnh lớn giữ nguyên
+        assert np.allclose(result[1:7, 1:7], 0.9)
+        # Mảnh "cánh" (33% > ngưỡng 15%) phải được GIỮ NGUYÊN, không nudge
+        assert np.allclose(result[1:5, 9:12], 0.9)
+
+    def test_tiny_noise_still_nudged_regardless_of_relative_size(self):
+        """Mảnh siêu nhỏ (dưới min_feature_px tuyệt đối) vẫn bị nudge dù
+        mảnh lớn nhất cũng nhỏ (tỷ lệ tương đối không áp dụng được)."""
+        from simp.runner import nudge_disconnected_islands
+        xPhys = np.zeros((6, 6))
+        xPhys[1:3, 1:3] = 0.9   # mảnh lớn nhất, 4 pixel
+        xPhys[5, 5] = 0.9        # nhiễu 1 pixel, tách rời
+        x = xPhys.copy()
+        result = nudge_disconnected_islands(x, xPhys, floor=0.01, min_feature_px=2)
+        assert np.allclose(result[1:3, 1:3], 0.9)
+        assert np.allclose(result[5, 5], 0.01)
 
 
 class TestRunner:

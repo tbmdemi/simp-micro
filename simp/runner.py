@@ -32,7 +32,7 @@ from .core.convergence import ConvergenceChecker
 from .homogenization.compute import compute_homogenized_tensor
 from .objectives.auxetic import (
     compute_auxetic_q12_objective, compute_auxetic_normalized_objective,
-    compute_nu12, compute_nu21,
+    compute_nu12, compute_nu21, stiffness_delta,
 )
 from .io.logger import save_csv
 
@@ -94,25 +94,45 @@ def penal_at_iteration(penal: float, penal_init, loop: int, max_iter: int,
 
 def nudge_disconnected_islands(x: np.ndarray, xPhys: np.ndarray,
                                 min_feature_px: int = 2,
+                                min_relative_size: float = 0.15,
                                 floor: float = 0.01) -> np.ndarray:
-    """Hạ mật độ các mảnh vật liệu rời rạc (KHÔNG PHẢI mảnh lớn nhất) trong
-    xPhys xuống `floor` trên biến thiết kế x tại đúng vị trí đó - heuristic
-    "nudge" giữa các vòng lặp cho enforce_connectivity (xem run_simp()).
+    """Hạ mật độ các mảnh vật liệu NHIỄU (nhỏ) trong xPhys xuống `floor` trên
+    biến thiết kế x tại đúng vị trí đó - heuristic "nudge" giữa các vòng lặp
+    cho enforce_connectivity (xem run_simp()).
+
+    FIX 2026-07-29 (regression B2, xem EXPERIMENT_LOG.md): bản đầu tiên dìm
+    TẤT CẢ mảnh không phải mảnh lớn nhất, bất kể kích thước - trace thực tế
+    trên seed `four_circle` cho thấy điều này dìm luôn cả các "cánh" cấu trúc
+    thật (vd 132px = 51% kích thước mảnh lớn nhất tại thời điểm đó, KHÔNG
+    phải nhiễu) đang trong quá trình hình thành cầu nối với thân chính, tạo
+    hiệu ứng "khóa cứng" winner-take-last: mảnh lớn nhất được ưu ái phình to
+    liên tục, còn các cánh bị dìm lặp lại mỗi connectivity_every vòng trước
+    khi kịp vượt ngưỡng 0.5 để tái liên thông - kết quả RỜI RẠC HƠN (10->19
+    mảnh) thay vì liên thông hơn. Sửa: chỉ dìm mảnh thực sự nhỏ (nhiễu) -
+    dưới min_feature_px pixel TUYỆT ĐỐI, HOẶC dưới min_relative_size (mặc
+    định 15%) kích thước mảnh lớn nhất - để mảnh cấu trúc đang hình thành có
+    cơ hội tự nhiên phát triển/liên thông thay vì bị diệt non.
 
     Viết lại độc lập với pipeline/phase5_cvae/manufacturability.py::
     check_connectivity() (cùng logic 8-connectivity + ndimage.label) vì
-    simp/ không phụ thuộc pipeline/ (hướng dependency ngược lại).
+    simp/ không phụ thuộc pipeline/ (hướng dependency ngược lại). LƯU Ý:
+    min_feature_px ở đây là ngưỡng SỐ PIXEL của cả mảnh (area), khác với
+    check_connectivity() (đó là bán kính erosion đo bề rộng nét) - cùng tên
+    tham số nhưng khác đơn vị/ý nghĩa, không dùng chung logic.
 
     Args:
         x: Biến thiết kế hiện tại (nely, nelx) - SẼ bị sửa tại chỗ các pixel
-            thuộc đảo rời rạc.
+            thuộc đảo nhiễu.
         xPhys: Mật độ vật lý hiện tại (nely, nelx) - dùng để XÁC ĐỊNH đảo
             (binarize > 0.5), nhưng bản thân không bị sửa trực tiếp ở đây
             (sẽ được filter/projection tính lại từ x đã nudge ở vòng sau).
-        min_feature_px: Không dùng để lọc nét mảnh ở đây (chỉ connectivity
-            thuần) - giữ tên tham số khớp check_connectivity() cho nhất quán,
-            hiện chưa dùng.
-        floor: Giá trị x hạ xuống tại các pixel thuộc đảo không phải lớn nhất.
+        min_feature_px: Ngưỡng số pixel TUYỆT ĐỐI - mảnh có ít hơn ngần này
+            pixel luôn bị coi là nhiễu, bất kể tỷ lệ so với mảnh lớn nhất.
+        min_relative_size: Ngưỡng TƯƠNG ĐỐI (phần của kích thước mảnh lớn
+            nhất) - mảnh nhỏ hơn ngưỡng này (và lớn hơn min_feature_px) vẫn
+            bị coi là nhiễu; mảnh lớn hơn được coi là cấu trúc thật, GIỮ
+            NGUYÊN (không nudge) để có cơ hội tự liên thông.
+        floor: Giá trị x hạ xuống tại các pixel thuộc đảo nhiễu.
 
     Returns:
         x đã nudge (cùng mảng, sửa tại chỗ - trả về cho tiện dùng theo chuỗi).
@@ -125,7 +145,15 @@ def nudge_disconnected_islands(x: np.ndarray, xPhys: np.ndarray,
         return x
     sizes = ndimage.sum(solid, labels, index=range(1, n_components + 1))
     largest_label = int(np.argmax(sizes)) + 1
-    island_mask = solid & (labels != largest_label)
+    largest_size = sizes[largest_label - 1]
+    noise_threshold = max(min_feature_px, min_relative_size * largest_size)
+    noise_labels = [
+        i + 1 for i, s in enumerate(sizes)
+        if (i + 1) != largest_label and s < noise_threshold
+    ]
+    if not noise_labels:
+        return x
+    island_mask = np.isin(labels, noise_labels)
     x[island_mask] = np.minimum(x[island_mask], floor)
     return x
 
@@ -197,14 +225,21 @@ def run_simp(params: dict) -> dict:
     # (density filter) - ft=1 không có bước "xPhys = filter(x)" trung gian để
     # chiếu lên. CHƯA áp dụng cho dataset hiện có - tính năng thử nghiệm, cần
     # pilot trên vài seed trước khi cân nhắc dùng rộng rãi.
-    # XẤP XỈ ĐÃ BIẾT: ràng buộc thể tích trong oc_update() vẫn bisection trên
-    # mean(x̃) (TRƯỚC projection), không phải mean(x̂) (SAU projection) - vì
-    # projection không (xấp xỉ) bảo toàn thể tích tuyệt đối mỗi vòng lặp, thể
-    # tích thật của x̂ cuối cùng có thể lệch nhẹ khỏi volfrac. Cùng dạng xấp xỉ
-    # với "Q đánh giá ở x cũ" đã có sẵn trong oc.py.
+    # FIX 2026-07-29 (B1, xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md): trước
+    # đây ràng buộc thể tích trong oc_update() bisection trên mean(x̃) (TRƯỚC
+    # projection) thay vì mean(x̂) (SAU projection), gây lệch volfrac có hệ
+    # thống đo được trong pilot (vd volfrac=0.45 -> vol thật 0.469). Đã sửa:
+    # oc_update() giờ nhận beta_proj/eta_proj và tự bisection trên mean(x̂).
     projection = params.get('projection', None)
     beta_proj = params.get('beta_proj', 8.0)
     eta_proj = params.get('eta', 0.5)
+    # beta_proj_init (mặc định None = TẮT, beta_proj cố định suốt vòng lặp):
+    # nếu đặt, beta_proj tăng tuyến tính từ beta_proj_init lên beta_proj qua
+    # max_iter vòng lặp (continuation kinh điển cho Heaviside projection,
+    # Wang-Lazarov-Sigmund 2011) - projection gần identity lúc đầu (bài toán
+    # lồi hơn, tránh local minima sớm khi thể tích/hình dạng còn đang định
+    # hình), sắc dần về beta_proj cuối. Cùng pattern với penal_init ở trên.
+    beta_proj_init = params.get('beta_proj_init', None)
     # enforce_connectivity (mặc định False = TẮT, hành vi cũ): mỗi
     # connectivity_every vòng lặp, kiểm tra liên thông trên xPhys hiện tại
     # (analogue của pipeline/phase5_cvae/manufacturability.py::check_connectivity(),
@@ -220,6 +255,10 @@ def run_simp(params: dict) -> dict:
     enforce_connectivity = params.get('enforce_connectivity', False)
     connectivity_every = params.get('connectivity_every', 10)
     connectivity_min_px = params.get('connectivity_min_feature_px', 2)
+    # FIX 2026-07-29 (regression B2 four_circle, xem nudge_disconnected_islands()
+    # và EXPERIMENT_LOG.md): ngưỡng tương đối để phân biệt mảnh cấu trúc thật
+    # (giữ nguyên) với mảnh nhiễu thật sự nhỏ (mới nudge).
+    connectivity_min_relative_size = params.get('connectivity_min_relative_size', 0.15)
     connectivity_floor = params.get('connectivity_floor', 0.01)
     # objective_variant (mặc định 'q12' = hành vi cũ, minimize Q12 thô):
     # 'normalized' dùng compute_auxetic_normalized_objective() (minimize
@@ -227,6 +266,19 @@ def run_simp(params: dict) -> dict:
     # objectives/auxetic.py). CHƯA áp dụng cho dataset hiện có, cần A/B test.
     # Xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.3/B3.
     objective_variant = params.get('objective_variant', 'q12')
+    # FIX 2026-07-29 (phát hiện SAU bug-fix A1 Q-scaling, xem EXPERIMENT_LOG.md):
+    # oc_update() đã có sẵn tham số Q/delta để enforce ràng buộc CỨNG
+    # (Q11>=delta, Q22>=delta) trong bisection - đúng thiết kế tham chiếu gốc
+    # (MATLAB topK_Hourglass.m, xem docstring oc.py) - nhưng run_simp() trước
+    # đây KHÔNG BAO GIỜ truyền Q/delta vào lời gọi oc_update() (orphaned, độc
+    # lập với bug A1). Trước khi sửa A1, bug scaling Q vô tình khiến phạt MỀM
+    # trong objectives/auxetic.py (so Q với cùng delta) LUÔN kích hoạt mạnh,
+    # che giấu việc thiếu ràng buộc CỨNG này. Sau khi sửa A1 (Q về đúng scale
+    # thật), phạt mềm một mình không đủ mạnh - kiểm chứng trực tiếp: hexagonal
+    # sụp cấu trúc hoàn toàn (vol~0.005) ở 2/6 điều kiện thử trong dải volfrac
+    # production (0.50-0.58). Sửa: nối lại ràng buộc cứng đã có sẵn - dùng
+    # ĐÚNG delta (stiffness_delta()) chia sẻ với phạt mềm, Q lấy từ vòng lặp
+    # HIỆN TẠI (evaluate tại x cũ, đúng quy ước đã ghi chú sẵn trong oc.py).
     if projection == 'heaviside' and ft != 2:
         raise ValueError("projection='heaviside' chỉ hỗ trợ ft=2 (density filter).")
     max_iter = params.get('max_iter', 200)
@@ -321,6 +373,10 @@ def run_simp(params: dict) -> dict:
         loop += 1
         penal_t = penal_at_iteration(penal, penal_init, loop, max_iter,
                                       penal_step_every=penal_step_every)
+        # beta_proj_t: continuation tuyến tính beta_proj_init -> beta_proj
+        # (tái dùng đúng công thức penal_at_iteration, chỉ khác tên tham số).
+        beta_proj_t = (penal_at_iteration(beta_proj, beta_proj_init, loop, max_iter)
+                       if projection == 'heaviside' else beta_proj)
 
         try:
             # solve_fe trả về U là fluctuation chi (K@chi=-K@U0), KHÔNG phải
@@ -372,7 +428,7 @@ def run_simp(params: dict) -> dict:
         # ngược qua dx̂/dx̃ TRƯỚC KHI đưa vào apply_sensitivity_filter() (hàm
         # đó xử lý bước dx̃/dx, giữ nguyên không đổi).
         if projection == 'heaviside':
-            dc = dc * heaviside_projection_derivative(x_tilde, beta_proj, eta_proj)
+            dc = dc * heaviside_projection_derivative(x_tilde, beta_proj_t, eta_proj)
 
         # Lọc độ nhạy
         dv = np.ones((nely, nelx))
@@ -382,14 +438,18 @@ def run_simp(params: dict) -> dict:
 
         # OC
         move_t = move_at_iteration(move, move_min, loop, max_iter)
-        xnew, x_tilde = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt)
+        delta_t = stiffness_delta(volfrac, E0)
+        xnew, x_tilde = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt,
+                                   Q=Q, delta=delta_t,
+                                   projection=projection, beta_proj=beta_proj_t, eta_proj=eta_proj)
         change = np.max(np.abs(xnew - x))
         x = xnew
-        xPhys = apply_heaviside_projection(x_tilde, beta_proj, eta_proj) if projection == 'heaviside' else x_tilde
+        xPhys = apply_heaviside_projection(x_tilde, beta_proj_t, eta_proj) if projection == 'heaviside' else x_tilde
 
         if enforce_connectivity and loop % connectivity_every == 0:
             x = nudge_disconnected_islands(
-                x, xPhys, min_feature_px=connectivity_min_px, floor=connectivity_floor,
+                x, xPhys, min_feature_px=connectivity_min_px,
+                min_relative_size=connectivity_min_relative_size, floor=connectivity_floor,
             )
 
         history['iteration'].append(loop)

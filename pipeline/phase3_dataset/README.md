@@ -32,8 +32,7 @@ lưu `batch`/`seed_names`/`params` (float liên tục) — không có khóa join
 toàn để nối với `outputs/phase3/manifest_quality.csv` (nơi chứa `is_connected`/
 `osc_score`, khóa theo `batch+seed+sample_id`). Muốn hợp nhất thật sự cần sửa
 `build_npz.py` để giữ lại `sample_id` xuyên suốt - chưa làm trong lần audit này
-(xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục D1/A5) để tránh rủi ro thay đổi
-silent hành vi pipeline hiện có.
+để tránh rủi ro thay đổi silent hành vi pipeline hiện có.
 
 **Nếu chạy lại pipeline này hôm nay:** `scan_dataset.py` giờ tự động quét mọi
 thư mục `batch_*` trong `outputs/multi_batch/` (kể cả hậu tố như
