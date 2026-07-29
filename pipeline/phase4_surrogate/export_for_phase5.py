@@ -21,6 +21,7 @@ Cách Phase 5 load lại (ví dụ):
 """
 import os
 import json
+import argparse
 import torch
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -81,9 +82,12 @@ def export_surrogate(src: str, dst: str, eval_report_path: str = None):
 
 
 def main():
-    src = os.path.join(PHASE4_DIR, "surrogate_best.pt")
-    dst = os.path.join(PHASE4_DIR, "surrogate_for_phase5.pt")
-    export_surrogate(src, dst)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--src", type=str, default=os.path.join(PHASE4_DIR, "surrogate_best.pt"))
+    parser.add_argument("--dst", type=str, default=os.path.join(PHASE4_DIR, "surrogate_for_phase5.pt"))
+    parser.add_argument("--eval-report", type=str, default=None)
+    args = parser.parse_args()
+    export_surrogate(args.src, args.dst, args.eval_report)
 
 
 if __name__ == "__main__":

@@ -67,4 +67,35 @@ R²(FE, single-shot validation đo mỗi 2 epoch) tăng dựng đứng: epoch 2 
 
 ---
 
+### 2026-07-25 - Rebuild dataset v2 (mở rộng quy mô + 2 bug trong sinh dữ liệu mới), retrain Phase 4/5
+
+**Động lực:** dataset production cần lớn hơn cho việc huấn luyện Phase 5 tiếp theo (mục tiêu 40-50k ảnh train sau augmentation). Viết script sinh dữ liệu song song mới `analysis/scripts/generate_production_batch.py` (dùng `multiprocessing.Pool`, độc lập với `pipeline/phase2_multi_batch/` gốc) để sinh thêm mẫu thô nhanh hơn.
+
+**Bug #1 - range tham số quá rộng cho seed nhạy cảm:** dùng nguyên `ACTIVE_PARAMETERS` (volfrac 0,3-0,7 / void_size_frac 0,1-0,4) cho MỌI seed khiến `reentrant_bowtie` chỉ đạt yield 1,4% (lịch sử 77,2%). `hourglass` không bị ảnh hưởng (96,3%, vốn robust trên toàn dải). Sửa: thêm `SEED_PARAM_RANGES`, `hexagonal`/`reentrant_bowtie` dùng range hẹp đã kiểm chứng (volfrac 0,50-0,58 / void_size_frac 0,28-0,38), giữ nguyên range rộng cho `hourglass`.
+
+**Bug #2 - `beta=0,8` thay vì mặc định production `1,0` (nghiêm trọng hơn, phát hiện SAU khi bug #1 vẫn không giải quyết hết vấn đề):** sau khi sửa range, `reentrant_bowtie` vẫn 0% sạch - `v12` kẹt ở đúng ~2e-11, 100% rời rạc, dừng ở 13-14/150 iteration. Root-cause qua `git diff simp/runner.py` (loại trừ các thay đổi `move_min`/`penal_init` của phiên trước vì no-op khi không set) và trace `pipeline/phase2_multi_batch/runner.py::build_params_dict()`: hàm này **không bao giờ set `beta`**, nghĩa là production luôn chạy `beta=1.0` (mặc định nội bộ của `run_simp`) - không phải `beta=0.8` mà mọi script sinh/pilot tuỳ chỉnh trong phiên này đã hardcode từ đầu. Xác nhận qua tái hiện trực tiếp bằng `run_simp()`: `beta=0.8` → kẹt 13 iter, `v12≈0`; `beta=1.0` → chạy đủ 150 iter, `v12=-0,063`. Sửa `generate_production_batch.py`: `beta=0.8`→`1.0`.
+
+**Kết quả sau khi sửa cả 2 bug** (batch đầy đủ, sau khi xoá và chạy lại batch bị lỗi beta=0,8): yield sạch `hourglass`=95,5%, `hexagonal`=96,4%, `reentrant_bowtie`=42,4%. `reentrant_bowtie` cải thiện rất nhiều so với 1,4% ban đầu nhưng **vẫn thấp hơn lịch sử 77,2%** - chênh lệch còn lại chưa điều tra thêm (không chặn tiến độ vì tổng thể dataset đã đạt quy mô mục tiêu).
+
+**Lưu ý về `/tmp`:** batch raw đầu tiên (~10.700 mẫu, ~3,5h compute) bị MẤT vì ghi vào `/tmp/phase3_v2_raw` (tmpfs, xoá qua reboot máy giữa 2 phiên làm việc). Từ đó mọi output raw/scratch ghi vào `outputs/` (đĩa thật), không dùng `/tmp` cho dữ liệu cần giữ.
+
+**Assemble + retrain:** `analysis/scripts/assemble_phase3_v2.py` lọc mẫu thô mới bằng `is_connected & osc_score<0,15 & v12<0 & not degenerate` (**không** loại theo `hit_cap`/`converged` - phiên này xác nhận lại rằng cờ `converged` bị gán sai và hit-cap không phải tiêu chí chất lượng đáng tin, xem mục 2026-07-24 ở trên), gộp với pool sạch cũ, chia 70/15/15 theo phân tầng seed, tăng cường đối xứng ×6 (train). Kết quả: train=**57.216** (đạt mục tiêu), val=test=**2.044**. Đã thay `outputs/phase3/{train,val,test,dataset_64}.npz` (backup bộ cũ nguyên vẹn: `outputs/phase3_backup/`).
+
+Retrain Phase 4 (`surrogate_v2.pt`) trên dataset v2: R²(v12/v21/volfrac) = **0,974/0,964/0,983** (test set v2, 2.044 mẫu) - cải thiện so với `surrogate_clean.pt` (0,922/0,889), chủ yếu nhờ quy mô dữ liệu (~2,6×).
+
+Retrain Phase 5: thử train from-scratch với real-physics loss active từ epoch 1 → **thất bại** (R²(FE) âm sâu -2 đến -17,4 suốt 60 epoch) - xác nhận quy trình 2-stage (`cvae_clean_weighted.pt`→`cvae_realphysics.pt` ở mục trên) là **bắt buộc**, không thể gộp 1 bước dù đã ngờ vực điều này từ trước. Chạy lại đúng 2-stage: Stage 1 base training (`cvae_v2_base.pt`, không real-physics, R²(FE) tại checkpoint tốt nhất = -1,34) → Stage 2 fine-tune 35 epoch (`--lambda-real-physics 20.0`, giống hệt tham số của `cvae_realphysics.pt`) cho `cvae_v2_finetuned.pt`, R²(FE) hội tụ ổn định qua các lần đo (0,44→0,81→0,84→0,86→0,91→0,90, chọn best=0,9054 theo `--select-by fe_r2`).
+
+**So sánh chính thức** (`best_of_n_eval.py --n-conditions 300 --n-samples 30`, CÙNG test set v2 cho cả 2 checkpoint để công bằng):
+
+| Checkpoint | R²(FE) oracle | hit rate single-shot | hit rate best-of-N | frac manufacturable |
+|---|---|---|---|---|
+| `cvae_v2_finetuned.pt` | 0,9953 | **0,997** | 1,000 | 0,247 |
+| `cvae_realphysics.pt` (checkpoint cũ, train trên dataset trước rebuild) | **0,9984** | 0,983 | 1,000 | **0,280** |
+
+**Quyết định:** giữ dataset v2 làm production (rollback path còn nguyên: `outputs/phase3_backup/`, `cvae_realphysics.pt`, `surrogate_best.pt` không bị đụng). Hai checkpoint Phase 5 ngang ngửa - khuyến nghị `cvae_v2_finetuned.pt` cho nhất quán với dataset hiện tại, nhưng `cvae_realphysics.pt` vẫn dùng tốt nếu ưu tiên R²/manufacturability nhỉnh hơn chút.
+
+**Việc CHƯA làm:** điều tra tiếp vì sao `reentrant_bowtie` chưa về lại mức yield lịch sử (77,2%) dù đã sửa cả 2 bug đã biết; cập nhật default checkpoint path trong code (hiện `surrogate_best.pt`/`surrogate_for_phase5.pt`/`cvae_realphysics.pt` vẫn là default, bản `_v2` chỉ dùng qua flag tường minh - quyết định có đổi default hay không chưa được đưa ra).
+
+---
+
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

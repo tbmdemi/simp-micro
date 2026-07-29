@@ -12,6 +12,7 @@ Cách chạy:
 import os
 import sys
 import json
+import argparse
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -32,7 +33,14 @@ def r2_score(y_true, y_pred):
 
 
 def main():
-    ckpt_path = os.path.join(PHASE4_DIR, "surrogate_best.pt")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ckpt", type=str, default=os.path.join(PHASE4_DIR, "surrogate_best.pt"))
+    parser.add_argument("--out", type=str, default=None,
+                         help="Đường dẫn ghi report JSON. Mặc định: outputs/phase4/evaluation_report.json "
+                              "TRỪ KHI --ckpt khác surrogate_best.pt, khi đó mặc định đổi sang "
+                              "evaluation_report_<tên-ckpt>.json để không ghi đè report của checkpoint khác.")
+    args = parser.parse_args()
+    ckpt_path = args.ckpt
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -102,7 +110,14 @@ def main():
         report["per_v12_bin"][f"[{b0},{b1})"] = {"n": int(mask.sum()), "mae_v12": float(mae_bin)}
         print(f"  [{b0:5.2f}, {b1:5.2f})  {mask.sum():6d} {mae_bin:10.4f}")
 
-    report_path = os.path.join(PHASE4_DIR, "evaluation_report.json")
+    default_ckpt = os.path.join(PHASE4_DIR, "surrogate_best.pt")
+    if args.out:
+        report_path = args.out
+    elif os.path.abspath(ckpt_path) == os.path.abspath(default_ckpt):
+        report_path = os.path.join(PHASE4_DIR, "evaluation_report.json")
+    else:
+        ckpt_stem = os.path.splitext(os.path.basename(ckpt_path))[0]
+        report_path = os.path.join(PHASE4_DIR, f"evaluation_report_{ckpt_stem}.json")
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
     print(f"\nĐã lưu báo cáo: {report_path}")

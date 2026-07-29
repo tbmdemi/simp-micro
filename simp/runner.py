@@ -42,6 +42,50 @@ for _name in [
     SEED_MAP[_name] = getattr(mod, f'{_name}_seed')
 
 
+def move_at_iteration(move: float, move_min, loop: int, max_iter: int) -> float:
+    """move tại vòng lặp `loop` (1-indexed) khi bật giảm dần tuyến tính.
+
+    move_min=None: trả về `move` không đổi (hành vi mặc định/cũ).
+    move_min đặt: giảm tuyến tính move -> move_min khi loop đi từ 1 -> max_iter
+    (loop=1 trả về move, loop=max_iter trả về move_min, kẹp trong [1,max_iter]).
+    """
+    if move_min is None:
+        return move
+    if max_iter <= 1:
+        return move_min
+    frac = min(max(loop - 1, 0), max_iter - 1) / (max_iter - 1)
+    return move - (move - move_min) * frac
+
+
+def penal_at_iteration(penal: float, penal_init, loop: int, max_iter: int,
+                        penal_step_every: int | None = None) -> float:
+    """penal tại vòng lặp `loop` (1-indexed) khi bật continuation.
+
+    penal_init=None: trả về `penal` không đổi (hành vi mặc định/cũ).
+    penal_init đặt: tăng penal_init -> penal khi loop đi từ 1 -> max_iter
+    (loop=1 trả về penal_init, loop=max_iter trả về penal, kẹp trong [1,max_iter]).
+    Continuation kinh điển (Sigmund/Bendsoe): bắt đầu penal thấp (bài toán lồi
+    hơn, tránh local minima sớm), tăng dần về penal cuối để ép nhị phân hóa.
+
+    penal_step_every=None (mặc định): tuyến tính liên tục mỗi vòng lặp.
+    penal_step_every=N: bậc thang kinh điển - giữ nguyên penal trong N vòng
+    rồi mới nhảy (như 99-line Sigmund: giữ cố định đến khi ổn định rồi tăng),
+    thay vì đổi "định luật vật liệu" liên tục mỗi vòng. Thử nghiệm 2026-07-26:
+    continuous linear gây osc_score bùng nổ trên reentrant_bowtie (yield
+    46%->26%) - nghi ngờ OC không kịp gần-cân-bằng trước khi penal đổi tiếp.
+    """
+    if penal_init is None:
+        return penal
+    if max_iter <= 1:
+        return penal
+    effective_loop = loop
+    if penal_step_every is not None and penal_step_every > 0:
+        effective_loop = (loop // penal_step_every) * penal_step_every
+    effective_loop = min(max(effective_loop - 1, 0), max_iter - 1)
+    frac = effective_loop / (max_iter - 1)
+    return penal_init + (penal - penal_init) * frac
+
+
 def run_simp(params: dict) -> dict:
     """Chạy vòng lặp tối ưu hóa hình dạng SIMP.
 
@@ -79,6 +123,29 @@ def run_simp(params: dict) -> dict:
     Emin = params.get('Emin', 1e-9)
     nu = params.get('nu', 0.3)
     move = params.get('move', 0.1)
+    # move_min (mặc định None = TẮT, hành vi cũ - move cố định suốt vòng lặp):
+    # nếu đặt, `move` giảm tuyến tính từ giá trị ở trên xuống move_min qua
+    # max_iter vòng lặp (xem _move_at_iteration bên dưới). Thử nghiệm giảm
+    # oscillation/limit-cycle cuối vòng lặp (xem osc_score,
+    # analysis/scripts/audit_label_stability.py) - move lớn cố định suốt
+    # quá trình là nguyên nhân kinh điển gây dao động quanh cực trị thay vì
+    # hội tụ êm khi OC đã gần đáp án. CHƯA áp dụng cho dataset hiện có -
+    # chỉ là tính năng thử nghiệm, cần pilot trước khi cân nhắc rebuild.
+    move_min = params.get('move_min', None)
+    # penal_init (mặc định None = TẮT, hành vi cũ - penal cố định suốt vòng
+    # lặp): nếu đặt, `penal` tăng tuyến tính từ penal_init lên giá trị `penal`
+    # ở trên qua max_iter vòng lặp (continuation kinh điển - xem
+    # penal_at_iteration). Thử nghiệm giảm local-minima/oscillation đầu vòng
+    # lặp, bổ trợ move_min (tác động cuối vòng lặp). CHƯA áp dụng cho dataset
+    # hiện có - chỉ là tính năng thử nghiệm, cần pilot trước.
+    penal_init = params.get('penal_init', None)
+    penal_step_every = params.get('penal_step_every', None)
+    # use_sqrt (mặc định False = hành vi cũ, x*ratio): bật để dùng damping
+    # exponent kinh điển eta=0.5 (x*sqrt(ratio), Bendsoe 1995/Sigmund 2001
+    # 99-line, Andreassen 2011 88-line) - chuẩn ngành để ổn định vòng lặp OC,
+    # xem oc_update() cho công thức đầy đủ. Thử nghiệm cho vấn đề dao động
+    # (osc_score) độc lập với move_min/penal_init ở trên.
+    use_sqrt = params.get('use_sqrt', False)
     max_iter = params.get('max_iter', 200)
     tol_change = params.get('tol_change', 0.01)
     tol_obj = params.get('tol_obj', 0.05)
@@ -148,6 +215,8 @@ def run_simp(params: dict) -> dict:
         'v21': [float('nan')],
         'objective': [float('nan')],
         'volume': [float(np.mean(xPhys))],
+        'move': [move],
+        'penal': [penal if penal_init is None else penal_init],
     }
 
     metadata = {
@@ -163,16 +232,18 @@ def run_simp(params: dict) -> dict:
 
     while loop < max_iter:
         loop += 1
+        penal_t = penal_at_iteration(penal, penal_init, loop, max_iter,
+                                      penal_step_every=penal_step_every)
 
         try:
             # solve_fe trả về U là fluctuation chi (K@chi=-K@U0), KHÔNG phải
             # tổng chuyển vị (xem docstring module ở trên).
-            U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal, E0, Emin, rho0=rho0)
+            U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal_t, E0, Emin, rho0=rho0)
 
             # Đồng nhất hóa (Andreassen 2014 eq.6) cần TỔNG chuyển vị u=u0+chi.
             U_total = U0 + U
             Q, dQ, _ = compute_homogenized_tensor(
-                U_total, U0, xPhys, material.KE, edofMat, penal, E0, Emin, rho0=rho0,
+                U_total, U0, xPhys, material.KE, edofMat, penal_t, E0, Emin, rho0=rho0,
             )
 
             # Hàm mục tiêu
@@ -213,7 +284,8 @@ def run_simp(params: dict) -> dict:
             dv = apply_filter(dv, H, Hs)
 
         # OC
-        xnew, xPhys = oc_update(x, dc, dv, volfrac, move, H, Hs, ft)
+        move_t = move_at_iteration(move, move_min, loop, max_iter)
+        xnew, xPhys = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt)
         change = np.max(np.abs(xnew - x))
         x = xnew
 
@@ -222,6 +294,8 @@ def run_simp(params: dict) -> dict:
         history['v21'].append(v21)
         history['objective'].append(c)
         history['volume'].append(float(np.mean(xPhys)))
+        history['move'].append(move_t)
+        history['penal'].append(penal_t)
 
         if loop % save_every == 0:
             from .io.visualizer import save_density_image
