@@ -1,59 +1,58 @@
 {
-  "n_total_raw": 5258,
-  "n_dropped_degenerate": 0,
-  "n_train_before_augment": 3680,
-  "n_train_after_augment": 22080,
-  "n_val": 789,
-  "n_test": 789,
+  "_note": "Tính lại 2026-07-29 trực tiếp từ train/val/test.npz hiện có (dataset v2, assemble_phase3_v2.py) - KHÔNG phải chạy lại pipeline gốc. n_total_raw/n_dropped_degenerate của bản v2 không thể suy ngược từ .npz cuối cùng, xem EXPERIMENT_LOG.md mục 'Rebuild v2' để lấy số liệu đó. Xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục D4.",
+  "n_train_after_augment": 57216,
+  "n_val": 2044,
+  "n_test": 2044,
   "seed_distribution_train": {
-    "circle": 339,
-    "circle_half_quarter": 311,
-    "cross_rectangular": 333,
-    "four_circle": 281,
-    "grid_circular_voids": 267,
-    "hexagonal": 462,
-    "hourglass": 496,
-    "nine_circle": 277,
-    "reentrant_bowtie": 277,
-    "small_square_cross": 323,
-    "square": 314
+    "circle": 1914,
+    "circle_half_quarter": 1578,
+    "cross_rectangular": 1884,
+    "four_circle": 1524,
+    "grid_circular_voids": 1590,
+    "hexagonal": 8898,
+    "hourglass": 29766,
+    "nine_circle": 1656,
+    "reentrant_bowtie": 4800,
+    "small_square_cross": 1812,
+    "square": 1794
   },
   "seed_distribution_val": {
-    "circle": 73,
-    "circle_half_quarter": 66,
-    "cross_rectangular": 72,
-    "four_circle": 60,
+    "circle": 68,
+    "circle_half_quarter": 57,
+    "cross_rectangular": 67,
+    "four_circle": 54,
     "grid_circular_voids": 57,
-    "hexagonal": 99,
-    "hourglass": 106,
+    "hexagonal": 318,
+    "hourglass": 1063,
     "nine_circle": 59,
-    "reentrant_bowtie": 60,
-    "small_square_cross": 69,
-    "square": 68
+    "reentrant_bowtie": 172,
+    "small_square_cross": 65,
+    "square": 64
   },
   "seed_distribution_test": {
-    "circle": 73,
-    "circle_half_quarter": 67,
-    "cross_rectangular": 71,
-    "four_circle": 60,
+    "circle": 69,
+    "circle_half_quarter": 56,
+    "cross_rectangular": 67,
+    "four_circle": 54,
     "grid_circular_voids": 57,
-    "hexagonal": 99,
-    "hourglass": 107,
+    "hexagonal": 318,
+    "hourglass": 1064,
     "nine_circle": 59,
-    "reentrant_bowtie": 59,
-    "small_square_cross": 70,
-    "square": 67
+    "reentrant_bowtie": 171,
+    "small_square_cross": 65,
+    "square": 64
   },
   "v12_range_train": [
-    -0.9965945482254028,
-    0.38709548115730286
+    -1.9527226686477661,
+    -0.002313536126166582
   ],
   "v12_range_val": [
     -0.8391187787055969,
-    0.12963292002677917
+    -0.008275557309389114
   ],
   "v12_range_test": [
-    -0.8515912890434265,
-    0.1404162496328354
-  ]
+    -0.8118477463722229,
+    -0.01363419834524393
+  ],
+  "v12_all_negative": true
 }

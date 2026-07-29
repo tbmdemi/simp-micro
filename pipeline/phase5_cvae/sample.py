@@ -45,7 +45,13 @@ from manufacturability import force_periodic  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
-CKPT_PATH = os.path.join(PHASE5_DIR, "cvae_best.pt")
+CKPT_PATH = os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt")
+
+# Checkpoint đã kiểm chứng bằng FE thật (differentiable-physics hoặc tương
+# đương) - single-shot generation đáng tin ở các checkpoint này, xem README
+# mục 5 + EXPERIMENT_LOG.md. Checkpoint KHÔNG có trong tập này (vd
+# cvae_best.pt, cvae_gamma20.pt cũ) vẫn cần lọc bằng best_of_n_eval.py.
+VALIDATED_CKPT_NAMES = {"cvae_v2_finetuned.pt", "cvae_realphysics.pt"}
 
 
 def load_model(device="cpu", ckpt_path=CKPT_PATH):
@@ -83,7 +89,8 @@ def main():
                          help="thư mục output tuỳ chỉnh (mặc định tự đặt theo v12/v21)")
     parser.add_argument("--ckpt", type=str, default=CKPT_PATH,
                          help="checkpoint cVAE (.pt) để load - mặc định outputs/phase5/"
-                              "cvae_best.pt. Giống --cvae-ckpt của best_of_n_eval.py.")
+                              "cvae_v2_finetuned.pt (đã kiểm chứng FE, single-shot đáng tin). "
+                              "Giống --cvae-ckpt của best_of_n_eval.py.")
     parser.add_argument("--no-force-periodic", action="store_true",
                          help="Tắt force_periodic() (mặc định BẬT - xem manufacturability.py "
                               "và EXPERIMENT_LOG.md mục Phase 6) trước khi lưu ảnh.")
@@ -94,17 +101,28 @@ def main():
             f"Không tìm thấy {args.ckpt} - hãy chạy train.py trước."
         )
 
+    ckpt_name = os.path.basename(args.ckpt)
     print("=" * 70)
-    print("CẢNH BÁO: sample.py sinh 1 MẪU DUY NHẤT mỗi lần gọi, KHÔNG lọc")
-    print("qua FE thật. verify_fe.py đã xác nhận ảnh sinh ra bởi cVAE thường")
-    print("KHÔNG đạt đúng Poisson ratio mong muốn khi kiểm bằng FE thật, dù")
-    print("R2 qua surrogate trông cao (surrogate exploitation - xem README §5,")
-    print("outputs/phase5/fe_verification_report.json).")
-    print("Script này chỉ nên dùng để xem NHANH hình dạng generator sinh ra.")
-    print("Muốn kết quả đáng tin cậy, dùng quy trình CHÍNH THỨC best_of_n_eval.py")
-    print("(sinh N ứng viên, chọn bằng FE thật - R2=+0.44..+0.60, hit rate 100%):")
-    print("    python3 pipeline/phase5_cvae/best_of_n_eval.py "
-          "--cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30")
+    if ckpt_name in VALIDATED_CKPT_NAMES:
+        print(f"Checkpoint '{ckpt_name}' đã kiểm chứng bằng FE thật "
+              "(differentiable-physics, xem EXPERIMENT_LOG.md) - single-shot")
+        print("hit rate ~98% ở n=789. sample.py vẫn KHÔNG lọc qua FE mỗi lần")
+        print("gọi; dùng best_of_n_eval.py nếu cần đo lường/đảm bảo nghiêm ngặt:")
+        print(f"    python3 pipeline/phase5_cvae/best_of_n_eval.py "
+              f"--cvae-ckpt {args.ckpt} --n-samples 30")
+    else:
+        print("CẢNH BÁO: sample.py sinh 1 MẪU DUY NHẤT mỗi lần gọi, KHÔNG lọc")
+        print("qua FE thật. verify_fe.py đã xác nhận ảnh sinh ra bởi cVAE thường")
+        print("KHÔNG đạt đúng Poisson ratio mong muốn khi kiểm bằng FE thật, dù")
+        print("R2 qua surrogate trông cao (surrogate exploitation - xem README §5,")
+        print("outputs/phase5/fe_verification_report.json).")
+        print(f"Checkpoint '{ckpt_name}' KHÔNG nằm trong danh sách đã kiểm chứng "
+              f"({sorted(VALIDATED_CKPT_NAMES)}).")
+        print("Script này chỉ nên dùng để xem NHANH hình dạng generator sinh ra.")
+        print("Muốn kết quả đáng tin cậy, dùng quy trình CHÍNH THỨC best_of_n_eval.py")
+        print("(sinh N ứng viên, chọn bằng FE thật) hoặc đổi sang checkpoint đã kiểm chứng:")
+        print("    python3 pipeline/phase5_cvae/best_of_n_eval.py "
+              "--cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30")
     print("=" * 70)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -30,7 +30,7 @@ except ImportError:
     from real_physics import RealPhysicsNu
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SURROGATE_PATH = os.path.join(REPO_ROOT, "outputs", "phase4", "surrogate_for_phase5.pt")
+SURROGATE_PATH = os.path.join(REPO_ROOT, "outputs", "phase4", "surrogate_for_phase5_v2.pt")
 
 
 def _import_surrogate_cnn():

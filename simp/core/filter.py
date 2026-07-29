@@ -105,3 +105,45 @@ def apply_sensitivity_filter(dc: np.ndarray, x: np.ndarray, H: csr_matrix, Hs: n
         return apply_filter(dc, H, Hs)
     else:
         return dc
+
+
+def apply_heaviside_projection(x_tilde: np.ndarray, beta_proj: float, eta: float = 0.5) -> np.ndarray:
+    """Chiếu Heaviside làm mượt (smoothed Heaviside projection) lên trường
+    mật độ đã lọc x̃, tạo biên 0-1 sắc nét và áp đặt độ dài đặc trưng tối
+    thiểu ~rmin (Wang, Lazarov & Sigmund 2011; Guest, Prévost & Belytschko
+    2004) - xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.1/B1.
+
+    TÍNH NĂNG THỬ NGHIỆM, TẮT MẶC ĐỊNH: dùng qua simp.runner.run_simp với
+    params['projection']='heaviside'. CHƯA áp dụng cho dataset hiện có -
+    cần pilot trên vài seed trước khi cân nhắc dùng rộng rãi.
+
+    Args:
+        x_tilde: Trường mật độ ĐÃ QUA FILTER (chưa qua projection), (nely, nelx).
+        beta_proj: Độ dốc phép chiếu (beta_proj=0 -> identity, beta_proj lớn
+            -> gần bước nhảy 0/1 thật). Nên tăng dần qua các vòng lặp
+            (continuation) để tránh local minima - việc này do caller quản lý.
+        eta: Ngưỡng chiếu (mặc định 0.5 - đối xứng solid/void).
+
+    Returns:
+        Trường mật độ vật lý x̂ (nely, nelx), trong [0, 1].
+    """
+    num = np.tanh(beta_proj * eta) + np.tanh(beta_proj * (x_tilde - eta))
+    den = np.tanh(beta_proj * eta) + np.tanh(beta_proj * (1 - eta))
+    return num / den
+
+
+def heaviside_projection_derivative(x_tilde: np.ndarray, beta_proj: float, eta: float = 0.5) -> np.ndarray:
+    """Đạo hàm dx̂/dx̃ của apply_heaviside_projection() - dùng để lan truyền
+    ngược độ nhạy dc/dx̂ (tính trên trường vật lý x̂) về dc/dx̃ trước khi đưa
+    qua apply_sensitivity_filter() (đã có, không đổi).
+
+    Args:
+        x_tilde: Trường mật độ ĐÃ QUA FILTER (giống input của
+            apply_heaviside_projection() ở cùng vòng lặp).
+        beta_proj, eta: Giống apply_heaviside_projection().
+
+    Returns:
+        Mảng (nely, nelx) đạo hàm elementwise dx̂/dx̃.
+    """
+    den = np.tanh(beta_proj * eta) + np.tanh(beta_proj * (1 - eta))
+    return beta_proj * (1.0 - np.tanh(beta_proj * (x_tilde - eta)) ** 2) / den

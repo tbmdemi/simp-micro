@@ -78,6 +78,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Phase 4 surrogate retrain trên dataset v2: R²(v12/v21/volfrac) 0,922/0,889/- → **0,974/0,964/0,983**.
 - Phase 5 cVAE retrain trên dataset v2 (`cvae_v2_finetuned.pt`, recipe 2-stage bắt buộc - train from-scratch với real-physics loss ngay từ đầu thất bại): R²(FE, n=300)=0,9953, hit rate single-shot=99,7% - ngang ngửa `cvae_realphysics.pt` (checkpoint cũ, R²=0,9984/98,3%, đo lại trên cùng test set v2). Cả 2 checkpoint được giữ, khuyến nghị dùng bản v2 cho nhất quán với dataset hiện tại.
 
+### 2026-07-29 - Audit độc lập toàn diện + fix (chưa gắn số phiên bản)
+
+> Chi tiết đầy đủ (bằng chứng số, severity, đề xuất): [AUDIT_REPORT_INDEPENDENT_2026-07-29.md](AUDIT_REPORT_INDEPENDENT_2026-07-29.md). Mục này chỉ tóm tắt theo định dạng changelog.
+
+#### Fixed
+- **Bug scaling `Q` trong `compute_homogenized_tensor()`** - `k_e` thiếu chia `E0` (double-counting, `KE` đã chứa sẵn `E0`) + chia dư `/(nelx*nely)` khi `U0` đã dùng tọa độ chuẩn hóa `[0,1]` (diện tích miền=1). `Q_cũ = Q_đúng * E0/nele` - đã kiểm chứng bằng bài test chuẩn "ô cơ sở đặc → Q=D" (2 mesh size, rtol<1e-6). KHÔNG ảnh hưởng `ν₁₂/ν₂₁` (bất biến với hệ số nhân đồng đều), nhưng ngưỡng phạt cứng `delta` trong `objectives/auxetic.py` từng lệch lên **~46%** độ cứng thay vì 10% thiết kế - giờ đúng lại.
+- Checkpoint/surrogate mặc định lỗi thời ở 5 script Phase 5 (`sample.py`, `best_of_n_eval.py`, `coverage_eval.py`, `losses.py`, `self_play.py`) - đổi sang `cvae_v2_finetuned.pt`/`surrogate_for_phase5_v2.pt`; thêm banner cảnh báo runtime vào `train.py` cho tổ hợp `val_loss`+`lambda_real_physics=0` (đã 2 lần xác nhận chọn nhầm checkpoint).
+- `torch`/`scikit-learn`/`pandas`/`Pillow` thiếu trong `requirements.txt`/`pyproject.toml` dù Phase 3-5 phụ thuộc hoàn toàn - `pip install -r requirements.txt` trước đây không đủ để chạy Phase 3-5.
+- `beta` không được truyền từ Phase 1 sang Phase 2 (`DEFAULT_FIXED` thiếu key) - giờ tường minh `beta=1.0` (khớp dữ liệu production thật, không đổi hành vi). `fixed_parameters` (quyết định active/fixed của Phase 1) bị bỏ quên khi gọi `run_batch_from_design()` trong `main.py` - đã nối lại.
+- `scan_dataset.py` hardcode `N_BATCHES=8`, bỏ sót batch 9-11 (kể cả bản rebuild sửa lỗi `dQ`) - giờ tự động quét mọi thư mục `batch_*`.
+- `outputs/phase3/split_report.json` mô tả dataset CŨ (5.258 mẫu) trong khi `train.npz` thật đã là dataset v2 (57.216 mẫu, seed lệch nặng về `hourglass`) - script `analysis/scripts/regenerate_split_report.py` tính lại khớp dữ liệu thật.
+
+#### Added (tính năng thử nghiệm, TẮT mặc định)
+- `simp/core/filter.py::apply_heaviside_projection()` - robust/minimum-length-scale projection (Wang-Lazarov-Sigmund 2011), qua `run_simp(params={'projection': 'heaviside', ...})`. Pilot 3 seed manufacturability thấp: kết quả lẫn lộn (cải thiện rõ `hexagonal`, không cải thiện `four_circle`/`grid_circular_voids`) - có xấp xỉ đã biết (ràng buộc thể tích trong OC nhắm x̃ trước-projection).
+- `simp/runner.py::nudge_disconnected_islands()` - heuristic hạ mật độ đảo vật liệu rời rạc mỗi N vòng lặp, qua `params={'enforce_connectivity': True, ...}`. Pilot: cải thiện mạnh `grid_circular_voids`/`nine_circle` (0/3→3/3 manufacturable) nhưng gây regression 1 case ở `four_circle`.
+- `simp/objectives/auxetic.py::compute_auxetic_normalized_objective()` - biến thể `c = Q12/sqrt(Q11*Q22)` (bị chặn tự nhiên [-1,1] bởi Cauchy-Schwarz/PSD của Q), qua `params={'objective_variant': 'normalized'}`. Pilot 3 seed × 2 điều kiện: thắng rõ 4/6, đặc biệt ngăn sụp cấu trúc mà `q12` gốc vẫn gặp phải (`hexagonal`).
+- Test hồi quy/gradient mới cho cả 4 mục trên trong `tests/test_core_smoke.py` (8 test).
+
+#### Known issue (không sửa trong lần này, đã ghi chú lý do)
+- `pipeline/phase3_dataset/finalize_dataset.py` chưa dùng chung logic lọc `is_connected`/`osc_score` với `analysis/scripts/assemble_phase3_v2.py::is_clean()` - `dataset_64.npz` không lưu `sample_id` nên thiếu khóa join an toàn. Xem `pipeline/phase3_dataset/README.md`.
+
 ## [1.4.0] - 2026-07-10
 
 ### Fixed

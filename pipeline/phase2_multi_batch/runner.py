@@ -59,6 +59,15 @@ def _compute_manufacturability_from_saved_png(sample_dir: str, n_iters: int) -> 
         return None
 
 # Default fixed parameters (override from config)
+#
+# BUG FIX (2026-07-29): 'beta' trước đây THIẾU ở đây - âm thầm rơi về default
+# nội bộ của simp/runner.py (1.0), khác với beta=3.0 dùng ở Phase 1 screening
+# (pipeline/params.py::FIXED_PARAMS). Thêm tường minh beta=1.0 (không phải
+# 3.0) vì đây chính là giá trị THỰC SỰ đã tạo ra dataset production hiện có
+# (analysis/scripts/generate_production_batch.py hardcode beta=1.0 riêng,
+# không đi qua DEFAULT_FIXED) - giữ 1.0 để không đổi hành vi dữ liệu đã có,
+# chỉ làm giá trị tường minh thay vì ẩn qua default. Xem
+# AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục D5.
 DEFAULT_FIXED: Dict[str, float] = {
     'nelx': 50,
     'nely': 50,
@@ -72,6 +81,7 @@ DEFAULT_FIXED: Dict[str, float] = {
     'window_size': 20,
     'save_every': 9999,
     'scale_factor': 1,
+    'beta': 1.0,
     'verbose': False,
 }
 

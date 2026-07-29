@@ -278,6 +278,18 @@ def main():
     if args.select_by == "fe_r2" and args.fe_eval_every <= 0:
         raise ValueError("--select-by fe_r2 cần --fe-eval-every > 0.")
 
+    if args.select_by == "val_loss" and args.lambda_real_physics == 0.0:
+        print("=" * 70)
+        print("CẢNH BÁO: --select-by val_loss (mặc định) + --lambda-real-physics 0.0")
+        print("(mặc định) là tổ hợp đã 2 lần độc lập xác nhận CHỌN NHẦM checkpoint")
+        print("(val_loss bị KL-warmup đánh lừa, thiên vị epoch chưa train đủ - xem")
+        print("EXPERIMENT_LOG.md, bảng 'val_loss không an toàn để chọn checkpoint').")
+        print("Khuyến nghị: thêm --select-by fe_r2 --fe-eval-every N (chọn theo R2 FE")
+        print("thật), và --lambda-real-physics > 0 để fine-tune differentiable-physics")
+        print("(cách đã tạo ra checkpoint khuyến nghị cvae_realphysics.pt/")
+        print("cvae_v2_finetuned.pt - xem README mục 5 để lấy đúng câu lệnh đầy đủ).")
+        print("=" * 70)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     os.makedirs(PHASE5_DIR, exist_ok=True)

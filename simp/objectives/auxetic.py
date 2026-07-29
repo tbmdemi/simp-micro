@@ -95,3 +95,63 @@ def compute_auxetic_q12_objective(
         dc += -2 * beta * (delta - Q[1, 1]) / delta_sq * dQ[1, 1, :, :]
 
     return c, dc
+
+
+def compute_auxetic_normalized_objective(
+    Q: np.ndarray,
+    dQ: np.ndarray,
+    volfrac: float,
+    E0: float,
+    beta: float = 1.0,
+) -> tuple:
+    """Biến thể chuẩn hóa của compute_auxetic_q12_objective(): thay vì minimize
+    Q12 thô, minimize hệ số ghép cắt-pháp chuẩn hóa
+
+        c = Q12 / sqrt(Q11 * Q22)
+
+    TÍNH NĂNG THỬ NGHIỆM (--objective-variant normalized qua run_simp), TẮT
+    MẶC ĐỊNH - dùng compute_auxetic_q12_objective() (mặc định) trừ khi bật
+    tường minh. CHƯA áp dụng cho dataset hiện có, cần A/B test trước. Xem
+    AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.3/B3.
+
+    Cơ sở: với ten-xơ độ cứng Q hợp lệ về mặt vật lý (positive semi-definite,
+    vì Q sinh ra từ dạng toàn phương năng lượng biến dạng), submatrix
+    [[Q11,Q12],[Q12,Q22]] cũng PSD, kéo theo Cauchy-Schwarz Q12^2 <= Q11*Q22
+    - nghĩa là c BỊ CHẶN tự nhiên trong [-1, 1] bởi chính vật lý, không cần
+    hệ số μ tùy chỉnh (đã tắt vì sai sót khái niệm, xem
+    compute_auxetic_q12_objective và README "Giới hạn Đã biết" mục 4). Đây
+    KHÔNG tự động ngăn Q11/Q22 cùng nhỏ (thiết kế yếu nhưng tỉ lệ vẫn giữ),
+    nên vẫn giữ NGUYÊN phạt stiffness delta như hàm gốc để so sánh công bằng
+    (chỉ đổi số hạng tỉ lệ Q12 thô -> chuẩn hóa, giữ nguyên phần còn lại).
+
+    Args:
+        Q, dQ, volfrac, E0, beta: giống compute_auxetic_q12_objective().
+
+    Returns:
+        (c, dc) - cùng shape với compute_auxetic_q12_objective().
+    """
+    delta = 0.1 * volfrac * E0
+    delta_sq = max(delta ** 2, 1e-12)
+
+    eps = 1e-9
+    P = Q[0, 0] * Q[1, 1]
+    denom = np.sqrt(max(P, eps))
+
+    c = Q[0, 1] / denom
+    if P > eps:
+        dP = dQ[0, 0, :, :] * Q[1, 1] + Q[0, 0] * dQ[1, 1, :, :]
+        dc = dQ[0, 1, :, :] / denom - Q[0, 1] * dP / (2 * denom ** 3)
+    else:
+        # P kẹp ở eps (gần suy biến) - coi denom như hằng số cục bộ để tránh
+        # chia cho ~0 trong đạo hàm (giống cách delta_sq clamp ở trên).
+        dc = dQ[0, 1, :, :] / denom
+
+    if Q[0, 0] < delta:
+        c += beta * (delta - Q[0, 0]) ** 2 / delta_sq
+        dc += -2 * beta * (delta - Q[0, 0]) / delta_sq * dQ[0, 0, :, :]
+
+    if Q[1, 1] < delta:
+        c += beta * (delta - Q[1, 1]) ** 2 / delta_sq
+        dc += -2 * beta * (delta - Q[1, 1]) / delta_sq * dQ[1, 1, :, :]
+
+    return c, dc

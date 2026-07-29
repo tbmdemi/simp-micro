@@ -21,13 +21,19 @@ import numpy as np
 
 from .materials.isotropic import Material
 from .core.fem import build_dof_mesh
-from .core.filter import build_filter, apply_filter, apply_sensitivity_filter
+from .core.filter import (
+    build_filter, apply_filter, apply_sensitivity_filter,
+    apply_heaviside_projection, heaviside_projection_derivative,
+)
 from .core.pbc import build_pbc
 from .core.solver import solve_fe
 from .core.oc import oc_update
 from .core.convergence import ConvergenceChecker
 from .homogenization.compute import compute_homogenized_tensor
-from .objectives.auxetic import compute_auxetic_q12_objective, compute_nu12, compute_nu21
+from .objectives.auxetic import (
+    compute_auxetic_q12_objective, compute_auxetic_normalized_objective,
+    compute_nu12, compute_nu21,
+)
 from .io.logger import save_csv
 
 # Ánh xạ tên seed -> hàm sinh mật độ ban đầu
@@ -84,6 +90,44 @@ def penal_at_iteration(penal: float, penal_init, loop: int, max_iter: int,
     effective_loop = min(max(effective_loop - 1, 0), max_iter - 1)
     frac = effective_loop / (max_iter - 1)
     return penal_init + (penal - penal_init) * frac
+
+
+def nudge_disconnected_islands(x: np.ndarray, xPhys: np.ndarray,
+                                min_feature_px: int = 2,
+                                floor: float = 0.01) -> np.ndarray:
+    """Hạ mật độ các mảnh vật liệu rời rạc (KHÔNG PHẢI mảnh lớn nhất) trong
+    xPhys xuống `floor` trên biến thiết kế x tại đúng vị trí đó - heuristic
+    "nudge" giữa các vòng lặp cho enforce_connectivity (xem run_simp()).
+
+    Viết lại độc lập với pipeline/phase5_cvae/manufacturability.py::
+    check_connectivity() (cùng logic 8-connectivity + ndimage.label) vì
+    simp/ không phụ thuộc pipeline/ (hướng dependency ngược lại).
+
+    Args:
+        x: Biến thiết kế hiện tại (nely, nelx) - SẼ bị sửa tại chỗ các pixel
+            thuộc đảo rời rạc.
+        xPhys: Mật độ vật lý hiện tại (nely, nelx) - dùng để XÁC ĐỊNH đảo
+            (binarize > 0.5), nhưng bản thân không bị sửa trực tiếp ở đây
+            (sẽ được filter/projection tính lại từ x đã nudge ở vòng sau).
+        min_feature_px: Không dùng để lọc nét mảnh ở đây (chỉ connectivity
+            thuần) - giữ tên tham số khớp check_connectivity() cho nhất quán,
+            hiện chưa dùng.
+        floor: Giá trị x hạ xuống tại các pixel thuộc đảo không phải lớn nhất.
+
+    Returns:
+        x đã nudge (cùng mảng, sửa tại chỗ - trả về cho tiện dùng theo chuỗi).
+    """
+    from scipy import ndimage
+    solid = xPhys > 0.5
+    structure = np.ones((3, 3), dtype=int)  # 8-connectivity
+    labels, n_components = ndimage.label(solid, structure=structure)
+    if n_components <= 1:
+        return x
+    sizes = ndimage.sum(solid, labels, index=range(1, n_components + 1))
+    largest_label = int(np.argmax(sizes)) + 1
+    island_mask = solid & (labels != largest_label)
+    x[island_mask] = np.minimum(x[island_mask], floor)
+    return x
 
 
 def run_simp(params: dict) -> dict:
@@ -146,6 +190,45 @@ def run_simp(params: dict) -> dict:
     # xem oc_update() cho công thức đầy đủ. Thử nghiệm cho vấn đề dao động
     # (osc_score) độc lập với move_min/penal_init ở trên.
     use_sqrt = params.get('use_sqrt', False)
+    # projection (mặc định None = TẮT, hành vi cũ - xPhys = x̃ filtered thẳng):
+    # 'heaviside' bật robust/minimum-length-scale projection (Wang-Lazarov-
+    # Sigmund 2011) qua core/filter.py::apply_heaviside_projection(). Xem
+    # AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.1/B1. CHỈ hỗ trợ ft=2
+    # (density filter) - ft=1 không có bước "xPhys = filter(x)" trung gian để
+    # chiếu lên. CHƯA áp dụng cho dataset hiện có - tính năng thử nghiệm, cần
+    # pilot trên vài seed trước khi cân nhắc dùng rộng rãi.
+    # XẤP XỈ ĐÃ BIẾT: ràng buộc thể tích trong oc_update() vẫn bisection trên
+    # mean(x̃) (TRƯỚC projection), không phải mean(x̂) (SAU projection) - vì
+    # projection không (xấp xỉ) bảo toàn thể tích tuyệt đối mỗi vòng lặp, thể
+    # tích thật của x̂ cuối cùng có thể lệch nhẹ khỏi volfrac. Cùng dạng xấp xỉ
+    # với "Q đánh giá ở x cũ" đã có sẵn trong oc.py.
+    projection = params.get('projection', None)
+    beta_proj = params.get('beta_proj', 8.0)
+    eta_proj = params.get('eta', 0.5)
+    # enforce_connectivity (mặc định False = TẮT, hành vi cũ): mỗi
+    # connectivity_every vòng lặp, kiểm tra liên thông trên xPhys hiện tại
+    # (analogue của pipeline/phase5_cvae/manufacturability.py::check_connectivity(),
+    # viết lại độc lập ở đây vì simp/ không phụ thuộc pipeline/), NẾU có >1
+    # mảnh vật liệu rời rạc thì "nudge" (KHÔNG PHẢI ràng buộc Lagrange chặt)
+    # - hạ mật độ pixel thuộc các mảnh KHÔNG PHẢI mảnh lớn nhất xuống gần 0
+    # trên biến thiết kế x (trước filter/projection), để các vòng OC tiếp
+    # theo có xu hướng loại bỏ đảo đó thay vì giữ nguyên. Đây là heuristic
+    # thực dụng giữa các vòng lặp, KHÔNG sửa gradient toán học của objective.
+    # Xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.2/B2. CHƯA áp dụng cho
+    # dataset hiện có - cần pilot trên seed hay bị rời rạc trước
+    # (grid_circular_voids/nine_circle/four_circle theo audit).
+    enforce_connectivity = params.get('enforce_connectivity', False)
+    connectivity_every = params.get('connectivity_every', 10)
+    connectivity_min_px = params.get('connectivity_min_feature_px', 2)
+    connectivity_floor = params.get('connectivity_floor', 0.01)
+    # objective_variant (mặc định 'q12' = hành vi cũ, minimize Q12 thô):
+    # 'normalized' dùng compute_auxetic_normalized_objective() (minimize
+    # Q12/sqrt(Q11*Q22), bị chặn tự nhiên [-1,1] bởi PSD của Q - xem
+    # objectives/auxetic.py). CHƯA áp dụng cho dataset hiện có, cần A/B test.
+    # Xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục 4.3/B3.
+    objective_variant = params.get('objective_variant', 'q12')
+    if projection == 'heaviside' and ft != 2:
+        raise ValueError("projection='heaviside' chỉ hỗ trợ ft=2 (density filter).")
     max_iter = params.get('max_iter', 200)
     tol_change = params.get('tol_change', 0.01)
     tol_obj = params.get('tol_obj', 0.05)
@@ -196,6 +279,10 @@ def run_simp(params: dict) -> dict:
         x = circle_seed(nelx, nely, void_size_frac, rotation_deg)
 
     xPhys = x.copy()
+    # x_tilde: trường ĐÃ QUA FILTER nhưng CHƯA QUA PROJECTION - khi
+    # projection TẮT, x_tilde luôn == xPhys (tương thích ngược hoàn toàn).
+    # Ở vòng lặp 1, seed chưa qua filter/projection nào (giống hành vi cũ).
+    x_tilde = xPhys.copy()
     from .io.visualizer import save_density_image
     save_density_image(xPhys, output_dir, 0, scale_factor)
 
@@ -247,7 +334,10 @@ def run_simp(params: dict) -> dict:
             )
 
             # Hàm mục tiêu
-            c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=beta, mu=mu)
+            if objective_variant == 'normalized':
+                c, dc = compute_auxetic_normalized_objective(Q, dQ, volfrac, E0, beta=beta)
+            else:
+                c, dc = compute_auxetic_q12_objective(Q, dQ, volfrac, E0, beta=beta, mu=mu)
 
             if math.isnan(c) or np.isnan(np.sum(xPhys)):
                 print(f'[STOP] NaN tại lần lặp {loop}')
@@ -277,6 +367,13 @@ def run_simp(params: dict) -> dict:
             break
         prev_obj = c
 
+        # dc hiện là d(obj)/d(xPhys) = d(obj)/d(x̂) (xPhys vừa dùng ở FE/
+        # homogenization/objective phía trên). Nếu có projection, lan truyền
+        # ngược qua dx̂/dx̃ TRƯỚC KHI đưa vào apply_sensitivity_filter() (hàm
+        # đó xử lý bước dx̃/dx, giữ nguyên không đổi).
+        if projection == 'heaviside':
+            dc = dc * heaviside_projection_derivative(x_tilde, beta_proj, eta_proj)
+
         # Lọc độ nhạy
         dv = np.ones((nely, nelx))
         dc = apply_sensitivity_filter(dc, x, H, Hs, ft)
@@ -285,9 +382,15 @@ def run_simp(params: dict) -> dict:
 
         # OC
         move_t = move_at_iteration(move, move_min, loop, max_iter)
-        xnew, xPhys = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt)
+        xnew, x_tilde = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt)
         change = np.max(np.abs(xnew - x))
         x = xnew
+        xPhys = apply_heaviside_projection(x_tilde, beta_proj, eta_proj) if projection == 'heaviside' else x_tilde
+
+        if enforce_connectivity and loop % connectivity_every == 0:
+            x = nudge_disconnected_islands(
+                x, xPhys, min_feature_px=connectivity_min_px, floor=connectivity_floor,
+            )
 
         history['iteration'].append(loop)
         history['v12'].append(v12)

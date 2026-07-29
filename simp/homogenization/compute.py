@@ -60,16 +60,25 @@ def compute_homogenized_tensor(
     x_flat = xPhys.flatten('F')
     E_penal = Emin + (rho0 * x_flat ** penal) * (E0 - Emin)
 
-    # k_e = E_penal[e] * KE; KHÔNG chia cho E0 (KE đã chứa E0 sẵn, xem
-    # Material). Do đó Q ~ 1/E0 giống U, nhưng delta = 0.1*volfrac*E0 trong
-    # objective cũng tỉ lệ E0 nên tự cân bằng.
-    k_e = E_penal
+    # BUG FIX (2026-07-29): k_e PHẢI chia cho E0 (KE đã chứa sẵn E0 - xem
+    # Material._compute_element_stiffness(), D = E0/(1-nu^2)*[...]). Thiếu
+    # phép chia này khiến Q bị nhân đúp E0 (Q ~ E0^2 thay vì tuyến tính theo
+    # E0). Đồng thời KHÔNG chia cho (nelx*nely): U0 (solver.py::solve_fe)
+    # dùng tọa độ chuẩn hóa [0,1] (x_coord=i/nelx, y_coord=j/nely) nên miền
+    # đã có diện tích |Ω|=1 - chia thêm cho nelx*nely tạo hệ số dư 1/nele.
+    # Kết hợp 2 lỗi: Q_cũ = Q_đúng * E0/nele (đã kiểm chứng bằng số: ô cơ sở
+    # đặc hoàn toàn (x=1, penal=1) phải cho Q=D chính xác - xem
+    # tests/test_core_smoke.py::test_homogenized_tensor_matches_input_material_for_solid_cell).
+    # KHÔNG ảnh hưởng ν12/ν21 (bất biến với hệ số nhân đồng đều qua S=Q^-1),
+    # chỉ ảnh hưởng các nơi dùng Q làm giá trị vật lý tuyệt đối (vd ngưỡng
+    # delta trong simp/objectives/auxetic.py).
+    k_e = E_penal / E0
 
-    Q = np.einsum('e,emi,mn,enj->ij', k_e, Ue, KE, Ue) / (nelx * nely)
+    Q = np.einsum('e,emi,mn,enj->ij', k_e, Ue, KE, Ue)
 
-    # dQ_ij/dx_e = (1/|Ω|) * d(k_e)/dx_e * (Ue^i)^T * KE * (Ue^j)
-    dk_e = rho0 * penal * x_flat ** (penal - 1) * (E0 - Emin)
-    dQ_flat = np.einsum('e,emi,mn,enj->eij', dk_e, Ue, KE, Ue) / (nelx * nely)
+    # dQ_ij/dx_e = (1/|Ω|) * d(k_e)/dx_e * (Ue^i)^T * KE * (Ue^j), |Ω|=1
+    dk_e = (rho0 * penal * x_flat ** (penal - 1) * (E0 - Emin)) / E0
+    dQ_flat = np.einsum('e,emi,mn,enj->eij', dk_e, Ue, KE, Ue)
     # BUG FIX (2026-07-24): chỉ số phần tử e được xây dựng theo order='F'
     # (khớp x_flat = xPhys.flatten('F') ở trên, và toàn bộ codebase - xem
     # solve_fe()). reshape() mặc định dùng order='C', khiến dQ[:,:,i,j] bị

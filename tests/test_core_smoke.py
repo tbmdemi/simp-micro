@@ -104,6 +104,37 @@ class TestFilter:
         # With uniform input, filter should preserve roughly uniform output
         assert np.allclose(result, result.mean(), atol=1e-5)
 
+    def test_heaviside_projection_bounds_and_midpoint(self):
+        from simp.core.filter import apply_heaviside_projection
+        x_tilde = np.array([0.0, 0.5, 1.0])
+        x_hat = apply_heaviside_projection(x_tilde, beta_proj=8.0, eta=0.5)
+        assert np.all(x_hat >= -1e-10) and np.all(x_hat <= 1 + 1e-10)
+        # eta=0.5 (đối xứng): x_tilde=0 -> x_hat=0, x_tilde=1 -> x_hat=1, x_tilde=eta -> x_hat=eta
+        assert abs(x_hat[0] - 0.0) < 1e-8
+        assert abs(x_hat[2] - 1.0) < 1e-8
+        assert abs(x_hat[1] - 0.5) < 1e-8
+
+    def test_heaviside_projection_sharpens_toward_01(self):
+        from simp.core.filter import apply_heaviside_projection
+        x_tilde = np.linspace(0.05, 0.95, 19)
+        low_beta = apply_heaviside_projection(x_tilde, beta_proj=1e-6, eta=0.5)
+        high_beta = apply_heaviside_projection(x_tilde, beta_proj=50.0, eta=0.5)
+        # beta_proj~0 phải xấp xỉ identity (không chiếu)
+        assert np.allclose(low_beta, x_tilde, atol=1e-4)
+        # beta_proj lớn phải đẩy giá trị về gần 0/1 hơn identity
+        assert np.mean(np.abs(high_beta - 0.5)) > np.mean(np.abs(x_tilde - 0.5))
+
+    def test_heaviside_projection_derivative_matches_finite_difference(self):
+        from simp.core.filter import apply_heaviside_projection, heaviside_projection_derivative
+        rng = np.random.default_rng(0)
+        x_tilde = rng.uniform(0.05, 0.95, size=20)
+        beta_proj, eta = 6.0, 0.5
+        analytic = heaviside_projection_derivative(x_tilde, beta_proj, eta)
+        h = 1e-6
+        fd = (apply_heaviside_projection(x_tilde + h, beta_proj, eta)
+              - apply_heaviside_projection(x_tilde - h, beta_proj, eta)) / (2 * h)
+        assert np.allclose(analytic, fd, atol=1e-5, rtol=1e-4)
+
 
 class TestSolver:
     """Smoke tests for core/solver.py - solve_fe."""
@@ -276,6 +307,46 @@ class TestObjectives:
         assert c > -2.0  # Penalty should increase c
         assert not np.allclose(dc, dQ[0, 1, :, :])  # dc should include penalty gradient
 
+    def test_auxetic_normalized_value_bounded_by_cauchy_schwarz(self):
+        from simp.objectives.auxetic import compute_auxetic_normalized_objective
+        Q = np.array([[20.0, -8.0, 0.0],
+                      [-8.0, 15.0, 0.0],
+                      [0.0, 0.0, 5.0]])
+        dQ = np.zeros((3, 3, 4, 4))
+        c, dc = compute_auxetic_normalized_objective(Q, dQ, volfrac=0.4, E0=199.0)
+        expected = Q[0, 1] / np.sqrt(Q[0, 0] * Q[1, 1])
+        assert abs(c - expected) < 1e-10
+        assert -1.0 <= expected <= 1.0  # Cauchy-Schwarz cho submatrix PSD
+
+    def test_auxetic_normalized_gradient_matches_finite_difference(self):
+        """Kiểm tra chuỗi đạo hàm dc/dQ * dQ/dx bằng finite-difference trong
+        không gian Q (không cần chạy FE thật) - xem docstring hàm."""
+        from simp.objectives.auxetic import compute_auxetic_normalized_objective
+
+        rng = np.random.default_rng(1)
+        Q0 = np.array([[18.0, -6.0, 0.3],
+                       [-6.0, 22.0, -0.2],
+                       [0.3, -0.2, 6.0]])
+        nely, nelx = 3, 3
+        # dQ ngẫu nhiên nhỏ, đại diện độ nhạy per-pixel dQ_ij/dx_e
+        dQ = rng.uniform(-0.05, 0.05, size=(3, 3, nely, nelx))
+        for i in range(3):
+            for j in range(i, 3):
+                dQ[j, i, :, :] = dQ[i, j, :, :]  # giữ đối xứng như Q thật
+
+        volfrac, E0 = 0.4, 199.0
+        c0, dc = compute_auxetic_normalized_objective(Q0, dQ, volfrac, E0)
+
+        h = 1e-6
+        for ei in range(nely):
+            for ej in range(nelx):
+                Q_plus = Q0 + h * dQ[:, :, ei, ej]
+                Q_minus = Q0 - h * dQ[:, :, ei, ej]
+                c_plus, _ = compute_auxetic_normalized_objective(Q_plus, dQ, volfrac, E0)
+                c_minus, _ = compute_auxetic_normalized_objective(Q_minus, dQ, volfrac, E0)
+                fd = (c_plus - c_minus) / (2 * h)
+                assert abs(dc[ei, ej] - fd) < 1e-4, f"pixel ({ei},{ej}): {dc[ei, ej]} vs fd={fd}"
+
 
 class TestPBC:
     """Smoke tests for core/pbc.py - build_pbc."""
@@ -329,6 +400,75 @@ class TestHomogenization:
         assert dQ.shape == (3, 3, nely, nelx)
         # Q should be symmetric
         assert np.allclose(Q, Q.T, atol=1e-10)
+
+    @pytest.mark.parametrize("nelx,nely", [(10, 10), (30, 30)])
+    def test_homogenized_tensor_matches_input_material_for_solid_cell(self, nelx, nely):
+        """Đồng nhất hóa một ô cơ sở ĐẶC HOÀN TOÀN (x=1 mọi nơi, penal=1) phải
+        trả về đúng ma trận vật liệu gốc D (plane-stress) - đây là bất biến
+        cơ bản của lý thuyết đồng nhất hóa: đồng nhất hóa vật liệu đồng nhất
+        phải cho ra chính vật liệu đó. Test này bắt lỗi scaling đã tìm thấy
+        ngày 2026-07-29 (Q_cũ = Q_đúng * E0/nele) - xem
+        AUDIT_REPORT_INDEPENDENT_2026-07-29.md, mục P1.
+        """
+        from simp.core.fem import build_dof_mesh
+        from simp.core.pbc import build_pbc
+        from simp.core.solver import solve_fe
+        from simp.homogenization.compute import compute_homogenized_tensor
+        from simp.materials.isotropic import Material
+
+        E0, Emin, nu = 199.0, 1e-9, 0.3
+        material = Material(E0, Emin, nu)
+        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
+        pbc = build_pbc(nelx, nely, nodenrs)
+
+        xPhys = np.ones((nely, nelx))
+        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal=1.0, E0=E0, Emin=Emin)
+        U_total = U0 + U
+
+        Q, dQ, _ = compute_homogenized_tensor(
+            U_total, U0, xPhys, material.KE, edofMat, penal=1.0, E0=E0, Emin=Emin
+        )
+
+        D = E0 / (1 - nu ** 2) * np.array([
+            [1, nu, 0],
+            [nu, 1, 0],
+            [0, 0, (1 - nu) / 2],
+        ])
+        assert np.allclose(Q, D, rtol=1e-6)
+
+
+class TestNudgeDisconnectedIslands:
+    """Unit tests for runner.py::nudge_disconnected_islands (B2)."""
+
+    def test_single_component_untouched(self):
+        from simp.runner import nudge_disconnected_islands
+        xPhys = np.zeros((6, 6))
+        xPhys[1:5, 1:5] = 0.9  # 1 khối liền, không đảo
+        x = xPhys.copy()
+        result = nudge_disconnected_islands(x, xPhys, floor=0.01)
+        assert np.allclose(result, xPhys)
+
+    def test_smaller_island_pushed_to_floor_larger_kept(self):
+        from simp.runner import nudge_disconnected_islands
+        xPhys = np.zeros((10, 10))
+        xPhys[1:7, 1:7] = 0.9   # mảnh lớn (36 pixel)
+        xPhys[8:10, 8:10] = 0.8  # mảnh nhỏ tách rời (4 pixel, không chạm mảnh lớn)
+        x = xPhys.copy()
+        result = nudge_disconnected_islands(x, xPhys, floor=0.01)
+        # Mảnh lớn giữ nguyên
+        assert np.allclose(result[1:7, 1:7], 0.9)
+        # Mảnh nhỏ bị hạ xuống floor
+        assert np.allclose(result[8:10, 8:10], 0.01)
+
+    def test_floor_only_lowers_never_raises(self):
+        from simp.runner import nudge_disconnected_islands
+        xPhys = np.zeros((10, 10))
+        xPhys[1:7, 1:7] = 0.9
+        xPhys[8:10, 8:10] = 0.6
+        x = xPhys.copy()
+        x[8:10, 8:10] = 0.3  # x đã thấp hơn floor=0.5 -> không nên bị NÂNG lên
+        result = nudge_disconnected_islands(x, xPhys, floor=0.5)
+        assert np.allclose(result[8:10, 8:10], 0.3)
 
 
 class TestRunner:

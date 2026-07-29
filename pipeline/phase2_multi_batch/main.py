@@ -500,10 +500,19 @@ def main() -> None:
         else:
             print("\n  Running SIMP batch…")
             try:
+                # BUG FIX (2026-07-29): fixed_params (xây dựng ở trên từ
+                # refined_parameters.json) trước đây bị BỎ QUÊN ở đây -
+                # run_batch_from_design() luôn rơi về DEFAULT_FIXED riêng của
+                # nó, phớt lờ quyết định active/fixed của Phase 1. Vô hại ở
+                # lần chạy trước vì refined_parameters.json khi đó để trống
+                # fixed_parameters (mọi tham số đều ACTIVE), nhưng sẽ âm thầm
+                # bỏ qua bất kỳ tham số nào Phase 1 quyết định cố định trong
+                # tương lai. Xem AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục D5.
                 batch_summary = run_batch_from_design(
                     design=design,
                     output_dir=str(batch_output_dir),
                     batch_id=batch_config.batch_id,
+                    fixed=fixed_params or None,
                     n_workers=(os.cpu_count() - 2),
                 )
             except Exception as e:

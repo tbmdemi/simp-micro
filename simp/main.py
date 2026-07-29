@@ -35,6 +35,24 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--use_sqrt', action='store_true',
                          help='Experimental: use classic OC damping exponent eta=0.5 '
                               '(x*sqrt(ratio)) instead of x*ratio (default: off)')
+    parser.add_argument('--projection', type=str, choices=['heaviside'],
+                         help='Experimental: robust/minimum-length-scale Heaviside projection '
+                              '(Wang-Lazarov-Sigmund 2011), only supported with --ft 2 '
+                              '(default: unset, off - identity, same as before)')
+    parser.add_argument('--beta_proj', type=float,
+                         help='Heaviside projection sharpness (only used with --projection heaviside, default 8.0)')
+    parser.add_argument('--eta', type=float,
+                         help='Heaviside projection threshold (only used with --projection heaviside, default 0.5)')
+    parser.add_argument('--enforce_connectivity', action='store_true',
+                         help='Experimental: every --connectivity_every iterations, nudge disconnected '
+                              'material islands toward void (default: off)')
+    parser.add_argument('--connectivity_every', type=int,
+                         help='Iteration interval for --enforce_connectivity (default 10)')
+    parser.add_argument('--connectivity_floor', type=float,
+                         help='Design-variable floor value for nudged island pixels (default 0.01)')
+    parser.add_argument('--objective_variant', type=str, choices=['q12', 'normalized'],
+                         help="Experimental: 'normalized' minimizes Q12/sqrt(Q11*Q22) instead of "
+                              "raw Q12 (default: unset, 'q12' - same as before)")
     parser.add_argument('--max_iter', type=int, help='Maximum number of optimization iterations')
     parser.add_argument('--tol_change', type=float, help='Tolerance for design change convergence')
     parser.add_argument('--tol_obj', type=float, help='Tolerance for objective stability convergence')

@@ -256,11 +256,11 @@ def main():
                               "summary.json cũ và nối thêm thay vì tính lại round 0).")
     parser.add_argument(
         "--start-cvae-ckpt", type=str,
-        default=os.path.join(PHASE5_DIR, "cvae_gamma20.pt"),
+        default=os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt"),
     )
     parser.add_argument(
         "--start-surrogate-ckpt", type=str,
-        default=os.path.join(PHASE4_DIR, "surrogate_best.pt"),
+        default=os.path.join(PHASE4_DIR, "surrogate_for_phase5_v2.pt"),
     )
     args = parser.parse_args()
     run(args)

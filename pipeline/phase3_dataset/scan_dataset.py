@@ -24,7 +24,42 @@ import pandas as pd
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 MULTI_BATCH_DIR = os.path.join(REPO_ROOT, "outputs", "multi_batch")
 OUT_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
-N_BATCHES = 8
+
+
+def discover_batches() -> dict[int, str]:
+    """Tự động tìm tất cả thư mục batch_* trong outputs/multi_batch/.
+
+    BUG FIX (2026-07-29): trước đây hardcode N_BATCHES=8 và giả định tên thư
+    mục đúng bằng "batch_{id}" - bỏ sót batch_9_seedweighted_validation,
+    batch_10_dqfix_rebuild, batch_11_dqfix_full_rebuild (đặc biệt batch 11 là
+    bản rebuild sửa lỗi dQ quan trọng nhất dự án, xem EXPERIMENT_LOG.md).
+    Giờ quét động theo pattern "batch_<id>[_hậu tố tùy ý]/batch_<id>_results.csv"
+    để tự bắt được batch mới trong tương lai mà không cần sửa hằng số. Xem
+    AUDIT_REPORT_INDEPENDENT_2026-07-29.md mục D1.
+
+    Returns:
+        Dict batch_id (int) -> đường dẫn thư mục batch tương ứng.
+    """
+    pattern = re.compile(r"^batch_(\d+)(?:_.*)?$")
+    found: dict[int, str] = {}
+    for entry in sorted(os.listdir(MULTI_BATCH_DIR)):
+        full = os.path.join(MULTI_BATCH_DIR, entry)
+        if not os.path.isdir(full):
+            continue
+        m = pattern.match(entry)
+        if not m:
+            continue
+        batch_id = int(m.group(1))
+        results_csv = os.path.join(full, f"batch_{batch_id}_results.csv")
+        if not os.path.exists(results_csv):
+            continue
+        if batch_id in found:
+            raise ValueError(
+                f"Batch id {batch_id} trùng ở 2 thư mục: '{found[batch_id]}' và "
+                f"'{full}' - cần xử lý thủ công (giữ lại bản nào?) trước khi quét."
+            )
+        found[batch_id] = full
+    return found
 
 
 def find_final_iteration_png(sample_dir: str) -> str | None:
@@ -53,8 +88,7 @@ def final_volfrac(sample_dir: str) -> float | None:
         return None
 
 
-def scan_batch(batch_id: int) -> pd.DataFrame:
-    batch_dir = os.path.join(MULTI_BATCH_DIR, f"batch_{batch_id}")
+def scan_batch(batch_id: int, batch_dir: str) -> pd.DataFrame:
     results_csv = os.path.join(batch_dir, f"batch_{batch_id}_results.csv")
     df = pd.read_csv(results_csv)
 
@@ -91,10 +125,14 @@ def scan_batch(batch_id: int) -> pd.DataFrame:
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
+    batches = discover_batches()
+    if not batches:
+        raise RuntimeError(f"Không tìm thấy batch nào trong {MULTI_BATCH_DIR}")
+    print(f"Tìm thấy {len(batches)} batch: {sorted(batches.keys())}")
     all_batches = []
-    for b in range(1, N_BATCHES + 1):
-        print(f"Đang quét batch {b}...")
-        all_batches.append(scan_batch(b))
+    for b, batch_dir in sorted(batches.items()):
+        print(f"Đang quét batch {b} ({os.path.basename(batch_dir)})...")
+        all_batches.append(scan_batch(b, batch_dir))
     manifest = pd.concat(all_batches, ignore_index=True)
 
     n_missing_img = manifest["image_path"].isna().sum()

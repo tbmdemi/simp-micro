@@ -236,7 +236,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cvae-ckpt", type=str,
-                         default=os.path.join(PHASE5_DIR, "cvae_gamma20.pt"))
+                         default=os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt"))
     parser.add_argument("--n-conditions", type=int, default=24)
     parser.add_argument("--n-samples", type=int, default=30,
                          help="Số ứng viên sinh ra MỖI condition, tất cả đều chấm bằng FE thật.")
