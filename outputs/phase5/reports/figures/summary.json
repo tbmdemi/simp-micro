@@ -1,0 +1,26 @@
+{
+  "gamma20": {
+    "hit_rate_single_shot": 0.5833333333333334,
+    "hit_rate_best_of_n": 1.0,
+    "r2_best_of_n": -0.8725823687099352,
+    "mean_frac_manufacturable": 0.15694444444444444,
+    "n_conditions": 24,
+    "n_samples": 30,
+    "mae_best_of_n": 0.15165406537898216,
+    "max_abs_err_best_of_n": 0.5345282369897469
+  },
+  "realphysics_fp_on": {
+    "hit_rate_single_shot": 1.0,
+    "hit_rate_best_of_n": 1.0,
+    "r2_best_of_n": 0.9993365915128878,
+    "mean_frac_manufacturable": 0.3097222222222222,
+    "mae_best_of_n": 0.002526922406186237,
+    "max_abs_err_best_of_n": 0.012942476405103931
+  },
+  "realphysics_fp_off": {
+    "hit_rate_single_shot": 1.0,
+    "hit_rate_best_of_n": 1.0,
+    "r2_best_of_n": 0.9991970463646724,
+    "mean_frac_manufacturable": 0.011111111111111112
+  }
+}
