@@ -3,6 +3,12 @@ numpy>=1.24
 scipy>=1.10
 matplotlib>=3.7
 
+# MMA optimizer (simp/core/mma_runner.py, stiffness_mode/optimizer='mma') -
+# xem EXPERIMENT_LOG.md mục 2026-07-30: OC hai-multiplier tự viết thất bại
+# (không có cơ chế trust-region), nlopt.LD_MMA (Svanberg 1987) là giải pháp
+# đã kiểm chứng cho đúng vấn đề đó (nhiều ràng buộc non-linear tổng quát).
+nlopt>=2.7
+
 # ML dependencies - THỰC SỰ dùng bởi pipeline/phase3_dataset (sklearn),
 # pipeline/phase4_surrogate + pipeline/phase5_cvae (torch); KHÔNG còn
 # optional (trước đây thiếu ở đây khiến `pip install -r requirements.txt`
@@ -18,6 +24,11 @@ Pillow>=10.0
 # để chạy Phase 0-5)
 # scikit-image>=0.20
 # seaborn>=0.13
+
+# Phase 8.1: đối chiếu FE độc lập (analysis/scripts/skfem_homogenization.py) -
+# implementation FEM khác hoàn toàn engine nội bộ simp/core/, dùng để kiểm
+# chứng vật lý (không tái dùng code hiện có) - xem EXPERIMENT_LOG.md 2026-07-31.
+scikit-fem>=10.0
 
 # Optional: dev dependencies
 # pytest>=7.0

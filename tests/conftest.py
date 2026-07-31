@@ -20,7 +20,8 @@ import pytest
 _BARE_MODULE_NAMES = (
     "dataset", "model", "evaluate", "train", "losses", "sample",
     "self_play", "adversarial_dataset", "verify_fe", "best_of_n_eval",
-    "export_for_phase5",
+    "export_for_phase5", "coverage_eval", "manufacturability",
+    "active_learning",
 )
 
 

@@ -317,6 +317,96 @@ class TestOC:
                                          Q=Q_violating, delta=10.0)
         assert np.mean(xnew_constrained) >= np.mean(xnew_free)
 
+    def test_oc_update_dual_basic(self):
+        """stiffness_mode='dual' (OC hai-multiplier, xem oc_update_dual())
+        phải chạy không lỗi và bám volfrac khi ràng buộc stiffness KHÔNG vi
+        phạm (multiplier phải rơi về 0, tương đương không ràng buộc)."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update
+
+        nely, nelx = 8, 8
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.4)
+        dc = -np.random.rand(nely, nelx) - 0.1
+        dv = np.ones((nely, nelx))
+        dg = np.random.rand(nely, nelx)
+        Q_satisfied = np.diag([50.0, 50.0, 20.0])  # >> delta, ràng buộc không active
+
+        xnew, xPhys = oc_update(x, dc, dv, volfrac=0.4, move=0.1, H=H, Hs=Hs, ft=2,
+                                 Q=Q_satisfied, delta=10.0, stiffness_mode='dual', dg=dg)
+        assert xnew.shape == (nely, nelx)
+        assert abs(np.mean(xPhys) - 0.4) < 1e-3
+
+    def test_oc_update_dual_requires_dg(self):
+        """stiffness_mode='dual' không có dg phải báo lỗi rõ ràng thay vì
+        crash mơ hồ hoặc âm thầm rơi về hành vi 'gate'."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update
+
+        nely, nelx = 6, 6
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.3)
+        dc = -np.random.rand(nely, nelx)
+        dv = np.ones((nely, nelx))
+        Q = np.diag([1.0, 1.0, 1.0])
+
+        with pytest.raises(ValueError):
+            oc_update(x, dc, dv, volfrac=0.3, move=0.1, H=H, Hs=Hs, ft=2,
+                      Q=Q, delta=10.0, stiffness_mode='dual')
+
+    def test_oc_update_dual_still_respects_volume_when_stiffness_violated(self):
+        """Bài test hồi quy trực tiếp cho phát hiện dao động của 'gate' (xem
+        docstring oc_update()): khi Q vi phạm, 'gate' sụp về lmid->0 (Q được
+        evaluate 1 lần tại x cũ và giữ NGUYÊN suốt bisection -> điều kiện
+        `vol>volfrac and stiff_ok` luôn False -> volume constraint bị BỎ HOÀN
+        TOÀN, mọi phần tử có -dc>0 nhảy lên x+move ĐỒNG LOẠT). 'dual' (OC
+        hai-multiplier) phải KHÔNG có hiện tượng này - mu1 luôn được bisect
+        độc lập với mu2, nên volfrac vẫn được bám sát dù stiffness đang vi
+        phạm."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update
+
+        nely, nelx = 8, 8
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.3)
+        dc = -np.random.rand(nely, nelx) - 0.1
+        dv = np.ones((nely, nelx))
+        dg = np.random.rand(nely, nelx) + 0.1  # dQ11/dx > 0 khắp nơi
+        Q_violating = np.diag([1.0, 1.0, 1.0])  # Q11=Q22=1 << delta=10
+
+        _, xPhys_gate = oc_update(x.copy(), dc, dv, volfrac=0.3, move=0.2, H=H, Hs=Hs, ft=2,
+                                   Q=Q_violating, delta=10.0, stiffness_mode='gate')
+        _, xPhys_dual = oc_update(x.copy(), dc, dv, volfrac=0.3, move=0.2, H=H, Hs=Hs, ft=2,
+                                   Q=Q_violating, delta=10.0, stiffness_mode='dual', dg=dg)
+
+        # 'gate' sụp về lmid->0 -> flood x+move đồng loạt -> thể tích vọt xa volfrac
+        assert np.mean(xPhys_gate) > 0.3 + 0.15
+        # 'dual' vẫn bisect mu1 độc lập -> bám volfrac tốt hơn HẲN 'gate'
+        assert abs(np.mean(xPhys_dual) - 0.3) < abs(np.mean(xPhys_gate) - 0.3) - 0.05
+
+    def test_oc_update_dual_biases_toward_stiffness_sensitive_elements(self):
+        """Khi ràng buộc vi phạm, 'dual' phải phân bổ vật liệu bổ sung THEO
+        TRỌNG SỐ dg (nhiều hơn ở phần tử có dQ11/dx lớn), khác 'gate' (đẩy
+        ĐỒNG LOẠT +move bất kể độ nhạy)."""
+        from simp.core.filter import build_filter
+        from simp.core.oc import oc_update
+
+        nely, nelx = 8, 8
+        H, Hs = build_filter(nelx, nely, 1.5)
+        x = np.full((nely, nelx), 0.3)
+        dc = -np.ones((nely, nelx)) * 0.5  # độ nhạy objective ĐỒNG NHẤT
+        dv = np.ones((nely, nelx))
+        # dg lệch hẳn: nửa trên nhạy stiffness cao, nửa dưới gần như không
+        dg = np.zeros((nely, nelx))
+        dg[:4, :] = 2.0
+        dg[4:, :] = 0.05
+        Q_violating = np.diag([1.0, 1.0, 1.0])
+
+        xnew_dual, _ = oc_update(x.copy(), dc, dv, volfrac=0.3, move=0.2, H=H, Hs=Hs, ft=2,
+                                  Q=Q_violating, delta=10.0, stiffness_mode='dual', dg=dg)
+        # dc đồng nhất -> chênh lệch material chỉ có thể đến từ trọng số dg
+        assert np.mean(xnew_dual[:4, :]) > np.mean(xnew_dual[4:, :])
+
     def test_oc_update_projection_targets_projected_volume(self):
         """FIX 2026-07-29 (B1): với projection='heaviside', bisection phải nhắm
         vào mean(x̂) (SAU projection), không phải mean(x̃) (TRƯỚC projection) -

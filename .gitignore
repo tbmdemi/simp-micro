@@ -73,6 +73,14 @@ outputs/phase3_backup/
 # pilot use_sqrt/move_min/penal_init (2026-07-26, xem EXPERIMENT_LOG.md) - scratch, không phải dataset
 outputs/pilot_damping_decay/
 
+# pilot OC hai-multiplier (stiffness_mode='dual', branch OC-2-multilayer) - scratch, không phải dataset
+outputs/pilot_oc_dual_multiplier/
+outputs/_smoke_*/
+
+# pilot MMA (nlopt.LD_MMA, simp/mma_runner.py) - scratch, không phải dataset
+outputs/pilot_mma/
+outputs/pilot_mma_*/
+
 # --- LaTeX build artifacts ---
 *.aux
 *.log

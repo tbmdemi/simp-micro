@@ -181,6 +181,56 @@ class TestCoverageEvalManufacturabilityFlag:
             assert t["frac_manufacturable"] is None
 
 
+class TestCoverageEvalForcePeriodic:
+    """FIX 2026-07-30: coverage_eval() trước đây KHÔNG BAO GIỜ áp
+    force_periodic() (khác best_of_n_eval.py/sample.py, mặc định BẬT từ báo
+    cáo Fix 2) - khiến mọi số liệu frac_manufacturable cũ (coverage_gamma20.json,
+    coverage_result.json) phản ánh nhầm cấu hình 'trước Fix 2'. Test này xác
+    nhận force_periodic() được gọi mặc định và có thể tắt qua tham số."""
+
+    def test_force_periodic_called_by_default(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import coverage_eval as cov_mod
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+        tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
+
+        call_count = {"n": 0}
+        real_force_periodic = cov_mod.force_periodic
+
+        def counting_force_periodic(img):
+            call_count["n"] += 1
+            return real_force_periodic(img)
+
+        monkeypatch.setattr(cov_mod, "force_periodic", counting_force_periodic)
+
+        cov_mod.coverage_eval(
+            str(ckpt_path), n_samples=2, grid_size=2, device="cpu", seed=1,
+            v12_range=(-0.5, -0.2),
+        )
+        assert call_count["n"] == 4  # 2 target x 2 mẫu
+
+    def test_force_periodic_disabled_when_requested(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import coverage_eval as cov_mod
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+        tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
+
+        call_count = {"n": 0}
+        monkeypatch.setattr(cov_mod, "force_periodic",
+                             lambda img: call_count.__setitem__("n", call_count["n"] + 1) or img)
+
+        result = cov_mod.coverage_eval(
+            str(ckpt_path), n_samples=2, grid_size=2, device="cpu", seed=1,
+            v12_range=(-0.5, -0.2), apply_force_periodic=False,
+        )
+        assert call_count["n"] == 0
+        assert result["apply_force_periodic"] is False
+
+
 class TestCoverageEvalCli:
     def test_main_writes_result_json(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import coverage_eval as cov_mod

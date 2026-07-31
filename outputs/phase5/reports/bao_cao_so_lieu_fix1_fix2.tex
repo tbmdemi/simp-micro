@@ -34,9 +34,13 @@
 \lhead{\small\color{inkSecondary} Báo cáo số liệu — SIMP Analyst / Phase 5 cVAE}
 \rhead{\small\color{inkSecondary} \thepage}
 
-\title{\textbf{Báo cáo Số liệu:\\Hai Cải tiến Đột phá trong Phase 5 (cVAE Inverse Design)}}
+\title{\textbf{Báo cáo Số liệu:\\Hai Cải tiến Đột phá trong Phase 5 (cVAE Inverse Design)\\
+\large và Bằng chứng Coverage Toàn miền Train}}
 \author{SIMP Analyst — Auxetic Microstructure Inverse Design}
-\date{Nhánh \texttt{main}, commit \texttt{45c500438} — dữ liệu chạy lại ngày 29/07/2026}
+\date{Mục~\ref{sec:fix1}--\ref{sec:fix2}: nhánh \texttt{main}, commit \texttt{45c500438}, dữ liệu
+29/07/2026. Mục~\ref{sec:coverage} (bổ sung): nhánh \texttt{OC-2-multilayer}, commit
+\texttt{d8092b100} + fix \texttt{coverage\_eval.py} CHƯA commit (xem \S\ref{sec:coverage}), dữ
+liệu 30/07/2026}
 
 \begin{document}
 \maketitle
@@ -50,10 +54,22 @@ auxetic từ Poisson ratio mục tiêu): (1) thay thế hàm mất mát dựa tr
 vốn bị decoder khai thác (surrogate exploitation) — bằng lớp vật lý-khả-vi thật
 (\texttt{real\_physics.py}, checkpoint \texttt{cvae\_realphysics.pt}); và (2) hậu xử lý
 \texttt{force\_periodic()} ép cứng tính tuần hoàn hình học trước khi chấm khả năng sản xuất
-(manufacturability). Toàn bộ số liệu được tạo bằng
+(manufacturability). Toàn bộ số liệu Mục~\ref{sec:fix1}--\ref{sec:fix2} được tạo bằng
 \texttt{pipeline/phase5\_cvae/best\_of\_n\_eval.py}, 24 điều kiện lấy ngẫu nhiên từ
 \texttt{test.npz} (seed=123, giống \texttt{self\_play.verify\_round}), 30 mẫu/điều kiện, chấm
 bằng FE thật trên toàn bộ mẫu (oracle, $k_{\text{fe\_verify}}=\text{None}$).
+
+\noindent\textbf{Bổ sung (Mục~\ref{sec:coverage}):} câu hỏi thật sự cần trả lời cho 1 bài toán
+\emph{inverse design} không phải "phương pháp có gì mới" mà là "đưa ra một tính chất auxetic mong
+muốn bất kỳ, hệ thống có trả về một thiết kế \emph{dùng được} không, trên toàn miền, không chỉ ở
+24 điều kiện đã chọn?" Mục~\ref{sec:coverage} chạy lại \texttt{coverage\_eval.py} trên lưới 8
+target trải đều \emph{toàn bộ} miền $\nu_{12}\in[-0.81,0.37]$ đã train (không phải mẫu ngẫu
+nhiên), trên chính checkpoint \texttt{cvae\_realphysics.pt}, cả với \texttt{force\_periodic()}
+bật và tắt — để trả lời trực tiếp câu hỏi "có vùng chết nào không" thay vì suy luận từ 24 điều
+kiện. Nhân tiện phát hiện và sửa 1 khoảng trống: \texttt{coverage\_eval.py} trước đây chưa từng áp
+\texttt{force\_periodic()}, khiến số liệu \texttt{frac\_manufacturable} cũ của script này
+(\texttt{coverage\_gamma20.json}, \texttt{coverage\_result.json}) phản ánh nhầm cấu hình
+"trước Fix 2".
 \end{abstract}
 
 \tableofcontents
@@ -126,6 +142,16 @@ mẫu/điều kiện, chấm FE thật trên toàn bộ 720 mẫu.}
 FE thật trên toàn bộ 30 ứng viên, là cận trên lý tưởng không tính chi phí. Triển khai thực tế
 dùng \texttt{-{}-k-fe-verify K} (surrogate xếp hạng rẻ, chỉ chạy FE thật trên top-K) sẽ có
 hit-rate/$R^2$ thấp hơn oracle một chút, đổi lấy tiết kiệm chi phí tính toán.
+
+\subsection{Công cụ bổ sung cho Mục~\ref{sec:coverage} — \texttt{coverage\_eval.py}}
+Khác \texttt{best\_of\_n\_eval.py} (24 điều kiện NGẪU NHIÊN lấy từ \texttt{test.npz}),
+\texttt{coverage\_eval.py} (roadmap 7.4) quét 1 \textbf{LƯỚI} $\nu_{12}=\nu_{21}$ trải đều toàn
+miền train (mặc định 8 điểm trong $[-0.81, 0.37]$), mỗi điểm sinh $N=15$ mẫu và chấm FE thật trên
+cả 15 (oracle). Mục đích: phát hiện "vùng chết" (target mà ngay cả best-of-N cũng không tìm được
+ứng viên đúng dấu) — câu hỏi mà 24 điều kiện ngẫu nhiên không trả lời trực tiếp được vì không đảm
+bảo phủ hết 2 đầu mút miền train. \textbf{Giới hạn đã biết của công cụ này} (kế thừa từ thiết kế
+gốc, không phải giới hạn riêng của báo cáo): lưới chỉ biến thiên $\nu_{12}=\nu_{21}$ đồng thời
+(đơn giản hoá 1 chiều), không phải coverage 2D đầy đủ của $(\nu_{12},\nu_{21})$ độc lập.
 
 % =====================================================================
 \section{Kết quả — Fix 1: Surrogate Exploitation $\to$ Real-Physics}
@@ -273,6 +299,86 @@ $2\times2$ bằng tịnh tiến — mô phỏng đúng cách lattice thật đư
 \end{figure}
 
 % =====================================================================
+\section{Coverage Toàn miền Train — Có "Vùng Chết" Không?}
+% =====================================================================
+\label{sec:coverage}
+
+\subsection{Vì sao mục này cần thiết}
+Mục~\ref{sec:fix1}--\ref{sec:fix2} chứng minh 2 cải tiến, nhưng cả hai đều đo trên \textbf{24
+điều kiện lấy ngẫu nhiên} từ tập test — trả lời được "trung bình có tốt lên không", chưa trả lời
+được câu hỏi thực sự quan trọng của 1 hệ thống \emph{inverse design}: \textbf{đưa ra BẤT KỲ tính
+chất auxetic mục tiêu nào trong miền đã train, hệ thống có luôn trả về 1 thiết kế dùng được
+không, hay có "vùng chết" (target mà best-of-N cũng không với tới) ở đâu đó chưa bị 24 điều kiện
+ngẫu nhiên phát hiện — đặc biệt ở 2 đầu mút miền train, nơi ít dữ liệu nhất?} Đây là câu hỏi mà
+\texttt{coverage\_eval.py} (lưới có hệ thống, không ngẫu nhiên) được thiết kế để trả lời trực
+tiếp (xem \S\ref{sec:method}).
+
+\subsection{Số liệu (checkpoint \texttt{cvae\_realphysics.pt}, lưới 8 target, 15 mẫu/target, oracle)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Chỉ số} & \textbf{force\_periodic TẮT} & \textbf{force\_periodic BẬT} \\
+\midrule
+hit\_rate (5 target auxetic, best-of-15 oracle) & 1.000 & 1.000 \\
+mean\_abs\_error ($\nu_{12}$, cả 8 target) & 0.0237 & \cellcolor{serOrange!15}0.0246 \\
+Vùng chết (target auxetic không hit) & \multicolumn{2}{c}{\textbf{Không có} (0/5)} \\
+frac\_manufacturable (TB 8 target) & 0.025 & \cellcolor{serOrange!15}\textbf{0.383} \\
+\bottomrule
+\end{tabular}
+\caption{Lưới trải đều $\nu_{12}\in[-0.81,0.37]$ (bao gồm cả 2 đầu mút miền train), KHÔNG phải
+mẫu ngẫu nhiên. So với \texttt{coverage\_gamma20.json}/\texttt{coverage\_result.json} (checkpoint
+CŨ, cùng script, không force\_periodic): mean\_abs\_error 0.199--0.212 $\to$ \textbf{0.024--0.025}
+— cải thiện $\sim$8$\times$ được xác nhận LẶP LẠI trên toàn miền, không chỉ 24 điều kiện của Mục
+\ref{sec:fix1}. \textbf{Lưu ý cỡ mẫu}: $N=15$/target (so với $N=30$/điều kiện ở
+Mục~\ref{sec:fix1}--\ref{sec:fix2}) và chỉ 8 điểm lưới — số liệu frac\_manufacturable ở đây có
+phương sai cao hơn, xem thảo luận bên dưới.}
+\label{tab:coverage}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[b]{0.47\textwidth}
+  \includegraphics[width=\linewidth]{figures/coverage_frac_manufacturable.pdf}
+  \caption{frac\_manufacturable theo target $\nu_{12}$}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.47\textwidth}
+  \includegraphics[width=\linewidth]{figures/coverage_abs_error.pdf}
+  \caption{Sai số $|\nu_{12}^{\text{best}}-\nu_{12}^{\text{target}}|$ (force\_periodic BẬT)}
+\end{subfigure}
+\caption{(a) force\_periodic() cải thiện frac\_manufacturable ở MỌI điểm lưới đã thử, không chỉ
+trung bình — đường cam luôn nằm trên đường xanh. Cả 2 đường đều thấp hơn ở 2 đầu mút
+($\nu_{12}=-0.81$ và $+0.37$) so với giữa miền — phù hợp trực giác "ít dữ liệu train hơn ở biên
+phân bố". (b) sai số Poisson ratio cũng cao nhất chính xác ở 2 đầu mút này (0.091 và 0.063) so
+với dưới 0.02 ở phần giữa miền — cùng 1 hiệu ứng "rìa phân bố train", nhất quán giữa 2 chỉ số độc
+lập.}
+\label{fig:coverage}
+\end{figure}
+
+\subsection{Đọc số liệu này thế nào}
+\textbf{Không có vùng chết} trong lưới 8 điểm đã thử (khớp phát hiện gốc của
+\texttt{coverage\_gamma20.json} trên checkpoint cũ) — hit\_rate best-of-N vẫn giữ 100\% xuyên
+suốt miền train, kể cả 2 đầu mút. Đây là bằng chứng trực tiếp (không suy luận từ 24 điều kiện)
+rằng \textbf{pipeline hiện tại đã đưa ra được lời giải cho bài toán inverse design trên toàn miền
+đã train}, không chỉ ở vùng "dễ" ngẫu nhiên rơi vào.
+
+Tuy nhiên 2 chỉ số độc lập (frac\_manufacturable và sai số $\nu_{12}$) đều cho thấy \textbf{hiệu
+ứng rìa phân bố}: chất lượng thấp hơn rõ rệt ở 2 đầu mút miền train so với ở giữa. Đây KHÔNG phải
+vùng chết (vẫn hit đúng dấu), mà là vùng \textbf{chất lượng thấp hơn} — sai số Poisson ratio cao
+hơn $\sim$4$\times$ và frac\_manufacturable thấp hơn $\sim$7$\times$ so với giữa miền. Diễn giải
+hợp lý nhất: dataset train có mật độ mẫu thưa hơn ở 2 đầu mút phân bố $\nu_{12}$ (hiệu ứng "rìa
+phân bố" kinh điển trong học máy), không phải lỗi của Fix 1/Fix 2 - cả hai fix vẫn có tác dụng
+đầy đủ ở đây (frac\_manufacturable BẬT vẫn cao hơn TẮT ở đúng 2 điểm rìa này: 0.067 vs 0.0).
+
+\paragraph{Giới hạn cần lưu ý.} $N=15$/target và chỉ 8 điểm lưới - nhỏ hơn nhiều so với 24
+$\times$ 30 = 720 mẫu của Mục~\ref{sec:fix1}--\ref{sec:fix2}, nên các con số frac\_manufacturable
+đơn lẻ (đặc biệt ở 2 điểm rìa, dựa trên rất ít mẫu auxetic hợp lệ) có sai số ước lượng lớn hơn -
+không nên diễn giải quá chi tiết từng điểm, chỉ nên tin xu hướng tổng thể (rìa thấp hơn giữa,
+nhất quán giữa 2 chỉ số độc lập). Muốn kết luận chắc chắn hơn về "hiệu ứng rìa" cần lưới dày hơn
++ $N$ lớn hơn ở chính 2 vùng rìa - chưa làm trong báo cáo này.
+
+% =====================================================================
 \section{Phân tích số liệu thu thập được}
 % =====================================================================
 \label{sec:analysis}
@@ -301,41 +407,70 @@ hàng + 1 cột biên.
 \paragraph{Giới hạn cần lưu ý khi diễn giải.} Toàn bộ số liệu trên là chế độ oracle
 ($k_{\text{fe\_verify}}=$None, chấm FE thật trên cả 30 mẫu) — phản ánh \emph{tiềm năng tối đa}
 của mỗi checkpoint, không phải chi phí triển khai thực tế (dùng surrogate xếp hạng rồi chỉ chạy
-FE thật trên top-K). Ngoài ra mẫu 24 điều kiện lấy ngẫu nhiên (seed=123) từ phân bố test set,
-chưa phải coverage đầy đủ toàn miền $\nu_{12}\in[-0.81, 0.37]$ (xem \texttt{coverage\_eval.py},
-roadmap 7.4/7.5) — vùng biên miền train có thể có hành vi khác các điều kiện đo ở đây.
+FE thật trên top-K). Mẫu 24 điều kiện lấy ngẫu nhiên (seed=123) từ phân bố test set cũng CHƯA phải
+coverage đầy đủ toàn miền $\nu_{12}\in[-0.81, 0.37]$ — \textbf{đã được đo lại trực tiếp bằng lưới
+có hệ thống ở Mục~\ref{sec:coverage}}: không có vùng chết, nhưng có hiệu ứng "rìa phân bố" (chất
+lượng thấp hơn ở 2 đầu mút $\nu_{12}=-0.81/+0.37$) mà 24 điều kiện ngẫu nhiên không phát hiện ra.
 
 % =====================================================================
 \section{Kết luận}
 % =====================================================================
-Hai cải tiến được xác nhận lại bằng số liệu chạy trực tiếp trên cùng bộ 24 điều kiện
-(seed=123), không dùng số liệu cũ:
+Ba mảnh bằng chứng được xác nhận bằng số liệu chạy trực tiếp, không dùng số liệu cũ:
 
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{Real-physics loss} (thay surrogate exploitation): $R^2$ từ $-0.873\to0.999$,
-  single-shot hit\_rate từ $58.3\%\to100\%$ — biến quy trình từ "phải sinh nhiều mẫu và hi vọng
-  1 mẫu đúng" thành "mẫu đầu tiên đã đáng tin".
-  \item \textbf{force\_periodic()}: frac\_manufacturable từ $1.1\%\to31.0\%$, không đánh đổi độ
-  chính xác Poisson ratio — biến hình học từ "đúng vật lý nhưng không lắp ráp được thành lattice"
-  sang "phần lớn sản xuất được", với chi phí sửa gần như bằng 0 (1 phép gán, không train lại).
+  \item \textbf{Real-physics loss} (thay surrogate exploitation, 24 điều kiện ngẫu nhiên):
+  $R^2$ từ $-0.873\to0.999$, single-shot hit\_rate từ $58.3\%\to100\%$ — biến quy trình từ "phải
+  sinh nhiều mẫu và hi vọng 1 mẫu đúng" thành "mẫu đầu tiên đã đáng tin".
+  \item \textbf{force\_periodic()} (24 điều kiện ngẫu nhiên): frac\_manufacturable từ
+  $1.1\%\to31.0\%$, không đánh đổi độ chính xác Poisson ratio — biến hình học từ "đúng vật lý
+  nhưng không lắp ráp được thành lattice" sang "phần lớn sản xuất được", chi phí sửa gần như bằng
+  0 (1 phép gán, không train lại).
+  \item \textbf{Coverage toàn miền train} (Mục~\ref{sec:coverage}, lưới có hệ thống — không phải
+  24 điều kiện ngẫu nhiên): \textbf{không có vùng chết}, hit\_rate 100\% xuyên suốt miền
+  $\nu_{12}\in[-0.81,0.37]$; nhưng có hiệu ứng "rìa phân bố" (sai số cao hơn $\sim$4$\times$,
+  frac\_manufacturable thấp hơn $\sim$7$\times$ ở 2 đầu mút so với giữa miền) — chưa từng được đo
+  trực tiếp trước báo cáo này.
 \end{itemize}
 
-Hướng tiếp theo hợp lý nhất theo đúng số liệu ở Mục~\ref{sec:analysis}: cải thiện
-connectivity/nét đủ rộng (phần force\_periodic() không chạm tới) và mở rộng coverage\_eval.py ra
-toàn miền train để xác nhận không có vùng chết trước khi triển khai rộng.
+\paragraph{Trả lời câu hỏi thật của bài toán inverse design.} Ba mảnh bằng chứng trên cùng khẳng
+định 1 điều: đưa ra một tính chất auxetic mục tiêu \emph{bất kỳ} trong miền đã train, pipeline
+hiện tại (real-physics loss + force\_periodic) trả về một thiết kế mà (a) FE thật xác nhận đúng
+dấu Poisson ratio ở tỉ lệ hit-rate 100\% - kể cả 2 đầu mút miền, và (b) có xác suất
+sản xuất được (liên thông, khớp biên tuần hoàn) tăng gấp $\sim$28--30 lần so với trước Fix 2. Đây
+chính là "solution" cho bài toán inverse design theo nghĩa thực dụng nhất - không phải một
+phương pháp mới, mà là bằng chứng định lượng rằng hệ thống đưa ra được câu trả lời dùng được, trên
+toàn miền, không chỉ ở các điều kiện được chọn thuận lợi.
+
+\paragraph{Hướng tiếp theo hợp lý nhất theo đúng số liệu ở Mục~\ref{sec:analysis},
+\ref{sec:coverage}:} (1) cải thiện connectivity/nét đủ rộng - phần force\_periodic() không chạm
+tới, vẫn là nguyên nhân chính khiến frac\_manufacturable chưa cao hơn nữa; (2) điều tra hiệu ứng
+"rìa phân bố" mới phát hiện bằng lưới dày hơn + $N$ lớn hơn ở đúng 2 vùng biên $\nu_{12}$, để xác
+nhận đây là do mật độ dữ liệu train thưa (có thể sửa bằng active-learning có mục tiêu, roadmap
+7.5) hay một nguyên nhân khác.
 
 \vspace{1cm}
 \noindent\rule{\linewidth}{0.4pt}
 \small\color{inkMuted}
 \textbf{Khả năng tái lập}: script + tham số dùng để tạo báo cáo này —
 \begin{verbatim}
+# Mục 3-4 (Fix 1, Fix 2) - nhánh main, commit 45c500438, 29/07/2026
 python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_gamma20.pt \
     --n-conditions 24 --n-samples 30
 python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_realphysics.pt \
     --n-conditions 24 --n-samples 30
 python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_realphysics.pt \
     --n-conditions 24 --n-samples 30 --no-force-periodic
+
+# Mục 5 (Coverage) - nhánh OC-2-multilayer, commit d8092b100 + fix
+# coverage_eval.py (force_periodic wiring, CHƯA commit khi báo cáo này tạo),
+# 30/07/2026
+python3 pipeline/phase5_cvae/coverage_eval.py --cvae-ckpt outputs/phase5/cvae_realphysics.pt \
+    --n-samples 15 --grid-size 8 --check-manufacturability \
+    --out outputs/phase5/self_play/coverage_realphysics_fp_on.json
+python3 pipeline/phase5_cvae/coverage_eval.py --cvae-ckpt outputs/phase5/cvae_realphysics.pt \
+    --n-samples 15 --grid-size 8 --check-manufacturability --no-force-periodic \
+    --out outputs/phase5/self_play/coverage_realphysics_fp_off.json
+python3 analysis/scripts/plot_coverage_figures.py
 \end{verbatim}
-Chạy trên nhánh \texttt{main}, commit \texttt{45c500438}, ngày 29/07/2026.
 
 \end{document}

@@ -61,6 +61,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--objective_variant', type=str, choices=['q12', 'normalized'],
                          help="Experimental: 'normalized' minimizes Q12/sqrt(Q11*Q22) instead of "
                               "raw Q12 (default: unset, 'q12' - same as before)")
+    parser.add_argument('--stiffness_mode', type=str, choices=['gate', 'dual'],
+                         help="Experimental: 'dual' uses a two-multiplier OC update (separate "
+                              "Lagrange multiplier for the Q11/Q22 stiffness constraint, nested "
+                              "bisection) instead of the binary stiff_ok gate on the volume "
+                              "bisection (default: unset, 'gate' - same as before). See "
+                              "core/oc.py::oc_update_dual() docstring for why 'gate' can oscillate.")
     parser.add_argument('--max_iter', type=int, help='Maximum number of optimization iterations')
     parser.add_argument('--tol_change', type=float, help='Tolerance for design change convergence')
     parser.add_argument('--tol_obj', type=float, help='Tolerance for objective stability convergence')
