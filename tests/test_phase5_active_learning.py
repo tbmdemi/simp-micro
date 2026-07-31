@@ -1,15 +1,11 @@
 """
-Tests for pipeline/phase5_cvae/active_learning.py (roadmap 7.1-7.3 + 7.5:
-the active-learning loop that self_play.py is NOT a substitute for - see
-module docstring). Covers the pure/unit-testable pieces
-(find_weak_targets, generate_and_verify_candidates,
+Tests for pipeline/phase5_cvae/active_learning.py. Covers the pure/unit
+functions (find_weak_targets, generate_and_verify_candidates,
 filter_good_candidates, save_good_candidates_npz, should_stop_loop); the
-subprocess orchestration in run()/main() spawns real training jobs and is
-intentionally out of scope for a unit test (same call this project already
-made for self_play.py's run(), see tests/test_phase5_self_play.py).
+subprocess orchestration in run()/main() is out of scope for a unit test,
+same as tests/test_phase5_self_play.py.
 
-Imports are lazy inside each test - see tests/conftest.py docstring on the
-bare-import collision between phase4_surrogate/ and phase5_cvae/.
+Imports are lazy inside each test - see tests/conftest.py.
 """
 import numpy as np
 import pytest
@@ -34,29 +30,17 @@ def _write_cvae_checkpoint(path, latent_dim=4, resolution=64,
 
 class TestFindWeakTargets:
     def test_none_abs_error_ranked_above_finite_error(self, tmp_path, monkeypatch):
-        """A target where every FE eval fails (abs_error=None, coverage_eval's
-        own dead_zone_targets list actually EXCLUDES these - see
-        coverage_eval.py's auxetic_rows filter on hit is not None) must
-        still be treated as the WORST case by find_weak_targets's own
-        ranking (None -> +inf), since it's exactly the case
-        active-learning should prioritize sampling more data for.
+        """A target where every FE eval fails (abs_error=None - excluded
+        from coverage_eval's own dead_zone_targets, see its auxetic_rows
+        filter) must still rank as WORST in find_weak_targets (None -> +inf).
 
-        NOTE: find_weak_targets delegates to coverage_eval() from
-        coverage_eval.py, so FE_PARAMS/evaluate_density_field must be
-        patched on THAT module's namespace, not on active_learning's -
-        active_learning only re-exports the `coverage_eval` function
-        object, it doesn't call evaluate_density_field for this path
-        itself. Patching via sys.modules["coverage_eval"] is unreliable
-        across tests: active_learning.py imports it via a BARE
-        `from coverage_eval import ...` (sys.path.insert trick), which
-        only registers sys.modules["coverage_eval"] the FIRST time
-        `pipeline.phase5_cvae.active_learning` itself gets imported in
-        the whole pytest session - later tests get the cached dotted
-        module without re-running that bare import, so the bare-name
-        key can vanish once conftest's autouse fixture pops it. Patching
-        `al_mod.coverage_eval.__globals__` directly instead is robust to
-        import order/caching, since it's the exact dict the function
-        looks up at call time, however it got bound."""
+        Patch via `al_mod.coverage_eval.__globals__`, not
+        sys.modules["coverage_eval"]: active_learning.py's bare
+        `from coverage_eval import ...` only registers that sys.modules key
+        the first time the module is imported in the session, so it can
+        vanish once conftest's autouse fixture pops it on later tests.
+        __globals__ is the exact dict the function looks up at call time
+        regardless of import order/caching."""
         from pipeline.phase5_cvae import active_learning as al_mod
         cov_globals = al_mod.coverage_eval.__globals__
 
@@ -69,9 +53,6 @@ class TestFindWeakTargets:
 
         def flaky_eval(img_fe, fe_params):
             calls["n"] += 1
-            # Fail deterministically on every sample of the FIRST grid
-            # target processed (the most-negative v12), succeed elsewhere
-            # with a large, but finite, error.
             if calls["n"] <= 2:
                 raise RuntimeError("forced FE failure")
             return 0.5, 0.5, np.eye(3)

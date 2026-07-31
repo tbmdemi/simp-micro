@@ -99,6 +99,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Known issue (không sửa trong lần này, đã ghi chú lý do)
 - `pipeline/phase3_dataset/finalize_dataset.py` chưa dùng chung logic lọc `is_connected`/`osc_score` với `analysis/scripts/assemble_phase3_v2.py::is_clean()` - `dataset_64.npz` không lưu `sample_id` nên thiếu khóa join an toàn. Xem `pipeline/phase3_dataset/README.md`.
 
+### 2026-07-30 - Bug scaling `Q` (A1) + MMA optimizer cho `hexagonal`/`hourglass` (chưa gắn số phiên bản)
+
+> Chi tiết đầy đủ (bằng chứng số, pilot N=100→N=400): [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Mục này chỉ tóm tắt.
+
+#### Added
+- `simp/mma_runner.py::run_simp_mma()` - `nlopt.LD_MMA` (Svanberg 1987) thay `oc_update()`, dùng cho `hexagonal`/`hourglass` (yield 76,5%→99,8% và 76,8%→88,0%, N=400, CI không chồng lấn). `reentrant_bowtie` giữ nguyên `gate`/OC - MMA thất bại nặng trên seed này (90,0%→0,0%, rơi vào local optimum sai dấu).
+- `analysis/scripts/generate_production_batch.py::SEED_OPTIMIZER` - dispatch optimizer theo seed, `--optimizer {auto,gate,mma}` (CHƯA chạy để regenerate dataset 57k production).
+- `nlopt>=2.7` vào `requirements.txt`/`pyproject.toml`.
+- `tests/test_mma_runner.py` (5 test).
+
+#### Fixed
+- Bug scaling `Q` (A1) trong `compute_homogenized_tensor()` - `Q_cũ = Q_đúng × E0/nele`, khiến ngưỡng phạt stiffness hiệu lực ~46% thay vì 10% thiết kế suốt lịch sử dự án (vô tình làm regularizer cho `hexagonal`). Sau khi sửa đúng, lộ ra bug thứ 2 (`X_MIN=0,0` thay vì `0,001`, trạng thái hấp thụ toán học) - sửa cả 2, tỷ lệ sụp cấu trúc 16,7%→0% (N=400).
+
+#### Known issue (đã chấp nhận, không phải bug chưa sửa)
+- `hexagonal` yield thấp hơn lịch sử sau khi sửa 2 bug trên (~80,5% so với 93,9%) - đã thử 3 hướng khắc phục, cả 3 đều phản tác dụng, xác nhận cấu hình mặc định hiện tại đã tốt nhất trong các hướng đã thử. Xem README §Giới hạn Đã biết #16.
+
+### 2026-07-31 - Phase 7 (active-learning) kết luận + Phase 8.1/8.3 (chưa gắn số phiên bản)
+
+> Chi tiết đầy đủ: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md), [`outputs/phase5/reports/final_status_report_2026-07-31.md`](outputs/phase5/reports/final_status_report_2026-07-31.md). Mục này chỉ tóm tắt.
+
+#### Added
+- `pipeline/phase5_cvae/active_learning.py` (roadmap 7.1-7.3+7.5) - vòng lặp active-learning thật: tìm vùng yếu qua `coverage_eval()` → sinh+FE-verify ứng viên → lọc manufacturable → fine-tune surrogate rồi cVAE → đo lại coverage → quyết định dừng.
+- `analysis/scripts/skfem_homogenization.py` (roadmap 8.1) - implementation FE/homogenization độc lập trên `scikit-fem` (không tái dùng `simp/core/pbc.py`/`compute.py`), cùng `analysis/scripts/run_independent_fe_check.py` (script so sánh).
+- `analysis/scripts/build_design_library.py` (roadmap 8.3) - thư viện thiết kế tuyển chọn qua `best_of_n_eval.py`, xuất `outputs/phase5/design_library/`.
+- `scikit-fem>=10.0` vào `requirements.txt`/`pyproject.toml` (optional, nhóm `analysis`).
+- `tests/test_phase5_active_learning.py` (12 test), `tests/test_skfem_homogenization.py` (7 test).
+
+#### Changed
+- README §Giới hạn Đã biết #15 (đối chiếu FE độc lập): GIẢI QUYẾT PHẦN LỚN - `scikit-fem` khớp engine nội bộ tới ~1e-9 (R²=1,000000, n=24 mẫu thật), xác nhận đúng vật lý, không chỉ nhất quán nội bộ.
+- README bảng roadmap Phase 6-8 viết lại theo đúng đánh số roadmap chi tiết (trước đó "Phase 6" trong bảng lẫn với nâng cấp cGAN/diffusion tuỳ chọn của Phase 5).
+
+#### Known result (âm tính, có giá trị phương pháp luận)
+- Active-learning loop chạy production trên `cvae_realphysics.pt` (đã gần mức trần: `frac_manufacturable`=0,35, hit-rate 98,7%) - round 1 làm `mean_abs_error` TỆ ĐI (0,0246→0,0686), không cải thiện. Kết luận: giữ nguyên checkpoint production, không promote checkpoint mới.
+
 ## [1.4.0] - 2026-07-10
 
 ### Fixed

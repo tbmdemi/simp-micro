@@ -52,10 +52,8 @@ class TestSolidCellAnalyticalGate:
 
 class TestPeriodicReductionStructure:
     def test_master_dof_count_matches_pbc_theory(self):
-        """For an (nelx+1)x(nely+1) periodic grid, independent DOFs after
-        tying right->left, top->bottom, all corners->bottom-left, minus the
-        2 pinned corner dofs, should be exactly
-        2*(nelx*nely) (interior+left+bottom nodes minus the corner)."""
+        """Periodic quotient has exactly nelx*nely distinct nodes; master
+        DOFs = 2*that, minus the 2 pinned corner dofs."""
         nelx, nely = 6, 6
         m, basis, _basis0 = skh.build_mesh_and_basis(nelx, nely)
         P, pin_dofs = skh.build_periodic_reduction(m, basis)
@@ -95,10 +93,7 @@ class TestElementGridIndexMap:
         assert pairs == {(i, j) for i in range(nelx) for j in range(nely)}
 
     def test_nonuniform_density_produces_asymmetric_but_valid_Q(self):
-        """A checkerboard-ish asymmetric density field must not crash and
-        must give a symmetric (within numerical tolerance) 3x3 Q, matching
-        the existing solver's own shape-only smoke test
-        (test_core_smoke.py::test_compute_homogenized_tensor_shape)."""
+        """Non-crashing + symmetric 3x3 Q for a non-trivial density field."""
         rng = np.random.default_rng(0)
         xPhys = rng.uniform(0.3, 1.0, size=(10, 10))
 

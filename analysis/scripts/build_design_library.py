@@ -1,24 +1,19 @@
 """
 Phase 8.3 - build_design_library.py
 ============================================================
-Roadmap 8.3: xây thư viện thiết kế được tuyển chọn (curated design library) -
-tái dùng pipeline/phase5_cvae/best_of_n_eval.py::best_of_n() (roadmap 6.4-6.6,
-đã kiểm chứng) cho từng target riêng lẻ qua custom_condition, lưu ảnh PNG +
-manifest.
+Roadmap 8.3: thư viện thiết kế tuyển chọn - gọi
+pipeline/phase5_cvae/best_of_n_eval.py::best_of_n() cho từng target
+(stratified theo bin v12 từ test.npz), lưu ảnh PNG + manifest.
 
-LƯU Ý PHẠM VI: best_of_n_eval.py trên nhánh này chỉ chọn "best" theo accuracy
-thuần (argmin|Δv12|) + lọc tuỳ chọn require_manufacturable - KHÔNG có composite
-score accuracy/manuf/aesthetic (cái đó chỉ tồn tại trên nhánh
-feature/optional-multi-condition CHƯA merge). Thư viện này dùng đúng 2 tiêu
-chí đã kiểm chứng trên nhánh hiện tại: accuracy (FE thật) + manufacturability.
-
-Chọn target: stratified theo bin v12 từ test.npz (giống ý tưởng
-run_independent_fe_check.py) để thư viện trải đều property space.
+Lưu ý phạm vi: chọn "best" theo accuracy (FE thật) + manufacturability -
+KHÔNG có composite score 3 trục (aesthetic chỉ tồn tại trên nhánh
+feature/optional-multi-condition chưa merge). Xem EXPERIMENT_LOG.md mục
+2026-07-31 cho kết quả đầy đủ.
 
 Cách chạy:
     python3 analysis/scripts/build_design_library.py --n-targets 24 --n-samples 30
 
-Output: outputs/phase5/design_library/design_XXX.png + manifest.json + manifest.csv
+Output: outputs/phase5/design_library/design_XXX.png + manifest.json/.csv
 """
 import os
 import sys
@@ -88,11 +83,9 @@ def run(n_targets: int, n_samples: int, cvae_ckpt: str, out_dir: str, seed: int 
             continue
         row = result["per_condition"][0]
 
-        # require_manufacturable=True chỉ lọc TRONG lúc xếp hạng - nếu
-        # KHÔNG có ứng viên nào manufacturable trong n_samples, best_of_n()
-        # rơi về chọn theo accuracy thuần trên toàn bộ pool (xem docstring
-        # best_of_n_eval.py) - kiểm tra lại trực tiếp ảnh đã lưu để biết
-        # CHẮC CHẮN thiết kế cuối cùng có sản xuất được hay chỉ là fallback.
+        # best_of_n() rơi về accuracy-only nếu KHÔNG có ứng viên manufacturable
+        # nào trong pool (xem best_of_n_eval.py) - kiểm tra lại trực tiếp ảnh
+        # đã lưu để biết chắc thiết kế cuối có sản xuất được hay là fallback.
         saved_img = np.asarray(Image.open(png_path), dtype=np.float32) / 255.0
         best_is_manufacturable = bool(
             check_manufacturability((saved_img > 0.5).astype(np.float32))["passes_all"]

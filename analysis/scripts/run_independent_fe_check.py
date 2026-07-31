@@ -1,16 +1,10 @@
 """
 Phase 8.1 - run_independent_fe_check.py
 ============================================================
-Chạy so sánh engine FE nội bộ (simp/core/solver.py qua
-pipeline/phase5_cvae/verify_fe.py::evaluate_density_field) với engine độc lập
-scikit-fem (skfem_homogenization.py::evaluate_density_field_skfem) trên các
-mẫu THẬT (đã sinh sẵn, có nhãn v12/v21/penal thật) lấy từ
-outputs/phase3/test.npz - KHÔNG qua cVAE, so sánh thuần 2 solver trên cùng 1
-density field.
-
-Chọn mẫu: xếp theo bin v12 (giống ý tưởng stratified split của
-finalize_dataset.py) để mẫu so sánh trải đều khắp property space, không dồn
-vào 1 vùng.
+So sánh engine FE nội bộ (verify_fe.py::evaluate_density_field) với engine
+độc lập scikit-fem (skfem_homogenization.py) trên mẫu thật (v12/v21/penal
+đã biết) từ outputs/phase3/test.npz, không qua cVAE. Kết quả: xem
+EXPERIMENT_LOG.md mục 2026-07-31.
 
 Cách chạy:
     python3 analysis/scripts/run_independent_fe_check.py --n-samples 28
@@ -38,9 +32,8 @@ REPORT_PATH = os.path.join(REPO_ROOT, "outputs", "phase5", "reports",
 
 def select_stratified_indices(v12: np.ndarray, n_samples: int, n_bins: int = 8,
                                seed: int = 123):
-    """Chia v12 thành n_bins khoảng đều, lấy ~n_samples/n_bins mẫu ngẫu
-    nhiên/bin (giống tinh thần stratified split của finalize_dataset.py) -
-    đảm bảo mẫu so sánh trải đều property space, không dồn 1 vùng."""
+    """Chia v12 thành n_bins khoảng đều, lấy ngẫu nhiên ~n_samples/n_bins
+    mẫu/bin để mẫu so sánh trải đều property space."""
     rng = np.random.default_rng(seed)
     bin_edges = np.linspace(v12.min(), v12.max(), n_bins + 1)
     bin_idx = np.clip(np.digitize(v12, bin_edges[1:-1]), 0, n_bins - 1)
