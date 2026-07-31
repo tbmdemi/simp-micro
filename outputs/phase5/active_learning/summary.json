@@ -1,0 +1,20 @@
+[
+  {
+    "round": 0,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_realphysics.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_for_phase5_v2.pt",
+    "hit_rate": 1.0,
+    "mean_abs_error": 0.02463795228282594,
+    "dead_zone_targets": [],
+    "n_good_candidates": 0
+  },
+  {
+    "round": 1,
+    "cvae_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase5/cvae_al_round1.pt",
+    "surrogate_ckpt": "/home/tbm/Documents/Input_SIMP_Analyst/outputs/phase4/surrogate_al_round1.pt",
+    "hit_rate": 1.0,
+    "mean_abs_error": 0.06859318908207893,
+    "dead_zone_targets": [],
+    "n_good_candidates": 23
+  }
+]

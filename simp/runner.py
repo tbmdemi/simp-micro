@@ -279,6 +279,14 @@ def run_simp(params: dict) -> dict:
     # production (0.50-0.58). Sửa: nối lại ràng buộc cứng đã có sẵn - dùng
     # ĐÚNG delta (stiffness_delta()) chia sẻ với phạt mềm, Q lấy từ vòng lặp
     # HIỆN TẠI (evaluate tại x cũ, đúng quy ước đã ghi chú sẵn trong oc.py).
+    # stiffness_mode (mặc định 'gate' = hành vi cũ): 'dual' bật OC hai-
+    # multiplier (core/oc.py::oc_update_dual) thay cho cổng nhị phân stiff_ok
+    # - xem docstring oc_update() cho phân tích cơ chế dao động của 'gate'
+    # khi delta/beta tăng (EXPERIMENT_LOG.md mục 2026-07-29, "hexagonal"
+    # accepted-gap). TÍNH NĂNG THỬ NGHIỆM, CHƯA áp dụng cho dataset hiện có -
+    # cần pilot trước khi cân nhắc đổi default.
+    stiffness_mode = params.get('stiffness_mode', 'gate')
+
     if projection == 'heaviside' and ft != 2:
         raise ValueError("projection='heaviside' chỉ hỗ trợ ft=2 (density filter).")
     max_iter = params.get('max_iter', 200)
@@ -436,11 +444,24 @@ def run_simp(params: dict) -> dict:
         if ft == 2:
             dv = apply_filter(dv, H, Hs)
 
+        # dg: độ nhạy của thành phần stiffness ĐANG RÀNG BUỘC CHẶT HƠN
+        # (min(Q11,Q22)) - chỉ cần khi stiffness_mode='dual' (xem
+        # core/oc.py::oc_update_dual). Áp ĐÚNG cùng chuỗi projection-
+        # derivative + sensitivity-filter như dc ở trên (dQ, giống dc trước
+        # filter, là đạo hàm theo xPhys=x̂, không phải x).
+        dg = None
+        if stiffness_mode == 'dual':
+            binding = 0 if Q[0, 0] <= Q[1, 1] else 1
+            dg = dQ[binding, binding]
+            if projection == 'heaviside':
+                dg = dg * heaviside_projection_derivative(x_tilde, beta_proj_t, eta_proj)
+            dg = apply_sensitivity_filter(dg, x, H, Hs, ft)
+
         # OC
         move_t = move_at_iteration(move, move_min, loop, max_iter)
         delta_t = stiffness_delta(volfrac, E0)
         xnew, x_tilde = oc_update(x, dc, dv, volfrac, move_t, H, Hs, ft, use_sqrt=use_sqrt,
-                                   Q=Q, delta=delta_t,
+                                   Q=Q, delta=delta_t, stiffness_mode=stiffness_mode, dg=dg,
                                    projection=projection, beta_proj=beta_proj_t, eta_proj=eta_proj)
         change = np.max(np.abs(xnew - x))
         x = xnew

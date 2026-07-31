@@ -22,6 +22,15 @@ không tính hit/miss, chỉ báo cáo abs_error để tham khảo.
 Cách chạy:
     python3 pipeline/phase5_cvae/coverage_eval.py \\
         --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 15 --grid-size 8
+
+FIX 2026-07-30: script này CHƯA BAO GIỜ áp force_periodic() trước khi chấm
+manufacturability - khác best_of_n_eval.py/sample.py (force_periodic mặc
+định BẬT từ báo cáo Fix 2, xem outputs/phase5/reports/). Nghĩa là mọi số
+liệu frac_manufacturable từng sinh ra bởi script này (coverage_gamma20.json,
+coverage_result.json) đang phản ánh cấu hình "trước Fix 2" (~1% mức), không
+phải cấu hình production thật (~31%) - một khoảng trống nhất quán giữa 2
+script đo cùng 1 khái niệm. Đã thêm apply_force_periodic (mặc định True,
+khớp best_of_n_eval.py) để sửa.
 """
 import os
 import sys
@@ -33,7 +42,7 @@ import torch
 sys.path.insert(0, os.path.dirname(__file__))
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
 from self_play import load_cvae                                            # noqa: E402
-from manufacturability import check_manufacturability                      # noqa: E402
+from manufacturability import check_manufacturability, force_periodic      # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
@@ -43,7 +52,8 @@ V12_TRAIN_RANGE = (-0.81, 0.37)
 
 def coverage_eval(cvae_ckpt_path: str, n_samples: int, grid_size: int,
                    device: str, seed: int = 123,
-                   v12_range=V12_TRAIN_RANGE, check_manuf: bool = False):
+                   v12_range=V12_TRAIN_RANGE, check_manuf: bool = False,
+                   apply_force_periodic: bool = True):
     torch.manual_seed(seed)
     model = load_cvae(cvae_ckpt_path, device)
     grid = np.linspace(v12_range[0], v12_range[1], grid_size)
@@ -59,6 +69,12 @@ def coverage_eval(cvae_ckpt_path: str, n_samples: int, grid_size: int,
             with torch.no_grad():
                 img = model.generate(cond_t, n_samples=1, device=device)
             imgs.append(img.squeeze().cpu().numpy().astype(np.float32))
+
+        if apply_force_periodic:
+            # Khớp best_of_n_eval.py: force_periodic() áp 1 LẦN lên img thô,
+            # DÙNG CHUNG cho cả manufacturability check LẪN FE eval bên dưới
+            # (không phải 2 bản sao khác nhau) - xem FIX ở docstring module.
+            imgs = [force_periodic(img) for img in imgs]
 
         v12_reals = []
         n_manufacturable = 0
@@ -110,6 +126,7 @@ def coverage_eval(cvae_ckpt_path: str, n_samples: int, grid_size: int,
         "hit_rate": hit_rate,
         "mean_abs_error": mean_abs_error,
         "dead_zone_targets": dead_zones,
+        "apply_force_periodic": apply_force_periodic,
         "per_target": per_target,
     }
 
@@ -127,6 +144,9 @@ def main():
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--check-manufacturability", action="store_true",
                          help="Ghi thêm frac_manufacturable mỗi target (roadmap 6.2/6.3).")
+    parser.add_argument("--no-force-periodic", action="store_true",
+                         help="Tắt force_periodic() (mặc định BẬT, khớp best_of_n_eval.py/sample.py - "
+                              "xem FIX 2026-07-30 ở docstring module).")
     parser.add_argument("--out", type=str,
                          default=os.path.join(PHASE5_DIR, "self_play", "coverage_result.json"))
     args = parser.parse_args()
@@ -135,6 +155,7 @@ def main():
     result = coverage_eval(
         args.cvae_ckpt, args.n_samples, args.grid_size, device, args.seed,
         v12_range=(args.v12_min, args.v12_max), check_manuf=args.check_manufacturability,
+        apply_force_periodic=not args.no_force_periodic,
     )
 
     print(f"Checkpoint: {args.cvae_ckpt}")

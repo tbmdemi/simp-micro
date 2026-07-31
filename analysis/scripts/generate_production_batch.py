@@ -67,24 +67,43 @@ SEED_PARAM_RANGES = {
     "reentrant_bowtie": (NARROW_VOLFRAC_RANGE, NARROW_VOID_SIZE_FRAC_RANGE),
 }
 
+# Optimizer theo TỪNG seed (xem EXPERIMENT_LOG.md mục 2026-07-30 "Mở rộng
+# kiểm chứng MMA..."): pilot N=100/config bắt cặp cho thấy MMA (nlopt.LD_MMA,
+# simp/mma_runner.py) KHÔNG phải chiến thắng toàn cục -
+#   hexagonal: gate 78,0% -> mma 100,0% (CI không chồng lấn, thắng rõ)
+#   hourglass: gate 80,0% -> mma 87,0% (cải thiện, không regression)
+#   reentrant_bowtie: gate 90,0% -> mma 0,0% (THẤT BẠI NẶNG - MMA hội tụ
+#     nhanh về 1 optimum cục bộ sai dấu v12>0 gần seed; gate/OC vẫn tốt nhất
+#     đã biết cho seed này, đã thử set_initial_step - chỉ vớt được 33,3%,
+#     còn xa dưới gate)
+# --optimizer auto (mặc định) dùng dispatch này; --optimizer gate/mma ép
+# TOÀN BỘ batch dùng 1 optimizer (vd. để tái lập pilot cũ) - CẨN THẬN dùng
+# mma toàn cục sẽ phá hỏng reentrant_bowtie.
+SEED_OPTIMIZER = {
+    "hourglass": "mma",
+    "hexagonal": "mma",
+    "reentrant_bowtie": "gate",
+}
+
 MANIFEST_FIELDS = [
     "batch", "seed", "sample_id", "image_path", "v12", "v21", "obj_value",
     "converged", "volfrac", "penal", "rmin", "move", "void_size_frac",
     "n_components", "is_connected", "degenerate", "volfrac_achieved",
-    "n_iters", "max_iter", "hit_cap", "osc_score", "osc_unstable",
+    "n_iters", "max_iter", "hit_cap", "osc_score", "osc_unstable", "optimizer",
 ]
 
 
 def _worker(task):
     """Top-level function (cần cho multiprocessing pickle)."""
-    idx, seed_name, volfrac, void_size_frac, run_dir = task
+    idx, seed_name, volfrac, void_size_frac, run_dir, optimizer_override = task
 
     # Import trong worker - mỗi process con cần tự import (tránh pickle lỗi
     # module state), theo đúng convention bare-import của project (xem
     # tests/conftest.py::_isolate_pipeline_bare_imports).
-    from simp.runner import run_simp
     from manufacturability import check_connectivity
     from audit_label_stability import osc_score, OSC_THRESHOLD
+
+    optimizer = optimizer_override or SEED_OPTIMIZER.get(seed_name, "gate")
 
     sample_id = f"{seed_name}_{idx:06d}"
     output_dir = os.path.join(run_dir, "simp_runs", sample_id)
@@ -99,7 +118,12 @@ def _worker(task):
     )
 
     try:
-        result = run_simp(params)
+        if optimizer == "mma":
+            from simp.mma_runner import run_simp_mma
+            result = run_simp_mma(params)
+        else:
+            from simp.runner import run_simp
+            result = run_simp(params)
     except Exception as e:
         return {"sample_id": sample_id, "error": str(e)}
 
@@ -126,6 +150,7 @@ def _worker(task):
         "degenerate": degenerate, "volfrac_achieved": volfrac_achieved,
         "n_iters": result["n_iters"], "max_iter": params["max_iter"],
         "hit_cap": hit_cap, "osc_score": osc, "osc_unstable": osc >= OSC_THRESHOLD,
+        "optimizer": optimizer,
     }
 
 
@@ -141,7 +166,13 @@ def main():
                          help="Offset sample_id (dùng khi resume/nối batch)")
     parser.add_argument("--only-seed", type=str, default=None,
                          help="Bỏ qua SEED_WEIGHTS, chỉ sinh 1 seed duy nhất (vd. hourglass)")
+    parser.add_argument("--optimizer", type=str, default="auto", choices=["auto", "gate", "mma"],
+                         help="'auto' (mặc định) dùng SEED_OPTIMIZER (mma cho hourglass/hexagonal, "
+                              "gate cho reentrant_bowtie, xem EXPERIMENT_LOG.md 2026-07-30). "
+                              "'gate'/'mma' ép TOÀN BỘ batch dùng 1 optimizer - CẨN THẬN: 'mma' "
+                              "toàn cục phá hỏng reentrant_bowtie (đã đo: 90,0%->0,0%).")
     args = parser.parse_args()
+    optimizer_override = None if args.optimizer == "auto" else args.optimizer
 
     os.makedirs(os.path.join(args.run_dir, "images"), exist_ok=True)
     os.makedirs(os.path.join(args.run_dir, "simp_runs"), exist_ok=True)
@@ -160,7 +191,7 @@ def main():
         vf_range, vs_range = SEED_PARAM_RANGES[seed_name]
         volfrac = float(rng.uniform(*vf_range))
         void_size_frac = float(rng.uniform(*vs_range))
-        tasks.append((idx, seed_name, volfrac, void_size_frac, args.run_dir))
+        tasks.append((idx, seed_name, volfrac, void_size_frac, args.run_dir, optimizer_override))
 
     write_header = not os.path.exists(manifest_path)
     t0 = time.time()
