@@ -377,7 +377,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **366/366 test pass** (`pytest tests/ -q`, ~4s).
+Trạng thái hiện tại: **437/437 test pass** (`pytest tests/ -q`, ~7s).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -415,7 +415,7 @@ Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết củ
 
 5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** - `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved`.
 
-6. **Test tự động (366/366 pass) chưa phủ hết I/O nặng**: vòng lặp chính của `screening_parallel.py`, `pipeline/seeds/*.py`, `visualize.py`, và lệnh gọi SIMP FE thật bên trong `multi_batch/runner.py::evaluate_single` (được mock trong test hiện có).
+6. **Test tự động (437/437 pass) chưa phủ hết I/O nặng**: vòng lặp chính của `screening_parallel.py`, `pipeline/seeds/*.py`, `visualize.py`, và lệnh gọi SIMP FE thật bên trong `multi_batch/runner.py::evaluate_single` (được mock trong test hiện có).
 
 7. **Một số HTML dashboard từng lỗi thời** so với kết quả đã xác thực (vd `html/inverse_auxetic_report.html`, sinh 2026-07-16) - đã gắn banner cảnh báo trỏ về README + báo cáo hiện hành. Rủi ro mang tính hệ thống (tài liệu trực quan không tự đồng bộ với code/dữ liệu) cần lưu ý khi thêm dashboard mới.
 
@@ -451,7 +451,7 @@ This section consolidates every known gap/limitation of the project in one place
 
 5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** - `compute_homogenized_tensor()` doesn't export `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved`.
 
-6. **Automated tests (366/366 pass) don't cover the heaviest I/O paths**: `screening_parallel.py`'s main loop, `pipeline/seeds/*.py`, `visualize.py`, and the real SIMP FE call inside `multi_batch/runner.py::evaluate_single` (mocked in the existing tests).
+6. **Automated tests (437/437 pass) don't cover the heaviest I/O paths**: `screening_parallel.py`'s main loop, `pipeline/seeds/*.py`, `visualize.py`, and the real SIMP FE call inside `multi_batch/runner.py::evaluate_single` (mocked in the existing tests).
 
 7. **Some HTML dashboards had gone stale** relative to validated results (e.g. `html/inverse_auxetic_report.html`, generated 2026-07-16) - now carry a warning banner pointing to the README and current reports. A systemic risk (visual docs don't auto-sync with code/data) worth watching for new dashboards.
 

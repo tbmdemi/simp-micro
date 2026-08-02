@@ -123,8 +123,12 @@ def compute_convergence_metrics(
 
     # Kiểm tra độ ổn định của hàm mục tiêu
     if len(df_clean) >= window:
-        recent = df_clean.iloc[-window:]
-        obj_changes = recent['Objective'].pct_change().abs().dropna()
+        recent = df_clean.iloc[-window:]['Objective']
+        # pct_change() chia cho giá trị trước không guard - khi objective
+        # gần 0 (auxetic Q12->0 là mục tiêu!) sinh ra pct khổng lồ giả tạo.
+        # Guard mẫu số như obj_change ở trên.
+        denom = recent.shift().abs().clip(lower=1e-15)
+        obj_changes = (recent.diff().abs() / denom).dropna()
         # Coi là ổn định nếu tất cả thay đổi trong cửa sổ đều < 5%
         obj_stable = bool((obj_changes < 0.05).all())
     else:
@@ -159,8 +163,12 @@ def classify_auxetic(
         threshold (float): Ngưỡng phân loại auxetic (mặc định 0.0).
 
     Returns:
-        str: 'Auxetic' nếu thỏa mãn điều kiện, ngược lại là 'Conventional'.
+        str: 'Auxetic' nếu thỏa mãn điều kiện, 'Conventional' nếu không, hoặc
+            'Invalid' nếu v12/v21 là NaN (Q suy biến) - tránh bị nuốt lặng lẽ
+            thành 'Conventional' vì NaN < threshold luôn là False trong Python.
     """
+    if np.isnan(v12) or np.isnan(v21):
+        return 'Invalid'
     if v12 < threshold or v21 < threshold:
         return 'Auxetic'
     return 'Conventional'

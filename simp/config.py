@@ -31,6 +31,8 @@ class SimpConfig:
     Emin: float = 1e-9
     nu: float = 0.3
     mu: float = 0.0
+    void_size_frac: float = 0.4
+    rotation_deg: float = 0.0
 
     def __post_init__(self) -> None:
         self.validate()
@@ -69,6 +71,6 @@ class SimpConfig:
             'E0': self.E0,
             'Emin': self.Emin,
             'nu': self.nu,
-            'void_size_frac': 0.4,
-            'rotation_deg': 0.0,
+            'void_size_frac': self.void_size_frac,
+            'rotation_deg': self.rotation_deg,
         }

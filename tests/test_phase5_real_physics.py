@@ -206,9 +206,19 @@ class TestRealPhysicsNuAutogradFunction:
         assert torch.all(torch.isfinite(raw.grad))
         assert raw.grad.abs().sum().item() > 0
 
+    @pytest.mark.filterwarnings(
+        "ignore:This process \\(pid=.*\\) is multi-threaded, use of fork\\(\\) "
+        "may lead to deadlocks in the child.:DeprecationWarning"
+    )
     def test_multiprocessing_matches_serial(self):
         """n_workers>0 phải cho đúng cùng kết quả với đường tuần tự
-        (n_workers=0) - chỉ khác cách thực thi, không khác công thức."""
+        (n_workers=0) - chỉ khác cách thực thi, không khác công thức.
+
+        Warning fork()-deadlock từ pytest+torch multi-threaded được filter
+        có chủ đích: đây là cảnh báo lành tính trong test (pool tồn tại
+        trong đúng 1 lệnh gọi ngắn), đổi sang 'spawn' toàn cục sẽ chậm hơn
+        và cần mọi thứ picklable - không đáng đánh đổi cho 1 warning test.
+        """
         nely, nelx = 6, 6
         x0 = _make_density(nely, nelx, 21)
         x1 = _make_density(nely, nelx, 22)

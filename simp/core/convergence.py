@@ -82,10 +82,9 @@ class ConvergenceChecker:
             change: Thay đổi tuyệt đối lớn nhất trong biến thiết kế.
         """
         self.change_history.append(change)
-        # Giới hạn bộ nhớ (chỉ giữ window_change * 2 phần tử)
-        max_keep = max(self.window_change * 2, 20)
-        if len(self.change_history) > max_keep:
-            self.change_history = self.change_history[-max_keep:]
+        # Giới hạn bộ nhớ - _check_window chỉ đọc window_change phần tử cuối
+        if len(self.change_history) > self.window_change:
+            self.change_history = self.change_history[-self.window_change:]
 
     def record_objective_change(self, obj: float, prev_obj: float) -> bool:
         """Ghi nhận thay đổi hàm mục tiêu cho cửa sổ trượt.
@@ -103,10 +102,9 @@ class ConvergenceChecker:
         change_in_obj = abs(obj - prev_obj) / max(abs(prev_obj), 1e-15)
         self.obj_changes.append(change_in_obj)
 
-        # Giới hạn bộ nhớ
-        max_keep = max(self.window_obj * 2, 40)
-        if len(self.obj_changes) > max_keep:
-            self.obj_changes = self.obj_changes[-max_keep:]
+        # Giới hạn bộ nhớ - _check_window chỉ đọc window_obj phần tử cuối
+        if len(self.obj_changes) > self.window_obj:
+            self.obj_changes = self.obj_changes[-self.window_obj:]
 
         return True
 

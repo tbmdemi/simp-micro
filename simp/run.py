@@ -13,7 +13,8 @@ params = {
     'penal': 3.0,
     'rmin': 3.0,
     'ft': 2,
-    'E0': 199.0,
+    'E0': 199.0,  # GPa, xấp xỉ thép - không phải 1.0 hay 210e3, ảnh hưởng
+                  # ngưỡng delta=0.1*volfrac*E0 trong OC gate (xem oc.py)
     'Emin': 1e-9,
     'nu': 0.3,
     'move': 0.1,

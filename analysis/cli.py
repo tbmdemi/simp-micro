@@ -17,7 +17,7 @@ from pathlib import Path
 import pandas as pd
 
 from .dataset import build_classification_table
-from .image import analyze_image_directory
+from .image import DEFAULT_IMAGE_PATTERN, analyze_image_directory
 from .report import generate_html_report
 
 
@@ -80,7 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
         help='Directory containing iteration images',
     )
     img_parser.add_argument(
-        '--pattern', type=str, default='iteration_*.png',
+        '--pattern', type=str, default=DEFAULT_IMAGE_PATTERN,
         help='Glob pattern for image files',
     )
     img_parser.add_argument(
@@ -185,7 +185,7 @@ def _find_and_analyze_images(data_dir: str) -> pd.DataFrame:
     data_path = Path(data_dir)
     subdirs = sorted([
         d for d in data_path.iterdir()
-        if d.is_dir() and list(d.glob('iteration_*.png'))
+        if d.is_dir() and list(d.glob(DEFAULT_IMAGE_PATTERN))
     ])
 
     if not subdirs:

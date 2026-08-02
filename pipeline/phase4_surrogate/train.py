@@ -35,17 +35,22 @@ LOSS_WEIGHTS = torch.tensor([1.0, 1.0, 0.3])
 
 
 def weighted_mse(pred, target, weights):
-    """Compute weighted MSE.
+    """Compute weighted MSE, masking out NaN targets instead of zeroing them.
 
-    L1: Clamp to [-10, 10] std to prevent NaN from extreme values (early training
-    or degenerate inputs).
+    L1: Clamp pred to [-10, 10] to prevent NaN from extreme values (early
+    training or degenerate inputs). Target NaNs come from degenerate Q
+    samples (see analysis/dataset.py classify_auxetic) - nan_to_num'ing them
+    to 0 would silently teach the model "NaN -> 0" as a real pattern, so we
+    exclude those entries from the mean per target dimension instead.
     """
     # ── L1: prevent NaN from extreme deviations ──
     pred = torch.nan_to_num(pred, nan=0.0, posinf=10.0, neginf=-10.0)
-    target = torch.nan_to_num(target, nan=0.0, posinf=10.0, neginf=-10.0)
-    diff = pred - target
+    valid = ~torch.isnan(target)
+    diff = pred - torch.nan_to_num(target, nan=0.0)
     diff = diff.clamp(-10.0, 10.0)  # prevent squared blowup
-    per_target_mse = (diff ** 2).mean(dim=0)  # (3,)
+    sq = (diff ** 2) * valid
+    counts = valid.sum(dim=0).clamp(min=1)
+    per_target_mse = sq.sum(dim=0) / counts  # (3,)
     return (per_target_mse * weights.to(pred.device)).sum(), per_target_mse.detach()
 
 
@@ -106,7 +111,13 @@ def main():
     parser.add_argument("--output-name", type=str, default="surrogate_best.pt",
                          help="Tên file checkpoint lưu trong outputs/phase4/ - đổi "
                               "tên này để không ghi đè surrogate_best.pt chính (self-play).")
+    parser.add_argument("--seed", type=int, default=0,
+                         help="RNG seed cho torch/numpy/DataLoader shuffle - đảm bảo "
+                              "training reproducible giữa các lần chạy cùng config.")
     args = parser.parse_args()
+
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
 
     os.makedirs(PHASE4_DIR, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -140,8 +151,9 @@ def main():
         train_ds.seed_classes = base_seed_classes
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
+    shuffle_generator = torch.Generator().manual_seed(args.seed)
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                               num_workers=2, drop_last=True)
+                               num_workers=2, drop_last=True, generator=shuffle_generator)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                              num_workers=2)
 

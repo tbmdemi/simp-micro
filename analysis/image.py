@@ -161,9 +161,12 @@ def analyze_image(path: str) -> Dict[str, float]:
     }
 
 
+DEFAULT_IMAGE_PATTERN = 'iteration_*.png'
+
+
 def analyze_image_directory(
     directory: str,
-    pattern: str = 'iteration_*.png',
+    pattern: str = DEFAULT_IMAGE_PATTERN,
 ) -> pd.DataFrame:
     """
     Phân tích tất cả các ảnh trong một thư mục khớp với mẫu cho trước.

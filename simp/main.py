@@ -84,9 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+_NON_PARAM_ARGS = {'quiet', 'version', 'verbose', 'list_seeds'}
+
+
 def _iter_cli_overrides(args: argparse.Namespace):
     for key, value in vars(args).items():
-        if value is not None and key != 'quiet':
+        if value is not None and key not in _NON_PARAM_ARGS:
             yield key, value
 
 
@@ -100,6 +103,17 @@ def build_params(args: argparse.Namespace) -> dict[str, Any]:
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+
+    if args.version:
+        from . import __version__
+        print(__version__)
+        return
+
+    if args.list_seeds:
+        from .runner import SEED_MAP
+        print('\n'.join(sorted(SEED_MAP)))
+        return
+
     params = build_params(args)
 
     if args.verbose:

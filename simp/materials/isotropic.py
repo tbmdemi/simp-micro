@@ -26,9 +26,18 @@ class Material:
 
         Args:
             E0: Modul đàn hồi Young của vật liệu đặc (mặc định 199.0).
-            Emin: Modul đàn hồi Young của lỗ rỗng (mặc định 1e-9).
+            Emin: Modul đàn hồi Young của lỗ rỗng (mặc định 1e-9). Lưu trên
+                self để tiện truy xuất nhưng KHÔNG dùng trong KE - nội suy
+                Emin/E0 theo mật độ xảy ra ở solver.py (SIMP penalization
+                trên sK), không phải ở đây.
             nu: Hệ số Poisson (mặc định 0.3).
+
+        Raises:
+            ValueError: nếu nu nằm ngoài khoảng vật lý hợp lệ (-1, 0.5) cho
+                vật liệu đẳng hướng - nu=1 làm (1 - nu**2) = 0 và D phân kỳ.
         """
+        if not (-1.0 < nu < 0.5):
+            raise ValueError(f'nu must be in (-1, 0.5) for isotropic material, got {nu}')
         self.E0 = E0
         self.Emin = Emin
         self.nu = nu
