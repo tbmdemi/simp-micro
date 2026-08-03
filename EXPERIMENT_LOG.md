@@ -221,4 +221,38 @@ Code: `analysis/scripts/skfem_homogenization.py` (engine độc lập, có thể
 
 ---
 
+### 2026-08-02 - Phản hồi audit khoa học: novelty/diversity metric + baseline comparison lần đầu tiên - phát hiện hit_rate là metric yếu, retrieval baseline ngang cVAE trên test set hiện tại
+
+Hai báo cáo audit bên ngoài (`AUDIT_REPORT_SCIENTIFIC_2026-08-02.md`, `AUDIT_REPORT_SCIENTIFIC_REVIEW_2026-08-02.md`) chỉ ra 2 khoảng trống cụ thể chưa có bằng chứng trong pipeline: (1) chưa đo cVAE có sinh thiết kế "mới" hay chỉ tái tạo gần dữ liệu train, (2) chưa có baseline nào ngoài so sánh optimizer nội bộ (OC vs MMA) - không biết nếu bỏ cVAE đi thì kết quả còn giữ được không.
+
+**1. Novelty/diversity (`analysis/scripts/novelty_diversity_eval.py`, mới):** với mỗi target lấy từ `test.npz` (seed=123, giống `best_of_n_eval.py`), sinh K mẫu bằng `cvae_v2_finetuned.pt`, đo khoảng cách L2 (pixel space, density field thô [0,1], không binarize) tới ảnh train GẦN NHẤT trong toàn bộ 57.216 mẫu (không subsample, dùng ma trận-hoá `||a-b||²=||a||²+||b||²-2a·b` theo chunk để tránh cấp phát ma trận khổng lồ). Có đường tham chiếu: khoảng cách NN thật-tới-thật (300 mẫu train ngẫu nhiên, tìm hàng xóm trong phần còn lại của train set, loại bỏ chính nó).
+
+Chạy `n_conditions=24, n_samples=20` (480 mẫu sinh ra):
+
+| | median | p5 | p95 |
+|---|---|---|---|
+| Novelty (sinh ra → train gần nhất) | 20,68 | 15,16 | 22,75 |
+| Reference (thật → thật gần nhất) | 1,58 | 0,004 | 12,12 |
+| Diversity (trong cùng 1 condition, K=20 mẫu) | 14,18 | 12,60 | 16,58 |
+
+**0/480 mẫu sinh ra (0,0%) có novelty thấp hơn P5 của đường tham chiếu** → không có bằng chứng "gần như sao chép" theo tiêu chí này. Sanity-check riêng: ảnh sinh ra có tỉ lệ pixel "xám" (0,05-0,95) = 24,5% so với 30,9% ở ảnh train thật - không lệch nhiều, nên khoảng cách lớn không phải do decoder sinh ảnh mờ/blur (mới confound tiềm ẩn), mà là khác biệt cấu trúc thật.
+
+**2. Baseline comparison (`analysis/scripts/baseline_comparison.py`, mới):** CÙNG tập 24 target (seed=123, giống hệt `best_of_n_eval.py` để so sánh apples-to-apples), 3 phương án: (a) random - chọn bừa 1 ảnh train, dùng nhãn (v12,v21) thật có sẵn; (b) nearest-neighbor retrieval - tra bảng train.npz tìm mẫu có (v12,v21) THẬT gần target nhất (không dùng mô hình sinh); (c) `best_of_n()` gọi thẳng (không viết lại), cVAE `cvae_v2_finetuned.pt`, N=10 mẫu/condition, FE thật trên tất cả.
+
+| Phương án | hit_rate | R² |
+|---|---|---|
+| random | 1,000 | **-3,304** |
+| **nearest-neighbor retrieval** | 1,000 | **1,000** |
+| cVAE best-of-10 | 1,000 | 0,973 |
+
+**Phát hiện 1 - `hit_rate` (định nghĩa hiện tại trong toàn bộ Phase 5: chỉ đúng dấu ν₁₂) là metric yếu:** vì dataset gốc ~92% mẫu đã auxetic (README §2), random guess cũng đạt hit_rate=1,000 ở n=24. R² mới là con số phân biệt được các phương án - mọi số hit_rate đã công bố trước đây (98,7% single-shot, v.v.) cần đọc kèm R²/CI, không tự đứng một mình. Đúng câu hỏi audit report mục 20.3 ("metric bị thiên lệch").
+
+**Phát hiện 2 - nearest-neighbor retrieval (tra bảng, không cần mô hình sinh) đạt R²=1,000, bằng hoặc nhỉnh hơn cVAE best-of-10 (0,973) trên chính test set này** (`mean_condition_dist`=0,0021 - dataset đủ dày nên hầu như luôn có mẫu train rất gần bất kỳ target nào rút từ cùng phân phối test/train). **Diễn giải đúng phạm vi:** phép test này CHỈ chứng minh (hoặc không chứng minh) lợi thế accuracy trên target trong-phân-phối (in-distribution) - test set và train set cùng 1 quy trình sinh dữ liệu (Phase 2 DOE), nên "tìm hàng xóm gần" gần như luôn khả thi. Đây KHÔNG phải bằng chứng cVAE vô dụng, mà là bằng chứng cụ thể rằng **lợi thế thật sự của cVAE (nếu có) phải nằm ở khả năng nội suy ngoài phân phối/mật độ train, hoặc ở việc không cần lưu trữ+tra cứu 57k mẫu** - trục này CHƯA được đo (cần thử nghiệm E trong audit report: out-of-distribution test).
+
+**Giới hạn chưa giải quyết được phát hiện khi implement:** không có baseline "SIMP-only nhắm 1 target Poisson ratio cụ thể" - `simp/objectives/auxetic.py` hiện chỉ cực trị hóa Q12 (`compute_auxetic_q12_objective`), không có số hạng bám mục tiêu (vd `(v12-target)²`). Cần thêm objective mới mới làm được so sánh này - ngoài phạm vi lần audit-response này, ghi vào Giới hạn Đã biết #18.
+
+Code: `analysis/scripts/novelty_diversity_eval.py`, `analysis/scripts/baseline_comparison.py` (cả 2 tái dùng `best_of_n_eval.py`/`dataset.py`/`adversarial_dataset.py`/`manufacturability.py` có sẵn, không viết lại logic FE/sampling). Kết quả đầy đủ: `outputs/phase5/reports/novelty_diversity_cvae_v2_finetuned.json`, `outputs/phase5/reports/baseline_comparison_cvae_v2_finetuned.json`. Trên nhánh `main`, uncommitted.
+
+---
+
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

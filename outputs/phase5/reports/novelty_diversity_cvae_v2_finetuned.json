@@ -1,0 +1,214 @@
+{
+  "cvae_ckpt": "outputs/phase5/cvae_v2_finetuned.pt",
+  "n_conditions": 24,
+  "n_samples_per_condition": 20,
+  "apply_force_periodic": true,
+  "novelty_generated": {
+    "p0": 9.899342928481305,
+    "p5": 15.161027218602486,
+    "p10": 17.247726412640905,
+    "p25": 19.15604126278777,
+    "p50": 20.675786041772874,
+    "p75": 21.894891509089128,
+    "p90": 22.745540799704465,
+    "p100": 24.91650105463718,
+    "mean": 20.214237173665552,
+    "n": 480
+  },
+  "diversity_within_condition": {
+    "p0": 11.372743182433279,
+    "p5": 12.601565467056474,
+    "p10": 12.98986794622321,
+    "p25": 13.401905701034947,
+    "p50": 14.175534254626225,
+    "p75": 15.311806260284625,
+    "p90": 16.57488426534753,
+    "p100": 18.226215663709137,
+    "mean": 14.410346401888027,
+    "n": 24
+  },
+  "reference_real_to_real_nn": {
+    "p0": 0.0,
+    "p5": 0.003921568955663083,
+    "p10": 0.014506485925928223,
+    "p25": 0.03657053858203695,
+    "p50": 1.5760974065620248,
+    "p75": 6.374149793960548,
+    "p90": 12.120171197319745,
+    "p100": 22.653430557349964,
+    "mean": 3.983637207148751,
+    "n": 300
+  },
+  "frac_generated_below_ref_p5": 0.0,
+  "interpretation": "frac_generated_below_ref_p5 = ti le mau sinh ra co novelty thap hon ca P5 cua khoang cach hang-xom-gan-nhat GIUA CAC MAU THAT trong training set - neu ti le nay cao, day la bang chung cu the cho 'gan nhu sao chep' thay vi suy dien cam tinh.",
+  "per_condition": [
+    {
+      "target_v12": -0.05282939225435257,
+      "target_v21": -0.1252250075340271,
+      "novelty_mean": 19.809690872443106,
+      "novelty_min": 15.973774495101148,
+      "diversity_mean_pairwise": 16.713256318945632
+    },
+    {
+      "target_v12": -0.31824803352355957,
+      "target_v21": -0.30912622809410095,
+      "novelty_mean": 19.8553616333562,
+      "novelty_min": 15.245603167571907,
+      "diversity_mean_pairwise": 15.018640754097387
+    },
+    {
+      "target_v12": -0.6549507975578308,
+      "target_v21": -0.47149330377578735,
+      "novelty_mean": 20.685649340115994,
+      "novelty_min": 13.824307474276832,
+      "diversity_mean_pairwise": 13.026170818429245
+    },
+    {
+      "target_v12": -0.5435999035835266,
+      "target_v21": -0.40529075264930725,
+      "novelty_mean": 20.078959043561447,
+      "novelty_min": 14.365623930114262,
+      "diversity_mean_pairwise": 13.879412982338353
+    },
+    {
+      "target_v12": -0.5760642886161804,
+      "target_v21": -0.3863372504711151,
+      "novelty_mean": 19.851577896455943,
+      "novelty_min": 12.786048607797971,
+      "diversity_mean_pairwise": 14.302956478219283
+    },
+    {
+      "target_v12": -0.5303966999053955,
+      "target_v21": -0.4264497458934784,
+      "novelty_mean": 21.347511438010653,
+      "novelty_min": 19.362467431018704,
+      "diversity_mean_pairwise": 11.372743182433279
+    },
+    {
+      "target_v12": -0.3154900372028351,
+      "target_v21": -0.1453816145658493,
+      "novelty_mean": 18.067985729032166,
+      "novelty_min": 12.347720154476962,
+      "diversity_mean_pairwise": 18.226215663709137
+    },
+    {
+      "target_v12": -0.230573832988739,
+      "target_v21": -0.7765845656394958,
+      "novelty_mean": 22.084499162732477,
+      "novelty_min": 18.641748628083143,
+      "diversity_mean_pairwise": 15.458034169046503
+    },
+    {
+      "target_v12": -0.3116527199745178,
+      "target_v21": -0.5073627233505249,
+      "novelty_mean": 21.210212996865216,
+      "novelty_min": 17.385529990777528,
+      "diversity_mean_pairwise": 15.361370638797158
+    },
+    {
+      "target_v12": -0.12948079407215118,
+      "target_v21": -0.2026887685060501,
+      "novelty_mean": 19.57518316809359,
+      "novelty_min": 13.646324731732733,
+      "diversity_mean_pairwise": 16.858914711600857
+    },
+    {
+      "target_v12": -0.5475974678993225,
+      "target_v21": -0.5132140517234802,
+      "novelty_mean": 19.276310346727666,
+      "novelty_min": 10.568104164857854,
+      "diversity_mean_pairwise": 14.46614052120008
+    },
+    {
+      "target_v12": -0.5911285877227783,
+      "target_v21": -0.40517231822013855,
+      "novelty_mean": 20.733746923017712,
+      "novelty_min": 16.195941590120963,
+      "diversity_mean_pairwise": 12.974309572420623
+    },
+    {
+      "target_v12": -0.3971596956253052,
+      "target_v21": -0.3887174129486084,
+      "novelty_mean": 20.034517182889957,
+      "novelty_min": 12.330866956224133,
+      "diversity_mean_pairwise": 14.231752526132684
+    },
+    {
+      "target_v12": -0.4501860737800598,
+      "target_v21": -0.45725345611572266,
+      "novelty_mean": 20.287232001817497,
+      "novelty_min": 15.1421118296852,
+      "diversity_mean_pairwise": 14.119315983119764
+    },
+    {
+      "target_v12": -0.4891093075275421,
+      "target_v21": -0.4230579733848572,
+      "novelty_mean": 19.592299603651753,
+      "novelty_min": 13.44890629019343,
+      "diversity_mean_pairwise": 13.711496059518112
+    },
+    {
+      "target_v12": -0.4510648548603058,
+      "target_v21": -0.5142699480056763,
+      "novelty_mean": 20.477088141692057,
+      "novelty_min": 15.905156971086628,
+      "diversity_mean_pairwise": 13.411689030496698
+    },
+    {
+      "target_v12": -0.4025222659111023,
+      "target_v21": -0.5163398385047913,
+      "novelty_mean": 20.060790142985486,
+      "novelty_min": 16.531081464034273,
+      "diversity_mean_pairwise": 14.691999367663735
+    },
+    {
+      "target_v12": -0.4741513133049011,
+      "target_v21": -0.47130897641181946,
+      "novelty_mean": 20.4883968766442,
+      "novelty_min": 13.851241662849636,
+      "diversity_mean_pairwise": 14.06740073655781
+    },
+    {
+      "target_v12": -0.32170480489730835,
+      "target_v21": -0.3295201361179352,
+      "novelty_mean": 19.34844601377316,
+      "novelty_min": 12.456987963989846,
+      "diversity_mean_pairwise": 15.295284800780447
+    },
+    {
+      "target_v12": -0.6114298701286316,
+      "target_v21": -0.5314897298812866,
+      "novelty_mean": 21.023784646983565,
+      "novelty_min": 16.14561019008135,
+      "diversity_mean_pairwise": 12.535787095521625
+    },
+    {
+      "target_v12": -0.42600056529045105,
+      "target_v21": -0.2738421857357025,
+      "novelty_mean": 18.542346288075812,
+      "novelty_min": 9.899342928481305,
+      "diversity_mean_pairwise": 16.252016140285292
+    },
+    {
+      "target_v12": -0.5447511076927185,
+      "target_v21": -0.5125241279602051,
+      "novelty_mean": 21.079792322691848,
+      "novelty_min": 17.51742401650644,
+      "diversity_mean_pairwise": 13.0616218366121
+    },
+    {
+      "target_v12": -0.31307142972946167,
+      "target_v21": -0.52521812915802,
+      "novelty_mean": 20.824784215186543,
+      "novelty_min": 17.34771149960647,
+      "diversity_mean_pairwise": 13.372555712649696
+    },
+    {
+      "target_v12": -0.5710978507995605,
+      "target_v21": -0.4643543064594269,
+      "novelty_mean": 20.80552618116917,
+      "novelty_min": 16.167055221312282,
+      "diversity_mean_pairwise": 13.439228544737164
+    }
+  ]
+}

@@ -716,6 +716,26 @@ section { padding: var(--gap-xl) 0; }
   padding: 0 var(--gap-sm);
 }
 
+/* ===== FUNNEL DIAGRAM ===== */
+.funnel-diagram {
+  max-width: 620px;
+  margin: 0 auto var(--gap-xl);
+  padding: var(--gap-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.funnel-diagram svg { width: 100%; height: auto; display: block; }
+
+.funnel-caption {
+  margin: var(--gap-md) 0 0;
+  font-size: 0.85rem;
+  color: var(--text3);
+  text-align: center;
+  max-width: none;
+}
+
 /* ===== CTA / OUTRO ===== */
 .cta-section {
   text-align: center;
@@ -1090,6 +1110,38 @@ section { padding: var(--gap-xl) 0; }
         <div class="node-value" style="color: var(--phase3);">Xác Thực</div>
         <div style="font-size: 0.8rem; color: var(--text3);">100×100 · 3–5 runs</div>
       </div>
+    </div>
+
+    <!-- Funnel: search-space narrowing across the 3 phases -->
+    <div class="funnel-diagram fade-in">
+      <svg viewBox="0 0 720 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phễu thu hẹp không gian tham số qua 3 giai đoạn">
+        <defs>
+          <marker id="fn-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--text3)"></path>
+          </marker>
+        </defs>
+        <path d="M60,20 L620,20 L530,110 L150,110 Z" fill="var(--phase1)" fill-opacity="0.85"></path>
+        <path d="M150,110 L530,110 L440,200 L240,200 Z" fill="var(--phase2)" fill-opacity="0.85"></path>
+        <path d="M240,200 L440,200 L390,290 L290,290 Z" fill="var(--phase3)" fill-opacity="0.85"></path>
+
+        <text x="340" y="60" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="16" fill="#fff">Screening</text>
+        <text x="340" y="82" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" fill="rgba(255,255,255,0.9)">12 tham số · lưới 50×50</text>
+
+        <text x="340" y="145" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="15" fill="#fff">Bayesian Opt</text>
+        <text x="340" y="166" text-anchor="middle" font-family="Inter, sans-serif" font-size="11.5" fill="rgba(255,255,255,0.9)">~3 tham số then chốt · 80×80</text>
+
+        <text x="340" y="230" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="13" fill="#fff">Xác Thực</text>
+        <text x="340" y="248" text-anchor="middle" font-family="Inter, sans-serif" font-size="10.5" fill="rgba(255,255,255,0.9)">1 bộ tối ưu · 100×100</text>
+
+        <line x1="340" y1="290" x2="340" y2="330" stroke="var(--text3)" stroke-width="2" marker-end="url(#fn-arrow)"></line>
+        <circle cx="340" cy="355" r="18" fill="var(--surface)" stroke="var(--phase3)" stroke-width="2.5"></circle>
+        <text x="340" y="360" text-anchor="middle" font-family="Inter, sans-serif" font-weight="700" font-size="14" fill="var(--phase3)">✓</text>
+
+        <text x="660" y="65" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="var(--text3)" transform="rotate(90 660 65)">RẺ · THÔ</text>
+        <text x="660" y="270" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="var(--text3)" transform="rotate(90 660 270)">ĐẮT · CHÍNH XÁC</text>
+        <line x1="645" y1="20" x2="645" y2="290" stroke="var(--border)" stroke-width="2" marker-end="url(#fn-arrow)"></line>
+      </svg>
+      <p class="funnel-caption">Mỗi giai đoạn thu hẹp không gian tìm kiếm và tăng độ mịn lưới - đổi chi phí tính toán thấp lấy độ bao phủ rộng ở Screening, rồi đổi ngược lại ở Xác Thực để lấy độ chính xác cho bộ tham số cuối cùng.</p>
     </div>
 
     <!-- Timeline -->
