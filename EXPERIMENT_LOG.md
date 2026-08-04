@@ -281,6 +281,28 @@ Sửa bằng "mở rộng" 3 layer đó thay vì crash/reset toàn bộ model: h
 
 **Kết quả:** 483/483 test pass (480 trước audit + 3 test mới). Không còn bug đã biết nào chặn workflow Pha A end-to-end (train fine-tune → sample → best_of_n_eval với composite scoring) theo đúng lệnh README.
 
+### 2026-08-04 - Thử nghiệm E (audit report): cVAE vs retrieval baseline NGOÀI phân phối train - kết quả phân cực, không phải chiến thắng toàn diện
+
+Bối cảnh: mục 2026-08-02 để lại câu hỏi treo lớn nhất chưa trả lời - so sánh trong-phân-phối (n=24, cùng phân phối test/train) cho thấy retrieval (R²=1,000) ngang hoặc nhỉnh hơn cVAE best-of-10 (R²=0,973), nhưng phép test đó KHÔNG đo được điều retrieval thật sự yếu: ngoại suy ra ngoài vùng dữ liệu đã thấy. Đây là "thử nghiệm E" mà audit report gốc đề xuất.
+
+**Thiết kế target OOD:** kiểm tra trực tiếp `train.npz` (57.216 mẫu) cho thấy v₁₂/v₂₁ nằm hoàn toàn trong `[-1,9527, -0,0023]` - TOÀN BỘ dataset là auxetic, KHÔNG một mẫu nào có v₁₂≥0. Từ đó chọn 12 target OOD chia 2 nhóm có lý do rõ ràng: (a) `non_auxetic` (sign-flip, v₁₂ mục tiêu = +0,1..+0,8) - vùng mật độ train tuyệt đối bằng 0, retrieval về mặt cấu trúc KHÔNG THỂ trả lời đúng dấu; (b) `extreme_auxetic` (v₁₂ mục tiêu = -2,1..-2,8) - vượt qua min train, đòi hỏi ngoại suy cường độ. `v21=target v12` cho đa số target (đơn giản, dễ giải thích - train có corr(v12,v21)≈0,05, gần như độc lập, không có hướng "tự nhiên" nào khác để suy ra v21).
+
+Script mới `analysis/scripts/ood_baseline_comparison.py` - tái dùng `nearest_neighbor_baseline()` (từ `baseline_comparison.py`) và `best_of_n()` (từ `best_of_n_eval.py`, gọi qua `custom_condition` từng target một), KHÔNG viết lại logic FE/sampling. Chạy trên `cvae_realphysics.pt` (checkpoint hiện dùng), N=10 mẫu/condition, seed=123 (khớp mọi benchmark trước).
+
+| Nhóm | retrieval R² | retrieval MAE | cVAE best-of-10 R² | cVAE MAE |
+|---|---|---|---|---|
+| Tổng hợp (n=12) | 0,057 | 1,053 | **0,418** | **0,844** |
+| `non_auxetic` (sign-flip, n=6) | -3,035 | 0,402 | **-0,285** | **0,191** |
+| `extreme_auxetic` (n=6) | -61,514 | 1,703 | -38,729 | 1,496 |
+
+**Phát hiện chính:** trên nhóm sign-flip, retrieval bị buộc luôn trả về mẫu gần 0 nhất trong train (`v12=-0,0023` cố định cho MỌI target dương, vì đó là biên train) - sai dấu 100%. cVAE, ngược lại, tự sinh cấu trúc MỚI đạt đúng DẤU DƯƠNG cho 5/6 target (vd target=+0,10 → cVAE đạt +0,10; target=+0,30 → +0,20; nhưng target=+0,80 → chỉ +0,30, hụt biên độ rõ khi target đi xa) - đây là bằng chứng thật, cụ thể, đo được về khả năng ngoại suy HƯỚNG (không chỉ tra bảng), điều mà retrieval về mặt cấu trúc không bao giờ làm được dù có bao nhiêu dữ liệu train.
+
+Trên nhóm extreme_auxetic thì KHÔNG có tin tốt: cVAE bão hòa quanh v₁₂≈-0,83 đến -1,10 bất kể target đẩy xa tới đâu (-2,1 hay -2,8 cho kết quả gần như nhau) - không ngoại suy được cường độ auxetic vượt ngoài phạm vi đã thấy, dù đỡ tệ hơn retrieval (retrieval còn tệ hơn nữa, có 3/6 target rơi đúng vào cùng 1 mẫu train biên `v12=-0,0930` bất kể target cách xa bao nhiêu).
+
+**Kết luận cẩn trọng (khớp tinh thần "known_gap" của baseline_comparison.py - không phóng đại):** cVAE CÓ generalization thật ngoài phân phối, thể hiện rõ nhất và có thể giải thích được qua khả năng đổi dấu - đây là điểm retrieval không bao giờ vượt qua được về nguyên tắc. Nhưng lợi thế này có giới hạn biên độ rõ ràng, và hoàn toàn không giúp được cho việc ngoại suy cường độ (magnitude) vượt xa phạm vi train. Không nên diễn giải kết quả này thành "cVAE tổng quát hoá tốt ra OOD" một cách chung chung - chỉ đúng cho trục sign-flip, không đúng cho trục magnitude.
+
+Code: `analysis/scripts/ood_baseline_comparison.py` (mới, tái dùng hạ tầng có sẵn). Kết quả đầy đủ: `outputs/phase5/reports/ood_baseline_comparison_cvae_realphysics.json`. Đã cập nhật `docs/LIMITATIONS.md` mục #19 (VI+EN) và mục tóm tắt claim đầu file. Trên nhánh `main`, uncommitted.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

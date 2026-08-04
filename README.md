@@ -64,10 +64,10 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
-Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02: "bạn đang claim cái gì, thật sự, và bằng chứng nào?" Bản đầy đủ (kèm 18 mục Giới hạn Đã biết): [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02: "bạn đang claim cái gì, thật sự, và bằng chứng nào?" Bản đầy đủ (kèm 19 mục Giới hạn Đã biết): [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-- **Claim ĐƯỢC ủng hộ bởi bằng chứng:** engine FE/homogenization đúng vật lý (đối chiếu độc lập bằng `scikit-fem`); checkpoint cVAE hiện tại sinh single-shot đáng tin cậy để dự đoán (v₁₂,v₂₁) đúng DẤU ở tỉ lệ cao (n=789); cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty).
-- **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; cVAE vượt trội baseline nearest-neighbor retrieval về độ chính xác trong-phân-phối (baseline mới đo 2026-08-02 cho thấy CHƯA có bằng chứng); tổng quát hoá ngoài phân phối train; `hit_rate` như chỉ số độc lập (base rate ~92% auxetic khiến metric này yếu, R² đáng tin hơn).
+- **Claim ĐƯỢC ủng hộ bởi bằng chứng:** engine FE/homogenization đúng vật lý (đối chiếu độc lập bằng `scikit-fem`); checkpoint cVAE hiện tại sinh single-shot đáng tin cậy để dự đoán (v₁₂,v₂₁) đúng DẤU ở tỉ lệ cao (n=789); cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty); cVAE vượt trội retrieval NGOÀI phân phối train về tổng quát (R²=0,418 vs 0,057, n=12) - đặc biệt retrieval về cấu trúc không bao giờ trả lời đúng dấu khi target ngoài vùng train, cVAE làm được cho đa số target sign-flip (2026-08-04).
+- **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; cVAE vượt trội baseline nearest-neighbor retrieval về độ chính xác trong-phân-phối (baseline đo 2026-08-02 cho thấy CHƯA có bằng chứng, retrieval còn thắng); cVAE ngoại suy được CƯỜNG ĐỘ auxetic vượt xa phạm vi train (cả cVAE lẫn retrieval đều thất bại nặng ở trục này, 2026-08-04); `hit_rate` như chỉ số độc lập (base rate ~92% auxetic khiến metric này yếu, R² đáng tin hơn).
 - **Không claim:** "đã giải quyết inverse design", "cVAE tốt hơn phương pháp classical trong mọi trường hợp", "surrogate có thể thay FE ở vùng chưa kiểm chứng".
 
 ---
