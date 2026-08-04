@@ -1,0 +1,41 @@
+{
+  "n_conditions": 1,
+  "n_samples_per_condition": 30,
+  "k_fe_verify": 30,
+  "n_fe_calls_total": 14,
+  "n_auxetic_targets": 1,
+  "hit_rate_single_shot": 1.0,
+  "hit_rate_best_of_n": 1.0,
+  "r2_fe_v12_best_of_n": NaN,
+  "require_manufacturable": true,
+  "apply_force_periodic": true,
+  "mean_frac_manufacturable": 0.4666666666666667,
+  "per_condition": [
+    {
+      "target_v12": -0.20000000298023224,
+      "is_auxetic_target": true,
+      "n_valid_samples": 14,
+      "v12_first": -0.19293095211527458,
+      "v12_best": -0.19882058848799314,
+      "v12_all": [
+        -0.19293095211527458,
+        -0.11851965589641275,
+        -0.1555697857892087,
+        -0.19882058848799314,
+        -0.2104168142901242,
+        -0.18777741404071982,
+        -0.11003360976429526,
+        -0.1687671575221815,
+        -0.22613521302268885,
+        -0.187765072350079,
+        -0.19683910779887948,
+        -0.13340685257744886,
+        -0.10439789119510516,
+        -0.20939331480833975
+      ],
+      "frac_auxetic_among_samples": 1.0,
+      "n_manufacturable": 14,
+      "frac_manufacturable": 0.4666666666666667
+    }
+  ]
+}

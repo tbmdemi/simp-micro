@@ -10,7 +10,7 @@ import pytest
 class TestRunSimpMma:
     """Smoke tests for mma_runner.py - run_simp_mma with tiny mesh."""
 
-    def test_run_simp_mma_tiny(self):
+    def test_run_simp_mma_tiny(self, tmp_path):
         """Chạy MMA trên mesh 4x4, vài eval - không được crash, shape đúng."""
         from simp.mma_runner import run_simp_mma
 
@@ -20,6 +20,7 @@ class TestRunSimpMma:
             'seed': 'circle', 'objective': 'auxetic', 'void_size_frac': 0.4,
             'rotation_deg': 0.0, 'beta': 1.0, 'save_every': 999,
             'scale_factor': 1, 'verbose': False,
+            'output_dir': str(tmp_path / 'run'),
         }
         result = run_simp_mma(params)
 
@@ -30,7 +31,7 @@ class TestRunSimpMma:
         assert 'history' in result
         assert not np.any(np.isnan(result['xPhys']))
 
-    def test_run_simp_mma_respects_bounds(self):
+    def test_run_simp_mma_respects_bounds(self, tmp_path):
         """xPhys phải nằm trong [X_MIN, 1.0] - đặc biệt X_MIN, không phải 0.0
         (seed thô có pixel=0.0 tuyệt đối, phải được clip trước khi đưa vào
         nlopt - xem FIX trong run_simp_mma(), nlopt.optimize() raise
@@ -42,6 +43,7 @@ class TestRunSimpMma:
             'nelx': 5, 'nely': 5, 'volfrac': 0.3, 'penal': 3.0, 'rmin': 1.5,
             'ft': 2, 'max_iter': 4, 'seed': 'hexagonal', 'objective': 'auxetic',
             'void_size_frac': 0.3, 'rotation_deg': 0.0, 'verbose': False,
+            'output_dir': str(tmp_path / 'run'),
         }
         result = run_simp_mma(params)
         assert np.all(result['xPhys'] >= X_MIN - 1e-9)
@@ -71,7 +73,7 @@ class TestRunSimpMma:
         with pytest.raises(ValueError):
             run_simp_mma(params)
 
-    def test_run_simp_mma_volume_close_to_target(self):
+    def test_run_simp_mma_volume_close_to_target(self, tmp_path):
         """Ràng buộc volume (bất đẳng thức mean(xPhys)<=volfrac trong nlopt)
         phải cho volfrac_achieved gần mục tiêu ở 1 bài toán đơn giản/đủ vòng
         lặp - khác oc_update() (bisection nhắm CHÍNH XÁC volfrac), MMA chỉ
@@ -83,6 +85,7 @@ class TestRunSimpMma:
             'nelx': 10, 'nely': 10, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
             'ft': 2, 'max_iter': 30, 'seed': 'hexagonal', 'objective': 'auxetic',
             'void_size_frac': 0.3, 'rotation_deg': 0.0, 'verbose': False,
+            'output_dir': str(tmp_path / 'run'),
         }
         result = run_simp_mma(params)
         vol = float(np.mean(result['xPhys']))

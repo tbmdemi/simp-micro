@@ -41,11 +41,12 @@ import torch
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from dataset import CVAEDataset                                # noqa: E402
+from dataset import CVAEDataset, build_condition_vector         # noqa: E402
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
 from self_play import load_cvae                                # noqa: E402
 from losses import load_frozen_surrogate, SURROGATE_PATH        # noqa: E402
 from manufacturability import check_manufacturability, force_periodic  # noqa: E402
+from aesthetics import aesthetic_score as compute_aesthetic_score  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
@@ -57,7 +58,9 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               surrogate_path: str = None, require_manufacturable: bool = False,
               min_feature_px: int = 2, periodicity_tol: float = 0.1,
               custom_condition: np.ndarray = None, save_best_png: str = None,
-              apply_force_periodic: bool = True):
+              apply_force_periodic: bool = True, volfrac: float = None,
+              void_size_frac: float = None, w_accuracy: float = 0.6,
+              w_manuf: float = 0.3, w_aesthetic: float = 0.1):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -83,12 +86,34 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     manufacturability.py) lên MỌI ứng viên trước khi chấm manufacturability
     và FE, ép cứng periodicity bằng 1 phép gán thay vì phải trông chờ cVAE
     học đúng. Đặt False để tái hiện hành vi gốc (trước khi có cải tiến
-    này) hoặc so sánh có/không."""
+    này) hoặc so sánh có/không.
+
+    volfrac/void_size_frac: target OPTIONAL bổ sung (xem dataset.py
+    extended_condition, train.py --extended-condition) - chỉ có tác dụng
+    với checkpoint condition_dim=6 VÀ custom_condition được dùng (giống
+    sample.py). Bỏ trống = không chỉ định (mask=0).
+
+    w_accuracy/w_manuf/w_aesthetic: trọng số chấm điểm tổng hợp để CHỌN
+    ứng viên tốt nhất trong N mẫu (mặc định 0.6/0.3/0.1 - đúng thứ tự ưu
+    tiên accuracy=cao, manufacturability=trung bình, aesthetic=thấp) - THAY
+    cho argmin(|Δv12|) thuần túy trước đây. accuracy_score chuẩn hoá
+    min-max |Δv12| trong CHÍNH pool ứng viên đang xét (rank-based, không
+    ngưỡng cố định); manuf_score = trung bình 3 cờ con (is_connected,
+    min_feature_ok, periodic_ok) - graded, không chỉ nhị phân passes_all;
+    aesthetic_score xem aesthetics.py (đối xứng + độ trơn viền). Đặt
+    w_accuracy=1, w_manuf=w_aesthetic=0 để tái hiện hành vi argmin(|Δv12|)
+    gốc."""
     torch.manual_seed(seed)
+    ckpt_meta = torch.load(cvae_ckpt_path, map_location="cpu", weights_only=False)
+    condition_dim = ckpt_meta.get("condition_dim", 2)
+    del ckpt_meta
     if custom_condition is not None:
-        conditions = [np.asarray(custom_condition, dtype=np.float32)]
+        cond0, cond1 = float(custom_condition[0]), float(custom_condition[1])
+        conditions = [build_condition_vector(cond0, cond1, condition_dim,
+                                              volfrac=volfrac, void_size_frac=void_size_frac)]
     else:
-        test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
+        test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"),
+                               extended_condition=(condition_dim == 6))
         rng = np.random.default_rng(seed)
         idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
         conditions = [test_ds[i][1].numpy() for i in idxs]
@@ -176,10 +201,34 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             continue
 
         v12_reals = np.array(v12_reals)
-        best_idx = int(np.argmin(np.abs(v12_reals - cond[0])))
+
+        # Chấm điểm tổng hợp thay argmin(|Δv12|) thuần túy - xem docstring
+        # best_of_n() (w_accuracy/w_manuf/w_aesthetic): accuracy chuẩn hoá
+        # min-max NGAY TRONG pool ứng viên đang xét (rank-based); manuf_score
+        # graded từ manuf_reports (đã tính cho MỌI ứng viên trước đó, xem
+        # trên); aesthetic_score từ aesthetics.py (đối xứng + độ trơn viền).
+        abs_err = np.abs(v12_reals - cond[0])
+        err_range = abs_err.max() - abs_err.min()
+        accuracy_scores = (
+            1.0 - (abs_err - abs_err.min()) / err_range if err_range > 0
+            else np.ones_like(abs_err)
+        )
+        manuf_scores = np.array([
+            (manuf_reports[i].get("is_connected", manuf_reports[i]["passes_all"])
+             + manuf_reports[i].get("min_feature_ok", manuf_reports[i]["passes_all"])
+             + manuf_reports[i].get("periodic_ok", manuf_reports[i]["passes_all"])) / 3.0
+            for i in v12_reals_img_idx
+        ])
+        aesthetic_scores = np.array([
+            compute_aesthetic_score(imgs[i]) for i in v12_reals_img_idx
+        ])
+        composite_scores = (w_accuracy * accuracy_scores + w_manuf * manuf_scores
+                             + w_aesthetic * aesthetic_scores)
+
+        best_idx = int(np.argmax(composite_scores))
         v12_best = float(v12_reals[best_idx])
+        best_img_idx = v12_reals_img_idx[best_idx]
         if save_best_png:
-            best_img_idx = v12_reals_img_idx[best_idx]
             os.makedirs(os.path.dirname(save_best_png) or ".", exist_ok=True)
             arr = ((imgs[best_img_idx] > 0.5).astype(np.float32) * 255).astype(np.uint8)
             Image.fromarray(arr, mode="L").save(save_best_png)
@@ -205,6 +254,10 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             "frac_auxetic_among_samples": float((v12_reals < 0).mean()) if is_auxetic_target else None,
             "n_manufacturable": n_manufacturable,
             "frac_manufacturable": n_manufacturable / n_samples,
+            "accuracy_score": float(accuracy_scores[best_idx]),
+            "manuf_score": float(manuf_scores[best_idx]),
+            "aesthetic_score": float(aesthetic_scores[best_idx]),
+            "composite_score": float(composite_scores[best_idx]),
         })
 
     hit_rate_best_of_n = n_hits_best_of_n / n_auxetic_targets if n_auxetic_targets else float("nan")
@@ -229,6 +282,10 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         "require_manufacturable": require_manufacturable,
         "apply_force_periodic": apply_force_periodic,
         "mean_frac_manufacturable": mean_frac_manufacturable,
+        "condition_dim": condition_dim,
+        "w_accuracy": w_accuracy,
+        "w_manuf": w_manuf,
+        "w_aesthetic": w_aesthetic,
         "per_condition": per_condition,
     }
 
@@ -286,6 +343,24 @@ def main():
                          help="Đường dẫn lưu ảnh ứng viên tốt nhất (chỉ dùng khi --v12/--v21 "
                               "được set). Mặc định: outputs/phase5/self_play/custom_test/"
                               "v12_{v12}_v21_{v21}_best.png")
+    parser.add_argument("--volfrac", type=float, default=None,
+                         help="Target tỉ lệ thể tích - OPTIONAL, chỉ có tác dụng nếu "
+                              "checkpoint có condition_dim=6 (train với --extended-condition) "
+                              "VÀ --v12/--v21 được dùng. Bỏ trống = không chỉ định (mask=0).")
+    parser.add_argument("--void-size-frac", type=float, default=None,
+                         help="Target kích thước lỗ rỗng - OPTIONAL, cùng điều kiện với "
+                              "--volfrac ở trên.")
+    parser.add_argument("--w-accuracy", type=float, default=0.6,
+                         help="Trọng số accuracy trong composite scoring chọn best-of-N "
+                              "(xem docstring best_of_n()). Mặc định 0.6 (ưu tiên cao).")
+    parser.add_argument("--w-manuf", type=float, default=0.3,
+                         help="Trọng số manufacturability (graded, không phải hard filter - "
+                              "dùng --require-manufacturable cho hard filter). Mặc định 0.3 "
+                              "(ưu tiên trung bình).")
+    parser.add_argument("--w-aesthetic", type=float, default=0.1,
+                         help="Trọng số thẩm mỹ (đối xứng + độ trơn viền, xem aesthetics.py). "
+                              "Mặc định 0.1 (ưu tiên thấp). Đặt --w-accuracy 1 --w-manuf 0 "
+                              "--w-aesthetic 0 để tái hiện hành vi argmin(|Δv12|) gốc.")
     args = parser.parse_args()
     if (args.v12 is None) != (args.v21 is None):
         parser.error("--v12 và --v21 phải đi cùng nhau")
@@ -304,6 +379,10 @@ def main():
         out_path = args.out or os.path.join(PHASE5_DIR, "self_play", "best_of_n_result.json")
     args.out = out_path
 
+    if (args.volfrac is not None or args.void_size_frac is not None) and args.v12 is None:
+        parser.error("--volfrac/--void-size-frac chỉ có tác dụng cùng --v12/--v21 "
+                     "(custom_condition) - xem docstring best_of_n().")
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     result = best_of_n(args.cvae_ckpt, args.n_conditions, args.n_samples, device, args.seed,
                         k_fe_verify=args.k_fe_verify, surrogate_path=args.surrogate_path,
@@ -312,9 +391,12 @@ def main():
                         periodicity_tol=args.periodicity_tol,
                         custom_condition=custom_condition,
                         save_best_png=save_best_png,
-                        apply_force_periodic=not args.no_force_periodic)
+                        apply_force_periodic=not args.no_force_periodic,
+                        volfrac=args.volfrac, void_size_frac=args.void_size_frac,
+                        w_accuracy=args.w_accuracy, w_manuf=args.w_manuf,
+                        w_aesthetic=args.w_aesthetic)
 
-    print(f"Checkpoint: {args.cvae_ckpt}")
+    print(f"Checkpoint: {args.cvae_ckpt} (condition_dim={result['condition_dim']})")
     print(f"N condition: {result['n_conditions']} ({result['n_auxetic_targets']} auxetic target) "
           f"x {result['n_samples_per_condition']} mẫu/condition, k_fe_verify={result['k_fe_verify']} "
           f"({result['n_fe_calls_total']} lần gọi FE thật tổng cộng)")
@@ -324,6 +406,10 @@ def main():
         c = result["per_condition"][0]
         print(f"  target v12={c['target_v12']:.4f} -> best_v12(FE thật)={c['v12_best']:.4f} "
               f"(sai số {abs(c['v12_best']-c['target_v12']):.4f})")
+        print(f"  composite_score={c['composite_score']:.3f} "
+              f"(accuracy={c['accuracy_score']:.3f}, manuf={c['manuf_score']:.3f}, "
+              f"aesthetic={c['aesthetic_score']:.3f}; weights="
+              f"{result['w_accuracy']}/{result['w_manuf']}/{result['w_aesthetic']})")
         print(f"  Ảnh ứng viên tốt nhất đã lưu: {save_best_png}")
     print(f"  R2(FE, best-of-N)                        = {result['r2_fe_v12_best_of_n']:.4f}")
     print(f"  frac manufacturable (6.2/6.3, TB các cond) = {result['mean_frac_manufacturable']:.3f} "

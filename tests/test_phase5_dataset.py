@@ -5,7 +5,8 @@ import numpy as np
 import torch
 
 from pipeline.phase5_cvae.dataset import (
-    CVAEDataset, compute_v12_bin_weights, compute_v12_sample_weights,
+    CVAEDataset, build_condition_vector, compute_v12_bin_weights,
+    compute_v12_sample_weights,
 )
 
 
@@ -43,6 +44,69 @@ class TestCVAEDataset:
         assert image.shape[0] == 5
         assert condition.shape == (5, 2)
         assert isinstance(image, torch.Tensor)
+
+
+class TestExtendedCondition:
+    """extended_condition=True: condition grows từ 2 -> 6 chiều
+    [v12,v21,volfrac,volfrac_mask,void_size_frac,void_size_frac_mask], mask
+    LUÔN=1 ở tầng dataset (dữ liệu thật, có sẵn) - condition-dropout để mô
+    phỏng "không chỉ định" là việc của train.py, không phải dataset.py."""
+
+    def test_default_condition_dim_is_2(self, phase3_npz_path):
+        ds = CVAEDataset(phase3_npz_path)
+        assert ds.condition_dim == 2
+        _, condition, _, _ = ds[0]
+        assert condition.shape == (2,)
+
+    def test_extended_condition_dim_is_6(self, phase3_npz_path):
+        ds = CVAEDataset(phase3_npz_path, extended_condition=True)
+        assert ds.condition_dim == 6
+        _, condition, _, _ = ds[0]
+        assert condition.shape == (6,)
+
+    def test_extended_condition_values_and_masks(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=3)
+        ds = CVAEDataset(path, extended_condition=True)
+        _, condition, _, _ = ds[0]
+        assert condition[0].item() == ds.v12[0]
+        assert condition[1].item() == ds.v21[0]
+        assert condition[2].item() == ds.volfrac_achieved[0]
+        assert condition[3].item() == 1.0  # volfrac mask
+        assert condition[4].item() == ds.void_size_frac[0]
+        assert condition[5].item() == 1.0  # void_size_frac mask
+
+    def test_extended_condition_dataloader_batching(self, phase3_npz_path):
+        from torch.utils.data import DataLoader
+        ds = CVAEDataset(phase3_npz_path, extended_condition=True)
+        loader = DataLoader(ds, batch_size=5)
+        _, condition, _, _ = next(iter(loader))
+        assert condition.shape == (5, 6)
+        assert torch.all(condition[:, 3] == 1.0)
+        assert torch.all(condition[:, 5] == 1.0)
+
+
+class TestBuildConditionVector:
+    def test_condition_dim_2_ignores_optional_args(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=2, volfrac=0.4)
+        np.testing.assert_allclose(cond, [-0.5, -0.3])
+
+    def test_condition_dim_6_unset_optional_gives_zero_mask(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=6)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.0, 0.0, 0.0, 0.0])
+
+    def test_condition_dim_6_with_volfrac_only(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=6, volfrac=0.35)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.35, 1.0, 0.0, 0.0])
+
+    def test_condition_dim_6_with_both_optional(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=6,
+                                       volfrac=0.35, void_size_frac=0.4)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.35, 1.0, 0.4, 1.0])
+
+    def test_invalid_condition_dim_raises(self):
+        import pytest
+        with pytest.raises(ValueError):
+            build_condition_vector(-0.5, -0.3, condition_dim=4)
 
 
 class TestV12BinWeights:

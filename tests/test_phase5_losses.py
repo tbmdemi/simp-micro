@@ -22,6 +22,7 @@ from pipeline.phase5_cvae.losses import (
     real_physics_prior_loss,
     reconstruction_loss,
     tv_loss,
+    volfrac_consistency_loss,
 )
 from pipeline.phase4_surrogate.model import SurrogateCNN
 
@@ -384,6 +385,106 @@ class TestCvaeLoss:
             beta=0.5, gamma=1.0, lambda_disagreement=0.1,
         )
         assert torch.isfinite(out["total"])
+
+
+class TestExtendedConditionSlicing:
+    """property_consistency_loss(_ensemble)/real_physics_loss must compare
+    against condition[:, :2] (v12,v21) only - surrogate/FE only ever predict
+    those 2 - even when condition is wider (extended_condition=True in
+    dataset.py, condition_dim=6: [v12,v21,volfrac,mask,void,mask]). Guards
+    against a shape-mismatch/silently-wrong-column regression."""
+
+    def test_property_consistency_loss_ignores_extra_condition_columns(self):
+        class PerfectSurrogate(torch.nn.Module):
+            def forward(self, image, seed_vec):
+                return self._target
+
+        surrogate = PerfectSurrogate()
+        recon = torch.rand(2, 1, 8, 8)
+        seed_vec = torch.zeros(2, 2)
+        # condition_dim=6: extra columns (volfrac/mask/void/mask) must be
+        # ignored, only columns 0,1 (v12,v21) compared.
+        condition = torch.tensor([[-0.5, 0.2, 0.4, 1.0, 0.3, 1.0],
+                                   [0.1, -0.3, 0.0, 0.0, 0.0, 0.0]])
+        surrogate._target = torch.stack([
+            condition[:, 0], condition[:, 1], torch.zeros(2),
+        ], dim=1)
+        loss = property_consistency_loss(
+            recon, condition, seed_vec, surrogate, ["v12", "v21", "volfrac_achieved"]
+        )
+        assert torch.isclose(loss, torch.tensor(0.0), atol=1e-6)
+
+    def test_real_physics_loss_ignores_extra_condition_columns(self):
+        density = torch.rand(2, 1, 8, 8, requires_grad=True)
+        condition = torch.zeros(2, 6)  # only cols 0,1 should matter
+        fe_params = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+        loss = real_physics_loss(density, condition, fe_params)
+        assert torch.isfinite(loss)
+        loss.backward()
+        assert density.grad is not None
+
+    def test_property_consistency_loss_ensemble_ignores_extra_columns(self):
+        class ConstantSurrogate(torch.nn.Module):
+            def forward(self, image, seed_vec):
+                return torch.full((image.size(0), 3), 0.3)
+
+        recon = torch.rand(2, 1, 8, 8)
+        seed_vec = torch.zeros(2, 2)
+        condition = torch.full((2, 6), 0.3)  # cols 0,1 = 0.3 (matches), rest irrelevant
+        mse, _ = property_consistency_loss_ensemble(
+            recon, condition, seed_vec, [ConstantSurrogate(), ConstantSurrogate()],
+            ["v12", "v21", "volfrac_achieved"], lambda_disagreement=0.0,
+        )
+        assert torch.isclose(mse, torch.tensor(0.0), atol=1e-6)
+
+
+class TestVolfracConsistencyLoss:
+    """volfrac là chiều OPTIONAL rẻ nhất trong extended_condition - suy trực
+    tiếp từ recon.mean() (không cần surrogate/FE), chỉ tính trên mẫu
+    mask=1 (xem docstring hàm) để không mâu thuẫn với condition-dropout ở
+    train.py."""
+
+    def test_zero_when_recon_mean_matches_target_exactly(self):
+        recon = torch.full((2, 1, 4, 4), 0.3)  # mean pixel = 0.3
+        target = torch.tensor([0.3, 0.3])
+        mask = torch.tensor([1.0, 1.0])
+        loss = volfrac_consistency_loss(recon, target, mask)
+        assert torch.isclose(loss, torch.tensor(0.0), atol=1e-6)
+
+    def test_positive_when_recon_mean_differs(self):
+        recon = torch.full((2, 1, 4, 4), 0.3)
+        target = torch.tensor([0.6, 0.6])
+        mask = torch.tensor([1.0, 1.0])
+        loss = volfrac_consistency_loss(recon, target, mask)
+        assert loss.item() > 0.0
+
+    def test_masked_out_samples_are_excluded(self):
+        """mask=0 mẫu 1 (recon.mean=0.9, target=0.0 - sai lệch RẤT lớn nếu
+        tính) - loss chỉ nên phản ánh mẫu 0 (mask=1, khớp hoàn hảo) -> 0."""
+        recon = torch.stack([
+            torch.full((1, 4, 4), 0.3),
+            torch.full((1, 4, 4), 0.9),
+        ])
+        target = torch.tensor([0.3, 0.0])
+        mask = torch.tensor([1.0, 0.0])
+        loss = volfrac_consistency_loss(recon, target, mask)
+        assert torch.isclose(loss, torch.tensor(0.0), atol=1e-6)
+
+    def test_all_masked_out_does_not_divide_by_zero(self):
+        recon = torch.rand(3, 1, 4, 4)
+        target = torch.zeros(3)
+        mask = torch.zeros(3)
+        loss = volfrac_consistency_loss(recon, target, mask)
+        assert torch.isfinite(loss)
+
+    def test_is_differentiable_wrt_recon(self):
+        recon = torch.rand(2, 1, 4, 4, requires_grad=True)
+        target = torch.tensor([0.5, 0.5])
+        mask = torch.tensor([1.0, 1.0])
+        loss = volfrac_consistency_loss(recon, target, mask)
+        loss.backward()
+        assert recon.grad is not None
+        assert torch.all(torch.isfinite(recon.grad))
 
 
 class TestLoadFrozenSurrogate:

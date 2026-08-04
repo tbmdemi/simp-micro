@@ -139,8 +139,15 @@ class TestBestOfNOracleSelectionLogic:
 
         monkeypatch.setattr(CVAE_bare, "generate", tracking_generate)
 
+        # w_accuracy=1/w_manuf=0/w_aesthetic=0: pin composite scoring back to
+        # pure argmin(|Δv12|) - this test verifies the FE-value/hit-rate/R2
+        # bookkeeping against a controlled oracle sequence, independent of
+        # manufacturability/aesthetic scores computed on whatever an
+        # untrained CVAE happens to generate (see TestCompositeScoring for
+        # dedicated tests of the composite-score math itself).
         result = boe_mod.best_of_n(
             str(ckpt_path), n_conditions=2, n_samples=3, device="cpu", seed=123,
+            w_accuracy=1.0, w_manuf=0.0, w_aesthetic=0.0,
         )
 
         assert result["n_auxetic_targets"] == 2
@@ -341,6 +348,128 @@ class TestRequireManufacturable:
         # all 4 candidates still scored by real FE despite none "passing" -
         # the filter must be a no-op when the flag is off.
         assert result["n_fe_calls_total"] == 4
+
+
+class TestCompositeScoring:
+    """best_of_n() picks the winner by composite_score = w_accuracy*accuracy
+    + w_manuf*manuf + w_aesthetic*aesthetic (see docstring) instead of pure
+    argmin(|Δv12|). FE, manufacturability AND aesthetic scores are all
+    stubbed so the composite math can be checked exactly, independent of
+    what an untrained CVAE actually generates."""
+
+    def test_manuf_weight_can_override_pure_accuracy_winner_when_isolated(
+        self, tmp_path, monkeypatch,
+    ):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        # candidate 0 is CLOSER to target -0.4 (pure-accuracy winner: |Δ|=0.01
+        # vs 0.30) but NOT manufacturable; candidate 1 is manufacturable.
+        fe_values = [-0.41, -0.1]
+        fe_call_idx = {"n": 0}
+
+        def fake_evaluate(img_fe, fe_params):
+            idx = fe_call_idx["n"]
+            fe_call_idx["n"] = idx + 1
+            v = fe_values[idx] if idx < len(fe_values) else fe_values[0]
+            return v, v, np.eye(3)
+
+        manuf_call_idx = {"n": 0}
+
+        def fake_check_manufacturability(img_bin, min_feature_px=2, periodicity_tol=0.1):
+            idx = manuf_call_idx["n"]
+            manuf_call_idx["n"] += 1
+            ok = idx == 1  # only candidate 1 (index 1) passes
+            return {"is_connected": ok, "min_feature_ok": ok, "periodic_ok": ok, "passes_all": ok}
+
+        monkeypatch.setattr(boe_mod, "evaluate_density_field", fake_evaluate)
+        monkeypatch.setattr(boe_mod, "check_manufacturability", fake_check_manufacturability)
+
+        # w_manuf=1.0 isolated (w_accuracy=w_aesthetic=0) - proves manuf_score
+        # actually drives selection, not just decoration on the report.
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=2, device="cpu", seed=1,
+            w_accuracy=0.0, w_manuf=1.0, w_aesthetic=0.0,
+        )
+
+        c = result["per_condition"][0]
+        assert c["v12_best"] == pytest.approx(-0.1)  # candidate 1, NOT the accuracy winner
+        assert c["manuf_score"] == pytest.approx(1.0)
+        assert c["composite_score"] == pytest.approx(1.0)
+
+    def test_report_includes_component_scores(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=3, device="cpu", seed=1,
+        )
+
+        c = result["per_condition"][0]
+        for key in ("accuracy_score", "manuf_score", "aesthetic_score", "composite_score"):
+            assert key in c
+            assert 0.0 <= c[key] <= 1.0
+        expected = (0.6 * c["accuracy_score"] + 0.3 * c["manuf_score"]
+                    + 0.1 * c["aesthetic_score"])
+        assert c["composite_score"] == pytest.approx(expected, abs=1e-6)
+        assert result["w_accuracy"] == 0.6
+        assert result["w_manuf"] == 0.3
+        assert result["w_aesthetic"] == 0.1
+        assert result["condition_dim"] == 2
+
+    def test_default_weights_reduce_to_pure_accuracy_when_manuf_and_aesthetic_tied(
+        self, tmp_path, monkeypatch,
+    ):
+        """If every candidate scores identically on manuf/aesthetic, the
+        composite ranking must reduce to the same winner as pure accuracy
+        (their contribution is a constant offset, doesn't change argmax)."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.5])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+
+        fe_values = [0.1, -0.55, -0.9]  # closest to target -0.5 is -0.55
+        call_idx = {"n": 0}
+
+        def fake_evaluate_density_field(img_fe, fe_params):
+            idx = call_idx["n"]
+            call_idx["n"] = idx + 1
+            v = fe_values[idx] if idx < len(fe_values) else fe_values[0]
+            return v, v, np.eye(3)
+
+        monkeypatch.setattr(boe_mod, "evaluate_density_field", fake_evaluate_density_field)
+        monkeypatch.setattr(
+            boe_mod, "check_manufacturability",
+            lambda img_bin, **kw: {"is_connected": True, "min_feature_ok": True,
+                                    "periodic_ok": True, "passes_all": True},
+        )
+        monkeypatch.setattr(boe_mod, "compute_aesthetic_score", lambda img, img_bin=None: 0.5)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=3, device="cpu", seed=123,
+        )
+
+        assert result["per_condition"][0]["v12_best"] == pytest.approx(-0.55)
 
 
 class TestBestOfNCli:

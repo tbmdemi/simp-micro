@@ -111,7 +111,11 @@ def property_consistency_loss(
     idx_v12 = target_names.index("v12")
     idx_v21 = target_names.index("v21")
     pred_cond = torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
-    return F.mse_loss(pred_cond, condition)
+    # condition có thể dài hơn 2 chiều (extended_condition, xem dataset.py) -
+    # surrogate chỉ dự đoán v12/v21 nên luôn so khớp 2 chiều đầu, các chiều
+    # optional (volfrac/void_size_frac) được volfrac_consistency_loss xử lý
+    # riêng (xem hàm bên dưới), không đi qua surrogate.
+    return F.mse_loss(pred_cond, condition[:, :2])
 
 
 def property_consistency_loss_ensemble(
@@ -137,7 +141,8 @@ def property_consistency_loss_ensemble(
         preds_cond.append(torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1))
     preds_stack = torch.stack(preds_cond, dim=0)  # (N_surrogate, B, 2)
     mean_pred = preds_stack.mean(dim=0)
-    mse = F.mse_loss(mean_pred, condition)
+    # condition[:, :2]: xem ghi chú tương tự trong property_consistency_loss().
+    mse = F.mse_loss(mean_pred, condition[:, :2])
     disagreement = preds_stack.var(dim=0, unbiased=False).mean()
     return mse + lambda_disagreement * disagreement, disagreement.detach()
 
@@ -220,7 +225,10 @@ def real_physics_loss(
         fe_params.get("Emin", 1e-9), fe_params.get("nu", 0.3),
         fe_params.get("rho0", 1.0), n_workers,
     )
-    return F.mse_loss(pred, condition_sub)
+    # RealPhysicsNu chỉ trả (v12, v21) - so khớp 2 chiều đầu của condition,
+    # cùng lý do với property_consistency_loss() khi condition mở rộng
+    # (extended_condition, xem dataset.py).
+    return F.mse_loss(pred, condition_sub[:, :2])
 
 
 def real_physics_prior_loss(
@@ -274,6 +282,21 @@ def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tenso
 # prop_loss ~ O(0.01-0.05) vs recon ~ O(1000), ~5 bậc độ lớn chênh lệch -
 # không có scale này thì gamma*prop gần như vô hình trong gradient tổng.
 PROP_LOSS_SCALE = 1000.0
+
+
+def volfrac_consistency_loss(recon: torch.Tensor, target_volfrac: torch.Tensor,
+                              mask: torch.Tensor) -> torch.Tensor:
+    """volfrac = tỉ lệ vật liệu rắn/toàn ô = trung bình pixel density - suy
+    trực tiếp từ `recon` (mean pixel), KHÔNG cần surrogate/FE, khác hẳn
+    property_consistency_loss()/real_physics_loss() (v12/v21 cần giải FE).
+
+    mask: (B,) 1.0 = mẫu này CÓ target volfrac (không bị condition-dropout
+    zero ra, xem train.py run_epoch) - chỉ tính loss trên mẫu mask=1, tính
+    cả mẫu mask=0 (giá trị target lúc đó là sentinel 0.0, không có ý nghĩa)
+    sẽ mâu thuẫn với chính tín hiệu "optional" mà dropout muốn dạy model."""
+    pred_volfrac = recon.mean(dim=[1, 2, 3])
+    sq_err = (pred_volfrac - target_volfrac) ** 2
+    return (sq_err * mask).sum() / mask.sum().clamp(min=1)
 
 
 def cvae_loss(
