@@ -414,7 +414,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **437/437 test pass** (`pytest tests/ -q`, ~7s).
+Trạng thái hiện tại: **483/483 test pass** (`pytest tests/ -q`, ~7s) - bao gồm test cho tính năng optional multi-condition (branch `feature/optional-multi-condition`, chưa merge, xem [mục 5.1](#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện)).
 
 | Module | Trạng thái |
 |--------|--------|

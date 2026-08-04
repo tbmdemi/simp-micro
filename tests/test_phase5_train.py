@@ -281,6 +281,67 @@ class TestRunEpochExtendedCondition:
         assert stats["volfrac_loss"] == 0.0
 
 
+class TestResizeConditionDimWeights:
+    """resize_condition_dim_weights() - --resume-from một checkpoint có
+    condition_dim khác model hiện tại (vd fine-tune cvae_realphysics.pt
+    condition_dim=2 thành --extended-condition condition_dim=6, đúng lệnh
+    khuyến nghị ở README mục 5.1). Trước fix này, model.load_state_dict()
+    strict=True crash ngay với RuntimeError size mismatch trên 3 layer fc
+    (encoder.fc_mu/fc_logvar, decoder.fc) - tái hiện bằng cách chạy chính
+    lệnh README ở advisor-test session 2026-08-03, xem EXPERIMENT_LOG.md."""
+
+    def test_same_dim_is_noop(self):
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import resize_condition_dim_weights
+
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        sd = model.state_dict()
+        out = resize_condition_dim_weights(sd, 2, 2)
+        assert out is sd
+
+    def test_widen_preserves_base_and_v12_v21_columns(self):
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import resize_condition_dim_weights
+
+        small = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        old_sd = small.state_dict()
+        new_sd = resize_condition_dim_weights(old_sd, 2, 6)
+
+        for key in ["encoder.fc_mu.weight", "encoder.fc_logvar.weight",
+                    "decoder.fc.weight"]:
+            old_w = old_sd[key]
+            new_w = new_sd[key]
+            base_dim = old_w.shape[1] - 2
+            assert new_w.shape == (old_w.shape[0], base_dim + 6)
+            assert torch.equal(new_w[:, :base_dim], old_w[:, :base_dim])
+            assert torch.equal(new_w[:, base_dim:base_dim + 2],
+                                old_w[:, base_dim:base_dim + 2])
+            # nouveau condition cols (volfrac/mask/void/mask) must be
+            # freshly initialized, not left as zeros/garbage.
+            assert new_w[:, base_dim + 2:].std().item() > 0
+
+        # unrelated params (biases, conv backbone) untouched.
+        for key in ["encoder.fc_mu.bias", "encoder.fc_logvar.bias",
+                    "decoder.fc.bias"]:
+            assert torch.equal(old_sd[key], new_sd[key])
+
+    def test_widened_state_dict_loads_into_new_model_without_crash(self):
+        """End-to-end: đúng lệnh README --extended-condition --resume-from -
+        model.load_state_dict(strict=True) trên state_dict đã resize phải
+        THÀNH CÔNG (trước fix: RuntimeError size mismatch ngay tại đây)."""
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import resize_condition_dim_weights
+
+        small = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        big = CVAE(condition_dim=6, latent_dim=4, resolution=64,
+                    channels=(4, 8, 16, 32))
+        resized = resize_condition_dim_weights(small.state_dict(), 2, 6)
+        big.load_state_dict(resized)  # must not raise
+
+
 class TestRealFeR2:
     def test_returns_finite_r2_on_tiny_fe_grid(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import train as train_mod

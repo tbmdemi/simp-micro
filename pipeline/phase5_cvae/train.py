@@ -47,6 +47,41 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
+_CONDITION_DEPENDENT_KEYS = ("encoder.fc_mu.weight", "encoder.fc_logvar.weight",
+                             "decoder.fc.weight")
+
+
+def resize_condition_dim_weights(state_dict: dict, old_condition_dim: int,
+                                  new_condition_dim: int) -> dict:
+    """--resume-from một checkpoint có condition_dim KHÁC model hiện tại (vd
+    fine-tune cvae_realphysics.pt condition_dim=2 thành --extended-condition
+    condition_dim=6, đúng lệnh khuyến nghị ở README mục 5.1) trước đây CRASH
+    ngay lập tức: model.load_state_dict(strict=True) từ chối vì 3 layer fc
+    duy nhất tiêu thụ condition (encoder.fc_mu/fc_logvar, decoder.fc) có
+    input_dim = base_dim + condition_dim nên đổi shape theo condition_dim.
+    Thay vì bỏ hết pretrained weight (reset toàn bộ model) hay crash, hàm
+    này "mở rộng" đúng 3 layer đó: giữ nguyên cột ứng với base features
+    (ảnh phẳng/latent z) VÀ cột ứng với v12/v21 (2 chiều đầu của condition
+    theo đúng thứ tự build_condition_vector) - chỉ random-init (init mặc
+    định của nn.Linear) các cột condition MỚI (volfrac/mask/void_size_frac/
+    mask). Giữ được toàn bộ pretrained CNN encoder/decoder (chiếm hầu hết
+    tham số) + phần lớn trọng số 2 layer fc, thay vì train lại từ đầu."""
+    if old_condition_dim == new_condition_dim:
+        return state_dict
+    new_state = dict(state_dict)
+    n_keep_cond = min(old_condition_dim, new_condition_dim)
+    for key in _CONDITION_DEPENDENT_KEYS:
+        old_w = state_dict[key]
+        out_features, old_in = old_w.shape
+        base_dim = old_in - old_condition_dim
+        new_in = base_dim + new_condition_dim
+        new_w = torch.empty(out_features, new_in, dtype=old_w.dtype, device=old_w.device)
+        torch.nn.init.kaiming_uniform_(new_w, a=5 ** 0.5)
+        new_w[:, :base_dim] = old_w[:, :base_dim]
+        new_w[:, base_dim:base_dim + n_keep_cond] = old_w[:, base_dim:base_dim + n_keep_cond]
+        new_state[key] = new_w
+    return new_state
+
 
 def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
     """R2(v12) đo bằng FE THẬT (không qua surrogate) trên 1 tập condition cố
@@ -385,7 +420,18 @@ def main():
                  resolution=args.resolution).to(device)
     if args.resume_from:
         resume_ckpt = torch.load(args.resume_from, map_location=device, weights_only=False)
-        model.load_state_dict(resume_ckpt["model_state_dict"])
+        resume_state_dict = resume_ckpt["model_state_dict"]
+        resume_condition_dim = resume_ckpt.get("condition_dim", 2)
+        if resume_condition_dim != condition_dim:
+            print(f"CẢNH BÁO: checkpoint resume có condition_dim={resume_condition_dim}, "
+                  f"model hiện tại condition_dim={condition_dim} (--extended-condition="
+                  f"{args.extended_condition}) - mở rộng/thu gọn 3 layer fc phụ thuộc "
+                  "condition (giữ cột v12/v21 + toàn bộ CNN backbone, random-init "
+                  "phần condition mới) thay vì crash. Xem resize_condition_dim_weights().")
+            resume_state_dict = resize_condition_dim_weights(
+                resume_state_dict, resume_condition_dim, condition_dim
+            )
+        model.load_state_dict(resume_state_dict)
         print(f"Đã load trọng số từ {args.resume_from} "
               f"(epoch={resume_ckpt.get('epoch')}, val_loss={resume_ckpt.get('val_loss')}) "
               f"- train tiếp thay vì khởi tạo ngẫu nhiên.")
