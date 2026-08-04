@@ -30,9 +30,6 @@ env/
 # --- Jupyter ---
 .ipynb_checkpoints/
 
-# --- Personal docs ---
-docs/
-
 # --- AI rules ---
 .clinerules/
 .claude/
