@@ -96,6 +96,91 @@ class TestSavePngForcePeriodic:
         assert loaded[-1, 0] == 0     # bottom row, untouched -> stays void
 
 
+class TestOptionalConditionCli:
+    """--volfrac/--void-size-frac (optional, xem dataset.py extended_condition) -
+    chỉ có tác dụng với checkpoint condition_dim=6."""
+
+    def test_extended_checkpoint_builds_6dim_condition_with_values(
+        self, tmp_path, monkeypatch,
+    ):
+        import sys
+        from pipeline.phase5_cvae import sample as sample_module
+        ckpt_path = tmp_path / "cvae_ext.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=6)
+        out_dir = tmp_path / "out"
+
+        captured = {}
+        real_generate = sample_module.CVAE.generate
+
+        def tracking_generate(self, condition, n_samples=1, device="cpu"):
+            captured["condition"] = condition.detach().cpu().numpy().copy()
+            return real_generate(self, condition, n_samples=n_samples, device=device)
+
+        monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(sys, "argv", [
+            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
+            "--volfrac", "0.35", "--n", "1", "--out", str(out_dir),
+            "--ckpt", str(ckpt_path),
+        ])
+
+        sample_module.main()
+
+        cond = captured["condition"]
+        np.testing.assert_allclose(cond, [-0.5, -0.4, 0.35, 1.0, 0.0, 0.0], atol=1e-5)
+
+    def test_extended_checkpoint_unset_optional_gives_zero_mask(
+        self, tmp_path, monkeypatch,
+    ):
+        import sys
+        from pipeline.phase5_cvae import sample as sample_module
+        ckpt_path = tmp_path / "cvae_ext.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=6)
+        out_dir = tmp_path / "out"
+
+        captured = {}
+        real_generate = sample_module.CVAE.generate
+
+        def tracking_generate(self, condition, n_samples=1, device="cpu"):
+            captured["condition"] = condition.detach().cpu().numpy().copy()
+            return real_generate(self, condition, n_samples=n_samples, device=device)
+
+        monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(sys, "argv", [
+            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
+            "--n", "1", "--out", str(out_dir), "--ckpt", str(ckpt_path),
+        ])
+
+        sample_module.main()
+
+        cond = captured["condition"]
+        np.testing.assert_allclose(cond, [-0.5, -0.4, 0.0, 0.0, 0.0, 0.0], atol=1e-5)
+
+    def test_condition_dim_2_checkpoint_warns_and_ignores_volfrac(
+        self, tmp_path, monkeypatch, capsys,
+    ):
+        import sys
+        from pipeline.phase5_cvae import sample as sample_module
+        ckpt_path = tmp_path / "cvae_best.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=2)
+        out_dir = tmp_path / "out"
+
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(sys, "argv", [
+            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
+            "--volfrac", "0.35", "--n", "1", "--out", str(out_dir),
+            "--ckpt", str(ckpt_path),
+        ])
+
+        sample_module.main()  # must not crash (shape mismatch) despite --volfrac
+
+        out = capsys.readouterr().out
+        assert "condition_dim=2" in out
+        pngs = sorted(out_dir.glob("sample_*.png"))
+        assert len(pngs) == 1
+
+
 class TestMainCli:
     def test_main_writes_expected_number_of_samples(self, tmp_path, monkeypatch, capsys):
         import sys

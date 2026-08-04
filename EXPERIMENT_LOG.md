@@ -253,6 +253,20 @@ Chạy `n_conditions=24, n_samples=20` (480 mẫu sinh ra):
 
 Code: `analysis/scripts/novelty_diversity_eval.py`, `analysis/scripts/baseline_comparison.py` (cả 2 tái dùng `best_of_n_eval.py`/`dataset.py`/`adversarial_dataset.py`/`manufacturability.py` có sẵn, không viết lại logic FE/sampling). Kết quả đầy đủ: `outputs/phase5/reports/novelty_diversity_cvae_v2_finetuned.json`, `outputs/phase5/reports/baseline_comparison_cvae_v2_finetuned.json`. Trên nhánh `main`, uncommitted.
 
+### 2026-07-25 - Tham số input optional (`volfrac`, `void_size_frac`) + chấm điểm toàn diện (Pha A, branch `feature/optional-multi-condition`)
+
+Yêu cầu: thêm tham số input ngoài `v12/v21` nhưng phải **optional** (không bắt buộc); đồng thời chấm điểm lời giải toàn diện hơn - chính xác/ổn định ưu tiên cao, khả năng chế tạo ưu tiên trung bình, thẩm mỹ ưu tiên thấp (trục hoàn toàn mới, chưa từng có trong codebase).
+
+**Nghiên cứu trước khi code:** kiểm tra trực tiếp `outputs/phase3/train.npz` phát hiện `volfrac`/`void_size_frac` (2 trong 5 tham số DOE gốc: `volfrac,penal,rmin,move,void_size_frac`) đã nằm sẵn trong field `params`/`param_names` của MỌI file npz - `CVAEDataset` thậm chí đã load `volfrac_achieved` nhưng vứt bỏ trước khi vào `condition` (`dataset.py`), và `train.py::run_epoch` từng nhận nó qua biến `_volfrac` rồi bỏ luôn. Tức là thêm 2 tham số này vào condition **không tốn backfill dữ liệu gì cả** - khác hẳn `f1=E₁₁/E₀, f2=E₂₂/E₀` (roadmap gốc, [Giới hạn #5](README.md#giới-hạn-đã-biết--known-limitations)): tuy `simp/runner.py::run_simp()` đã trả về `Q` (tensor 3×3 đầy đủ, đủ để suy f1/f2) ở MỌI lần chạy, `pipeline/phase2_multi_batch/runner.py::evaluate_single()` chỉ trích `v12/v21/obj_value` rồi vứt `Q` - nên f1/f2 cần backfill (1 FE-solve/mẫu trên ảnh cuối đã lưu, rẻ, không phải chạy lại DOE) + train lại Phase 4 surrogate + kiểm tra multicollinearity (f1/f2/v12/v21 cùng suy từ 1 `Q`). Do ngân sách được yêu cầu giữ chặt (50% giờ còn lại, tối đa 10%/tuần), chia 2 pha: **Pha A** (volfrac/void_size_frac, làm ngay) và **Pha B** (f1/f2, để lại làm sau).
+
+**Thiết kế "optional" - presence-mask + condition-dropout, không phải chỉ default value:** nếu chỉ set sentinel=0 khi không chỉ định, model không phân biệt được với giá trị thật bằng 0. `condition` mở từ 2 lên 6 chiều `[v12,v21,volfrac,volfrac_mask,void_size_frac,void_size_frac_mask]` (`--extended-condition`), lúc train áp `apply_condition_dropout()` (kiểu classifier-free-guidance: zero value+mask ngẫu nhiên theo từng chiều optional, độc lập từng mẫu, `--optional-dropout-p` mặc định 0,5) để model học xử lý cả 2 trường hợp. `volfrac` có loss riêng gần như miễn phí (`volfrac_consistency_loss` - suy trực tiếp từ `recon.mean()`, không qua surrogate/FE, chỉ tính trên mẫu mask=1); `void_size_frac` không có loss riêng ở Pha A (không có công thức rẻ tương tự), chỉ học ngầm qua reconstruction.
+
+**Chấm điểm toàn diện trong `best_of_n_eval.py`:** `argmin(|Δv12|)` (thuần túy chính xác) đổi thành `argmax(composite_score)` với `composite_score = 0,6·accuracy_score + 0,3·manuf_score + 0,1·aesthetic_score` (đúng thứ tự ưu tiên yêu cầu). `manuf_score` graded (trung bình 3 cờ con, không chỉ nhị phân `passes_all` như trước). `aesthetic_score` (module mới `aesthetics.py`: đối xứng + tỉ lệ chu vi/diện tích) cố tình giữ rẻ vì là trục ưu tiên thấp nhất - không cần model riêng.
+
+**Kiểm chứng:** 414/414 test pass (thêm ~35 test), smoke-test thật trên data thật (train 2 epoch không NaN, `sample.py`/`best_of_n_eval.py` có/không tham số optional, cả checkpoint cũ `condition_dim=2` lẫn mới `=6`). 1 test cũ (`TestBestOfNOracleSelectionLogic`) phải cố định `w_accuracy=1,w_manuf=0,w_aesthetic=0` vì assert đúng winner theo argmin thuần túy, độc lập với manuf/aesthetic đo trên ảnh model chưa train thật.
+
+**Trạng thái:** chưa commit/merge, đang ở branch `feature/optional-multi-condition` - người yêu cầu muốn thử nghiệm riêng trước khi đưa vào `FixLoss` vì chưa chắc chắn thành công. Pha B (f1/f2) chưa bắt đầu.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

@@ -57,6 +57,17 @@ def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
     seed_onehot = np.zeros((n_samples, n_seeds), dtype=np.float32)
     seed_onehot[np.arange(n_samples), seed_idx] = 1.0
 
+    # DOE params, cùng schema build_npz.py (params[:, i] = giá trị cột
+    # param_names[i]) - dùng cho CVAEDataset(extended_condition=True), xem
+    # dataset.py. volfrac ở đây trùng volfrac_achieved cho đơn giản (không
+    # ảnh hưởng gì tới các test không dùng extended_condition).
+    penal = rng.uniform(2.0, 5.0, size=n_samples).astype(np.float32)
+    rmin = rng.uniform(1.0, 2.5, size=n_samples).astype(np.float32)
+    move = rng.uniform(0.05, 0.25, size=n_samples).astype(np.float32)
+    void_size_frac = rng.uniform(0.25, 0.55, size=n_samples).astype(np.float32)
+    params = np.stack([volfrac, penal, rmin, move, void_size_frac], axis=1).astype(np.float32)
+    param_names = np.array(["volfrac", "penal", "rmin", "move", "void_size_frac"])
+
     np.savez(
         path,
         images=images,
@@ -65,6 +76,8 @@ def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
         volfrac_achieved=volfrac,
         seed_onehot=seed_onehot,
         seed_classes=seed_classes,
+        params=params,
+        param_names=param_names,
     )
     return path
 

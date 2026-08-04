@@ -161,6 +161,126 @@ class TestRunEpochRealPhysics:
         assert np.isnan(stats["real_physics"])
 
 
+class TestApplyConditionDropout:
+    """Classifier-free-guidance-style dropout on the 2 optional columns
+    (volfrac at (2,3), void_size_frac at (4,5)) - see train.py docstring.
+    Columns 0,1 (v12,v21) must never be touched."""
+
+    def test_never_touches_v12_v21_columns(self):
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
+        dropped = apply_condition_dropout(condition, dropout_p=1.0)
+        assert torch.allclose(dropped[:, 0], condition[:, 0])
+        assert torch.allclose(dropped[:, 1], condition[:, 1])
+
+    def test_dropout_p_one_always_zeros_optional_columns(self):
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
+        dropped = apply_condition_dropout(condition, dropout_p=1.0)
+        assert torch.all(dropped[:, 2:] == 0.0)
+
+    def test_dropout_p_zero_never_touches_optional_columns(self):
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
+        dropped = apply_condition_dropout(condition, dropout_p=0.0)
+        assert torch.allclose(dropped, condition)
+
+    def test_value_and_mask_always_dropped_together(self):
+        """Nếu mask=0, value đi kèm PHẢI cũng =0 (và ngược lại mask=1 thì
+        value giữ nguyên) - không được lệch pha value/mask cho cùng 1 mẫu."""
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(1)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 50)
+        dropped = apply_condition_dropout(condition, dropout_p=0.5)
+        volfrac_dropped = dropped[:, 3] == 0.0
+        assert torch.all((dropped[:, 2] == 0.0) == volfrac_dropped)
+        void_dropped = dropped[:, 5] == 0.0
+        assert torch.all((dropped[:, 4] == 0.0) == void_dropped)
+
+    def test_does_not_mutate_input_in_place(self):
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 10)
+        original = condition.clone()
+        apply_condition_dropout(condition, dropout_p=1.0)
+        assert torch.allclose(condition, original)
+
+
+class TestRunEpochExtendedCondition:
+    """run_epoch(extended_condition=True, lambda_volfrac>0) - end-to-end
+    through the real training loop (not just losses.py's unit test), same
+    spirit as TestRunEpochRealPhysics above."""
+
+    def test_extended_condition_updates_decoder_params(self, make_phase3_npz):
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        path = make_phase3_npz("val.npz", n_samples=12)
+        ds = CVAEDataset(path, extended_condition=True)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=6, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        before = [p.clone() for p in model.decoder.parameters()]
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            extended_condition=True, lambda_volfrac=1.0, optional_dropout_p=0.5,
+        )
+
+        assert "volfrac_loss" in stats
+        assert np.isfinite(stats["volfrac_loss"])
+        after = list(model.decoder.parameters())
+        assert any(not torch.allclose(b, a) for b, a in zip(before, after))
+
+    def test_lambda_volfrac_zero_gives_zero_volfrac_loss(self, make_phase3_npz):
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        path = make_phase3_npz("val.npz", n_samples=8)
+        ds = CVAEDataset(path, extended_condition=True)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=6, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            extended_condition=True, lambda_volfrac=0.0,
+        )
+        assert stats["volfrac_loss"] == 0.0
+
+    def test_non_extended_condition_ignores_new_args(self, phase3_npz_path):
+        """Backward-compat: extended_condition=False (mặc định) - lambda_volfrac
+        bị bỏ qua hoàn toàn dù truyền >0, không lỗi shape trên condition 2 chiều."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        ds = CVAEDataset(phase3_npz_path)  # extended_condition=False
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            extended_condition=False, lambda_volfrac=1.0,
+        )
+        assert stats["volfrac_loss"] == 0.0
+
+
 class TestRealFeR2:
     def test_returns_finite_r2_on_tiny_fe_grid(self, tmp_path, monkeypatch):
         from pipeline.phase5_cvae import train as train_mod

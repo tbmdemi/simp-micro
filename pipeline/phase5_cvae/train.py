@@ -37,7 +37,7 @@ from dataset import CVAEDataset, compute_v12_sample_weights  # noqa: E402
 from losses import (                       # noqa: E402
     cvae_loss, kl_beta_schedule, load_frozen_surrogate,
     load_frozen_surrogate_ensemble, prior_sample_regularization,
-    real_physics_prior_loss, PROP_LOSS_SCALE,
+    real_physics_prior_loss, volfrac_consistency_loss, PROP_LOSS_SCALE,
 )
 from verify_fe import (                    # noqa: E402
     FE_PARAMS, resize_to_fe_grid, evaluate_density_field,
@@ -80,16 +80,35 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
     return float(1 - ss_res / ss_tot)
 
 
+def apply_condition_dropout(condition: torch.Tensor, dropout_p: float) -> torch.Tensor:
+    """Classifier-free-guidance-style: với MỖI chiều optional (volfrac,
+    void_size_frac - value+mask tại cột (2,3) và (4,5), xem dataset.py
+    extended_condition), zero value + set mask=0 với xác suất dropout_p ĐỘC
+    LẬP theo từng mẫu trong batch. Không đụng cột 0,1 (v12,v21 - luôn bắt
+    buộc). Dạy model bỏ qua đúng những chiều mask=0 lúc suy diễn không được
+    người dùng chỉ định - không dropout thì model chỉ từng thấy mask=1 lúc
+    train, không biết xử lý mask=0 hợp lý lúc inference."""
+    condition = condition.clone()
+    bsz = condition.size(0)
+    for value_col, mask_col in ((2, 3), (4, 5)):
+        drop = torch.rand(bsz, device=condition.device) < dropout_p
+        condition[drop, value_col] = 0.0
+        condition[drop, mask_col] = 0.0
+    return condition
+
+
 def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
               lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0,
               lambda_periodic=0.0, regularize_prior_samples=False,
               lambda_real_physics=0.0, real_physics_every=1,
-              real_physics_subsample=None, real_physics_workers=0, fe_params=None):
+              real_physics_subsample=None, real_physics_workers=0, fe_params=None,
+              extended_condition=False, lambda_volfrac=0.0, optional_dropout_p=0.5):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
               "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
               "periodic": 0.0, "disagreement": 0.0,
-              "prior_tv": 0.0, "prior_binarization": 0.0, "prior_periodic": 0.0}
+              "prior_tv": 0.0, "prior_binarization": 0.0, "prior_periodic": 0.0,
+              "volfrac_loss": 0.0}
     n = 0
     real_physics_sum = 0.0
     real_physics_n = 0
@@ -98,6 +117,9 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         condition = condition.to(device)
         seed_vec = seed_vec.to(device)
         bsz = image.size(0)
+
+        if train and extended_condition:
+            condition = apply_condition_dropout(condition, optional_dropout_p)
 
         with torch.set_grad_enabled(train):
             recon, mu, logvar = model(image, condition, deterministic=not train)
@@ -137,6 +159,25 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
                 )
                 losses["total"] = losses["total"] + lambda_real_physics * PROP_LOSS_SCALE * rp_loss
 
+            # volfrac là chiều optional RẺ (xem losses.volfrac_consistency_loss
+            # docstring: suy trực tiếp từ recon.mean(), không cần surrogate/FE)
+            # - áp cả trên recon posterior và (nếu regularize_prior_samples bật)
+            # trên 1 lần decode từ z~prior, cùng lý do real_physics_prior_loss
+            # ưu tiên chế độ prior (generate() lúc inference không đi qua
+            # encoder). void_size_frac KHÔNG có loss riêng ở Pha A (không có
+            # công thức rẻ/khả vi tương tự) - chỉ học ngầm qua reconstruction.
+            vol_loss = torch.tensor(0.0, device=device)
+            if extended_condition and lambda_volfrac > 0:
+                vol_target = condition[:, 2]
+                vol_mask = condition[:, 3]
+                vol_loss = volfrac_consistency_loss(recon, vol_target, vol_mask)
+                if regularize_prior_samples:
+                    z_prior_v = torch.randn(bsz, model.latent_dim, device=device)
+                    prior_recon_v = model.decoder(z_prior_v, condition)
+                    vol_loss_prior = volfrac_consistency_loss(prior_recon_v, vol_target, vol_mask)
+                    vol_loss = 0.5 * (vol_loss + vol_loss_prior)
+                losses["total"] = losses["total"] + lambda_volfrac * PROP_LOSS_SCALE * vol_loss
+
             if train:
                 optimizer.zero_grad()
                 losses["total"].backward()
@@ -158,6 +199,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         totals["prior_tv"] += losses["prior_tv"].item() * bsz
         totals["prior_binarization"] += losses["prior_binarization"].item() * bsz
         totals["prior_periodic"] += losses["prior_periodic"].item() * bsz
+        totals["volfrac_loss"] += float(vol_loss.detach()) * bsz
         n += bsz
 
     result = {k: v / n for k, v in totals.items()}
@@ -273,6 +315,25 @@ def main():
                               "chỗ (chỉ dùng nếu --sampling-weights-path không tồn tại). "
                               "0=tắt (weight đều), 1=nghịch đảo tần suất hoàn toàn, "
                               "0.5=sqrt (mặc định, tránh trọng số quá cực đoan ở bin ít mẫu).")
+    parser.add_argument("--extended-condition", action="store_true",
+                         help="Mở rộng condition từ (v12,v21) 2 chiều lên 6 chiều "
+                              "[v12,v21,volfrac,volfrac_mask,void_size_frac,"
+                              "void_size_frac_mask] - xem dataset.py CVAEDataset "
+                              "extended_condition. volfrac/void_size_frac là OPTIONAL "
+                              "(mask=0 nếu người dùng không chỉ định lúc sample.py/"
+                              "best_of_n_eval.py) - train.py tự áp condition-dropout "
+                              "(--optional-dropout-p) để model học xử lý cả 2 trường "
+                              "hợp. Mặc định TẮT (giữ hành vi cũ, condition_dim=2).")
+    parser.add_argument("--optional-dropout-p", type=float, default=0.5,
+                         help="Chỉ có tác dụng khi --extended-condition: xác suất "
+                              "(độc lập theo từng chiều optional, từng mẫu) zero "
+                              "value+mask lúc train, kiểu classifier-free-guidance - "
+                              "xem apply_condition_dropout().")
+    parser.add_argument("--lambda-volfrac", type=float, default=0.0,
+                         help="Chỉ có tác dụng khi --extended-condition: trọng số "
+                              "volfrac_consistency_loss (losses.py) - suy trực tiếp "
+                              "từ recon.mean(), không cần surrogate/FE. 0.0 = tắt "
+                              "(mặc định).")
     args = parser.parse_args()
 
     if args.select_by == "fe_r2" and args.fe_eval_every <= 0:
@@ -294,8 +355,11 @@ def main():
     print(f"Device: {device}")
     os.makedirs(PHASE5_DIR, exist_ok=True)
 
-    train_ds = CVAEDataset(os.path.join(PHASE3_DIR, "train.npz"))
-    val_ds = CVAEDataset(os.path.join(PHASE3_DIR, "val.npz"))
+    train_ds = CVAEDataset(os.path.join(PHASE3_DIR, "train.npz"),
+                           extended_condition=args.extended_condition)
+    val_ds = CVAEDataset(os.path.join(PHASE3_DIR, "val.npz"),
+                         extended_condition=args.extended_condition)
+    condition_dim = train_ds.condition_dim
     if args.weighted_sampling:
         sample_weights = compute_v12_sample_weights(
             train_ds.v12, weights_path=args.sampling_weights_path,
@@ -317,7 +381,7 @@ def main():
                              num_workers=2)
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
-    model = CVAE(condition_dim=2, latent_dim=args.latent_dim,
+    model = CVAE(condition_dim=condition_dim, latent_dim=args.latent_dim,
                  resolution=args.resolution).to(device)
     if args.resume_from:
         resume_ckpt = torch.load(args.resume_from, map_location=device, weights_only=False)
@@ -351,9 +415,14 @@ def main():
         rng = np.random.default_rng(42)
         n_cond = min(args.n_fe_eval_conditions, len(val_ds))
         idxs = rng.choice(len(val_ds), size=n_cond, replace=False)
-        fe_eval_conditions = np.stack(
-            [[val_ds[i][1][0].item(), val_ds[i][1][1].item()] for i in idxs]
-        )
+        # Pad về đủ condition_dim với mask=0 (giả lập "chỉ chỉ định v12/v21,
+        # không chỉ định volfrac/void_size_frac") khi extended_condition -
+        # đo đúng khả năng CỐT LÕI (v12/v21 targeting) không lẫn ảnh hưởng
+        # optional dims, so sánh được với lịch sử đo trước khi có tính năng này.
+        fe_eval_conditions = np.stack([
+            [val_ds[i][1][0].item(), val_ds[i][1][1].item()] + [0.0] * (condition_dim - 2)
+            for i in idxs
+        ])
         print(f"FE-eval bật: mỗi {args.fe_eval_every} epoch chấm R2(FE thật) trên "
               f"{n_cond} condition validation cố định.")
 
@@ -376,6 +445,9 @@ def main():
             real_physics_subsample=args.real_physics_subsample,
             real_physics_workers=args.real_physics_workers,
             fe_params=FE_PARAMS,
+            extended_condition=args.extended_condition,
+            lambda_volfrac=args.lambda_volfrac,
+            optional_dropout_p=args.optional_dropout_p,
         )
         val_stats = run_epoch(
             model, val_loader, surrogate, target_names,
@@ -385,6 +457,9 @@ def main():
             lambda_periodic=args.lambda_periodic,
             regularize_prior_samples=args.regularize_prior_samples,
             fe_params=FE_PARAMS,
+            extended_condition=args.extended_condition,
+            lambda_volfrac=args.lambda_volfrac,
+            optional_dropout_p=args.optional_dropout_p,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
@@ -399,14 +474,16 @@ def main():
               f"prior[tv={train_stats['prior_tv']:.4f} bin={train_stats['prior_binarization']:.4f} "
               f"periodic={train_stats['prior_periodic']:.4f}] "
               f"disagree={train_stats['disagreement']:.5f} "
-              f"real_physics={train_stats['real_physics']:.4f} || "
+              f"real_physics={train_stats['real_physics']:.4f} "
+              f"volfrac_loss={train_stats['volfrac_loss']:.4f} || "
               f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
               f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
               f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
               f"bin={val_stats['binarization']:.4f} periodic={val_stats['periodic']:.4f} "
               f"prior[tv={val_stats['prior_tv']:.4f} bin={val_stats['prior_binarization']:.4f} "
               f"periodic={val_stats['prior_periodic']:.4f}] "
-              f"disagree={val_stats['disagreement']:.5f}")
+              f"disagree={val_stats['disagreement']:.5f} "
+              f"volfrac_loss={val_stats['volfrac_loss']:.4f}")
 
         fe_r2 = None
         if fe_eval_conditions is not None and epoch % args.fe_eval_every == 0:
@@ -424,7 +501,8 @@ def main():
                 torch.save({
                     "model_state_dict": model.state_dict(),
                     "latent_dim": args.latent_dim,
-                    "condition_dim": 2,
+                    "condition_dim": condition_dim,
+                    "extended_condition": args.extended_condition,
                     "resolution": args.resolution,
                     "epoch": epoch,
                     "val_loss": val_stats["total"],
@@ -447,7 +525,8 @@ def main():
                 torch.save({
                     "model_state_dict": model.state_dict(),
                     "latent_dim": args.latent_dim,
-                    "condition_dim": 2,
+                    "condition_dim": condition_dim,
+                    "extended_condition": args.extended_condition,
                     "resolution": args.resolution,
                     "epoch": epoch,
                     "val_loss": best_val,

@@ -42,6 +42,7 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(__file__))
 from model import CVAE  # noqa: E402
 from manufacturability import force_periodic  # noqa: E402
+from dataset import build_condition_vector  # noqa: E402
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
@@ -63,6 +64,7 @@ def load_model(device="cpu", ckpt_path=CKPT_PATH):
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()
+    model.condition_dim = ckpt["condition_dim"]  # tiện tra cứu ở main() khi build condition
     return model
 
 
@@ -84,6 +86,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--v12", type=float, required=True)
     parser.add_argument("--v21", type=float, required=True)
+    parser.add_argument("--volfrac", type=float, default=None,
+                         help="Target tỉ lệ thể tích - OPTIONAL, chỉ có tác dụng nếu "
+                              "checkpoint được train với --extended-condition "
+                              "(condition_dim=6). Bỏ trống = không chỉ định (mask=0), "
+                              "model tự sinh volfrac không ràng buộc.")
+    parser.add_argument("--void-size-frac", type=float, default=None,
+                         help="Target kích thước lỗ rỗng - OPTIONAL, cùng điều kiện "
+                              "với --volfrac ở trên.")
     parser.add_argument("--n", type=int, default=8, help="số mẫu sinh ra")
     parser.add_argument("--out", type=str, default=None,
                          help="thư mục output tuỳ chỉnh (mặc định tự đặt theo v12/v21)")
@@ -128,7 +138,14 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model(device=device, ckpt_path=args.ckpt)
 
-    condition = torch.tensor([args.v12, args.v21], dtype=torch.float32, device=device)
+    if model.condition_dim == 2 and (args.volfrac is not None or args.void_size_frac is not None):
+        print("CẢNH BÁO: checkpoint này có condition_dim=2 (train KHÔNG có "
+              "--extended-condition) - --volfrac/--void-size-frac bị BỎ QUA.")
+    cond_np = build_condition_vector(
+        args.v12, args.v21, model.condition_dim,
+        volfrac=args.volfrac, void_size_frac=args.void_size_frac,
+    )
+    condition = torch.tensor(cond_np, dtype=torch.float32, device=device)
     samples = model.generate(condition, n_samples=args.n, device=device)  # (n,1,64,64)
 
     out_dir = args.out or os.path.join(

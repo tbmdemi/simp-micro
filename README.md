@@ -54,13 +54,13 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability + rebuild dQ | **8/8 lô gốc + batch 11 rebuild**, 7.920 mẫu, **91,9% auxetic** (đã rebuild 3 seed bị lỗi dQ, tăng từ 82,1%). Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: (a) phân tích ngược xác nhận SEED chi phối manufacturability - thêm phân bổ mẫu theo seed; (b) phát hiện + sửa lỗi `dQ` + rebuild đầy đủ 2.160 mẫu (3 seed bất đối xứng). Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2----hoàn-thành) bên dưới và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#bảng-tổng-hợp-lỗi-đã-sửa) |
 | 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành, **đã rebuild lần 2 (v2, 2026-07-25)** | **57.216 mẫu train** (sau aug) / 2.044 val / 2.044 test - dataset production hiện tại. Xem mục "Rebuild v2" ngay dưới bảng này |
 | 4 | CNN Surrogate Model | ✅ Hoàn thành, đã retrain trên dataset v2 | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set v2 (`surrogate_v2.pt`, 2026-07-25): ν₁₂ = **0,974**, ν₂₁ = **0,964**, volfrac = 0,983. Xem [Phase 4](#4-cnn-surrogate-model-phase-4----hoàn-thành) bên dưới |
-| 5 | Conditional VAE | ✅✅ Surrogate-exploitation đã sửa TẬN GỐC bằng differentiable-physics; đã retrain trên dataset v2 | `cvae_realphysics.pt` (fine-tune real-physics, 2026-07-24, checkpoint production hiện hành): R²(FE,n=789)=**0,999** (oracle), hit rate single-shot=**98,7%**, frac manufacturable=0,35. Xem [Phase 5](#5-conditional-vae-phase-5----đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) bên dưới; toàn bộ quá trình thử-sai xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Nâng cấp tuỳ chọn cGAN/conditional diffusion (mục 5.6/5.7 trong roadmap chi tiết): ⬜ chưa bắt đầu |
+| 5 | Conditional VAE | ✅✅ Surrogate-exploitation đã sửa TẬN GỐC bằng differentiable-physics; đã retrain trên dataset v2 | `cvae_realphysics.pt` (fine-tune real-physics, 2026-07-24, checkpoint production hiện hành): R²(FE,n=789)=**0,999** (oracle), hit rate single-shot=**98,7%**, frac manufacturable=0,35. Xem [Phase 5](#5-conditional-vae-phase-5----đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) bên dưới; toàn bộ quá trình thử-sai xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). Nâng cấp tuỳ chọn cGAN/conditional diffusion (mục 5.6/5.7 trong roadmap chi tiết): ⬜ chưa bắt đầu. **2026-07-25 (branch `feature/optional-multi-condition`, chưa merge):** thêm `volfrac`/`void_size_frac` làm condition **optional** (presence-mask + condition-dropout) và chấm điểm tổng hợp accuracy/manufacturability/aesthetic (`0,6/0,3/0,1`) thay `argmin(Δv12)` thuần túy trong `best_of_n_eval.py` - xem [mục 5.1](#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện) |
 | 6 | Hậu xử lý & kiểm định FEA | ✅ Hoàn thành | Nhị phân hoá + connectivity/min-feature/periodicity (`manufacturability.py`) + lọc/verify bằng FE thật (`best_of_n_eval.py`) - đã có sẵn trong pipeline Phase 5 |
 | 7 | Active-learning loop | ✅ Kết luận (2026-07-31) | Implement + chạy production (`pipeline/phase5_cvae/active_learning.py`) - **không cải thiện** checkpoint đã tối ưu (`cvae_realphysics.pt` gần mức trần, mean_abs_error tệ đi 0,0246→0,0686 sau 1 vòng) - giữ nguyên checkpoint production. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-07-31 |
 | 8 | Xác thực cuối & đóng gói | 🟨 Một phần | **8.1 đối chiếu FE độc lập**: ✅ xong, `scikit-fem` khớp engine nội bộ tới 1e-9 (R²=1,000000, n=24) - xác nhận đúng vật lý. **8.3 thư viện thiết kế**: ✅ xong, 24 thiết kế, hit-rate 100%, 87,5% xác nhận manufacturable. **8.2 biến dạng lớn**, **8.5 chuẩn bị STL**: ⬜ chưa làm (tuỳ chọn) |
 
 > Chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.): xem dashboard `html/dashboards/workflow.html`.
-> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng; khả năng chế tạo - xem [Phase 5](#5-conditional-vae-phase-5----đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng - đọc kỹ trước khi trích dẫn.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc) chưa khả dụng làm condition (dù `volfrac`/`void_size_frac` đã khả dụng dạng optional, xem [5.1](#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện), branch `feature/optional-multi-condition`, chưa merge); khả năng chế tạo - xem [Phase 5](#5-conditional-vae-phase-5----đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng - đọc kỹ trước khi trích dẫn.
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
@@ -307,6 +307,34 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 
 
 Hai checkpoint ngang ngửa nhau (cả hai đạt hit-rate best-of-N=1,0); `cvae_v2_finetuned.pt` nhỉnh hơn ở hit-rate single-shot (số quan trọng nhất cho dùng thực tế không lọc), `cvae_realphysics.pt` nhỉnh hơn nhẹ ở R²/manufacturability. **Khuyến nghị: dùng `cvae_v2_finetuned.pt` cho nhất quán với dataset production hiện tại**; `cvae_realphysics.pt` vẫn được giữ nguyên làm tham chiếu lịch sử, không bị ghi đè.
 
+#### 5.1. Tham số input tùy chọn volfrac và void size frac, chấm điểm toàn diện
+
+> **Trạng thái: branch `feature/optional-multi-condition` (chưa merge vào `FixLoss`).** Mục này mô tả tính năng đang phát triển, không phải hành vi mặc định của checkpoint/lệnh ở trên.
+
+Roadmap yêu cầu: (a) cho phép chỉ định thêm tham số ngoài `v12, v21` nhưng **KHÔNG bắt buộc** (người dùng chỉ cần v12/v21 vẫn dùng được bình thường); (b) chấm điểm lời giải toàn diện thay vì chỉ theo độ chính xác Poisson - độ chính xác/ổn định ưu tiên **cao**, khả năng chế tạo ưu tiên **trung bình**, thẩm mỹ ưu tiên **thấp**.
+
+- **`volfrac`/`void_size_frac` làm condition optional**: 2 tham số DOE này vốn đã có sẵn miễn phí trong `outputs/phase3/*.npz` (`params`/`param_names`, không cần backfill dữ liệu) nhưng trước đây không được đưa vào condition vector của cVAE. `--extended-condition` (train.py) mở `condition_dim` từ 2 lên 6: `[v12, v21, volfrac, volfrac_mask, void_size_frac, void_size_frac_mask]`. "Optional" triển khai bằng **presence-mask + condition-dropout kiểu classifier-free-guidance** (`train.py::apply_condition_dropout`, `--optional-dropout-p`, mặc định 0,5) - không chỉ set sentinel=0, vì model cần phân biệt "không chỉ định" với "giá trị thật bằng 0". `volfrac` có thêm loss riêng rẻ (`losses.volfrac_consistency_loss` - suy trực tiếp từ `recon.mean()`, không cần surrogate/FE); `void_size_frac` chưa có loss riêng (chỉ học ngầm qua reconstruction, giống cách v12/v21 hoạt động trước khi có property-consistency loss).
+
+```bash
+# Train với condition mở rộng (fine-tune từ checkpoint hiện có):
+python3 pipeline/phase5_cvae/train.py --extended-condition --lambda-volfrac 1.0 \
+  --resume-from outputs/phase5/cvae_realphysics.pt --output-name cvae_extended.pt
+
+# Suy diễn - volfrac/void_size_frac optional, bỏ trống = không ràng buộc:
+python3 pipeline/phase5_cvae/sample.py --ckpt outputs/phase5/cvae_extended.pt --v12 -0.5 --v21 -0.5
+python3 pipeline/phase5_cvae/sample.py --ckpt outputs/phase5/cvae_extended.pt --v12 -0.5 --v21 -0.5 --volfrac 0.35
+```
+
+- **Chấm điểm tổng hợp trong `best_of_n_eval.py`**: thay `argmin(|Δv12|)` thuần túy bằng `composite_score = w_accuracy·accuracy_score + w_manuf·manuf_score + w_aesthetic·aesthetic_score` (mặc định `0,6/0,3/0,1`, đúng thứ tự ưu tiên cao/trung bình/thấp; `--w-accuracy 1 --w-manuf 0 --w-aesthetic 0` để tái hiện hành vi gốc). `accuracy_score` chuẩn hóa min-max `|Δv12|` trong chính pool ứng viên; `manuf_score` là điểm graded (trung bình 3 cờ con `is_connected/min_feature_ok/periodic_ok`, không chỉ nhị phân `passes_all`); `aesthetic_score` (module mới `aesthetics.py`) = đối xứng (flip ngang/dọc) + độ trơn viền (tỉ lệ chu vi/diện tích), cố tình giữ rẻ/không cần model riêng vì là trục ưu tiên thấp nhất. `--require-manufacturable` (hard filter cũ) vẫn hoạt động song song, áp trước khi chấm composite.
+
+```bash
+python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_extended.pt \
+  --v12 -0.5 --v21 -0.5 --volfrac 0.35 --n-samples 30 \
+  --w-accuracy 0.6 --w-manuf 0.3 --w-aesthetic 0.1
+```
+
+- **Chưa làm** (xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md)): `f1=E₁₁/E₀, f2=E₂₂/E₀` (mục 5 [Giới hạn Đã biết](#giới-hạn-đã-biết--known-limitations)) suy được từ tensor `Q` mà `run_simp()` đã trả về nhưng chưa từng lưu xuống đĩa cho dataset hiện có - cần backfill 1 FE-solve/mẫu (rẻ, không phải chạy lại DOE) + train lại Phase 4 surrogate (hiện chỉ xuất 3 chiều `[v12,v21,volfrac]`) + kiểm tra multicollinearity (f1/f2 cùng suy từ `Q` với v12/v21) - để lại như việc kế tiếp, ngoài phạm vi nhánh này.
+
 ---
 
 ## Tham chiếu CLI
@@ -422,7 +450,7 @@ Mục này gộp lại toàn bộ khoảng trống/giới hạn đã biết củ
 
 4. **Thành phần phạt `mu` trong hàm mục tiêu auxetic đang tắt** (`mu=0.0`, sai sót khái niệm chưa thiết kế lại) - toàn bộ dataset hiện có (Phase 2-5) dùng cấu hình này.
 
-5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** - `compute_homogenized_tensor()` chưa xuất `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved`.
+5. **`f1, f2` (mục tiêu độ cứng chuẩn hóa theo roadmap gốc) chưa khả dụng** - `simp/runner.py::run_simp()` đã trả về tensor `Q` 3×3 đầy đủ (chứa đủ thông tin để suy `E₁₁/E₀, E₂₂/E₀`) nhưng `Q` chưa từng được lưu xuống đĩa cho dataset hiện có (`pipeline/phase2_multi_batch/runner.py::evaluate_single()` chỉ trích `v12/v21/obj_value`) - cần backfill (1 FE-solve/mẫu trên ảnh cuối đã lưu, không phải chạy lại DOE) + mở rộng Phase 4 surrogate (hiện chỉ xuất 3 chiều) + kiểm tra multicollinearity với v12/v21 (cùng suy từ 1 `Q`). **Cập nhật 2026-07-25 (branch `feature/optional-multi-condition`, chưa merge):** `volfrac`/`void_size_frac` (2 tham số DOE khác, vốn đã có sẵn miễn phí trong dataset) giờ khả dụng làm condition **optional** - xem [mục 5.1](#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện); `f1, f2` vẫn CHƯA làm, vẫn chỉ dùng `ν₁₂, ν₂₁, volfrac_achieved`.
 
 6. **Test tự động (437/437 pass) chưa phủ hết I/O nặng**: vòng lặp chính của `screening_parallel.py`, `pipeline/seeds/*.py`, `visualize.py`, và lệnh gọi SIMP FE thật bên trong `multi_batch/runner.py::evaluate_single` (được mock trong test hiện có).
 
@@ -462,7 +490,7 @@ This section consolidates every known gap/limitation of the project in one place
 
 4. **The `mu` penalty term in the auxetic objective is disabled** (`mu=0.0`, unresolved conceptual flaw) - the entire existing dataset (Phase 2-5) uses this configuration.
 
-5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** - `compute_homogenized_tensor()` doesn't export `E₁₁/E₀, E₂₂/E₀`; dataset/surrogate/cVAE only use `ν₁₂, ν₂₁, volfrac_achieved`.
+5. **`f1, f2` (normalized stiffness targets from the original roadmap) are not available** - `simp/runner.py::run_simp()` already returns the full 3×3 `Q` tensor (enough to derive `E₁₁/E₀, E₂₂/E₀`) but `Q` was never persisted to disk for the existing dataset (`pipeline/phase2_multi_batch/runner.py::evaluate_single()` only extracts `v12/v21/obj_value`) - would need a backfill (1 FE-solve per saved final-density image, not a DOE rerun) plus extending the Phase 4 surrogate (currently 3-dim output) and checking multicollinearity with v12/v21 (both derive from the same `Q`). **Update 2026-07-25 (branch `feature/optional-multi-condition`, not merged):** `volfrac`/`void_size_frac` (2 other DOE parameters, already free in the dataset) are now available as **optional** condition dims - see [section 5.1](#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện) (Vietnamese-only, like the rest of the Phase 5 walkthrough - see item 8); `f1, f2` are still NOT done, dataset/surrogate/cVAE still only use `ν₁₂, ν₂₁, volfrac_achieved`.
 
 6. **Automated tests (437/437 pass) don't cover the heaviest I/O paths**: `screening_parallel.py`'s main loop, `pipeline/seeds/*.py`, `visualize.py`, and the real SIMP FE call inside `multi_batch/runner.py::evaluate_single` (mocked in the existing tests).
 

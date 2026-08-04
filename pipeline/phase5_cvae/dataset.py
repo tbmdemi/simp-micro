@@ -6,8 +6,17 @@ v12/v21 ở đây là CONDITION đầu vào cVAE (không phải target regress),
 nguyên đơn vị vật lý (không chuẩn hoá). seed_onehot vẫn trả về nhưng chỉ dùng
 phụ ở evaluate.py, không đưa vào condition vector (xem model.py).
 
-Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21], seed_vec
-(n_seeds,) one-hot, volfrac scalar.
+Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21] (mặc định) hoặc
+(6,)=[v12,v21,volfrac,volfrac_mask,void_size_frac,void_size_frac_mask] khi
+`extended_condition=True` (xem `CVAEDataset.__init__`), seed_vec (n_seeds,)
+one-hot, volfrac scalar (luôn trả riêng, kể cả khi đã có trong condition -
+dùng cho volfrac_consistency_loss).
+
+extended_condition thêm volfrac/void_size_frac làm tham số OPTIONAL: mask ở
+đây LUÔN=1 (dataset chỉ mô tả dữ liệu thật, có sẵn); train.py mới là nơi áp
+condition-dropout (zero value + mask=0 ngẫu nhiên) để model học bỏ qua các
+chiều optional lúc suy diễn không được chỉ định - xem losses.py
+`volfrac_consistency_loss` và train.py `run_epoch`.
 """
 import os
 import json
@@ -21,7 +30,7 @@ V12_WEIGHTS_PATH = os.path.join(PHASE3_DIR, "v12_bin_weights.json")
 
 
 class CVAEDataset(Dataset):
-    def __init__(self, npz_path: str):
+    def __init__(self, npz_path: str, extended_condition: bool = False):
         data = np.load(npz_path, allow_pickle=True)
         self.images = data["images"]                       # (N, RES, RES) [0,1]
         self.v12 = data["v12"].astype(np.float32)
@@ -29,6 +38,13 @@ class CVAEDataset(Dataset):
         self.volfrac_achieved = data["volfrac_achieved"].astype(np.float32)
         self.seed_onehot = data["seed_onehot"].astype(np.float32)  # (N, n_seeds)
         self.seed_classes = data["seed_classes"]
+
+        self.extended_condition = extended_condition
+        self.void_size_frac = None
+        if extended_condition:
+            param_names = list(data["param_names"])
+            void_idx = param_names.index("void_size_frac")
+            self.void_size_frac = data["params"][:, void_idx].astype(np.float32)
 
     def __len__(self):
         return len(self.images)
@@ -41,14 +57,39 @@ class CVAEDataset(Dataset):
     def resolution(self) -> int:
         return self.images.shape[-1]
 
+    @property
+    def condition_dim(self) -> int:
+        return 6 if self.extended_condition else 2
+
     def __getitem__(self, idx):
         image = torch.from_numpy(self.images[idx]).unsqueeze(0)  # (1, RES, RES)
-        condition = torch.tensor(
-            [self.v12[idx], self.v21[idx]], dtype=torch.float32
-        )
+        cond_values = [self.v12[idx], self.v21[idx]]
+        if self.extended_condition:
+            cond_values += [
+                self.volfrac_achieved[idx], 1.0,
+                self.void_size_frac[idx], 1.0,
+            ]
+        condition = torch.tensor(cond_values, dtype=torch.float32)
         seed_vec = torch.from_numpy(self.seed_onehot[idx])
         volfrac = torch.tensor(self.volfrac_achieved[idx], dtype=torch.float32)
         return image, condition, seed_vec, volfrac
+
+
+def build_condition_vector(v12: float, v21: float, condition_dim: int,
+                            volfrac: float = None, void_size_frac: float = None) -> np.ndarray:
+    """Dựng condition vector cho suy diễn (sample.py/best_of_n_eval.py) -
+    dùng chung 1 chỗ để 2 script không lệch quy ước. condition_dim==2:
+    hành vi cũ, bỏ qua volfrac/void_size_frac nếu lỡ truyền (in cảnh báo ở
+    caller). condition_dim==6: volfrac/void_size_frac=None -> (0.0, mask=0.0)
+    ĐÚNG quy ước condition-dropout lúc train (xem train.py
+    apply_condition_dropout) - giá trị có -> (value, mask=1.0)."""
+    if condition_dim == 2:
+        return np.array([v12, v21], dtype=np.float32)
+    if condition_dim != 6:
+        raise ValueError(f"condition_dim={condition_dim} không được hỗ trợ (chỉ 2 hoặc 6).")
+    vol_val, vol_mask = (volfrac, 1.0) if volfrac is not None else (0.0, 0.0)
+    void_val, void_mask = (void_size_frac, 1.0) if void_size_frac is not None else (0.0, 0.0)
+    return np.array([v12, v21, vol_val, vol_mask, void_val, void_mask], dtype=np.float32)
 
 
 def compute_v12_bin_weights(v12: np.ndarray, bin_edges: np.ndarray, alpha: float = 0.5) -> np.ndarray:
