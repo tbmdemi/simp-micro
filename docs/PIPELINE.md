@@ -51,7 +51,9 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 
 - Ảnh PNG mật độ (từ lưới `xPhys` 50×50) resize về 64×64 bằng box-filter downsampling; 33/7.920 mẫu (0,4%) bị loại (topology suy biến, `volfrac_achieved` ngoài `[0,05, 0,95]`).
 - **Chia train/val/test 70/15/15, phân tầng theo seed**; **tăng cường đối xứng** (chỉ train): xoay 90°/270° hoán đổi `ν₁₂↔ν₂₁`, xoay 180°/lật giữ nguyên. Train: 5.520 → 33.120 mẫu (×6) *(số liệu lịch sử - xem cập nhật ngay dưới)*.
-- Target xuất ra: `v12`, `v21`, `volfrac_achieved`. `f1, f2` (roadmap gốc) chưa khả dụng - cần mở rộng `compute_homogenized_tensor()` để xuất độ cứng chuẩn hóa trước.
+- Target xuất ra: `v12`, `v21`, `volfrac_achieved`. `f1, f2` (roadmap gốc) - xem cập nhật 2026-08-05 ngay dưới.
+
+**2026-08-05 - Backfill f1=E₁₁/E₀, f2=E₂₂/E₀ (Pha B), Phase 4 surrogate 5-chiều:** `analysis/scripts/backfill_f1_f2_npz.py` chạy FE trực tiếp trên ảnh đã lưu trong `{train,val,test}.npz` (không join qua manifest.csv - lý do và caveat nhiễu resize xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-05). Surrogate mở rộng (`train.py --include-f1f2`) đạt R²(test): f1=0,933, f2=0,961 - cùng bậc v12/v21. Checkpoint: `outputs/phase4/surrogate_f1f2.pt`. **Chưa làm:** nối f1/f2 làm condition cho cVAE Phase 5.
 
 **2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
 
@@ -159,4 +161,4 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_e
   --w-accuracy 0.6 --w-manuf 0.3 --w-aesthetic 0.1
 ```
 
-- **Chưa làm** (xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md)): `f1=E₁₁/E₀, f2=E₂₂/E₀` (Pha B, mục 5 [Giới hạn Đã biết](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)) suy được từ tensor `Q` mà `run_simp()` đã trả về nhưng chưa từng lưu xuống đĩa cho dataset hiện có - cần backfill 1 FE-solve/mẫu (rẻ, không phải chạy lại DOE) + train lại Phase 4 surrogate (hiện chỉ xuất 3 chiều `[v12,v21,volfrac]`) + kiểm tra multicollinearity (f1/f2 cùng suy từ `Q` với v12/v21) - để lại như việc kế tiếp.
+- **[XONG 2026-08-05, chỉ ở mức Phase 4]** `f1=E₁₁/E₀, f2=E₂₂/E₀` (Pha B) đã backfill + surrogate 5-chiều đạt R²≈0,93-0,96 - xem mục 3 ở trên. **Chưa làm:** nối f1/f2 làm condition cho cVAE Phase 5 (mới chỉ Pha A - volfrac/void_size_frac - có ở Phase 5).

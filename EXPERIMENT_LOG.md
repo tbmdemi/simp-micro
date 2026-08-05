@@ -303,6 +303,40 @@ Trên nhóm extreme_auxetic thì KHÔNG có tin tốt: cVAE bão hòa quanh v₁
 
 Code: `analysis/scripts/ood_baseline_comparison.py` (mới, tái dùng hạ tầng có sẵn). Kết quả đầy đủ: `outputs/phase5/reports/ood_baseline_comparison_cvae_realphysics.json`. Đã cập nhật `docs/LIMITATIONS.md` mục #19 (VI+EN) và mục tóm tắt claim đầu file. Trên nhánh `main`, uncommitted.
 
+### 2026-08-05 - Backfill f1=E₁₁/E₀, f2=E₂₂/E₀ (Pha B roadmap gốc) - phát hiện landmine manifest.csv giữa chừng, đổi phương án, Phase 4 surrogate 5-chiều đạt R² cùng bậc v12/v21
+
+Bối cảnh: `Q` (tensor độ cứng đồng nhất hóa 3×3 đầy đủ) được `run_simp()` tính ở MỌI lần chạy FE nhưng chưa từng lưu xuống đĩa - chỉ `v12/v21/obj_value` được giữ (xem [Giới hạn #5](docs/LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Kế hoạch ban đầu: đọc `outputs/phase3/manifest.csv` (10.269 dòng, có `image_path`), chạy lại FE trên ảnh gốc độ phân giải cao, join kết quả vào `train/val/test.npz` theo `image_path`.
+
+**Landmine phát hiện giữa chừng:** `manifest.csv` (10.269 dòng) KHÔNG khớp số lượng thật của pool đã dùng để build `train/val/test.npz` hiện tại - suy ngược từ `split_report.json` (`n_train_after_augment`=57.216, augment x6 cố định → 9.536 mẫu gốc + val 2.044 + test 2.044 = **13.624**, khớp CHÍNH XÁC với `outputs/phase3/dataset_64.npz` có sẵn (n=13.624) nhưng KHÔNG khớp `manifest.csv` - chênh 3.355 dòng, không rõ nguồn gốc chênh lệch (có thể `manifest.csv` là bản trung gian/cũ, pool gốc `outputs/phase3_v2_raw/` đã không còn trên đĩa để đối chiếu lại). Join theo `image_path` từ `manifest.csv` sẽ SAI LỆCH ngầm mà không phát hiện được (thiếu ~1/4 dữ liệu, không rõ mẫu nào). Quan trọng hơn: 5/6 mẫu trong `train.npz` là bản tăng cường đối xứng (xoay/lật) CHỈ tồn tại dưới dạng mảng numpy trong `.npz` - không có file PNG gốc nào trên đĩa để chạy FE độ phân giải cao hơn, kể cả khi giải quyết được vấn đề join.
+
+**Đổi phương án:** viết `analysis/scripts/backfill_f1_f2_npz.py` - chạy FE TRỰC TIẾP trên ảnh 64×64 đã lưu sẵn trong `{train,val,test}.npz` (dùng `penal` thật từ `params[:,1]`), không cần join gì cả - an toàn tuyệt đối về mặt liên kết dữ liệu, đổi lại chấp nhận thêm 1 lớp resize (64×64→50×50 lưới FE, sau khi ảnh gốc đã qua 1 lần resize xuống 64×64 khi build dataset) làm nhiễu tăng nhẹ so với phương án đọc ảnh gốc (sanity check ban đầu trên `manifest.csv` cho sai số median chỉ 0,0006-0,0018; phương án cuối cho median 0,0018 nhưng đuôi dài hơn, max tới 0,99 ở 3,2% mẫu train - xem phân bố đầy đủ trong `docs/PIPELINE.md § 3`).
+
+12 worker song song, ~14 phút cho 57.216 mẫu train (val/test ~2 phút mỗi tập), 0 lỗi FE. Merge vào `outputs/phase3/{split}_ext.npz` (giữ nguyên mọi field cũ + f1, f2, `dv12_backfill_qc`).
+
+**Mở rộng Phase 4 surrogate** (`dataset.py::AuxeticDataset(include_f1f2=...)`, `model.py::SurrogateCNN(n_outputs=...)`, `train.py --include-f1f2` - tương thích ngược hoàn toàn, mặc định TẮT, mọi test cũ (28 test) vẫn pass). Train 5-target (`[v12,v21,volfrac,f1,f2]`, trọng số loss `[1,1,0.3,1,1]`) trên GPU, ~14s/epoch, early-stop epoch 42 (val_loss=0,00249). Kết quả R²(test, n=2044): **v12=0,970, v21=0,960, volfrac=0,980, f1=0,933, f2=0,961** - f1/f2 học được TỐT dù dữ liệu backfill nhiễu hơn, không có dấu hiệu nhiễu resize cản trở việc học (nhiễu trung bình hoá qua N lớn).
+
+**Multicollinearity** (đo trực tiếp trên 57.216 mẫu, không cần chờ model): corr(v12,f2)=0,692, corr(v21,f1)=0,645 - hợp lý về vật lý (v12≈Q₁₂/Q₂₂=Q₁₂/(f2·E₀) theo công thức rút gọn trong `objectives/auxetic.py` docstring, tương tự v21↔f1), nhưng KHÔNG đủ mạnh (chưa tới 0,7) để coi f1/f2 là dư thừa/suy được tuyến tính từ v12/v21.
+
+**Chưa làm tiếp** (ngoài phạm vi hôm nay): nối f1/f2 làm condition cho cVAE Phase 5 - mới dừng ở Phase 4 surrogate. Checkpoint: `outputs/phase4/surrogate_f1f2.pt`. Code: `analysis/scripts/backfill_f1_f2_npz.py`, `merge_f1f2_into_npz.py` (mới); `pipeline/phase4_surrogate/{dataset,model,train}.py` (sửa, tương thích ngược). Đã cập nhật `docs/PIPELINE.md § 3`, `README.md`, `docs/LIMITATIONS.md` mục #5 (VI+EN). Trên nhánh `main`, uncommitted.
+
+### 2026-08-05 (tiếp) - A/B test `objective_variant='normalized'` (ứng viên thay thế `mu` penalty) - kết quả tiêu cực rõ ràng trên cả 3 seed, KHÔNG nên bật
+
+Bối cảnh: `mu` penalty tuyến tính (`c = Q12 - mu*(Q11+Q22)`) đã bị tắt từ trước (mu=0.0) vì sai sót khái niệm - `runner.py:305` ghi rõ thực nghiệm cũ cho thấy mu>0 không cải thiện. Code đã có sẵn 1 ứng viên thay thế CHƯA TỪNG test: `compute_auxetic_normalized_objective()` (`simp/objectives/auxetic.py:100-157`, `c = Q12/√(Q11·Q22)`) - nhờ bất đẳng thức Cauchy-Schwarz trên ma trận PSD `Q`, tỉ số này tự nhiên bị chặn [-1,1] mà không cần tham số tùy chỉnh nào, đúng chỗ `mu` bị coi là sai khái niệm. Wired sẵn qua `objective_variant='normalized'` trong `run_simp()`, nhưng docstring ghi rõ "CHƯA áp dụng cho dataset hiện có, cần A/B test trước" - không cần thiết kế công thức mới, chỉ cần đo.
+
+Viết `analysis/scripts/pilot_normalized_objective.py` (cùng pattern `pilot_mma.py`), so `q12` (mặc định) vs `normalized` trên CÙNG dải tham số production, n=50 mẫu/config, 3 seed khó (`hexagonal`, `hourglass`, `reentrant_bowtie`) - tổng 300 lần chạy SIMP, ~12s/mẫu đơn luồng, 10 worker song song, tổng ~10 phút.
+
+| Seed | q12 sạch | normalized sạch | q12 osc_unstable | normalized osc_unstable | q12 disconnected | normalized disconnected |
+|---|---|---|---|---|---|---|
+| hexagonal | 84,0% | **8,0%** | 10% | **92%** | 8% | **82%** |
+| hourglass | 72,0% | **26,0%** | 18% | **72%** | 26% | 26% |
+| reentrant_bowtie | 92,0% | **32,0%** | 8% | **58%** | 8% | 30% |
+
+**Kết quả rõ ràng, nhất quán trên cả 3 seed: `normalized` làm yield sụp đổ nặng** (giảm 60-76 điểm phần trăm tuyệt đối). Điều bất ngờ: KHÔNG phải do sai dấu auxetic - `reentrant_bowtie` với `normalized` đạt 100% đúng dấu v12<0 (còn tốt hơn `q12`'s 92%), `hourglass` giữ nguyên 84%. Nguyên nhân thật sự là **mất ổn định hội tụ** (`osc_unstable` tăng 5-9 lần ở cả 3 seed) - nhãn dao động limit-cycle cuối vòng lặp (xem [Giới hạn #13](docs/LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)), cộng thêm rời rạc hoá nặng riêng ở `hexagonal` (8%→82%, kèm `Q11/Q22` trung bình tăng vọt 22→33 - dấu hiệu optimizer "lách" bằng cách làm cứng đều cả 2 trục thay vì đẩy Q12 âm thật).
+
+**Diễn giải:** chuẩn hoá theo `√(Q11·Q22)` tuy đúng và có chặn-biên đẹp về mặt lý thuyết, nhưng đưa vào 1 phép chia phi tuyến trong gradient (`dc` có thêm số hạng `-Q12*dP/(2*denom³)`) làm cảnh quan gradient khó hội tụ hơn nhiều trong khung OC + continuation hiện tại (không phải vấn đề riêng của bất kỳ seed nào - nhất quán cả 3). **Cả 2 hướng thay thế `mu` (phạt tuyến tính VÀ chuẩn hoá tỉ lệ) giờ đều đã bị loại bằng thực nghiệm trực tiếp** - giữ nguyên mặc định `mu=0.0`/`objective_variant='q12'`. Muốn tiếp tục hướng này cần ý tưởng khác hẳn (không phải đổi công thức objective nữa), ví dụ đổi cơ chế tối ưu (MMA đã thắng lớn ở `hexagonal`/`hourglass` cho vấn đề khác - có thể đáng thử kết hợp) hoặc continuation schedule khác cho riêng `normalized`.
+
+Code: `analysis/scripts/pilot_normalized_objective.py` (mới). Manifest đầy đủ: `outputs/pilot_normalized_{hexagonal,hourglass,reentrant_bowtie}/manifest.csv`. Đã cập nhật `docs/LIMITATIONS.md` mục #4 (VI+EN). Trên nhánh `main`, uncommitted.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

@@ -27,7 +27,11 @@ class ConvBlock(nn.Module):
 
 
 class SurrogateCNN(nn.Module):
-    def __init__(self, n_seeds: int, channels=(32, 64, 128, 256), fc_hidden=128):
+    def __init__(self, n_seeds: int, channels=(32, 64, 128, 256), fc_hidden=128,
+                 n_outputs: int = 3):
+        """n_outputs=3 (mac dinh, tuong thich nguoc): [v12,v21,volfrac_achieved].
+        n_outputs=5: them f1=E11/E0, f2=E22/E0 (backfill 2026-08-05, xem
+        dataset.py::AuxeticDataset(include_f1f2=True))."""
         super().__init__()
         blocks = []
         in_ch = 1
@@ -38,18 +42,19 @@ class SurrogateCNN(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)  # -> (B, channels[-1], 1, 1)
 
         fc_in = channels[-1] + n_seeds  # concat seed one-hot sau GAP
+        self.n_outputs = n_outputs
         self.fc = nn.Sequential(
             nn.Linear(fc_in, fc_hidden),
             nn.ReLU(inplace=True),
             nn.Dropout(0.2),
-            nn.Linear(fc_hidden, 3),  # [v12, v21, volfrac_achieved]
+            nn.Linear(fc_hidden, n_outputs),
         )
 
     def forward(self, image, seed_vec):
         x = self.conv(image)                # (B, C, H', W')
         x = self.gap(x).flatten(1)           # (B, C)
         x = torch.cat([x, seed_vec], dim=1)  # (B, C + n_seeds)
-        return self.fc(x)                    # (B, 3)
+        return self.fc(x)                    # (B, n_outputs)
 
 
 if __name__ == "__main__":

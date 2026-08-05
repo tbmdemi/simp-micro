@@ -60,14 +60,14 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 8 | Xác thực cuối & đóng gói | 🟨 Một phần | **8.1 đối chiếu FE độc lập**: ✅ xong, `scikit-fem` khớp engine nội bộ tới 1e-9 (R²=1,000000, n=24) - xác nhận đúng vật lý. **8.3 thư viện thiết kế**: ✅ xong, 24 thiết kế, hit-rate 100%, 87,5% xác nhận manufacturable. **8.2 biến dạng lớn**, **8.5 chuẩn bị STL**: ⬜ chưa làm (tuỳ chọn) |
 
 > Chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.): xem dashboard `html/dashboards/workflow.html`.
-> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`, đang chờ thiết kế lại); đồng nhất hóa chưa xuất độ cứng `E₁₁/E₀, E₂₂/E₀` nên `f1, f2` (roadmap gốc, Pha B) chưa khả dụng làm condition (dù `volfrac`/`void_size_frac` đã khả dụng dạng optional, xem [docs/PIPELINE.md § 5.1](docs/PIPELINE.md#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện)); khả năng chế tạo - xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng - đọc kỹ trước khi trích dẫn.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): phạt `mu` tắt, biến thể thay thế đã A/B test và bị loại (2026-08-05); `f1=E₁₁/E₀, f2=E₂₂/E₀` (Pha B) đã backfill tới Phase 4 (R²≈0,93-0,96) nhưng CHƯA nối condition cho cVAE Phase 5 (khác `volfrac`/`void_size_frac` - Pha A - đã tới Phase 5, xem [docs/PIPELINE.md § 5.1](docs/PIPELINE.md#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện)); các R²/hit-rate của Phase 5 đo trên cỡ mẫu rất nhỏ (n=3-24 điều kiện), CI rộng - đọc kỹ trước khi trích dẫn.
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
 Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02: "bạn đang claim cái gì, thật sự, và bằng chứng nào?" Bản đầy đủ (kèm 19 mục Giới hạn Đã biết): [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-- **Claim ĐƯỢC ủng hộ bởi bằng chứng:** engine FE/homogenization đúng vật lý (đối chiếu độc lập bằng `scikit-fem`); checkpoint cVAE hiện tại sinh single-shot đáng tin cậy để dự đoán (v₁₂,v₂₁) đúng DẤU ở tỉ lệ cao (n=789); cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty); cVAE vượt trội retrieval NGOÀI phân phối train về tổng quát (R²=0,418 vs 0,057, n=12) - đặc biệt retrieval về cấu trúc không bao giờ trả lời đúng dấu khi target ngoài vùng train, cVAE làm được cho đa số target sign-flip (2026-08-04).
-- **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; cVAE vượt trội baseline nearest-neighbor retrieval về độ chính xác trong-phân-phối (baseline đo 2026-08-02 cho thấy CHƯA có bằng chứng, retrieval còn thắng); cVAE ngoại suy được CƯỜNG ĐỘ auxetic vượt xa phạm vi train (cả cVAE lẫn retrieval đều thất bại nặng ở trục này, 2026-08-04); `hit_rate` như chỉ số độc lập (base rate ~92% auxetic khiến metric này yếu, R² đáng tin hơn).
+- **Claim ĐƯỢC ủng hộ bởi bằng chứng:** engine FE/homogenization đúng vật lý (đối chiếu độc lập bằng `scikit-fem`); checkpoint cVAE hiện tại sinh single-shot đáng tin cậy để dự đoán đúng DẤU (v₁₂,v₂₁) ở tỉ lệ cao (n=789); cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty); cVAE vượt trội retrieval trên trục đổi dấu NGOÀI phân phối train (R²=0,42 vs 0,06, n=12).
+- **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; cVAE vượt trội retrieval về độ chính xác trong-phân-phối (retrieval còn thắng); cVAE ngoại suy được cường độ auxetic vượt xa phạm vi train; `hit_rate` như chỉ số độc lập (base rate ~92% auxetic khiến metric này yếu, R² đáng tin hơn).
 - **Không claim:** "đã giải quyết inverse design", "cVAE tốt hơn phương pháp classical trong mọi trường hợp", "surrogate có thể thay FE ở vùng chưa kiểm chứng".
 
 ---
@@ -297,7 +297,7 @@ Danh sách đầy đủ 18 mục (song ngữ Việt/English) đã được tách
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
-- `f1, f2` (Pha B, độ cứng chuẩn hóa) chưa khả dụng làm condition - chỉ `volfrac`/`void_size_frac` (Pha A) đã xong.
+- `f1, f2` (Pha B, độ cứng chuẩn hóa) đã backfill + surrogate Phase 4 5-chiều (2026-08-05) nhưng CHƯA nối làm condition cho cVAE - chỉ `volfrac`/`void_size_frac` (Pha A) đã tới Phase 5.
 - Test tự động (483/483 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, FE call thật).
 - Toàn bộ pipeline dùng FEM tuyến tính (giả định biến dạng nhỏ) - xem mục 14.
 - `hit_rate` là metric yếu do base rate ~92% auxetic của dataset; chưa có bằng chứng cVAE vượt trội baseline nearest-neighbor trong-phân-phối (mục 17-18, phát hiện 2026-08-02).
@@ -308,6 +308,7 @@ Danh sách đầy đủ 18 mục (song ngữ Việt/English) đã được tách
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 18 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
+- [`docs/SLIDE_AND_REPORT_GUIDE.md`](docs/SLIDE_AND_REPORT_GUIDE.md) - hướng dẫn dựng slide thuyết trình + báo cáo khoa học (IMRaD): outline chi tiết, kiểm kê hình/dashboard có sẵn, sơ đồ Mermaid cần vẽ, checklist claim khoa học
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án
 - `html/dashboards/workflow.html` - dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
 - `html/index.html` - dashboard/báo cáo bổ sung (lưu ý: một số trang chỉ phản ánh screening Phase 1, chưa tái sinh theo Phase 2-5)

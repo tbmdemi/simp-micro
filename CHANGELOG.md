@@ -112,8 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Fixed
 - Bug scaling `Q` (A1) trong `compute_homogenized_tensor()` - `Q_cũ = Q_đúng × E0/nele`, khiến ngưỡng phạt stiffness hiệu lực ~46% thay vì 10% thiết kế suốt lịch sử dự án (vô tình làm regularizer cho `hexagonal`). Sau khi sửa đúng, lộ ra bug thứ 2 (`X_MIN=0,0` thay vì `0,001`, trạng thái hấp thụ toán học) - sửa cả 2, tỷ lệ sụp cấu trúc 16,7%→0% (N=400).
 
-#### Known issue (đã chấp nhận, không phải bug chưa sửa)
-- `hexagonal` yield thấp hơn lịch sử sau khi sửa 2 bug trên (~80,5% so với 93,9%) - đã thử 3 hướng khắc phục, cả 3 đều phản tác dụng, xác nhận cấu hình mặc định hiện tại đã tốt nhất trong các hướng đã thử. Xem README §Giới hạn Đã biết #16.
+#### Known issue → [ĐÃ GIẢI QUYẾT, xem "Added" ở trên] (sửa 2026-08-05, dòng này trước đó mâu thuẫn với chính mục Added)
+- `hexagonal` yield thấp hơn lịch sử trong khung OC/gate sau khi sửa 2 bug trên (~80,5% so với 93,9%) - đã thử 3 hướng khắc phục THAM SỐ (không đổi optimizer), cả 3 đều phản tác dụng. Nhưng đổi hẳn optimizer (MMA, xem "Added" ngay trên) giải quyết triệt để (76,5%→99,8%, N=400) - dòng "known issue" gốc ở đây đã lỗi thời ngay từ khi CHANGELOG được viết. Khoảng trống còn lại thật: dataset 57k production hiện dùng sinh bằng code TRƯỚC MMA dispatch, chưa rebuild. Xem [docs/LIMITATIONS.md](docs/LIMITATIONS.md) mục #16 (đã sửa 2026-08-05).
 
 ### 2026-07-31 - Phase 7 (active-learning) kết luận + Phase 8.1/8.3 (chưa gắn số phiên bản)
 

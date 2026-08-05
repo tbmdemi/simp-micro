@@ -30,8 +30,11 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE4_DIR = os.path.join(REPO_ROOT, "outputs", "phase4")
 
-# Trọng số loss theo roadmap 4.1: v12, v21 quan trọng hơn volfrac
-LOSS_WEIGHTS = torch.tensor([1.0, 1.0, 0.3])
+# Trọng số loss theo roadmap 4.1: v12, v21 quan trọng hơn volfrac.
+# 5 chiều (--include-f1f2, backfill 2026-08-05): f1/f2 (E11/E0, E22/E0) đặt
+# ngang v12/v21 - đều là mục tiêu vật lý chính, volfrac chỉ phụ.
+LOSS_WEIGHTS_3 = torch.tensor([1.0, 1.0, 0.3])
+LOSS_WEIGHTS_5 = torch.tensor([1.0, 1.0, 0.3, 1.0, 1.0])
 
 
 def weighted_mse(pred, target, weights):
@@ -50,14 +53,14 @@ def weighted_mse(pred, target, weights):
     diff = diff.clamp(-10.0, 10.0)  # prevent squared blowup
     sq = (diff ** 2) * valid
     counts = valid.sum(dim=0).clamp(min=1)
-    per_target_mse = sq.sum(dim=0) / counts  # (3,)
+    per_target_mse = sq.sum(dim=0) / counts  # (n_targets,)
     return (per_target_mse * weights.to(pred.device)).sum(), per_target_mse.detach()
 
 
-def run_epoch(model, loader, optimizer, device, train: bool):
+def run_epoch(model, loader, optimizer, device, train: bool, loss_weights: torch.Tensor = LOSS_WEIGHTS_3):
     model.train() if train else model.eval()
     total_loss = 0.0
-    total_per_target = torch.zeros(3)
+    total_per_target = torch.zeros(len(loss_weights))
     n_batches = 0
 
     context = torch.enable_grad() if train else torch.no_grad()
@@ -65,7 +68,7 @@ def run_epoch(model, loader, optimizer, device, train: bool):
         for image, seed_vec, targets in loader:
             image, seed_vec, targets = image.to(device), seed_vec.to(device), targets.to(device)
             pred = model(image, seed_vec)
-            loss, per_target = weighted_mse(pred, targets, LOSS_WEIGHTS)
+            loss, per_target = weighted_mse(pred, targets, loss_weights)
 
             if train:
                 optimizer.zero_grad()
@@ -114,6 +117,17 @@ def main():
     parser.add_argument("--seed", type=int, default=0,
                          help="RNG seed cho torch/numpy/DataLoader shuffle - đảm bảo "
                               "training reproducible giữa các lần chạy cùng config.")
+    parser.add_argument("--include-f1f2", action="store_true",
+                         help="Mở rộng target sang 5 chiều [v12,v21,volfrac,f1,f2] "
+                              "(f1=E11/E0, f2=E22/E0, backfill 2026-08-05, xem "
+                              "analysis/scripts/backfill_f1_f2_npz.py). Cần "
+                              "outputs/phase3/{train,val}_ext.npz (mặc định khi bật cờ "
+                              "này). Mặc định TẮT - hành vi cũ 3 target.")
+    parser.add_argument("--train-npz", type=str, default=None,
+                         help="Override đường dẫn train npz (mặc định train.npz, hoặc "
+                              "train_ext.npz nếu --include-f1f2).")
+    parser.add_argument("--val-npz", type=str, default=None,
+                         help="Override đường dẫn val npz (tương tự --train-npz).")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -123,8 +137,14 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Thiết bị: {device}")
 
-    train_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "train.npz"))
-    val_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "val.npz"))
+    default_suffix = "_ext" if args.include_f1f2 else ""
+    train_npz = args.train_npz or os.path.join(PHASE3_DIR, f"train{default_suffix}.npz")
+    val_npz = args.val_npz or os.path.join(PHASE3_DIR, f"val{default_suffix}.npz")
+    train_ds = AuxeticDataset(train_npz, include_f1f2=args.include_f1f2)
+    val_ds = AuxeticDataset(val_npz, include_f1f2=args.include_f1f2)
+    loss_weights = LOSS_WEIGHTS_5 if args.include_f1f2 else LOSS_WEIGHTS_3
+    target_names = (["v12", "v21", "volfrac_achieved", "f1", "f2"] if args.include_f1f2
+                     else ["v12", "v21", "volfrac_achieved"])
     base_n_seeds = train_ds.n_seeds
     base_seed_classes = train_ds.seed_classes
     if args.limit:
@@ -138,7 +158,7 @@ def main():
         from torch.utils.data import ConcatDataset
         extra = []
         for p in args.adversarial_npz:
-            ds = AuxeticDataset(p)
+            ds = AuxeticDataset(p, include_f1f2=args.include_f1f2)
             assert list(ds.seed_classes) == list(base_seed_classes), (
                 f"seed_classes của {p} ({list(ds.seed_classes)}) không khớp "
                 f"train.npz ({list(base_seed_classes)}) - cột one-hot sẽ lệch."
@@ -157,7 +177,7 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                              num_workers=2)
 
-    model = SurrogateCNN(n_seeds=train_ds.n_seeds).to(device)
+    model = SurrogateCNN(n_seeds=train_ds.n_seeds, n_outputs=len(loss_weights)).to(device)
     if args.init_from:
         init_ckpt = torch.load(args.init_from, map_location=device, weights_only=False)
         model.load_state_dict(init_ckpt["model_state_dict"])
@@ -176,21 +196,21 @@ def main():
 
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
-        train_loss, train_per_target = run_epoch(model, train_loader, optimizer, device, train=True)
-        val_loss, val_per_target = run_epoch(model, val_loader, optimizer, device, train=False)
+        train_loss, train_per_target = run_epoch(model, train_loader, optimizer, device,
+                                                  train=True, loss_weights=loss_weights)
+        val_loss, val_per_target = run_epoch(model, val_loader, optimizer, device,
+                                              train=False, loss_weights=loss_weights)
         scheduler.step(val_loss)
         dt = time.time() - t0
 
         print(f"Epoch {epoch:3d}/{args.epochs} | "
               f"train_loss={train_loss:.5f} val_loss={val_loss:.5f} | "
-              f"val_mse[v12,v21,vf]={val_per_target.tolist()} | "
+              f"val_mse[{','.join(target_names)}]={val_per_target.tolist()} | "
               f"lr={optimizer.param_groups[0]['lr']:.2e} | {dt:.1f}s")
 
         history.append({
             "epoch": epoch, "train_loss": train_loss, "val_loss": val_loss,
-            "val_mse_v12": val_per_target[0].item(),
-            "val_mse_v21": val_per_target[1].item(),
-            "val_mse_volfrac": val_per_target[2].item(),
+            **{f"val_mse_{name}": val_per_target[i].item() for i, name in enumerate(target_names)},
         })
 
         if val_loss < best_val_loss - 1e-5:
@@ -202,7 +222,8 @@ def main():
                 "seed_classes": train_ds.seed_classes.tolist(),
                 "channels": (32, 64, 128, 256),
                 "fc_hidden": 128,
-                "target_names": ["v12", "v21", "volfrac_achieved"],
+                "n_outputs": len(loss_weights),
+                "target_names": target_names,
                 "val_loss": val_loss,
                 "epoch": epoch,
             }, best_ckpt_path)
