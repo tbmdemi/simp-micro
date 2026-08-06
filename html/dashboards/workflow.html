@@ -11,7 +11,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SIMP Analyst — Workflow Pipeline v2.0</title>
+<title>SIMP Analyst - Workflow Pipeline v2.0</title>
 <style>
 /* ══════════════════════════════════════════════════════════════
    GOOGLE FONTS
@@ -30,7 +30,7 @@
   --color-text-secondary:#5a6b7c;
   --color-text-muted:    #8e99a9;
 
-  /* Phase colours — 8 giai đoạn (0→7), lạnh → ấm theo chiều pipeline */
+  /* Phase colours - 8 giai đoạn (0→7), lạnh → ấm theo chiều pipeline */
   --phase-0: #64748b;   /* Dữ liệu SIMP (MATLAB) */
   --phase-1: #4a90d9;   /* Sàng lọc LHS */
   --phase-2: #2f9e97;   /* Mở rộng DOE */
@@ -188,7 +188,7 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   OVERALL PROJECT PROGRESS (số liệu thật, tĩnh — không phải hiệu ứng scroll)
+   OVERALL PROJECT PROGRESS (số liệu thật, tĩnh - không phải hiệu ứng scroll)
    ══════════════════════════════════════════════════════════════ */
 .overall-progress {
   margin-bottom: 26px;
@@ -923,7 +923,7 @@ body {
   </header>
 
   <p class="subtitle">
-    Quy trình 8 giai đoạn: <strong>Dữ liệu SIMP (MATLAB)</strong> → <strong>Sàng lọc LHS</strong> → <strong>Mở rộng DOE</strong> → <strong>Biểu diễn &amp; tăng cường dữ liệu</strong> → <strong>Surrogate CNN</strong> → <strong>Generative Model</strong> → <strong>Kiểm định FEA</strong> → <strong>Active Learning Loop</strong> — thiết kế Unit Cell Auxetic theo yêu cầu
+    Quy trình 8 giai đoạn: <strong>Dữ liệu SIMP (MATLAB)</strong> → <strong>Sàng lọc LHS</strong> → <strong>Mở rộng DOE</strong> → <strong>Biểu diễn &amp; tăng cường dữ liệu</strong> → <strong>Surrogate CNN</strong> → <strong>Generative Model</strong> → <strong>Kiểm định FEA</strong> → <strong>Active Learning Loop</strong> - thiết kế Unit Cell Auxetic theo yêu cầu
   </p>
 
   <!-- ════════════ OVERALL PROGRESS (số liệu thật từ Checklist) ════════════ -->
@@ -1030,7 +1030,7 @@ body {
             <div class="node-title">Objective</div>
             <div class="node-desc">Auxetic / First / Second</div>
             <div class="node-meta"><span><span class="node-status-dot done"></span>3 hàm mục tiêu</span></div>
-            <div class="node-tooltip">Định nghĩa 3 hàm mục tiêu: auxetic (Poisson ratio âm), first, second — dùng xuyên suốt Phase 0-2</div>
+            <div class="node-tooltip">Định nghĩa 3 hàm mục tiêu: auxetic (Poisson ratio âm), first, second - dùng xuyên suốt Phase 0-2</div>
           </div>
           <span class="node-arrow">→</span>
           <div class="node">
@@ -1109,7 +1109,7 @@ body {
             <div class="node-title">Thiết kế LHS</div>
             <div class="node-desc">Ma trận mẫu</div>
             <div class="node-meta"><span><span class="node-status-dot done"></span>10 seed × 3 obj</span></div>
-            <div class="node-tooltip">Thiết kế ma trận Latin Hypercube Sampling ban đầu — xác định số mức và số điểm mẫu</div>
+            <div class="node-tooltip">Thiết kế ma trận Latin Hypercube Sampling ban đầu - xác định số mức và số điểm mẫu</div>
           </div>
           <span class="node-arrow">→</span>
           <div class="node">
@@ -1141,7 +1141,7 @@ body {
             <div class="node-title">Pareto Front</div>
             <div class="node-desc">Auxetic vs tần số</div>
             <div class="node-meta"><span><span class="node-status-dot done"></span>Sơ bộ</span></div>
-            <div class="node-tooltip">Vẽ sơ bộ Pareto front giữa hành vi auxetic và tần số riêng — cần hoàn thiện phần trình bày</div>
+            <div class="node-tooltip">Vẽ sơ bộ Pareto front giữa hành vi auxetic và tần số riêng - cần hoàn thiện phần trình bày</div>
           </div>
         </div>
         <div class="insight-box">
@@ -1222,7 +1222,7 @@ body {
             <div class="node-title">Batch 2</div>
             <div class="node-desc">Directed sampling</div>
             <div class="node-meta"><span><span class="node-status-dot done"></span>Đã chạy</span></div>
-            <div class="node-tooltip">Thiết kế & chạy SIMP batch 2 — directed sampling nhắm vào vùng thưa / vùng quan trọng</div>
+            <div class="node-tooltip">Thiết kế & chạy SIMP batch 2 - directed sampling nhắm vào vùng thưa / vùng quan trọng</div>
           </div>
           <span class="node-arrow">→</span>
           <div class="node node-diamond">
@@ -1302,7 +1302,7 @@ body {
             <div class="node-title">Train / Val / Test</div>
             <div class="node-desc">Stratified Split</div>
             <div class="node-meta"><span><span class="node-status-dot wait"></span>Chưa bắt đầu</span></div>
-            <div class="node-tooltip">Chia tập dữ liệu train/validation/test — stratified theo ν</div>
+            <div class="node-tooltip">Chia tập dữ liệu train/validation/test - stratified theo ν</div>
           </div>
           <span class="node-arrow">→</span>
           <div class="node">
@@ -1468,7 +1468,7 @@ body {
             <div class="node-title">Diffusion?</div>
             <div class="node-desc">Tùy chọn nâng cao</div>
             <div class="node-meta"><span><span class="node-status-dot wait"></span>Tùy chọn</span></div>
-            <div class="node-tooltip">(Nâng cấp - tùy chọn) Thử nghiệm conditional diffusion — tham khảo hướng video denoising diffusion cho inverse design (Deep-DRAM)</div>
+            <div class="node-tooltip">(Nâng cấp - tùy chọn) Thử nghiệm conditional diffusion - tham khảo hướng video denoising diffusion cho inverse design (Deep-DRAM)</div>
           </div>
         </div>
       </div>
@@ -1531,7 +1531,7 @@ body {
             <div class="node-title">Rank Candidates</div>
             <div class="node-desc">Top-N</div>
             <div class="node-meta"><span><span class="node-status-dot wait"></span>Top 5</span></div>
-            <div class="node-tooltip">Lọc candidate qua surrogate — rank theo sai số với target, chọn Top 5</div>
+            <div class="node-tooltip">Lọc candidate qua surrogate - rank theo sai số với target, chọn Top 5</div>
           </div>
           <span class="node-arrow">→</span>
           <div class="node">
@@ -1547,7 +1547,7 @@ body {
             <div class="node-title">Target ν đạt?</div>
             <div class="node-desc">So sánh</div>
             <div class="node-meta"><span><span class="node-status-dot wait"></span>Dung sai ±0.05</span></div>
-            <div class="node-tooltip">So sánh kết quả verify với target ban đầu — dung sai ν ± 0.05</div>
+            <div class="node-tooltip">So sánh kết quả verify với target ban đầu - dung sai ν ± 0.05</div>
           </div>
         </div>
       </div>
@@ -1714,7 +1714,7 @@ body {
 
   phaseCards.forEach((card) => observer.observe(card));
 
-  // ── 2. PROGRESS BAR ANIMATION (hiệu ứng scroll — độc lập với tiến độ dự án thật) ──
+  // ── 2. PROGRESS BAR ANIMATION (hiệu ứng scroll - độc lập với tiến độ dự án thật) ──
   function updateProgress() {
     const phases = document.querySelectorAll('.phase');
     let visibleCount = 0;

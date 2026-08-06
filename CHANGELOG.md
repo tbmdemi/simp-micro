@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - Dataset train lọc bỏ 33,6% mẫu nhãn dao động/rời rạc/ngoài khoảng vật lý hợp lý (7.920→5.258 mẫu gốc); Phase 4 surrogate và Phase 5 cVAE đã train lại trên bản sạch (checkpoint cũ giữ nguyên làm baseline lịch sử, không ghi đè).
 - **Checkpoint Phase 5 khuyến nghị mặc định đổi thành `cvae_realphysics.pt`**: R²(FE, n=789 toàn bộ test set) = 0,999 (oracle)/0,992 (K=10), hit rate single-shot 98,7% - so với 0,20-0,32 (oracle)/CI âm (K=10) ở checkpoint tốt nhất trước đó.
-- README.md/EXPERIMENT_LOG.md rút gọn đáng kể (EXPERIMENT_LOG: 708→70 dòng), chuẩn hóa dùng `-` thay cho em-dash `—` trên toàn bộ `.md`/`.py`/`.sh`.
+- README.md/EXPERIMENT_LOG.md rút gọn đáng kể (EXPERIMENT_LOG: 708→70 dòng), chuẩn hóa dùng `-` thay cho em-dash `-` trên toàn bộ `.md`/`.py`/`.sh`.
 - Khuyến nghị "K=10 giữ gần hết mức tăng R²" (dựa trên n=24) bị rút lại sau khi đánh giá ở n=789 cho thấy nó sụp đổ về CI âm/cắt-0 với mọi checkpoint trước differentiable-physics.
 
 ### 2026-07-25 - Rebuild dataset v2 + retrain Phase 4/5 (chưa gắn số phiên bản)

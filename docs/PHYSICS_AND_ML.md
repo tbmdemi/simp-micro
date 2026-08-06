@@ -121,6 +121,6 @@ Ngay cả với checkpoint differentiable-physics tốt nhất, `best_of_n_eval.
 | Làm sao tối ưu **một** hình học từ 1 điểm khởi tạo? | SIMP + OC + sensitivity giải tích | Không cần ML |
 | Làm sao đi ngược từ target `(ν₁₂,ν₂₁)` ra hình học **tức thời**, không cần chạy lại SIMP hàng nghìn vòng lặp? | Cung cấp dữ liệu training (Phase 1-3) + đạo hàm giải tích để huấn luyện đúng | cVAE (Phase 5) học ánh xạ ngược từ dữ liệu, `real_physics.py` giữ nó trung thực với vật lý trong lúc học |
 | Ứng viên do mô hình sinh ra có đáng tin không? | FE thật verify lại (`best_of_n_eval.py`) | cVAE chỉ đề xuất (proposal), không tự quyết |
-| Sao biết mô hình không chỉ "học thuộc lòng" tập train? | — | Novelty/diversity eval (`analysis/scripts/novelty_diversity_eval.py`) + so sánh baseline nearest-neighbor retrieval |
+| Sao biết mô hình không chỉ "học thuộc lòng" tập train? | - | Novelty/diversity eval (`analysis/scripts/novelty_diversity_eval.py`) + so sánh baseline nearest-neighbor retrieval |
 
 Nguyên tắc thiết kế xuyên suốt: **ML/DL được dùng ở đúng chỗ nó có lợi thế tuyệt đối (tốc độ suy luận, học ánh xạ ngược khó biểu diễn giải tích), nhưng không bao giờ được phép tự làm giám khảo cho chính nó** - mọi con số claim khoa học cuối cùng đều phải quy về nghiệm FE + homogenization xác định, độc lập kiểm chứng được (kể cả bằng một implementation FE hoàn toàn khác, `scikit-fem`, xem [LIMITATIONS.md](LIMITATIONS.md) mục 15).

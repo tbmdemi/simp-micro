@@ -1,5 +1,5 @@
 <!--
-  Title: Từ Dataset đến Thiết kế Ngược — Phase 3-5 Results
+  Title: Từ Dataset đến Thiết kế Ngược - Phase 3-5 Results
   Type: Report
   Aesthetic: Same academic Playfair+Inter language as inverse_auxetic_report.html, extended with
              hand-built SVG charts (gamma-sweep divergence, best-of-N comparison, manufacturability bars)
@@ -11,7 +11,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Flow và kết quả thực tế của Phase 3 (Dataset Build), Phase 4 (CNN Surrogate) và Phase 5 (cVAE Inverse Design) trong pipeline SIMP Analyst, bao gồm phát hiện surrogate exploitation và giải pháp best-of-N.">
-<title>Từ Dataset đến Thiết kế Ngược — Phase 3-5</title>
+<title>Từ Dataset đến Thiết kế Ngược - Phase 3-5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -191,7 +191,7 @@
 <a href="../index.html" class="simp-hub-nav">← SIMP Analyst</a>
 <header>
     <h1>Từ Dataset đến Thiết kế Ngược</h1>
-    <p>Flow và kết quả thực tế của Phase 3 (Dataset Build), Phase 4 (CNN Surrogate) và Phase 5 (cVAE Inverse Design) — bao gồm phát hiện <em>surrogate exploitation</em> và giải pháp best-of-N đã được xác minh bằng FE thực.</p>
+    <p>Flow và kết quả thực tế của Phase 3 (Dataset Build), Phase 4 (CNN Surrogate) và Phase 5 (cVAE Inverse Design) - bao gồm phát hiện <em>surrogate exploitation</em> và giải pháp best-of-N đã được xác minh bằng FE thực.</p>
     <div class="header-meta">
         <div class="stat"><span class="stat-num">33,120</span><span class="stat-label">Train images (Phase 3)</span></div>
         <div class="stat"><span class="stat-num">R²=0.91</span><span class="stat-label">Surrogate (Phase 4)</span></div>
@@ -204,9 +204,9 @@
     <h2>Mục lục</h2>
     <ul class="toc">
         <li><a href="#overview">0. Vị trí trong Pipeline</a></li>
-        <li><a href="#phase3">1. Phase 3 — Dataset Build</a></li>
-        <li><a href="#phase4">2. Phase 4 — CNN Surrogate</a></li>
-        <li><a href="#phase5">3. Phase 5 — cVAE Inverse Design</a></li>
+        <li><a href="#phase3">1. Phase 3 - Dataset Build</a></li>
+        <li><a href="#phase4">2. Phase 4 - CNN Surrogate</a></li>
+        <li><a href="#phase5">3. Phase 5 - cVAE Inverse Design</a></li>
         <li><a href="#exploitation">3.1 Surrogate Exploitation</a></li>
         <li><a href="#bestofn">3.2 Giải pháp: Best-of-N</a></li>
         <li><a href="#manufacturability">3.3 Khả năng chế tạo</a></li>
@@ -221,49 +221,49 @@
     <div class="flow-steps">
         <div class="flow-step">
             <div class="num">2</div>
-            <div class="body"><strong>Multi-Batch Adaptive DOE</strong> — 8 batch, 7.920 mẫu, 100% hội tụ FE. <em>(đã hoàn thành, xem link trên)</em></div>
+            <div class="body"><strong>Multi-Batch Adaptive DOE</strong> - 8 batch, 7.920 mẫu, 100% hội tụ FE. <em>(đã hoàn thành, xem link trên)</em></div>
         </div>
         <div class="flow-step">
             <div class="num">3</div>
-            <div class="body"><strong>Dataset Build</strong> — resize 64×64, lọc outlier, chia stratified train/val/test, tăng cường đối xứng vật lý.</div>
+            <div class="body"><strong>Dataset Build</strong> - resize 64×64, lọc outlier, chia stratified train/val/test, tăng cường đối xứng vật lý.</div>
         </div>
         <div class="flow-step">
             <div class="num">4</div>
-            <div class="body"><strong>CNN Surrogate</strong> — dự đoán (ν₁₂, ν₂₁, volfrac) từ ảnh mật độ, dùng làm "trọng tài rẻ" trong loss của Phase 5.</div>
+            <div class="body"><strong>CNN Surrogate</strong> - dự đoán (ν₁₂, ν₂₁, volfrac) từ ảnh mật độ, dùng làm "trọng tài rẻ" trong loss của Phase 5.</div>
         </div>
         <div class="flow-step">
             <div class="num">5</div>
-            <div class="body"><strong>cVAE Inverse Design</strong> — sinh ảnh mật độ từ target (ν₁₂, ν₂₁); phát hiện &amp; khắc phục vấn đề surrogate exploitation qua best-of-N + FE thực.</div>
+            <div class="body"><strong>cVAE Inverse Design</strong> - sinh ảnh mật độ từ target (ν₁₂, ν₂₁); phát hiện &amp; khắc phục vấn đề surrogate exploitation qua best-of-N + FE thực.</div>
         </div>
     </div>
 </section>
 
 <!-- 1. PHASE 3 -->
 <section id="phase3">
-    <h2>1. Phase 3 — Dataset Build</h2>
+    <h2>1. Phase 3 - Dataset Build</h2>
     <p>Biến 7.920 mẫu thô (ảnh PNG + CSV rải rác trong 8 thư mục batch) thành 3 file <code>.npz</code> sẵn sàng cho PyTorch, qua 4 script tuần tự.</p>
 
     <div class="flow-steps">
         <div class="flow-step">
             <div class="num">1</div>
-            <div class="body"><code>scan_dataset.py</code> — quét toàn bộ 8 batch, khớp mỗi sample với ảnh mật độ cuối cùng + <code>volume_fraction</code> từ <code>iteration_data.csv</code> → <code>manifest.csv</code>.</div>
+            <div class="body"><code>scan_dataset.py</code> - quét toàn bộ 8 batch, khớp mỗi sample với ảnh mật độ cuối cùng + <code>volume_fraction</code> từ <code>iteration_data.csv</code> → <code>manifest.csv</code>.</div>
         </div>
         <div class="flow-step">
             <div class="num">2</div>
-            <div class="body"><code>build_npz.py --resolution 64</code> — resize ảnh (từ lưới <code>xPhys</code> 50×50 gốc) về 64×64 bằng box-filter downsampling, chuẩn hóa pixel [0,1] → <code>dataset_64.npz</code>.</div>
+            <div class="body"><code>build_npz.py --resolution 64</code> - resize ảnh (từ lưới <code>xPhys</code> 50×50 gốc) về 64×64 bằng box-filter downsampling, chuẩn hóa pixel [0,1] → <code>dataset_64.npz</code>.</div>
         </div>
         <div class="flow-step">
             <div class="num">3</div>
-            <div class="body"><code>augment_symmetry.py</code> — tăng cường đối xứng vật lý hợp lệ, chỉ áp dụng cho tập train (gọi từ script 4, không chạy độc lập).</div>
+            <div class="body"><code>augment_symmetry.py</code> - tăng cường đối xứng vật lý hợp lệ, chỉ áp dụng cho tập train (gọi từ script 4, không chạy độc lập).</div>
         </div>
         <div class="flow-step">
             <div class="num">4</div>
-            <div class="body"><code>finalize_dataset.py --resolution 64</code> — lọc mẫu suy biến, chia 70/15/15 phân tầng theo seed, tăng cường train → <code>train/val/test.npz</code> + <code>split_report.json</code>.</div>
+            <div class="body"><code>finalize_dataset.py --resolution 64</code> - lọc mẫu suy biến, chia 70/15/15 phân tầng theo seed, tăng cường train → <code>train/val/test.npz</code> + <code>split_report.json</code>.</div>
         </div>
     </div>
 
     <h3>Quy tắc tăng cường đối xứng</h3>
-    <p>Ô đơn vị tuần hoàn dưới tải trục 1 và trục 2 — mỗi phép biến đổi hình học phải đi kèm phép hoán đổi target tương ứng để giữ đúng ý nghĩa vật lý:</p>
+    <p>Ô đơn vị tuần hoàn dưới tải trục 1 và trục 2 - mỗi phép biến đổi hình học phải đi kèm phép hoán đổi target tương ứng để giữ đúng ý nghĩa vật lý:</p>
     <table>
         <thead><tr><th>Phép biến đổi</th><th>Ảnh hưởng lên target</th></tr></thead>
         <tbody>
@@ -271,7 +271,7 @@
             <tr><td>Xoay 180°, lật ngang/dọc</td><td>Trục không hoán đổi → ν₁₂, ν₂₁ giữ nguyên</td></tr>
         </tbody>
     </table>
-    <p class="vi">Chỉ áp dụng các phép hợp lệ vật lý — không dùng biến đổi tùy ý (shear, cắt xén) vì sẽ phá vỡ tính đúng đắn vật lý. Áp dụng CHỈ trên train để tránh rò rỉ giữa các biến thể đối xứng của cùng một mẫu vào val/test.</p>
+    <p class="vi">Chỉ áp dụng các phép hợp lệ vật lý - không dùng biến đổi tùy ý (shear, cắt xén) vì sẽ phá vỡ tính đúng đắn vật lý. Áp dụng CHỈ trên train để tránh rò rỉ giữa các biến thể đối xứng của cùng một mẫu vào val/test.</p>
 
     <h3>Kết quả (<code>split_report.json</code>)</h3>
     <div class="stat-row">
@@ -289,17 +289,17 @@
             <tr><td>Test</td><td class="num">1,184</td><td class="num">[−0.627, 0.370]</td></tr>
         </tbody>
     </table>
-    <p>33/7.920 mẫu (0,4%) bị loại vì <code>volfrac_achieved</code> nằm ngoài <code>[0.05, 0.95]</code> — topology sụp về rỗng hoặc đặc hoàn toàn, không mang thông tin hình học hữu ích. Chia stratified theo seed đảm bảo cả 11 seed geometry xuất hiện tỉ lệ đều ở cả 3 tập (~108 mẫu/seed ở val và test).</p>
+    <p>33/7.920 mẫu (0,4%) bị loại vì <code>volfrac_achieved</code> nằm ngoài <code>[0.05, 0.95]</code> - topology sụp về rỗng hoặc đặc hoàn toàn, không mang thông tin hình học hữu ích. Chia stratified theo seed đảm bảo cả 11 seed geometry xuất hiện tỉ lệ đều ở cả 3 tập (~108 mẫu/seed ở val và test).</p>
 
     <div class="callout" style="border-left-color: var(--accent); background: var(--accent-light);">
-        <p><strong>Khoảng trống đã biết:</strong> target xuất ra hiện chỉ có <code>v12</code>, <code>v21</code>, <code>volfrac_achieved</code>. Các chỉ số <code>f1, f2</code> (độ cứng chuẩn hóa E₁₁/E₀, E₂₂/E₀ theo roadmap gốc) chưa khả dụng — cần mở rộng <code>compute_homogenized_tensor()</code> để xuất trước khi có thể dùng.</p>
+        <p><strong>Khoảng trống đã biết:</strong> target xuất ra hiện chỉ có <code>v12</code>, <code>v21</code>, <code>volfrac_achieved</code>. Các chỉ số <code>f1, f2</code> (độ cứng chuẩn hóa E₁₁/E₀, E₂₂/E₀ theo roadmap gốc) chưa khả dụng - cần mở rộng <code>compute_homogenized_tensor()</code> để xuất trước khi có thể dùng.</p>
     </div>
 </section>
 
 <!-- 2. PHASE 4 -->
 <section id="phase4">
-    <h2>2. Phase 4 — CNN Surrogate Model</h2>
-    <p>Một CNN nhỏ học dự đoán nhanh <code>(ν₁₂, ν₂₁, volfrac)</code> trực tiếp từ ảnh mật độ, không cần chạy FE — cần thiết vì FE thật quá chậm để đặt bên trong vòng lặp gradient descent của loss property-consistency ở Phase 5.</p>
+    <h2>2. Phase 4 - CNN Surrogate Model</h2>
+    <p>Một CNN nhỏ học dự đoán nhanh <code>(ν₁₂, ν₂₁, volfrac)</code> trực tiếp từ ảnh mật độ, không cần chạy FE - cần thiết vì FE thật quá chậm để đặt bên trong vòng lặp gradient descent của loss property-consistency ở Phase 5.</p>
 
     <h3>Kiến trúc (<code>SurrogateCNN</code>)</h3>
     <div class="formula-box" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.9;">
@@ -337,13 +337,13 @@
         <div class="bar-row-v"><span class="lbl">square</span><div class="bar-track-v"><div class="bar-fill-v" style="width:98%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0478</span></div>
         <div class="bar-row-v"><span class="lbl">four_circle</span><div class="bar-track-v"><div class="bar-fill-v" style="width:100%; background:var(--accent2);"></div></div><span class="bar-val-v">0.0489</span></div>
     </div>
-    <p class="vi">Không seed nào kém nghiêm trọng (dao động 0,021–0,049) — nếu R² &lt; 0,90 trên bất kỳ target nào, thử mở rộng <code>channels</code> trong <code>SurrogateCNN</code> trước khi đổi kiến trúc.</p>
+    <p class="vi">Không seed nào kém nghiêm trọng (dao động 0,021–0,049) - nếu R² &lt; 0,90 trên bất kỳ target nào, thử mở rộng <code>channels</code> trong <code>SurrogateCNN</code> trước khi đổi kiến trúc.</p>
 </section>
 
 <!-- 3. PHASE 5 -->
 <section id="phase5">
-    <h2>3. Phase 5 — Conditional VAE (Inverse Design)</h2>
-    <p>Bước thiết kế ngược thực sự: một mô hình sinh nhận target <strong>(ν₁₂, ν₂₁)</strong> làm điều kiện và sinh ra một ảnh mật độ 64×64 đạt được tính chất đó — không cần biết trước seed hay tham số thiết kế nào.</p>
+    <h2>3. Phase 5 - Conditional VAE (Inverse Design)</h2>
+    <p>Bước thiết kế ngược thực sự: một mô hình sinh nhận target <strong>(ν₁₂, ν₂₁)</strong> làm điều kiện và sinh ra một ảnh mật độ 64×64 đạt được tính chất đó - không cần biết trước seed hay tham số thiết kế nào.</p>
 
     <h3>Kiến trúc (<code>CVAE</code>)</h3>
     <div class="formula-box" style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.9;">
@@ -352,17 +352,17 @@
         Decoder (ConvTranspose2d, đối xứng ngược):<br>
         &nbsp;&nbsp;[z (32,), condition (2,)] → FC → reshape (256,4,4) → 4× ConvTranspose2d → Sigmoid → (1,64,64)
     </div>
-    <p class="vi">Lựa chọn thiết kế quan trọng: condition vector <strong>chỉ gồm [ν₁₂, ν₂₁]</strong> — không có seed one-hot — để đúng tinh thần inverse design thực sự.</p>
+    <p class="vi">Lựa chọn thiết kế quan trọng: condition vector <strong>chỉ gồm [ν₁₂, ν₂₁]</strong> - không có seed one-hot - để đúng tinh thần inverse design thực sự.</p>
 
     <h3>Hàm loss</h3>
     <div class="formula-box">
         \[ \mathcal{L} = \mathcal{L}_{recon} + \beta \cdot \mathcal{L}_{KL} + \gamma \cdot 1000 \cdot \mathcal{L}_{prop} \]
     </div>
-    <p><code>β</code> tăng tuyến tính 0→1 qua 30 epoch đầu (chống posterior collapse). <code>L_prop</code> là MSE giữa target và dự đoán của <strong>surrogate Phase 4 đã đóng băng</strong> trên ảnh do decoder sinh ra. Hằng số nhân <code>1000</code> (<code>PROP_LOSS_SCALE</code>) là một sửa lỗi quan trọng — thiếu nó, ở <code>gamma=1</code> mặc định ban đầu, property loss (~0.01–0.05) hoàn toàn vô hình trước recon+kl (~1000) trong gradient.</p>
+    <p><code>β</code> tăng tuyến tính 0→1 qua 30 epoch đầu (chống posterior collapse). <code>L_prop</code> là MSE giữa target và dự đoán của <strong>surrogate Phase 4 đã đóng băng</strong> trên ảnh do decoder sinh ra. Hằng số nhân <code>1000</code> (<code>PROP_LOSS_SCALE</code>) là một sửa lỗi quan trọng - thiếu nó, ở <code>gamma=1</code> mặc định ban đầu, property loss (~0.01–0.05) hoàn toàn vô hình trước recon+kl (~1000) trong gradient.</p>
 
     <!-- 3.1 EXPLOITATION -->
     <h3 id="exploitation">3.1 Phát hiện: Surrogate Exploitation</h3>
-    <p><code>gamma</code> là tham số điều chỉnh quan trọng nhất — quét <code>gamma</code> từ 1 đến 300 để xem property-consistency loss ảnh hưởng thế nào đến chất lượng sinh. Kết quả tưởng như càng tăng gamma càng tốt <em>— nếu chỉ nhìn qua surrogate</em>:</p>
+    <p><code>gamma</code> là tham số điều chỉnh quan trọng nhất - quét <code>gamma</code> từ 1 đến 300 để xem property-consistency loss ảnh hưởng thế nào đến chất lượng sinh. Kết quả tưởng như càng tăng gamma càng tốt <em>- nếu chỉ nhìn qua surrogate</em>:</p>
 
     <div class="chart-svg-wrap">
         <svg viewBox="0 0 660 330" width="660" height="330" role="img" aria-label="Biểu đồ R² qua surrogate tăng dần theo gamma trong khi R² qua FE thực luôn âm sâu">
@@ -439,10 +439,10 @@
     </div>
 
     <div class="callout">
-        <p><strong>Surrogate exploitation:</strong> R² đo qua surrogate tăng đơn điệu theo gamma và không bao giờ bão hòa, nhưng R² đo qua FE thực âm sâu ở <em>mọi</em> mức gamma — và khoảng cách surrogate-vs-thực <strong>nới rộng thêm</strong> khi gamma tăng (từ cách biệt 1,55 ở γ=1 lên 3,27 ở γ=300). Đây là bằng chứng rõ ràng rằng decoder học cách đánh lừa CNN đóng băng thay vì sinh hình học auxetic thực.</p>
+        <p><strong>Surrogate exploitation:</strong> R² đo qua surrogate tăng đơn điệu theo gamma và không bao giờ bão hòa, nhưng R² đo qua FE thực âm sâu ở <em>mọi</em> mức gamma - và khoảng cách surrogate-vs-thực <strong>nới rộng thêm</strong> khi gamma tăng (từ cách biệt 1,55 ở γ=1 lên 3,27 ở γ=300). Đây là bằng chứng rõ ràng rằng decoder học cách đánh lừa CNN đóng băng thay vì sinh hình học auxetic thực.</p>
     </div>
 
-    <h4>Hai biện pháp thử ở giai đoạn huấn luyện — không khắc phục được vấn đề single-shot</h4>
+    <h4>Hai biện pháp thử ở giai đoạn huấn luyện - không khắc phục được vấn đề single-shot</h4>
     <div class="grid-2">
         <div class="card">
             <div class="card-title">❌ Self-play <span class="badge bad">Không hiệu quả</span></div>
@@ -450,13 +450,13 @@
         </div>
         <div class="card">
             <div class="card-title">⏸️ Ensemble surrogate <span class="badge bad">Chưa hội tụ</span></div>
-            <p style="margin-bottom:0;">3 surrogate huấn luyện độc lập, phạt decoder khi chúng bất đồng (kiểu Deep Ensembles). Hạ tầng đã được viết + unit-test (forward/backward xác minh), nhưng một lần chạy huấn luyện đầy đủ không hội tụ trong thời gian phiên làm việc — để lại như một lựa chọn đã ghi nhận, chưa phải giải pháp đã chứng minh.</p>
+            <p style="margin-bottom:0;">3 surrogate huấn luyện độc lập, phạt decoder khi chúng bất đồng (kiểu Deep Ensembles). Hạ tầng đã được viết + unit-test (forward/backward xác minh), nhưng một lần chạy huấn luyện đầy đủ không hội tụ trong thời gian phiên làm việc - để lại như một lựa chọn đã ghi nhận, chưa phải giải pháp đã chứng minh.</p>
         </div>
     </div>
 
     <!-- 3.2 BEST OF N -->
     <h3 id="bestofn">3.2 Giải pháp: Best-of-N + Chọn lọc bằng FE thực</h3>
-    <p>Cùng công thức với pipeline Deep-DRAM đã công bố (Pahlavani et al., <em>Advanced Materials</em> 2024): sinh N ứng viên/điều kiện, để <strong>FE thực</strong> (không phải surrogate) chọn người thắng cuộc. Không cần huấn luyện lại — đo trực tiếp trên checkpoint <code>cvae_gamma20.pt</code> có sẵn, tập giữ riêng 24 điều kiện (19 auxetic).</p>
+    <p>Cùng công thức với pipeline Deep-DRAM đã công bố (Pahlavani et al., <em>Advanced Materials</em> 2024): sinh N ứng viên/điều kiện, để <strong>FE thực</strong> (không phải surrogate) chọn người thắng cuộc. Không cần huấn luyện lại - đo trực tiếp trên checkpoint <code>cvae_gamma20.pt</code> có sẵn, tập giữ riêng 24 điều kiện (19 auxetic).</p>
 
     <table>
         <thead><tr><th>Chiến lược</th><th class="num"># lần gọi FE / điều kiện</th><th class="num">R² (ν₁₂, FE thực)</th><th class="num">Tỷ lệ trúng auxetic</th></tr></thead>
@@ -469,19 +469,19 @@
     <p class="vi">Biến thể thực dụng (lọc sơ bộ bằng surrogate, rẻ hơn 3× về số lần gọi FE) giữ được gần như toàn bộ mức tăng R² và vẫn đạt tỷ lệ trúng 100%.</p>
 
     <div class="callout good-callout">
-        <p><strong>Vì sao cách này hiệu quả:</strong> mục tiêu huấn luyện (một mẫu đơn lẻ phải đáng tin cậy qua gradient của một surrogate) về cơ bản khó đảm bảo — nhưng inverse design chỉ cần <em>phân phối của generator</em> chứa lời giải tốt ở đâu đó, và dùng FE thực làm cổng cuối cùng khiến điều đó an toàn để khai thác, ngay cả với một generator single-shot không hoàn hảo.</p>
+        <p><strong>Vì sao cách này hiệu quả:</strong> mục tiêu huấn luyện (một mẫu đơn lẻ phải đáng tin cậy qua gradient của một surrogate) về cơ bản khó đảm bảo - nhưng inverse design chỉ cần <em>phân phối của generator</em> chứa lời giải tốt ở đâu đó, và dùng FE thực làm cổng cuối cùng khiến điều đó an toàn để khai thác, ngay cả với một generator single-shot không hoàn hảo.</p>
     </div>
 
     <!-- 3.3 MANUFACTURABILITY -->
-    <h3 id="manufacturability">3.3 Khả năng chế tạo — hệ số Poisson đúng không đồng nghĩa với khả thi để chế tạo</h3>
-    <p><code>manufacturability.py</code> kiểm tra 2 điều kiện độc lập với độ chính xác Poisson: <strong>connectivity</strong> (một khối liền, không có đảo nổi, không có nét mảnh hơn bề rộng tối thiểu) và <strong>periodicity</strong> (cạnh đối diện của ô đơn vị phải khớp khi ghép lát bằng phép tịnh tiến — khác với điều kiện biên tuần hoàn trên trường chuyển vị dùng trong FE).</p>
+    <h3 id="manufacturability">3.3 Khả năng chế tạo - hệ số Poisson đúng không đồng nghĩa với khả thi để chế tạo</h3>
+    <p><code>manufacturability.py</code> kiểm tra 2 điều kiện độc lập với độ chính xác Poisson: <strong>connectivity</strong> (một khối liền, không có đảo nổi, không có nét mảnh hơn bề rộng tối thiểu) và <strong>periodicity</strong> (cạnh đối diện của ô đơn vị phải khớp khi ghép lát bằng phép tịnh tiến - khác với điều kiện biên tuần hoàn trên trường chuyển vị dùng trong FE).</p>
 
     <div class="bar-chart-v">
         <div class="bar-row-v"><span class="lbl">Connectivity only</span><div class="bar-track-v"><div class="bar-fill-v" style="width:100%; background:var(--accent2);"></div></div><span class="bar-val-v">7–28%</span></div>
         <div class="bar-row-v"><span class="lbl">Periodicity only</span><div class="bar-track-v"><div class="bar-fill-v" style="width:40%; background:var(--accent2);"></div></div><span class="bar-val-v">3–11%</span></div>
         <div class="bar-row-v"><span class="lbl">Cả hai đồng thời</span><div class="bar-track-v"><div class="bar-fill-v" style="width:13%; background:var(--bad);"></div></div><span class="bar-val-v">0–3.5%</span></div>
     </div>
-    <p>Tỷ lệ thấp này <strong>đồng đều trên toàn không gian thuộc tính</strong>, không phải một "vùng chết" cục bộ (xác nhận bằng <code>coverage_eval.py</code> trên lưới 8 điều kiện) — nghĩa là đây là vấn đề hành vi của decoder, không phải khoảng trống dữ liệu cần active learning để lấp đầy.</p>
+    <p>Tỷ lệ thấp này <strong>đồng đều trên toàn không gian thuộc tính</strong>, không phải một "vùng chết" cục bộ (xác nhận bằng <code>coverage_eval.py</code> trên lưới 8 điều kiện) - nghĩa là đây là vấn đề hành vi của decoder, không phải khoảng trống dữ liệu cần active learning để lấp đầy.</p>
 
     <h4>Giảm nhẹ: lọc tại inference với N lớn hơn nhiều</h4>
     <table>
@@ -498,13 +498,13 @@
 <!-- 4. CONCLUSION -->
 <section id="conclusion">
     <h2>4. Tổng kết</h2>
-    <p>Pipeline từ dataset đến thiết kế ngược (Phase 3→5) đã hoàn thành với một câu chuyện rõ ràng: một surrogate CNN chính xác (R²≈0.91) không đủ để làm trọng tài duy nhất trong loss huấn luyện generative model — nó bị khai thác. Giải pháp không nằm ở việc huấn luyện lại tốt hơn, mà ở việc đặt <strong>FE thực làm trọng tài cuối cùng</strong> tại thời điểm inference (best-of-N), giữ nguyên checkpoint đã có.</p>
+    <p>Pipeline từ dataset đến thiết kế ngược (Phase 3→5) đã hoàn thành với một câu chuyện rõ ràng: một surrogate CNN chính xác (R²≈0.91) không đủ để làm trọng tài duy nhất trong loss huấn luyện generative model - nó bị khai thác. Giải pháp không nằm ở việc huấn luyện lại tốt hơn, mà ở việc đặt <strong>FE thực làm trọng tài cuối cùng</strong> tại thời điểm inference (best-of-N), giữ nguyên checkpoint đã có.</p>
     <ul>
         <li><strong>Phase 3:</strong> 7.920 → 33.120 mẫu train (sau tăng cường), split stratified theo seed.</li>
         <li><strong>Phase 4:</strong> R²(ν₁₂)=0.910, R²(ν₂₁)=0.911, R²(volfrac)=0.982 trên test set.</li>
         <li><strong>Phase 5:</strong> single-shot bị khai thác surrogate (R² FE thực âm sâu) → best-of-N + FE thực khắc phục hoàn toàn về mặt độ chính xác Poisson (R²=+0.44 đến +0.60, tỷ lệ trúng 100%); khả năng chế tạo là một trục đánh đổi riêng (0–3.5% mặc định, +0.19 R² nếu ép N=1500 để đảm bảo khả chế tạo).</li>
     </ul>
-    <p class="vi">Phase 6-8 (chế tạo/kiểm định thực nghiệm, active learning, mở rộng property space) chưa bắt đầu — xem <a href="../guides/simp_guide_and_roadmap.html">lộ trình đầy đủ</a>.</p>
+    <p class="vi">Phase 6-8 (chế tạo/kiểm định thực nghiệm, active learning, mở rộng property space) chưa bắt đầu - xem <a href="../guides/simp_guide_and_roadmap.html">lộ trình đầy đủ</a>.</p>
 </section>
 
 </div>

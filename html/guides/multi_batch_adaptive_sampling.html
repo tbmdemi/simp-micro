@@ -10,7 +10,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-Batch Adaptive Sampling Pipeline — SIMP</title>
+<title>Multi-Batch Adaptive Sampling Pipeline - SIMP</title>
 <meta name="description" content="Architecture deep-dive of the multi-batch adaptive sampling pipeline for SIMP topology optimization: sequential design space exploration with coverage analysis, adaptive decision-making, and self-contained HTML monitoring reports.">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
@@ -627,7 +627,7 @@
 <!-- ===== HERO ===== -->
 <section class="hero">
   <div class="hero-content">
-    <span class="hero-badge">pipeline/phase2_multi_batch/ — v1.3.0</span>
+    <span class="hero-badge">pipeline/phase2_multi_batch/ - v1.3.0</span>
     <h1>Multi-Batch<br><span class="highlight">Adaptive</span> <span class="highlight2">Sampling</span></h1>
     <p class="hero-sub">Intelligent, sequential design space exploration for SIMP topology optimization. Close the loop between generation & analysis.</p>
     <p class="hero-sub-vi">Khám phá không gian thiết kế tuần tự thông minh cho tối ưu hóa topo SIMP. Kết nối vòng lặp giữa sinh thiết kế và phân tích.</p>
@@ -669,12 +669,12 @@
     <p class="vi">Một quy trình con độc lập, thay thế thiết kế một-lần bằng khám phá lặp theo vùng phủ.</p>
   </div>
 
-  <p>Phase 1 screens a coarse grid of seed × objective × parameter combos. It tells you <em>what works</em> — but it cannot tell you <em>what you missed</em>. The multi-batch adaptive pipeline solves this by operating in sequential batches:</p>
-  <p class="vi">Pha 1 sàng lọc một lưới thô các tổ hợp seed × objective × tham số. Nó cho bạn biết <em>cái gì hiệu quả</em> — nhưng không thể cho biết <em>bạn đã bỏ sót gì</em>. Quy trình thích ứng đa batch giải quyết điều này bằng cách vận hành theo các batch tuần tự:</p>
+  <p>Phase 1 screens a coarse grid of seed × objective × parameter combos. It tells you <em>what works</em> - but it cannot tell you <em>what you missed</em>. The multi-batch adaptive pipeline solves this by operating in sequential batches:</p>
+  <p class="vi">Pha 1 sàng lọc một lưới thô các tổ hợp seed × objective × tham số. Nó cho bạn biết <em>cái gì hiệu quả</em> - nhưng không thể cho biết <em>bạn đã bỏ sót gì</em>. Quy trình thích ứng đa batch giải quyết điều này bằng cách vận hành theo các batch tuần tự:</p>
 
   <div class="highlight-box">
-    <p><strong>Batch 1</strong> — Sobol / LHS space-filling design across the full parameter domain (120 samples).<br>
-    <strong>Batch 2+</strong> — Coverage analysis identifies under-explored regions; <code>decide_next_action()</code> chooses to <strong>expand</strong>, <strong>refine</strong>, or <strong>stop</strong>.</p>
+    <p><strong>Batch 1</strong> - Sobol / LHS space-filling design across the full parameter domain (120 samples).<br>
+    <strong>Batch 2+</strong> - Coverage analysis identifies under-explored regions; <code>decide_next_action()</code> chooses to <strong>expand</strong>, <strong>refine</strong>, or <strong>stop</strong>.</p>
   </div>
 
   <p>Each batch runs SIMP in parallel (4 workers), aggregates results, generates self-contained HTML coverage reports, and logs every decision. The loop continues until the property space is adequately sampled or improvement plateaus.</p>
@@ -796,8 +796,8 @@
 <section class="fade-in">
   <div class="section-header">
     <h2>Data Flow / Luồng dữ liệu</h2>
-    <p>One cycle of the adaptive loop — from Phase 1 summary to decision.</p>
-    <p class="vi">Một chu kỳ của vòng lặp thích ứng — từ tổng kết Pha 1 đến quyết định.</p>
+    <p>One cycle of the adaptive loop - from Phase 1 summary to decision.</p>
+    <p class="vi">Một chu kỳ của vòng lặp thích ứng - từ tổng kết Pha 1 đến quyết định.</p>
   </div>
 
   <div class="flow-diagram">
@@ -836,7 +836,7 @@
   </div>
 
   <div class="highlight-box blue">
-    <p><strong>Key insight:</strong> The loop is <em>stateless by design</em>. Everything needed to decide the next batch is persisted as JSON — decision logs, batch summaries, coverage reports. You can resume from any point, or run <code>--only-report</code> to regenerate visualisations from historical data.</p>
+    <p><strong>Key insight:</strong> The loop is <em>stateless by design</em>. Everything needed to decide the next batch is persisted as JSON - decision logs, batch summaries, coverage reports. You can resume from any point, or run <code>--only-report</code> to regenerate visualisations from historical data.</p>
   </div>
 </section>
 
@@ -850,16 +850,16 @@
 
   <div class="module-deep">
     <h3><span class="tag cyan">Sobol</span> Deterministic Low-Discrepancy / Độ lệch thấp xác định</h3>
-    <p>Uses <code>scipy.stats.qmc.Sobol</code> to generate a sequence that covers the hypercube uniformly. Every run with the same seed produces identical designs — critical for reproducibility.</p>
-    <p class="vi">Sử dụng <code>scipy.stats.qmc.Sobol</code> để tạo một chuỗi bao phủ siêu khối lập phương đồng đều. Mỗi lần chạy với cùng seed tạo ra các thiết kế giống hệt nhau — rất quan trọng cho khả năng tái lập.</p>
+    <p>Uses <code>scipy.stats.qmc.Sobol</code> to generate a sequence that covers the hypercube uniformly. Every run with the same seed produces identical designs - critical for reproducibility.</p>
+    <p class="vi">Sử dụng <code>scipy.stats.qmc.Sobol</code> để tạo một chuỗi bao phủ siêu khối lập phương đồng đều. Mỗi lần chạy với cùng seed tạo ra các thiết kế giống hệt nhau - rất quan trọng cho khả năng tái lập.</p>
     <pre><span class="kw">from</span> scipy.stats.qmc <span class="kw">import</span> Sobol
 sampler = Sobol(d=n_params, scramble=True, seed=42)
 sample = sampler.random(n=n_samples)
 <span class="cm"># Scale to param ranges → DataFrame with seed/objective columns</span></pre>
     <ul>
-      <li><strong>Best for / Tốt nhất cho</strong> — Batch 1 initial exploration, when you want deterministic results / khám phá ban đầu batch 1, khi cần kết quả xác định</li>
-      <li><strong>Drawback / Hạn chế</strong> — Can align with periodic structure in some objectives / có thể căn chỉnh với cấu trúc tuần hoàn trong một số mục tiêu</li>
-      <li><strong>Default / Mặc định</strong> — Yes, used as the default strategy / có, được dùng làm chiến lược mặc định</li>
+      <li><strong>Best for / Tốt nhất cho</strong> - Batch 1 initial exploration, when you want deterministic results / khám phá ban đầu batch 1, khi cần kết quả xác định</li>
+      <li><strong>Drawback / Hạn chế</strong> - Can align with periodic structure in some objectives / có thể căn chỉnh với cấu trúc tuần hoàn trong một số mục tiêu</li>
+      <li><strong>Default / Mặc định</strong> - Yes, used as the default strategy / có, được dùng làm chiến lược mặc định</li>
     </ul>
   </div>
 
@@ -871,9 +871,9 @@ sample = sampler.random(n=n_samples)
 design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin'</span>)
 <span class="cm"># Randomised, non-deterministic by default / Ngẫu nhiên, không xác định theo mặc định</span></pre>
     <ul>
-      <li><strong>Best for / Tốt nhất cho</strong> — Stochastic robustness testing, when you want randomness / kiểm tra độ bền vững ngẫu nhiên, khi bạn muốn tính ngẫu nhiên</li>
-      <li><strong>Drawback / Hạn chế</strong> — Can leave larger gaps than Sobol in low dimensions / có thể để lại khoảng trống lớn hơn Sobol ở chiều thấp</li>
-      <li><strong>pyDOE required / Yêu cầu pyDOE</strong> — Optional dependency; fallback uses <code>numpy.random.uniform</code> / phụ thuộc tùy chọn; fallback dùng <code>numpy.random.uniform</code></li>
+      <li><strong>Best for / Tốt nhất cho</strong> - Stochastic robustness testing, when you want randomness / kiểm tra độ bền vững ngẫu nhiên, khi bạn muốn tính ngẫu nhiên</li>
+      <li><strong>Drawback / Hạn chế</strong> - Can leave larger gaps than Sobol in low dimensions / có thể để lại khoảng trống lớn hơn Sobol ở chiều thấp</li>
+      <li><strong>pyDOE required / Yêu cầu pyDOE</strong> - Optional dependency; fallback uses <code>numpy.random.uniform</code> / phụ thuộc tùy chọn; fallback dùng <code>numpy.random.uniform</code></li>
     </ul>
   </div>
 
@@ -889,9 +889,9 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
         <span class="kw">if</span> corr < best_corr: best = candidate
     <span class="kw">return</span> best</pre>
     <ul>
-      <li><strong>Best for / Tốt nhất cho</strong> — High-dimensional parameter spaces (>5 params) / không gian tham số nhiều chiều (>5 tham số)</li>
-      <li><strong>Drawback / Hạn chế</strong> — Slower to generate, not deterministic / chậm hơn để tạo, không xác định</li>
-      <li><strong>Used when / Dùng khi</strong> — <code>--strategy optimized_lhs</code></li>
+      <li><strong>Best for / Tốt nhất cho</strong> - High-dimensional parameter spaces (>5 params) / không gian tham số nhiều chiều (>5 tham số)</li>
+      <li><strong>Drawback / Hạn chế</strong> - Slower to generate, not deterministic / chậm hơn để tạo, không xác định</li>
+      <li><strong>Used when / Dùng khi</strong> - <code>--strategy optimized_lhs</code></li>
     </ul>
   </div>
 
@@ -909,12 +909,12 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
   </div>
 
   <div class="module-deep">
-    <p>The coverage engine operates on the <strong>property space</strong> — not the parameter space. It discretises <code>v12</code>, <code>v21</code>, and <code>obj_value</code> into an ND grid and counts how many bins contain at least one sample.</p>
-    <p class="vi">Cơ chế vùng phủ hoạt động trên <strong>không gian thuộc tính</strong> — không phải không gian tham số. Nó lượng tử hóa <code>v12</code>, <code>v21</code> và <code>obj_value</code> thành một lưới đa chiều và đếm số lượng bin có ít nhất một mẫu.</p>
+    <p>The coverage engine operates on the <strong>property space</strong> - not the parameter space. It discretises <code>v12</code>, <code>v21</code>, and <code>obj_value</code> into an ND grid and counts how many bins contain at least one sample.</p>
+    <p class="vi">Cơ chế vùng phủ hoạt động trên <strong>không gian thuộc tính</strong> - không phải không gian tham số. Nó lượng tử hóa <code>v12</code>, <code>v21</code> và <code>obj_value</code> thành một lưới đa chiều và đếm số lượng bin có ít nhất một mẫu.</p>
 
     <div class="coverage-grid-diagram">
       <svg id="cov-grid-svg" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Minh họa 2D của lưới vùng phủ ND lấp dần qua các batch"></svg>
-      <p class="vi" style="font-style: normal; margin-top: 4px;"><em>Minh họa khái niệm (2D, không phải số liệu bin thật) — số liệu thật ở bảng "Real Run Results" bên dưới: độ thưa cuối cùng ổn định quanh 18.5%.</em></p>
+      <p class="vi" style="font-style: normal; margin-top: 4px;"><em>Minh họa khái niệm (2D, không phải số liệu bin thật) - số liệu thật ở bảng "Real Run Results" bên dưới: độ thưa cuối cùng ổn định quanh 18.5%.</em></p>
     </div>
 
     <script>
@@ -925,11 +925,11 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
       var cell = 24, gap = 4, cols = 6, rows = 6;
       var panelW = cols * cell + (cols - 1) * gap;
       var panels = [
-        { x: 20,  title: 'Batch 1 · Sobol (khám phá)', sub: '~14/36 ô — thưa, rải rác', color: '#2563eb',
+        { x: 20,  title: 'Batch 1 · Sobol (khám phá)', sub: '~14/36 ô - thưa, rải rác', color: '#2563eb',
           filled: [[0,1],[0,4],[1,0],[1,3],[2,0],[2,5],[3,2],[3,5],[4,1],[4,4],[5,0],[5,3],[2,2],[0,0]] },
-        { x: 20 + panelW + 78, title: 'Batch 4 · LHS tối ưu (tinh chỉnh)', sub: '~24/36 ô — lấp vùng thưa cũ', color: '#d97706',
+        { x: 20 + panelW + 78, title: 'Batch 4 · LHS tối ưu (tinh chỉnh)', sub: '~24/36 ô - lấp vùng thưa cũ', color: '#d97706',
           filled: [[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[1,2],[1,3],[1,5],[2,0],[2,2],[2,3],[2,4],[2,5],[3,0],[3,2],[3,3],[3,5],[4,1],[4,2],[4,4],[5,0],[5,3]] },
-        { x: 20 + 2*(panelW + 78), title: 'Batch 8 · dừng (~18,5% thưa)', sub: '~30/36 ô — vùng phủ đầy đủ', color: '#059669',
+        { x: 20 + 2*(panelW + 78), title: 'Batch 8 · dừng (~18,5% thưa)', sub: '~30/36 ô - vùng phủ đầy đủ', color: '#059669',
           filled: [[0,0],[0,1],[0,2],[0,3],[0,4],[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[3,0],[3,1],[3,2],[3,3],[3,5],[4,0],[4,1],[4,2],[4,4],[4,5],[5,0],[5,3],[5,5]] }
       ];
 
@@ -1002,9 +1002,9 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
     <span class="kw">return</span> {<span class="str">'coverage_pct'</span>: (<span class="num">1</span> - sparsity) * <span class="num">100</span>, <span class="str">'grid'</span>: grid}</pre>
 
     <ul>
-      <li><strong><code>coverage_report()</code></strong> — Returns coverage percentage, per-bin counts, and sparsity statistics / trả về tỷ lệ vùng phủ, số lượng mỗi bin và thống kê độ thưa</li>
-      <li><strong><code>find_sparse_regions()</code></strong> — Returns list of bin coordinates with < N samples (configurable threshold) / trả về danh sách tọa độ bin có < N mẫu (ngưỡng cấu hình được)</li>
-      <li><strong><code>compare_batches()</code></strong> — Reports how many new bins each batch added (coverage improvement) / báo cáo số lượng bin mới mỗi batch thêm vào (cải thiện vùng phủ)</li>
+      <li><strong><code>coverage_report()</code></strong> - Returns coverage percentage, per-bin counts, and sparsity statistics / trả về tỷ lệ vùng phủ, số lượng mỗi bin và thống kê độ thưa</li>
+      <li><strong><code>find_sparse_regions()</code></strong> - Returns list of bin coordinates with < N samples (configurable threshold) / trả về danh sách tọa độ bin có < N mẫu (ngưỡng cấu hình được)</li>
+      <li><strong><code>compare_batches()</code></strong> - Reports how many new bins each batch added (coverage improvement) / báo cáo số lượng bin mới mỗi batch thêm vào (cải thiện vùng phủ)</li>
     </ul>
   </div>
 </section>
@@ -1041,7 +1041,7 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
   </div>
 
   <div class="highlight-box warn" style="margin-top: var(--gap-lg);">
-    <p><strong>Decision thresholds are configurable:</strong> <code>sparsity_expand_threshold</code>, <code>sparsity_refine_threshold</code>, <code>improvement_patience</code>. Tune them via the <code>decide_next_action()</code> function signature — no subclassing needed.</p>
+    <p><strong>Decision thresholds are configurable:</strong> <code>sparsity_expand_threshold</code>, <code>sparsity_refine_threshold</code>, <code>improvement_patience</code>. Tune them via the <code>decide_next_action()</code> function signature - no subclassing needed.</p>
   </div>
 </section>
 
@@ -1049,8 +1049,8 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
 <section class="fade-in">
   <div class="section-header">
     <h2>Kết quả thực tế / Real Run Results</h2>
-    <p>One completed run: 8 batches, 7,920 samples — this is what the adaptive loop actually did, not a projection.</p>
-    <p class="vi">Một lần chạy đã hoàn thành: 8 batch, 7.920 mẫu — đây là những gì vòng lặp thích ứng đã thực sự làm, không phải dự đoán.</p>
+    <p>One completed run: 8 batches, 7,920 samples - this is what the adaptive loop actually did, not a projection.</p>
+    <p class="vi">Một lần chạy đã hoàn thành: 8 batch, 7.920 mẫu - đây là những gì vòng lặp thích ứng đã thực sự làm, không phải dự đoán.</p>
   </div>
 
   <div class="hero-metrics" style="margin: 0 0 var(--gap-lg); justify-content: flex-start;">
@@ -1091,8 +1091,8 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
   </div>
 
   <div class="highlight-box" style="margin-top: var(--gap-lg);">
-    <p><strong>Why it stopped at batch 8:</strong> 2 consecutive batches without objective improvement, with sparsity stabilized around ~18.5% — the stop condition from the Decision Logic above. The <code>volfrac</code> search range narrowed from <code>[0.45, 0.70]</code> to <code>[0.50, 0.58]</code> by batch 8, consistent with Phase 1's finding that <code>volfrac</code> is the dominant parameter (Spearman r ≈ 0.87–0.96).</p>
-    <p class="vi"><strong>Vì sao dừng ở batch 8:</strong> 2 batch liên tiếp không cải thiện mục tiêu, độ thưa ổn định quanh ~18,5% — đúng điều kiện dừng ở mục Decision Logic phía trên. Khoảng tìm kiếm <code>volfrac</code> thu hẹp từ <code>[0.45, 0.70]</code> xuống <code>[0.50, 0.58]</code> ở batch 8, khớp với phát hiện ở Phase 1 rằng <code>volfrac</code> là tham số chi phối (Spearman r ≈ 0,87–0,96).</p>
+    <p><strong>Why it stopped at batch 8:</strong> 2 consecutive batches without objective improvement, with sparsity stabilized around ~18.5% - the stop condition from the Decision Logic above. The <code>volfrac</code> search range narrowed from <code>[0.45, 0.70]</code> to <code>[0.50, 0.58]</code> by batch 8, consistent with Phase 1's finding that <code>volfrac</code> is the dominant parameter (Spearman r ≈ 0.87–0.96).</p>
+    <p class="vi"><strong>Vì sao dừng ở batch 8:</strong> 2 batch liên tiếp không cải thiện mục tiêu, độ thưa ổn định quanh ~18,5% - đúng điều kiện dừng ở mục Decision Logic phía trên. Khoảng tìm kiếm <code>volfrac</code> thu hẹp từ <code>[0.45, 0.70]</code> xuống <code>[0.50, 0.58]</code> ở batch 8, khớp với phát hiện ở Phase 1 rằng <code>volfrac</code> là tham số chi phối (Spearman r ≈ 0,87–0,96).</p>
   </div>
 
   <div class="module-deep" style="margin-top: var(--gap-lg);">
@@ -1158,8 +1158,8 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
       </div>
     </div>
 
-    <p style="margin-top: var(--gap-md);"><code>reentrant_bowtie</code> and <code>hexagonal</code> are the hardest geometries to push auxetic — good candidates for further parameter tuning in a future batch.</p>
-    <p class="vi"><code>reentrant_bowtie</code> và <code>hexagonal</code> là các hình học khó đẩy về auxetic nhất — ứng viên tốt để tiếp tục tinh chỉnh tham số ở batch tương lai.</p>
+    <p style="margin-top: var(--gap-md);"><code>reentrant_bowtie</code> and <code>hexagonal</code> are the hardest geometries to push auxetic - good candidates for further parameter tuning in a future batch.</p>
+    <p class="vi"><code>reentrant_bowtie</code> và <code>hexagonal</code> là các hình học khó đẩy về auxetic nhất - ứng viên tốt để tiếp tục tinh chỉnh tham số ở batch tương lai.</p>
   </div>
 </section>
 
@@ -1213,7 +1213,7 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
         </tr>
         <tr>
           <td>--resume</td>
-          <td>—</td>
+          <td>-</td>
           <td>Path to a prior decision_log.json to resume from / Đường dẫn đến decision_log.json trước đó để tiếp tục</td>
         </tr>
         <tr>
@@ -1255,8 +1255,8 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--gap-lg);">
       <div>
         <h4>Stateless persistence / Bền vững không trạng thái</h4>
-        <p>Every batch writes its summary, results, params, and design as separate JSON/CSV files. No database, no global state — just a directory tree you can inspect, diff, and resume from.</p>
-        <p class="vi">Mỗi batch ghi summary, kết quả, tham số và thiết kế thành các file JSON/CSV riêng biệt. Không database, không trạng thái toàn cục — chỉ một cây thư mục bạn có thể kiểm tra, so sánh và tiếp tục.</p>
+        <p>Every batch writes its summary, results, params, and design as separate JSON/CSV files. No database, no global state - just a directory tree you can inspect, diff, and resume from.</p>
+        <p class="vi">Mỗi batch ghi summary, kết quả, tham số và thiết kế thành các file JSON/CSV riêng biệt. Không database, không trạng thái toàn cục - chỉ một cây thư mục bạn có thể kiểm tra, so sánh và tiếp tục.</p>
       </div>
       <div>
         <h4>Mock-mode for development / Chế độ giả lập cho phát triển</h4>
@@ -1265,23 +1265,23 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
       </div>
       <div>
         <h4>Zero new dependencies / Không phụ thuộc mới</h4>
-        <p>The module uses only <code>scipy</code>, <code>numpy</code>, <code>pandas</code> — all already in <code>requirements.txt</code>. <code>pyDOE</code> for LHS is an optional import; a pure-numpy fallback is provided.</p>
-        <p class="vi">Module chỉ sử dụng <code>scipy</code>, <code>numpy</code>, <code>pandas</code> — tất cả đã có trong <code>requirements.txt</code>. <code>pyDOE</code> cho LHS là import tùy chọn; fallback bằng numpy thuần được cung cấp.</p>
+        <p>The module uses only <code>scipy</code>, <code>numpy</code>, <code>pandas</code> - all already in <code>requirements.txt</code>. <code>pyDOE</code> for LHS is an optional import; a pure-numpy fallback is provided.</p>
+        <p class="vi">Module chỉ sử dụng <code>scipy</code>, <code>numpy</code>, <code>pandas</code> - tất cả đã có trong <code>requirements.txt</code>. <code>pyDOE</code> cho LHS là import tùy chọn; fallback bằng numpy thuần được cung cấp.</p>
       </div>
       <div>
         <h4>Property-space coverage / Vùng phủ không gian thuộc tính</h4>
-        <p>We analyze coverage in <em>property space</em> (v12, v21, obj) — not parameter space. This is deliberate: it tells you if you're discovering genuinely different designs, not just different inputs.</p>
-        <p class="vi">Chúng tôi phân tích vùng phủ trong <em>không gian thuộc tính</em> (v12, v21, obj) — không phải không gian tham số. Điều này có chủ ý: nó cho biết bạn có đang khám phá các thiết kế thực sự khác nhau hay không, chứ không chỉ các đầu vào khác nhau.</p>
+        <p>We analyze coverage in <em>property space</em> (v12, v21, obj) - not parameter space. This is deliberate: it tells you if you're discovering genuinely different designs, not just different inputs.</p>
+        <p class="vi">Chúng tôi phân tích vùng phủ trong <em>không gian thuộc tính</em> (v12, v21, obj) - không phải không gian tham số. Điều này có chủ ý: nó cho biết bạn có đang khám phá các thiết kế thực sự khác nhau hay không, chứ không chỉ các đầu vào khác nhau.</p>
       </div>
       <div>
         <h4>Configurable decision thresholds / Ngưỡng quyết định cấu hình được</h4>
-        <p>All thresholds in <code>decide_next_action()</code> are keyword arguments with sensible defaults. No configuration file, no magic numbers — just Python that you can tune per experiment.</p>
-        <p class="vi">Tất cả ngưỡng trong <code>decide_next_action()</code> là đối số keyword với giá trị mặc định hợp lý. Không file cấu hình, không số ma thuật — chỉ Python mà bạn có thể tùy chỉnh cho từng thí nghiệm.</p>
+        <p>All thresholds in <code>decide_next_action()</code> are keyword arguments with sensible defaults. No configuration file, no magic numbers - just Python that you can tune per experiment.</p>
+        <p class="vi">Tất cả ngưỡng trong <code>decide_next_action()</code> là đối số keyword với giá trị mặc định hợp lý. Không file cấu hình, không số ma thuật - chỉ Python mà bạn có thể tùy chỉnh cho từng thí nghiệm.</p>
       </div>
       <div>
         <h4>Self-contained HTML reports / Báo cáo HTML độc lập</h4>
-        <p>Coverage reports and batch progression visualisations are single-file HTML pages — no server needed. Generated at every batch so you can monitor progress in real time.</p>
-        <p class="vi">Báo cáo vùng phủ và trực quan hóa tiến trình batch là các trang HTML đơn file — không cần server. Được tạo ở mỗi batch để bạn có thể theo dõi tiến trình theo thời gian thực.</p>
+        <p>Coverage reports and batch progression visualisations are single-file HTML pages - no server needed. Generated at every batch so you can monitor progress in real time.</p>
+        <p class="vi">Báo cáo vùng phủ và trực quan hóa tiến trình batch là các trang HTML đơn file - không cần server. Được tạo ở mỗi batch để bạn có thể theo dõi tiến trình theo thời gian thực.</p>
       </div>
     </div>
   </div>
@@ -1320,7 +1320,7 @@ design = lhs(n=n_params, samples=n_samples, criterion=<span class="str">'maximin
 }</pre>
 
   <div class="highlight-box blue">
-    <p><strong>No migration needed.</strong> If you have a Phase 1 summary with <code>active_parameters</code> and <code>ranges</code>, it works. The <code>multi_batch</code> key in <code>REFINED_PARAMETERS_TEMPLATE</code> is a convenience addition — the pipeline can also parse plain <code>parameters</code> dicts from any JSON summary file.</p>
+    <p><strong>No migration needed.</strong> If you have a Phase 1 summary with <code>active_parameters</code> and <code>ranges</code>, it works. The <code>multi_batch</code> key in <code>REFINED_PARAMETERS_TEMPLATE</code> is a convenience addition - the pipeline can also parse plain <code>parameters</code> dicts from any JSON summary file.</p>
   </div>
 </section>
 
@@ -1335,10 +1335,10 @@ pipeline/
 └── multi_batch/
     ├── __init__.py          # Module exports / Xuất module
     ├── params.py            # BatchConfig, PipelineConfig, enums, load_phase1_params
-    ├── sampling.py          # generate_design — Sobol, LHS, Optimized LHS
-    ├── runner.py            # run_batch_from_design — parallel SIMP execution / thực thi SIMP song song
+    ├── sampling.py          # generate_design - Sobol, LHS, Optimized LHS
+    ├── runner.py            # run_batch_from_design - parallel SIMP execution / thực thi SIMP song song
     ├── coverage.py          # coverage_report, find_sparse_regions, compare_batches
-    ├── adaptive.py           # decide_next_action — the decision orchestrator / điều phối quyết định
+    ├── adaptive.py           # decide_next_action - the decision orchestrator / điều phối quyết định
     ├── visualize.py         # generate_coverage_html, generate_batch_progression_html
     └── main.py              # CLI entry point, decision loop, mock runner / điểm vào CLI, vòng lặp quyết định</pre>
 </section>
@@ -1348,9 +1348,9 @@ pipeline/
 <!-- ===== FOOTER ===== -->
 <footer>
   <div class="container">
-    <p><strong>Multi-Batch Adaptive Sampling</strong> — SIMP Pipeline v1.3.0<br>
+    <p><strong>Multi-Batch Adaptive Sampling</strong> - SIMP Pipeline v1.3.0<br>
     Built with NumPy · SciPy · Pandas · Matplotlib · Chart.js<br>
-    <span style="color: var(--text3);">Single-file HTML guide — no server required / Hướng dẫn HTML đơn file — không cần server</span></p>
+    <span style="color: var(--text3);">Single-file HTML guide - no server required / Hướng dẫn HTML đơn file - không cần server</span></p>
   </div>
 </footer>
 

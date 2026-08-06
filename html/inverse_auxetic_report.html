@@ -197,14 +197,14 @@
 <a href="index.html" class="simp-hub-nav">← SIMP Analyst</a>
 <header>
     <h1>Inverse Design of Auxetic Mechanical Metamaterials</h1>
-    <p>A comprehensive exploration of topology-optimized auxetic structures — from theory to data-driven design</p>
+    <p>A comprehensive exploration of topology-optimized auxetic structures - from theory to data-driven design</p>
 </header>
 <div class="container">
 
 <div style="margin:20px 0 0;padding:18px 24px;background:#fff3cd;border:1px solid #f0c36d;border-left:6px solid #b8860b;border-radius:8px;color:#4a3b00;">
-    <strong>⚠️ Báo cáo sơ bộ, đã lỗi thời (generated 2026-07-16) — Preliminary report, superseded by later validated results.</strong>
-    <p style="margin:8px 0 0;">Báo cáo này chỉ phản ánh <strong>Phase 1 screening</strong> ban đầu — trước khi 3 lỗi tính toán gốc được sửa (công thức ν₁₂ tắt trực hướng khi xoay, chuyển vị FE trong đồng nhất hóa, chuẩn hóa hệ số phạt; xem <a href="../EXPERIMENT_LOG.md">EXPERIMENT_LOG.md</a>) và trước khi Phase 2 (8 lô, 7.920 mẫu, đã xác thực) hoàn thành. <strong>Xếp hạng seed ở Mục 8 (Kết luận) bên dưới trái ngược với dữ liệu đã xác thực hiện tại</strong>: hourglass/hexagonal/reentrant_bowtie được nêu là tốt nhất ở đây thực ra là 3 seed <em>kém nhất</em> (48,6–67,8% mẫu auxetic) trên toàn bộ 7.920 mẫu; xem bảng seed đầy đủ trong <a href="../README.md#các-seed-có-sẵn">README.md</a>. Kết quả Phase 3-5 (dataset, CNN surrogate R²=0,91, cVAE + best-of-N) đầy đủ và cập nhật xem tại <a href="reports/ml_pipeline_phase3to5.html">báo cáo Phase 3-5</a>.</p>
-    <p style="margin:8px 0 0;font-size:0.9em;opacity:0.85;">This report reflects only the initial Phase 1 screening, before three root-cause computation bugs were fixed and before the validated 7,920-sample Phase 2 run completed. <strong>The seed ranking in Conclusion §8 below is contradicted by current validated data</strong>: hourglass/hexagonal/reentrant_bowtie, listed here as top performers, are actually the three <em>worst</em>-performing seeds (48.6–67.8% auxetic) across the full 7,920-sample dataset — see the seed table in <a href="../README.md#các-seed-có-sẵn">README.md</a>. For current, validated Phase 3-5 results (dataset, CNN surrogate, cVAE + best-of-N), see the <a href="reports/ml_pipeline_phase3to5.html">Phase 3-5 report</a>.</p>
+    <strong>⚠️ Báo cáo sơ bộ, đã lỗi thời (generated 2026-07-16) - Preliminary report, superseded by later validated results.</strong>
+    <p style="margin:8px 0 0;">Báo cáo này chỉ phản ánh <strong>Phase 1 screening</strong> ban đầu - trước khi 3 lỗi tính toán gốc được sửa (công thức ν₁₂ tắt trực hướng khi xoay, chuyển vị FE trong đồng nhất hóa, chuẩn hóa hệ số phạt; xem <a href="../EXPERIMENT_LOG.md">EXPERIMENT_LOG.md</a>) và trước khi Phase 2 (8 lô, 7.920 mẫu, đã xác thực) hoàn thành. <strong>Xếp hạng seed ở Mục 8 (Kết luận) bên dưới trái ngược với dữ liệu đã xác thực hiện tại</strong>: hourglass/hexagonal/reentrant_bowtie được nêu là tốt nhất ở đây thực ra là 3 seed <em>kém nhất</em> (48,6–67,8% mẫu auxetic) trên toàn bộ 7.920 mẫu; xem bảng seed đầy đủ trong <a href="../README.md#các-seed-có-sẵn">README.md</a>. Kết quả Phase 3-5 (dataset, CNN surrogate R²=0,91, cVAE + best-of-N) đầy đủ và cập nhật xem tại <a href="reports/ml_pipeline_phase3to5.html">báo cáo Phase 3-5</a>.</p>
+    <p style="margin:8px 0 0;font-size:0.9em;opacity:0.85;">This report reflects only the initial Phase 1 screening, before three root-cause computation bugs were fixed and before the validated 7,920-sample Phase 2 run completed. <strong>The seed ranking in Conclusion §8 below is contradicted by current validated data</strong>: hourglass/hexagonal/reentrant_bowtie, listed here as top performers, are actually the three <em>worst</em>-performing seeds (48.6–67.8% auxetic) across the full 7,920-sample dataset - see the seed table in <a href="../README.md#các-seed-có-sẵn">README.md</a>. For current, validated Phase 3-5 results (dataset, CNN surrogate, cVAE + best-of-N), see the <a href="reports/ml_pipeline_phase3to5.html">Phase 3-5 report</a>.</p>
 </div>
 
 
@@ -212,7 +212,7 @@
 <section>
     <h2>1. Introduction</h2>
     <p>Auxetic materials exhibit a <strong>negative Poisson's ratio</strong> (\(\nu < 0\)): they expand laterally when stretched. This counterintuitive behavior enables enhanced shear resistance, fracture toughness, and energy absorption.</p>
-    <p>Inverse design — specifying desired properties and computationally discovering the microstructure — accelerates auxetic discovery beyond trial-and-error. This report details the process using <strong>topology optimization</strong> via the SIMP method combined with <strong>homogenization</strong> to extract effective moduli.</p>
+    <p>Inverse design - specifying desired properties and computationally discovering the microstructure - accelerates auxetic discovery beyond trial-and-error. This report details the process using <strong>topology optimization</strong> via the SIMP method combined with <strong>homogenization</strong> to extract effective moduli.</p>
 </section>
 
 <!-- 2. Theoretical Foundation -->
@@ -239,7 +239,7 @@
         \end{aligned}
         \]
     </div>
-    <p>A negative \(\nu_{12}\) occurs when the off-diagonal term \(Q_{12} > 0\) — indicating auxetic behavior.</p>
+    <p>A negative \(\nu_{12}\) occurs when the off-diagonal term \(Q_{12} > 0\) - indicating auxetic behavior.</p>
 </section>
 
 <!-- 3. Pipeline & Screening Results -->
@@ -297,7 +297,7 @@
 <!-- 5. Convergence Analysis -->
 <section>
     <h2>5. Convergence Behavior</h2>
-    <p>Convergence profiles for three representative samples — excellent, moderate, and failed — illustrate distinct optimization trajectories:</p>
+    <p>Convergence profiles for three representative samples - excellent, moderate, and failed - illustrate distinct optimization trajectories:</p>
     <div class="grid-2">
         <div class="card">
             <div class="card-title">✅ Excellent design (hourglass, \(\nu_{12} = -0.42\))</div>
@@ -328,7 +328,7 @@
     <p>The rotation parameter (\(\phi\)) can induce shear–normal coupling. Based on the screening:</p>
     <ul>
         <li>Samples with \(\phi = 0\) produce a wider spread of \(\nu_{12}\) and the most strongly auxetic candidates.</li>
-        <li>Non-zero rotation introduces moderate correlation with \(\nu_{12}\) (Spearman \(r \approx 0.21\)), but the benefit is limited — the most negative \(\nu_{12}\) values still occur at \(\phi = 0\).</li>
+        <li>Non-zero rotation introduces moderate correlation with \(\nu_{12}\) (Spearman \(r \approx 0.21\)), but the benefit is limited - the most negative \(\nu_{12}\) values still occur at \(\phi = 0\).</li>
     </ul>
     <p><strong>Recommendation:</strong> fix \(\phi = 0\) for Phase 2 to reduce dimensionality without sacrificing auxetic potential.</p>
 </section>
@@ -358,11 +358,11 @@
 <section>
     <h2>8. Conclusion</h2>
     <p>This report demonstrated the inverse design pipeline for auxetic metamaterials: starting from parametric screening across 11 seed topologies, identifying high-performing candidates with \(\nu_{12} < -0.3\) using SIMP-driven topology optimization, and distilling actionable guidelines for Phase 2 refinement.</p>
-    <p>Key findings <em>(Phase 1 screening, pre-bugfix — see warning banner at top of page; superseded by the validated Phase 2 results below)</em>:</p>
+    <p>Key findings <em>(Phase 1 screening, pre-bugfix - see warning banner at top of page; superseded by the validated Phase 2 results below)</em>:</p>
     <ul>
-        <li><s>Hourglass, hexagonal, reentrant_bowtie</s> are <strong>not</strong> the most promising seeds — on the validated 7,920-sample Phase 2 dataset they are the three <em>worst</em>-performing seeds (48.6–67.8% auxetic vs. 98–99% for nine_circle/grid_circular_voids). See <a href="../README.md#các-seed-có-sẵn">README.md's seed table</a> for the current ranking.</li>
+        <li><s>Hourglass, hexagonal, reentrant_bowtie</s> are <strong>not</strong> the most promising seeds - on the validated 7,920-sample Phase 2 dataset they are the three <em>worst</em>-performing seeds (48.6–67.8% auxetic vs. 98–99% for nine_circle/grid_circular_voids). See <a href="../README.md#các-seed-có-sẵn">README.md's seed table</a> for the current ranking.</li>
         <li>Strong auxeticity correlates with <strong>moderate \(r_{\min}\) (3.5–5.0)</strong>, <strong>volfrac around 0.35</strong>, and <strong>\(\phi = 0\)</strong>.</li>
-        <li>Void collapse occurs in 12% of samples — avoid extreme void_size_frac > 0.6.</li>
+        <li>Void collapse occurs in 12% of samples - avoid extreme void_size_frac > 0.6.</li>
     </ul>
 </section>
 
