@@ -32,6 +32,18 @@ SEEDS = [
     "nine_circle", "cross_rectangular", "grid_circular_voids",
     "small_square_cross", "circle_half_quarter",
 ]
+def resolve_repo_path(p: "str | Path") -> Path:
+    """Resolve a sample_path/csv_path against REPO_ROOT, independent of cwd.
+
+    sample_path values stored in the dataset (parquet/manifest) are relative
+    to the repo root. Resolving them via Path.cwd() breaks whenever the
+    Jupyter kernel's working directory isn't the repo root (e.g. VS Code
+    defaults to the notebook's own directory).
+    """
+    path = Path(p)
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
 MAX_ITER = 150   # from pipeline/params.py FIXED_PARAMS
 VOID_THRESHOLD = 0.01  # Volume_Fraction below this → void collapse
 NU_LOWER = -1.0   # physically plausible range for Poisson's ratio
@@ -416,7 +428,7 @@ def plot_top10_grid(
             ax.text(0.5, 0.5, "No image path", ha="center", va="center",
                     transform=ax.transAxes, fontsize=8)
         else:
-            sample_dir = Path(str(sample_path))
+            sample_dir = resolve_repo_path(str(sample_path))
             # Find the last iteration image
             images = sorted(sample_dir.glob("iteration_*.png"))
             img_path = images[-1] if images else None

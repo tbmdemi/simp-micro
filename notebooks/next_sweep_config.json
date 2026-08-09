@@ -35,7 +35,7 @@
   "total_samples": 2157,
   "recommendations": {
     "focus_seeds": "Focus on top-performing seeds that consistently produce nu < -0.3",
-    "avoid_high_rmin": "rmin > 2.5 rarely produces auxetic behavior \u2014 cap the upper bound",
+    "avoid_high_rmin": "rmin > 2.5 rarely produces auxetic behavior - cap the upper bound",
     "volfrac_strategy": "Volfrac in [0.45, 0.70] gives best trade-off between auxeticity and material usage",
     "void_size_frac_strategy": "void_size_frac around [0.25, 0.55] promotes void stability",
     "rotation": "Fixed to 0 for Phase 2 to reduce parameter space (rotation shows limited benefit)",
