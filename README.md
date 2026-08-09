@@ -20,6 +20,8 @@ Density/Sensitivity Filtering → OC Update → Convergence Check → Repeat
 
 Codebase này là bản triển khai lại bằng Python của các đoạn mã SIMP MATLAB kinh điển (88 dòng / 99 dòng), được mở rộng thêm điều kiện biên tuần hoàn (periodic boundary conditions), phép đồng nhất hóa dựa trên năng lượng (energy-based homogenization), và một pipeline DOE (Design of Experiments) đa lô thích ứng (adaptive multi-batch) để sinh dữ liệu quy mô lớn.
 
+> **Ghi chú tên gọi:** dự án tên là **AuxForge**; repo GitHub vẫn giữ slug lịch sử `simp-micro` (từ trước khi đổi tên) - xem [CHANGELOG.md](CHANGELOG.md) mục đổi tên.
+
 ---
 
 ## Mục lục

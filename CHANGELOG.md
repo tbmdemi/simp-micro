@@ -133,6 +133,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Known result (âm tính, có giá trị phương pháp luận)
 - Active-learning loop chạy production trên `cvae_realphysics.pt` (đã gần mức trần: `frac_manufacturable`=0,35, hit-rate 98,7%) - round 1 làm `mean_abs_error` TỆ ĐI (0,0246→0,0686), không cải thiện. Kết luận: giữ nguyên checkpoint production, không promote checkpoint mới.
 
+### 2026-08-02 đến 2026-08-09 - Optional multi-condition (Pha A) + OOD baseline + tái cấu trúc tài liệu (chưa gắn số phiên bản)
+
+> Chi tiết đầy đủ: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) các mục 2026-08-02 đến 2026-08-05. Mục này chỉ tóm tắt theo định dạng changelog.
+
+#### Added
+- **Optional multi-condition (Pha A, PR #13, nhánh `feature/optional-multi-condition`)**: mở rộng cVAE để nhận thêm điều kiện tuỳ chọn (`volfrac`, `void_size_frac`) bên cạnh `v12`/`v21`, cùng novelty/diversity metric và điểm số tổng hợp accuracy/manufacturability/aesthetic cho việc chọn ứng viên - đã fix 2 bug thật phát hiện qua audit kiểu phản biện sau khi rebase lên `main` (một bug nằm ngay trên lệnh khuyến nghị trong README).
+- `analysis/scripts/` - script so sánh cVAE với retrieval baseline ngoài phân phối train (OOD, Thử nghiệm E): cVAE thắng rõ trên sign-flip Poisson (R²=0,42 so với 0,06) nhưng cả hai đều không ngoại suy được về biên độ vượt khoảng train - kết quả có tính hai mặt, không phải chiến thắng toàn diện, tránh diễn giải quá mức.
+- `docs/slides/` - slide deck trình bày dự án AuxForge.
+
+#### Changed
+- Phát hiện `hit_rate` (best-of-N) là metric yếu khi so với retrieval baseline trên test set hiện tại - bổ sung novelty/diversity metric để đánh giá đầy đủ hơn thay vì chỉ dựa vào hit_rate.
+- Tách `docs/PIPELINE.md` ra thành file riêng khỏi tài liệu gộp trước đó; xoá script gamma-sweep không còn dùng.
+- Đồng bộ đường dẫn trong notebooks sang dùng `utils.REPO_ROOT` thay vì đường dẫn tương đối cứng.
+- README §Giới hạn Đã biết cập nhật phản ánh các phát hiện audit/OOD ở trên.
+
 ## [1.4.0] - 2026-07-10
 
 ### Fixed

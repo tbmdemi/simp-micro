@@ -33,6 +33,7 @@ env/
 # --- AI rules ---
 .clinerules/
 .claude/
+.pi-subagents/
 
 # --- SIMP results (auto-generated at root) ---
 simp_result_*/
@@ -78,6 +79,9 @@ outputs/_smoke_*/
 # pilot MMA (nlopt.LD_MMA, simp/mma_runner.py) - scratch, không phải dataset
 outputs/pilot_mma/
 outputs/pilot_mma_*/
+
+# pilot objective_variant='normalized' A/B test (2026-08-05, xem EXPERIMENT_LOG.md) - scratch, không phải dataset
+outputs/pilot_normalized_*/
 
 # --- LaTeX build artifacts ---
 *.aux

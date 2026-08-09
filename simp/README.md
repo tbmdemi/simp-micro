@@ -91,7 +91,7 @@ Results are saved to `outputs/simp_results_[seed]/`:
 
 ```
 simp/
-├── __init__.py               # Package metadata (version 1.1.0, MIT license)
+├── __init__.py               # Package metadata (version 1.4.0, MIT license)
 ├── run.py                    # Entry point - run optimization with default params
 ├── runner.py                 # Main optimization loop orchestrator
 │
