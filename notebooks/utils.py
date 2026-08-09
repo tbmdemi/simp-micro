@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy import ndimage, stats
 
 logger = logging.getLogger(__name__)
 
@@ -454,3 +455,296 @@ def plot_top10_grid(
     fig.suptitle("Top 10 Auxetic Designs", fontsize=14, y=1.02)
     fig.tight_layout()
     return fig
+
+
+# ──────────────────────────────────────────────
+#  Geometric feature extraction (n_edges/thickness -> v12 influence,
+#  xem notebooks/07_geometric_feature_influence.ipynb)
+# ──────────────────────────────────────────────
+
+GEOM_BIN_THRESHOLD = 0.5
+GEOM_PAD = 2  # px, viền tuần hoàn quanh ảnh trước khi skeleton hóa
+_NEIGHBORS_8 = [(-1, -1), (-1, 0), (-1, 1), (0, -1),
+                (0, 1), (1, -1), (1, 0), (1, 1)]
+
+
+def _shift(img: np.ndarray, dy: int, dx: int) -> np.ndarray:
+    """Dịch ảnh nhị phân (dy, dx), lấp biên bằng 0 (nền)."""
+    out = np.zeros_like(img)
+    h, w = img.shape
+    ys, ye = max(0, dy), h + min(0, dy)
+    xs, xe = max(0, dx), w + min(0, dx)
+    oys, oye = max(0, -dy), h + min(0, -dy)
+    oxs, oxe = max(0, -dx), w + min(0, -dx)
+    out[oys:oye, oxs:oxe] = img[ys:ye, xs:xe]
+    return out
+
+
+def zhang_suen_thin(binary: np.ndarray, max_iter: int = 200) -> np.ndarray:
+    """Zhang-Suen thinning, vector hóa toàn ảnh bằng numpy (không loop
+    pixel). `binary`: mảng bool, 1=vật liệu. Trả skeleton bool, dày 1 pixel.
+    """
+    img = binary.astype(np.uint8).copy()
+    for _ in range(max_iter):
+        changed = False
+        for sub_iter in (0, 1):
+            p2 = _shift(img, -1, 0)
+            p3 = _shift(img, -1, 1)
+            p4 = _shift(img, 0, 1)
+            p5 = _shift(img, 1, 1)
+            p6 = _shift(img, 1, 0)
+            p7 = _shift(img, 1, -1)
+            p8 = _shift(img, 0, -1)
+            p9 = _shift(img, -1, -1)
+
+            neighbors = [p2, p3, p4, p5, p6, p7, p8, p9]
+            B = sum(neighbors)  # số hàng xóm = 1
+            seq = neighbors + [p2]  # A = số chuyển 0->1 theo chu trình p2..p9..p2
+            A = np.zeros_like(img)
+            for a, b in zip(seq[:-1], seq[1:]):
+                A += ((a == 0) & (b == 1)).astype(np.uint8)
+
+            cond_base = (img == 1) & (B >= 2) & (B <= 6) & (A == 1)
+            if sub_iter == 0:
+                cond = cond_base & ((p2 * p4 * p6) == 0) & ((p4 * p6 * p8) == 0)
+            else:
+                cond = cond_base & ((p2 * p4 * p8) == 0) & ((p2 * p6 * p8) == 0)
+
+            if cond.any():
+                img[cond] = 0
+                changed = True
+        if not changed:
+            break
+    return img.astype(bool)
+
+
+def skeleton_topology(skel: np.ndarray) -> Dict[str, float]:
+    """Rút gọn skeleton pixel-graph thành topology graph (contract các
+    chuỗi pass-through degree=2), trả n_edges (số thanh/struts thật),
+    n_junctions, n_endpoints, n_loops, n_isolated.
+    """
+    ys, xs = np.where(skel)
+    if len(ys) == 0:
+        return dict(n_edges=0, n_junctions=0, n_endpoints=0, n_loops=0, n_isolated=0)
+
+    coords = set(zip(ys.tolist(), xs.tolist()))
+    h, w = skel.shape
+
+    def neighbors(pt):
+        y, x = pt
+        out = []
+        for dy, dx in _NEIGHBORS_8:
+            ny, nx = y + dy, x + dx
+            if 0 <= ny < h and 0 <= nx < w and (ny, nx) in coords:
+                out.append((ny, nx))
+        return out
+
+    degree = {pt: len(neighbors(pt)) for pt in coords}
+    keep = {pt for pt, d in degree.items() if d != 2}
+    isolated = {pt for pt, d in degree.items() if d == 0}
+    keep -= isolated
+
+    visited_edges = set()
+    n_edges = 0
+    for start in keep:
+        for nbr in neighbors(start):
+            ekey = frozenset((start, nbr))
+            if ekey in visited_edges:
+                continue
+            visited_edges.add(ekey)
+            prev, cur = start, nbr
+            while cur not in keep:
+                nxts = [n for n in neighbors(cur) if n != prev]
+                if not nxts:
+                    break
+                nxt = nxts[0]
+                visited_edges.add(frozenset((cur, nxt)))
+                prev, cur = cur, nxt
+            if cur in keep:
+                n_edges += 1
+
+    # Vòng kín thuần túy (mọi pixel degree==2, không có junction/endpoint):
+    # mỗi connected component còn lại như vậy tính là 1 "cạnh" dạng vòng.
+    remaining = coords - keep - isolated
+    visited_pix = set()
+    n_loops = 0
+    for pt in remaining:
+        touched = {p for e in visited_edges for p in e}
+        if pt in visited_pix or pt in touched:
+            continue
+        stack = [pt]
+        comp = set()
+        while stack:
+            cur = stack.pop()
+            if cur in comp:
+                continue
+            comp.add(cur)
+            for nbr in neighbors(cur):
+                if nbr in remaining and nbr not in comp:
+                    stack.append(nbr)
+        if comp and not (comp & touched):
+            n_loops += 1
+        visited_pix |= comp
+
+    n_junctions = sum(1 for pt in keep if degree[pt] >= 3)
+    n_endpoints = sum(1 for pt in keep if degree[pt] == 1)
+
+    return dict(
+        n_edges=n_edges + n_loops,
+        n_junctions=n_junctions,
+        n_endpoints=n_endpoints,
+        n_loops=n_loops,
+        n_isolated=len(isolated),
+    )
+
+
+def extract_geometric_features(image: np.ndarray) -> Dict[str, float]:
+    """image: (64,64) float32 [0,1] density field. Trả dict đặc trưng hình
+    học: n_edges (số thanh), n_junctions, n_endpoints, độ dày trung bình
+    (mean_thickness_px = 2*EDT tại pixel skeleton), n_components, solid_frac.
+
+    Pad tuần hoàn (wrap) trước khi skeleton hóa để thanh bị cắt ngang bởi
+    biên ô đơn vị không tạo endpoint giả.
+    """
+    binary = image > GEOM_BIN_THRESHOLD
+    padded = np.pad(binary, GEOM_PAD, mode="wrap")
+    skel_padded = zhang_suen_thin(padded)
+    skel = skel_padded[GEOM_PAD:-GEOM_PAD, GEOM_PAD:-GEOM_PAD]
+
+    topo = skeleton_topology(skel)
+
+    edt_padded = ndimage.distance_transform_edt(padded)
+    edt = edt_padded[GEOM_PAD:-GEOM_PAD, GEOM_PAD:-GEOM_PAD]
+    skel_thickness = edt[skel] * 2.0
+    mean_thickness = float(skel_thickness.mean()) if skel_thickness.size else 0.0
+    std_thickness = float(skel_thickness.std()) if skel_thickness.size else 0.0
+
+    structure = np.ones((3, 3), dtype=int)
+    _, n_components = ndimage.label(binary, structure=structure)
+
+    return {
+        "n_edges": float(topo["n_edges"]),
+        "n_junctions": float(topo["n_junctions"]),
+        "n_endpoints": float(topo["n_endpoints"]),
+        "n_isolated_specks": float(topo["n_isolated"]),
+        "mean_thickness_px": mean_thickness,
+        "std_thickness_px": std_thickness,
+        "skeleton_length_px": float(skel.sum()),
+        "n_components": float(n_components),
+        "solid_frac": float(binary.mean()),
+    }
+
+
+def load_geometric_analysis_sample(
+    n_samples: Optional[int] = 6000, seed: int = 0,
+) -> Tuple[pd.DataFrame, np.ndarray]:
+    """Gộp train/val/test_ext.npz (phân tích mô tả post-hoc, không train
+    model nên không có rủi ro leakage giữa split), lấy mẫu phân tầng theo
+    seed_class nếu n_samples được chỉ định (None = toàn bộ ~57k mẫu).
+
+    Trả (meta_df, images) với meta_df có cột: v12, seed_name, volfrac_param, split.
+    """
+    frames = []
+    for split in ("train", "val", "test"):
+        path = PHASE3_DIR / f"{split}_ext.npz"
+        if not path.exists():
+            continue
+        d = np.load(path, allow_pickle=True)
+        n = len(d["v12"])
+        frames.append(dict(
+            images=d["images"], v12=d["v12"], seed_names=d["seed_names"],
+            volfrac=d["params"][:, 0], split=np.full(n, split),
+        ))
+
+    images = np.concatenate([f["images"] for f in frames], axis=0)
+    v12 = np.concatenate([f["v12"] for f in frames], axis=0)
+    seed_names = np.concatenate([f["seed_names"] for f in frames], axis=0)
+    volfrac = np.concatenate([f["volfrac"] for f in frames], axis=0)
+    split = np.concatenate([f["split"] for f in frames], axis=0)
+
+    idx = np.arange(len(v12))
+    rng = np.random.default_rng(seed)
+    if n_samples is not None and n_samples < len(idx):
+        df_idx = pd.DataFrame({"idx": idx, "seed_names": seed_names})
+        frac = n_samples / len(idx)
+        sampled = df_idx.groupby("seed_names", group_keys=False)[["idx"]].apply(
+            lambda g: g.sample(n=max(1, round(len(g) * frac)), random_state=seed)
+        )
+        idx = rng.permutation(sampled["idx"].to_numpy())
+
+    meta = pd.DataFrame({
+        "idx": idx, "v12": v12[idx], "seed_name": seed_names[idx],
+        "volfrac_param": volfrac[idx], "split": split[idx],
+    })
+    return meta, images[idx]
+
+
+def partial_corr(x: np.ndarray, y: np.ndarray, control: np.ndarray) -> float:
+    """Pearson partial correlation giữa x,y kiểm soát 1 biến `control`."""
+    def resid(a, b):
+        slope, intercept, *_ = stats.linregress(b, a)
+        return a - (slope * b + intercept)
+    rx, ry = resid(x, control), resid(y, control)
+    if np.std(rx) == 0 or np.std(ry) == 0:
+        return float("nan")
+    return float(np.corrcoef(rx, ry)[0, 1])
+
+
+def binary_split_test(feature: np.ndarray, v12: np.ndarray) -> Dict[str, float]:
+    """Chia theo median thành nhóm cao/thấp, Mann-Whitney U + rank-biserial
+    effect size - đúng yêu cầu "câu nhị phân" đánh giá ảnh hưởng."""
+    med = np.median(feature)
+    low_mask, high_mask = feature <= med, feature > med
+    low, high = v12[low_mask], v12[high_mask]
+    if len(low) < 5 or len(high) < 5:
+        return dict(median=float(med), n_low=len(low), n_high=len(high),
+                    u_stat=float("nan"), p_value=float("nan"), rank_biserial=float("nan"),
+                    mean_v12_low=float(np.mean(low)) if len(low) else float("nan"),
+                    mean_v12_high=float(np.mean(high)) if len(high) else float("nan"))
+    u_stat, p_value = stats.mannwhitneyu(low, high, alternative="two-sided")
+    rank_biserial = 1 - (2 * u_stat) / (len(low) * len(high))
+    return dict(median=float(med), n_low=int(low_mask.sum()), n_high=int(high_mask.sum()),
+                u_stat=float(u_stat), p_value=float(p_value), rank_biserial=float(rank_biserial),
+                mean_v12_low=float(np.mean(low)), mean_v12_high=float(np.mean(high)))
+
+
+GEOM_FEATURE_COLS = ["n_edges", "n_junctions", "n_endpoints", "mean_thickness_px",
+                      "std_thickness_px", "n_components", "solid_frac"]
+
+
+def analyze_geometric_group(df: pd.DataFrame, label: str) -> Dict:
+    """Tương quan Pearson/Spearman + partial corr (kiểm soát volfrac) +
+    Mann-Whitney nhị phân + hồi quy đa biến chuẩn hóa, cho 1 nhóm mẫu
+    (pooled hoặc 1 seed_class)."""
+    v12 = df["v12"].to_numpy()
+    volfrac = df["volfrac_param"].to_numpy()
+    out = {"label": label, "n": len(df), "features": {}}
+    for col in GEOM_FEATURE_COLS:
+        x = df[col].to_numpy()
+        if np.std(x) == 0 or len(df) < 8:
+            continue
+        pear_r, pear_p = stats.pearsonr(x, v12)
+        spear_r, spear_p = stats.spearmanr(x, v12)
+        pcorr = partial_corr(x, v12, volfrac) if col != "solid_frac" else float("nan")
+        out["features"][col] = {
+            "pearson_r": float(pear_r), "pearson_p": float(pear_p),
+            "spearman_r": float(spear_r), "spearman_p": float(spear_p),
+            "partial_corr_ctrl_volfrac": pcorr,
+            "binary_test": binary_split_test(x, v12),
+        }
+
+    all_reg_cols = ["n_edges", "mean_thickness_px", "n_components", "volfrac_param"]
+    reg_cols = [c for c in all_reg_cols if df[c].std() > 0]
+    X = df[reg_cols].to_numpy(dtype=float)
+    if len(df) > len(reg_cols) + 5 and len(reg_cols) >= 2:
+        Xz = (X - X.mean(axis=0)) / X.std(axis=0)
+        Xz1 = np.column_stack([Xz, np.ones(len(df))])
+        coef, *_ = np.linalg.lstsq(Xz1, v12, rcond=None)
+        pred = Xz1 @ coef
+        ss_res, ss_tot = float(np.sum((v12 - pred) ** 2)), float(np.sum((v12 - v12.mean()) ** 2))
+        out["regression"] = {
+            "cols": reg_cols,
+            "standardized_coef": {c: float(k) for c, k in zip(reg_cols, coef[:-1])},
+            "r2": 1 - ss_res / ss_tot if ss_tot > 0 else float("nan"),
+        }
+    return out

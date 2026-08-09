@@ -339,4 +339,24 @@ Code: `analysis/scripts/pilot_normalized_objective.py` (mới). Manifest đầy 
 
 ---
 
+### 2026-08-09 - Ảnh hưởng đặc trưng hình học (số cạnh/thanh, độ dày) lên v12 - phát hiện Simpson's paradox rõ ràng giữa số liệu gộp và từng họ seed
+
+Bối cảnh: yêu cầu "đánh giá ảnh hưởng các kết quả, ví dụ số lượng cạnh/độ dày tới hệ số Poisson's" khác với `analysis/sensitivity/` đã có (đo tham số SIMP ĐẦU VÀO như `volfrac`/`rmin` → objective) - đây là đo đặc trưng TOPOLOGY xuất hiện (emergent) trong ảnh kết quả → v12, chưa có trong pipeline.
+
+Viết `notebooks/07_geometric_feature_influence.ipynb` (mới, hàm dùng chung đặt trong `notebooks/utils.py` theo convention hiện có - không thêm dependency, chỉ numpy/scipy/networkx đã có sẵn trong `requirements.txt`, không cần `scikit-image`). Trích đặc trưng từ ảnh binarize (ngưỡng 0,5, đúng convention `manufacturability.py`): pad tuần hoàn (wrap) trước khi skeleton hóa để tránh endpoint giả tại biên ô đơn vị, Zhang-Suen thinning vector hóa bằng numpy (không loop pixel), rồi rút gọn skeleton pixel-graph thành graph topology thật (contract chuỗi pass-through) để đếm `n_edges` (số thanh), `n_junctions`, `n_endpoints`; độ dày thanh = 2×distance-transform tại pixel skeleton. Đã sanity-check bằng overlay skeleton lên vài mẫu (hourglass/hexagonal/reentrant_bowtie/circle) - skeleton bám đúng trục trung tuyến của vật liệu, junction/endpoint hợp lý về mặt trực quan.
+
+Chạy trên 6.001 mẫu lấy phân tầng theo `seed_class` (gộp `train+val+test_ext.npz`, phân tích mô tả post-hoc nên không có rủi ro leakage). Ba phép kiểm định: Pearson/Spearman, partial correlation kiểm soát `volfrac`, và kiểm định nhị phân Mann-Whitney U (chia nhóm cao/thấp theo median) - đúng yêu cầu gốc "câu nhị phân".
+
+**Kết quả chính - đảo chiều tương quan (Simpson's paradox) giữa số liệu GỘP và từng HỌ seed:**
+- Gộp toàn bộ: `corr(n_edges, v12) = +0,168` (p=2×10⁻³⁹) - có vẻ như càng nhiều thanh thì v12 càng ít âm.
+- Nhưng tách theo `seed_class`, dấu ĐẢO NGƯỢC ở hầu hết các họ: `hourglass` (n=3.121) **-0,384**, `circle` -0,374, `square` -0,366, `four_circle` -0,342, `cross_rectangular` -0,324 - càng nhiều thanh thì v12 càng ÂM hơn (auxetic mạnh hơn), ngược hẳn xu hướng gộp. Ngoại lệ: `hexagonal` (n=933) gần như không có quan hệ (+0,040, p=0,22, không có ý nghĩa thống kê).
+- Độ dày thanh (`mean_thickness_px`) cũng đảo chiều tương tự: âm ở `hourglass`/`hexagonal`/`circle_half_quarter` (thanh mỏng hơn → auxetic mạnh hơn) nhưng dương ở `circle`/`square`/`cross_rectangular`/`small_square_cross` (+0,44 đến +0,50).
+- Tất cả kiểm định Mann-Whitney trong từng họ lớn đều có p<0,001 (nhiều trường hợp p≈0, underflow) - hiệu ứng có thật về mặt thống kê, không phải nhiễu ngẫu nhiên, nhưng độ mạnh ở mức trung bình (|r|≈0,2-0,4 trong từng họ, rank-biserial tương ứng), KHÔNG phải yếu tố chi phối chính (volfrac/họ seed vẫn quyết định phần lớn - hồi quy đa biến gộp chỉ đạt R²=0,042).
+
+**Diễn giải:** số liệu gộp gây hiểu lầm vì mỗi họ seed chiếm vùng giá trị v12 và cấu trúc rất khác nhau (`hourglass` áp đảo 52% mẫu); kết luận đúng phải đọc theo từng họ, không đọc số gộp. Cơ chế vật lý hợp lý: trong các họ dạng "khung xoay/gấp khúc" (hourglass, circle-based), thêm thanh phụ (junction) thường tạo thêm điểm xoay/uốn góp phần tăng hiệu ứng auxetic, còn với `hexagonal` (cơ chế re-entrant hình học đã cố định bởi góc cell) topology phụ không ảnh hưởng nhiều - khớp với ghi nhận trước đó rằng `hexagonal` có hành vi yield khác biệt các seed khác ([[hexagonal_yield_oc_dual_multiplier]]).
+
+Code: `notebooks/07_geometric_feature_influence.ipynb` (mới), hàm dùng chung trong `notebooks/utils.py` (`extract_geometric_features`, `skeleton_topology`, `zhang_suen_thin`, `analyze_geometric_group`, `binary_split_test`, `partial_corr`, `load_geometric_analysis_sample`). Output: `outputs/phase3/reports/geometric_feature_influence_n6001.json`, `geometric_features_raw_n6001.csv`, hình `outputs/figures/geometric_feature_influence_n_edges_vs_v12_n6001.png`. Trên nhánh `main`, uncommitted.
+
+---
+
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*
