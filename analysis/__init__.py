@@ -12,9 +12,7 @@ Core API:
 
 Standalone scripts live in ``analysis.scripts`` - run them via::
 
-    python -m analysis.scripts.aggregate_correlations
     python -m analysis.scripts.plot_correlation_figures
-    python -m analysis.scripts.select_representative
 """
 
 from ._version import __version__, VERSION_INFO

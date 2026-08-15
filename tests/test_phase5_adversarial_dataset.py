@@ -8,21 +8,6 @@ fast; this module's whole point is to score generated images with the real
 solver, so we exercise that path rather than mocking it away.
 """
 import numpy as np
-import torch
-
-
-def _write_cvae_checkpoint(path, latent_dim=6, resolution=64,
-                            channels=(4, 8, 16, 32)):
-    from pipeline.phase5_cvae.model import CVAE
-    model = CVAE(condition_dim=2, latent_dim=latent_dim,
-                 resolution=resolution, channels=channels)
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "latent_dim": latent_dim,
-        "condition_dim": 2,
-        "resolution": resolution,
-        "channels": channels,
-    }, path)
 
 
 def _write_train_npz(path, n_samples=10, n_seeds=3):
@@ -43,10 +28,9 @@ def _write_train_npz(path, n_samples=10, n_seeds=3):
 
 
 class TestLoadCvae:
-    def test_load_cvae_returns_eval_model(self, tmp_path):
+    def test_load_cvae_returns_eval_model(self, tmp_path, make_cvae_checkpoint):
         from pipeline.phase5_cvae.adversarial_dataset import load_cvae
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
 
         model = load_cvae(str(ckpt_path), "cpu")
 
@@ -55,7 +39,7 @@ class TestLoadCvae:
 
 
 class TestGenerateAdversarialNpz:
-    def test_generates_npz_matching_phase3_schema(self, tmp_path, monkeypatch):
+    def test_generates_npz_matching_phase3_schema(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import adversarial_dataset as adv_mod
 
         # Small FE grid so the real solve stays fast in a unit test.
@@ -66,8 +50,7 @@ class TestGenerateAdversarialNpz:
         _write_train_npz(train_npz, n_samples=10, n_seeds=3)
         monkeypatch.setattr(adv_mod, "PHASE3_DIR", str(tmp_path))
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
         out_path = tmp_path / "adversarial.npz"
 
         adv_mod.generate_adversarial_npz(
@@ -88,7 +71,7 @@ class TestGenerateAdversarialNpz:
         assert data["images"].min() >= 0.0
         assert data["images"].max() <= 1.0
 
-    def test_raises_if_all_fe_solves_fail(self, tmp_path, monkeypatch):
+    def test_raises_if_all_fe_solves_fail(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import adversarial_dataset as adv_mod
 
         def _always_fail(*args, **kwargs):
@@ -100,8 +83,7 @@ class TestGenerateAdversarialNpz:
         _write_train_npz(train_npz, n_samples=5, n_seeds=2)
         monkeypatch.setattr(adv_mod, "PHASE3_DIR", str(tmp_path))
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
 
         import pytest
         with pytest.raises(RuntimeError, match="Không sinh được"):

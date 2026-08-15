@@ -51,10 +51,14 @@ def load_frozen_surrogate(device="cpu", path=SURROGATE_PATH):
     SurrogateCNN = _import_surrogate_cnn()
 
     ckpt = torch.load(path, map_location=device, weights_only=False)
+    # n_outputs=3 mặc định cho gói export CŨ (trước khi export_for_phase5.py
+    # lưu field này) - bug đã sửa 2026-08-15: thiếu tham số này làm crash
+    # size-mismatch khi load checkpoint 5-output (--include-f1f2).
     model = SurrogateCNN(
         n_seeds=ckpt["n_seeds"],
         channels=ckpt["channels"],
         fc_hidden=ckpt["fc_hidden"],
+        n_outputs=ckpt.get("n_outputs", 3),
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)

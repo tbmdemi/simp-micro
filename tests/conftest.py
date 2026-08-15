@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 import pytest
+import torch
 
 # pipeline/phase4_surrogate/ and pipeline/phase5_cvae/ each define sibling
 # modules with the SAME basenames (dataset.py, model.py, evaluate.py,
@@ -95,3 +96,33 @@ def make_phase3_npz(tmp_path):
 def phase3_npz_path(make_phase3_npz):
     """A single ready-to-use synthetic Phase-3-schema .npz path."""
     return make_phase3_npz("data.npz", n_samples=12)
+
+
+def _write_cvae_checkpoint(path, latent_dim=8, condition_dim=2,
+                            resolution=64, channels=(4, 8, 16, 32)):
+    """Save a freshly-initialized (untrained) CVAE checkpoint at `path`, in
+    the same dict format `pipeline/phase5_cvae/train.py` writes - small
+    enough to build instantly, for tests that only need SOME valid
+    checkpoint to load (not real trained weights). Consolidated 2026-08-15
+    from 6 near-identical copies across tests/test_phase5_*.py."""
+    from pipeline.phase5_cvae.model import CVAE
+    model = CVAE(condition_dim=condition_dim, latent_dim=latent_dim,
+                 resolution=resolution, channels=channels)
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "latent_dim": latent_dim,
+        "condition_dim": condition_dim,
+        "resolution": resolution,
+        "channels": channels,
+    }, path)
+
+
+@pytest.fixture
+def make_cvae_checkpoint(tmp_path):
+    """Factory fixture: make_cvae_checkpoint(name="cvae.pt", latent_dim=8,
+    condition_dim=2, ...) -> str path to a freshly-written CVAE checkpoint."""
+    def _factory(name="cvae.pt", **kwargs):
+        path = tmp_path / name
+        _write_cvae_checkpoint(path, **kwargs)
+        return str(path)
+    return _factory

@@ -9,27 +9,12 @@ Imports are lazy inside each test - see tests/conftest.py.
 """
 import numpy as np
 import pytest
-import torch
 
 SEED_CLASSES = np.array(["circle", "square", "hexagonal"], dtype=object)
 
 
-def _write_cvae_checkpoint(path, latent_dim=4, resolution=64,
-                            channels=(4, 8, 16, 32)):
-    from pipeline.phase5_cvae.model import CVAE
-    model = CVAE(condition_dim=2, latent_dim=latent_dim,
-                 resolution=resolution, channels=channels)
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "latent_dim": latent_dim,
-        "condition_dim": 2,
-        "resolution": resolution,
-        "channels": channels,
-    }, path)
-
-
 class TestFindWeakTargets:
-    def test_none_abs_error_ranked_above_finite_error(self, tmp_path, monkeypatch):
+    def test_none_abs_error_ranked_above_finite_error(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         """A target where every FE eval fails (abs_error=None - excluded
         from coverage_eval's own dead_zone_targets, see its auxetic_rows
         filter) must still rank as WORST in find_weak_targets (None -> +inf).
@@ -44,8 +29,7 @@ class TestFindWeakTargets:
         from pipeline.phase5_cvae import active_learning as al_mod
         cov_globals = al_mod.coverage_eval.__globals__
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe = dict(cov_globals["FE_PARAMS"], nelx=6, nely=6)
         monkeypatch.setitem(cov_globals, "FE_PARAMS", tiny_fe)
 
@@ -70,12 +54,11 @@ class TestFindWeakTargets:
         assert len(none_error_targets) >= 1
         assert weak_targets[0] in none_error_targets
 
-    def test_respects_n_weak_limit(self, tmp_path, monkeypatch):
+    def test_respects_n_weak_limit(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import active_learning as al_mod
         cov_globals = al_mod.coverage_eval.__globals__
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe = dict(cov_globals["FE_PARAMS"], nelx=6, nely=6)
         monkeypatch.setitem(cov_globals, "FE_PARAMS", tiny_fe)
 
@@ -87,11 +70,10 @@ class TestFindWeakTargets:
 
 
 class TestGenerateAndVerifyCandidates:
-    def test_skips_failed_fe_evals_and_labels_succeed(self, tmp_path, monkeypatch):
+    def test_skips_failed_fe_evals_and_labels_succeed(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import active_learning as al_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe = dict(al_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(al_mod, "FE_PARAMS", tiny_fe)
 
@@ -116,11 +98,10 @@ class TestGenerateAndVerifyCandidates:
             assert c["seed_onehot"].sum() == 1.0
             assert c["image"].shape == (64, 64)
 
-    def test_no_candidates_when_all_fe_evals_fail(self, tmp_path, monkeypatch):
+    def test_no_candidates_when_all_fe_evals_fail(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import active_learning as al_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe = dict(al_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(al_mod, "FE_PARAMS", tiny_fe)
 

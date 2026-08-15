@@ -118,6 +118,42 @@ class TestGenerateDesign:
         df_default = generate_design(**kwargs)
         assert df_explicit_none.equals(df_default)
 
+    def test_reproducible_across_python_subprocesses(self):
+        """Bug đã sửa 2026-08-15: generate_design() từng dùng hash(str) builtin
+        làm seed nội bộ - Python randomize hash() chuỗi theo TỪNG TIẾN TRÌNH
+        (PYTHONHASHSEED ngẫu nhiên mặc định), nên chạy lại ĐÚNG batch config ở
+        2 tiến trình Python khác nhau (vd tái lập DOE cho luận văn, hoặc resume
+        sau crash) từng cho ra 2 bộ mẫu Sobol/LHS KHÁC NHAU dù docstring khẳng
+        định reproducibility. Test này chạy generate_design() ở 2 subprocess
+        THẬT (PYTHONHASHSEED không set, mỗi subprocess random khác nhau) và so
+        kết quả - với hash() builtin cũ, test này sẽ FLAKY/fail ngẫu nhiên."""
+        import subprocess
+        import sys
+
+        script = (
+            "import pandas as pd; "
+            "from pipeline.phase2_multi_batch.params import SamplingStrategy; "
+            "from pipeline.phase2_multi_batch.sampling import generate_design; "
+            "df = generate_design(n_samples=5, param_ranges={'volfrac': (0.3, 0.7)}, "
+            "strategy=SamplingStrategy.SOBOL, batch_id=1, seed_map=['circle', 'square'], "
+            "objective_map=['auxetic']); "
+            "print(df['volfrac'].to_json())"
+        )
+        # PYTHONHASHSEED KHÔNG set - mỗi subprocess được Python tự random hoá
+        # độc lập, đúng kịch bản bug xảy ra thật (2 lần chạy CLI riêng biệt).
+        outs = []
+        for _ in range(2):
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                cwd=str(__import__("pathlib").Path(__file__).resolve().parents[1]),
+                capture_output=True, text=True, check=True,
+            )
+            outs.append(result.stdout.strip())
+        assert outs[0] == outs[1], (
+            "generate_design() phải cho kết quả GIỐNG HỆT giữa 2 tiến trình "
+            "Python độc lập - nếu khác nhau, seed nội bộ không tất định."
+        )
+
     def test_seed_missing_from_override_falls_back_to_n_samples(self):
         param_ranges = {"volfrac": (0.3, 0.7)}
         df = generate_design(

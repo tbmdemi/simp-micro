@@ -196,16 +196,26 @@ def save_results(results: List[Dict], analysis: Dict, output_dir: str,
     header = ['sample_id', 'success', 'v12', 'v21', 'obj_value',
               'n_iters', 'converged', 'elapsed_time'] + param_names + ['error']
     lines = [','.join(header)]
+    # Bug đã sửa 2026-08-15: `r['v12'] or ''` coi 0.0 là falsy (đúng ngữ nghĩa
+    # Python) nên mẫu có v12/v21/obj_value/n_iters/elapsed_time = 0.0 HỢP LỆ
+    # bị ghi thành chuỗi rỗng trong CSV - analyst.py sau đó dùng
+    # pd.to_numeric(errors='coerce') + dropna() nên mẫu này bị âm thầm loại
+    # khỏi phân tích Spearman, trong khi file .json song song (không qua
+    # phép " or ''" này) vẫn giữ đúng giá trị - lệch dữ liệu không ai biết.
+    # Dùng "is not None" để chỉ giá trị THẬT SỰ THIẾU mới thành rỗng.
+    def _fmt(v):
+        return str(v) if v is not None else ''
+
     for r in results:
         row = [
             str(r['sample_id']),
             str(r['success']),
-            str(r['v12'] or ''),
-            str(r['v21'] or ''),
-            str(r['obj_value'] or ''),
-            str(r['n_iters'] or ''),
+            _fmt(r['v12']),
+            _fmt(r['v21']),
+            _fmt(r['obj_value']),
+            _fmt(r['n_iters']),
             str(r['converged']),
-            f'{r["elapsed_time"]:.2f}' if r['elapsed_time'] else '',
+            f'{r["elapsed_time"]:.2f}' if r['elapsed_time'] is not None else '',
         ]
         for p in param_names:
             val = r['params'].get(p, '')

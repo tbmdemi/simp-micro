@@ -24,7 +24,9 @@ def hourglass_seed(nelx: int, nely: int, volfrac: float, rotation_deg: float = 0
 
     for i in range(nelx):
         for j in range(nely):
-            dx, dy = i - center_x, j - center_y
+            # Bug đã sửa 2026-08-15: (i+0.5)/(j+0.5) không phải i/j - xem
+            # simp/seeds/circle.py.
+            dx, dy = (i + 0.5) - center_x, (j + 0.5) - center_y
             rx = dx * cos_t - dy * sin_t
             ry = dx * sin_t + dy * cos_t
 

@@ -7,6 +7,7 @@ level; the phase4-surrogate import is done lazily via importlib inside
 load_frozen_surrogate(), specifically to dodge the bare-import collision
 documented in tests/conftest.py), so a top-level import here is safe.
 """
+import pytest
 import torch
 
 from pipeline.phase5_cvae.losses import (
@@ -27,30 +28,50 @@ from pipeline.phase5_cvae.losses import (
 from pipeline.phase4_surrogate.model import SurrogateCNN
 
 
-def _write_surrogate_export(path, n_seeds=4, channels=(8, 16), fc_hidden=16):
-    model = SurrogateCNN(n_seeds=n_seeds, channels=channels, fc_hidden=fc_hidden)
+class _ConstantSurrogate(torch.nn.Module):
+    """Stub surrogate: predicts `value` across all `n_outputs` columns,
+    ignoring the actual input - used where tests only need a deterministic,
+    input-independent prediction (was reimplemented ad-hoc under 5 different
+    names across this file)."""
+    def __init__(self, value=0.0, n_outputs=3):
+        super().__init__()
+        self.value, self.n_outputs = value, n_outputs
+
+    def forward(self, image, seed_vec):
+        return torch.full((image.size(0), self.n_outputs), self.value)
+
+
+class _PerfectSurrogate(torch.nn.Module):
+    """Stub surrogate: predicts exactly `._target` (caller wires this to the
+    condition tensor) - used to test the zero-loss-when-correct case."""
+    def forward(self, image, seed_vec):
+        return self._target
+
+
+def _write_surrogate_export(path, n_seeds=4, channels=(8, 16), fc_hidden=16,
+                             n_outputs=3, target_names=None):
+    model = SurrogateCNN(n_seeds=n_seeds, channels=channels, fc_hidden=fc_hidden,
+                          n_outputs=n_outputs)
     torch.save({
         "model_state_dict": model.state_dict(),
         "n_seeds": n_seeds,
         "channels": channels,
         "fc_hidden": fc_hidden,
-        "target_names": ["v12", "v21", "volfrac_achieved"],
+        "n_outputs": n_outputs,
+        "target_names": target_names or ["v12", "v21", "volfrac_achieved"],
     }, path)
 
 
 class TestKlBetaSchedule:
-    def test_zero_warmup_returns_beta_max(self):
-        assert kl_beta_schedule(epoch=5, warmup_epochs=0, beta_max=1.0) == 1.0
-
-    def test_linear_ramp(self):
-        assert kl_beta_schedule(epoch=5, warmup_epochs=10, beta_max=1.0) == 0.5
-        assert kl_beta_schedule(epoch=0, warmup_epochs=10, beta_max=1.0) == 0.0
-
-    def test_clamped_after_warmup(self):
-        assert kl_beta_schedule(epoch=100, warmup_epochs=10, beta_max=1.0) == 1.0
-
-    def test_scales_with_beta_max(self):
-        assert kl_beta_schedule(epoch=5, warmup_epochs=10, beta_max=2.0) == 1.0
+    @pytest.mark.parametrize("epoch,warmup_epochs,beta_max,expected", [
+        (5, 0, 1.0, 1.0),      # zero warmup -> beta_max immediately
+        (5, 10, 1.0, 0.5),     # linear ramp, midpoint
+        (0, 10, 1.0, 0.0),     # linear ramp, start
+        (100, 10, 1.0, 1.0),   # clamped after warmup ends
+        (5, 10, 2.0, 1.0),     # scales with beta_max
+    ], ids=["zero-warmup", "ramp-mid", "ramp-start", "clamped", "scaled-beta-max"])
+    def test_schedule(self, epoch, warmup_epochs, beta_max, expected):
+        assert kl_beta_schedule(epoch=epoch, warmup_epochs=warmup_epochs, beta_max=beta_max) == expected
 
 
 class TestReconstructionLoss:
@@ -92,12 +113,7 @@ class TestKlDivergence:
 
 class TestPropertyConsistencyLoss:
     def test_zero_when_surrogate_predicts_target_exactly(self):
-        class PerfectSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                # always predicts condition passed in via a closure hack below
-                return self._target
-
-        surrogate = PerfectSurrogate()
+        surrogate = _PerfectSurrogate()
         recon = torch.rand(3, 1, 8, 8)
         seed_vec = torch.zeros(3, 2)
         condition = torch.tensor([[-0.5, 0.2], [0.1, -0.3], [0.0, 0.0]])
@@ -110,32 +126,19 @@ class TestPropertyConsistencyLoss:
         assert torch.isclose(loss, torch.tensor(0.0), atol=1e-6)
 
     def test_nonzero_when_prediction_is_off(self):
-        class ConstantSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.zeros(image.size(0), 3)
-
-        surrogate = ConstantSurrogate()
+        surrogate = _ConstantSurrogate(0.0)
         recon = torch.rand(2, 1, 8, 8)
         seed_vec = torch.zeros(2, 2)
         condition = torch.tensor([[1.0, 1.0], [1.0, 1.0]])
         loss = property_consistency_loss(
             recon, condition, seed_vec, surrogate, ["v12", "v21", "volfrac_achieved"]
         )
-        assert loss.item() == pytest_approx(1.0)
-
-
-def pytest_approx(value):
-    import pytest
-    return pytest.approx(value, abs=1e-5)
+        assert loss.item() == pytest.approx(1.0, abs=1e-5)
 
 
 class TestPropertyConsistencyLossEnsemble:
     def test_matches_single_model_when_ensemble_of_one_copy(self):
-        class ConstantSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.full((image.size(0), 3), 0.3)
-
-        s1, s2 = ConstantSurrogate(), ConstantSurrogate()
+        s1, s2 = _ConstantSurrogate(0.3), _ConstantSurrogate(0.3)
         recon = torch.rand(2, 1, 8, 8)
         seed_vec = torch.zeros(2, 2)
         condition = torch.zeros(2, 2)
@@ -150,28 +153,21 @@ class TestPropertyConsistencyLossEnsemble:
         assert torch.isclose(disagreement, torch.tensor(0.0), atol=1e-6)
 
     def test_disagreement_penalizes_divergent_surrogates(self):
-        class LowSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.zeros(image.size(0), 3)
-
-        class HighSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.full((image.size(0), 3), 2.0)
-
+        low, high = _ConstantSurrogate(0.0), _ConstantSurrogate(2.0)
         recon = torch.rand(2, 1, 8, 8)
         seed_vec = torch.zeros(2, 2)
         condition = torch.ones(2, 2)  # mean pred = 1.0 -> MSE with target 1.0 is 0
         target_names = ["v12", "v21", "volfrac_achieved"]
 
         mse_only, disagreement = property_consistency_loss_ensemble(
-            recon, condition, seed_vec, [LowSurrogate(), HighSurrogate()],
+            recon, condition, seed_vec, [low, high],
             target_names, lambda_disagreement=0.0,
         )
         assert torch.isclose(mse_only, torch.tensor(0.0), atol=1e-6)
         assert disagreement.item() > 0.0
 
         penalized, _ = property_consistency_loss_ensemble(
-            recon, condition, seed_vec, [LowSurrogate(), HighSurrogate()],
+            recon, condition, seed_vec, [low, high],
             target_names, lambda_disagreement=1.0,
         )
         assert penalized.item() > mse_only.item()
@@ -346,10 +342,6 @@ class TestRealPhysicsPriorLoss:
 
 class TestCvaeLoss:
     def test_returns_all_expected_keys(self):
-        class DummySurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.zeros(image.size(0), 3)
-
         recon = torch.rand(2, 1, 8, 8, requires_grad=True)
         image = torch.rand(2, 1, 8, 8)
         mu = torch.zeros(2, 4, requires_grad=True)
@@ -359,7 +351,7 @@ class TestCvaeLoss:
 
         out = cvae_loss(
             recon, image, mu, logvar, condition, seed_vec,
-            DummySurrogate(), ["v12", "v21", "volfrac_achieved"],
+            _ConstantSurrogate(0.0), ["v12", "v21", "volfrac_achieved"],
             beta=0.5, gamma=1.0,
         )
         for key in ("total", "recon", "kl", "prop", "prop_weighted",
@@ -368,10 +360,6 @@ class TestCvaeLoss:
         assert out["total"].requires_grad  # differentiable wrt recon/mu/logvar
 
     def test_ensemble_path_when_surrogate_is_a_list(self):
-        class DummySurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.zeros(image.size(0), 3)
-
         recon = torch.rand(2, 1, 8, 8)
         image = torch.rand(2, 1, 8, 8)
         mu = torch.zeros(2, 4)
@@ -381,7 +369,7 @@ class TestCvaeLoss:
 
         out = cvae_loss(
             recon, image, mu, logvar, condition, seed_vec,
-            [DummySurrogate(), DummySurrogate()], ["v12", "v21", "volfrac_achieved"],
+            [_ConstantSurrogate(0.0), _ConstantSurrogate(0.0)], ["v12", "v21", "volfrac_achieved"],
             beta=0.5, gamma=1.0, lambda_disagreement=0.1,
         )
         assert torch.isfinite(out["total"])
@@ -395,11 +383,7 @@ class TestExtendedConditionSlicing:
     against a shape-mismatch/silently-wrong-column regression."""
 
     def test_property_consistency_loss_ignores_extra_condition_columns(self):
-        class PerfectSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return self._target
-
-        surrogate = PerfectSurrogate()
+        surrogate = _PerfectSurrogate()
         recon = torch.rand(2, 1, 8, 8)
         seed_vec = torch.zeros(2, 2)
         # condition_dim=6: extra columns (volfrac/mask/void/mask) must be
@@ -424,15 +408,11 @@ class TestExtendedConditionSlicing:
         assert density.grad is not None
 
     def test_property_consistency_loss_ensemble_ignores_extra_columns(self):
-        class ConstantSurrogate(torch.nn.Module):
-            def forward(self, image, seed_vec):
-                return torch.full((image.size(0), 3), 0.3)
-
         recon = torch.rand(2, 1, 8, 8)
         seed_vec = torch.zeros(2, 2)
         condition = torch.full((2, 6), 0.3)  # cols 0,1 = 0.3 (matches), rest irrelevant
         mse, _ = property_consistency_loss_ensemble(
-            recon, condition, seed_vec, [ConstantSurrogate(), ConstantSurrogate()],
+            recon, condition, seed_vec, [_ConstantSurrogate(0.3), _ConstantSurrogate(0.3)],
             ["v12", "v21", "volfrac_achieved"], lambda_disagreement=0.0,
         )
         assert torch.isclose(mse, torch.tensor(0.0), atol=1e-6)
@@ -512,3 +492,38 @@ class TestLoadFrozenSurrogate:
         assert len(models) == 2
         assert target_names == ["v12", "v21", "volfrac_achieved"]
         assert models[0] is not models[1]
+
+    def test_load_5_output_f1f2_checkpoint(self, tmp_path):
+        """Bug đã sửa 2026-08-15: load_frozen_surrogate() bỏ qua n_outputs
+        trong checkpoint, luôn dựng SurrogateCNN(n_outputs=3 mặc định) ->
+        load_state_dict() crash size-mismatch trên checkpoint 5-output
+        (--include-f1f2, xem model.py SurrogateCNN docstring)."""
+        from pipeline.phase5_cvae.losses import load_frozen_surrogate
+        path = tmp_path / "surrogate_f1f2_for_phase5.pt"
+        _write_surrogate_export(
+            path, n_outputs=5,
+            target_names=["v12", "v21", "volfrac_achieved", "f1", "f2"],
+        )
+
+        model, target_names = load_frozen_surrogate(device="cpu", path=str(path))
+
+        assert target_names == ["v12", "v21", "volfrac_achieved", "f1", "f2"]
+        assert model.n_outputs == 5
+        out = model(torch.rand(2, 1, 64, 64), torch.zeros(2, 4))
+        assert out.shape == (2, 5)
+
+    def test_load_old_checkpoint_without_n_outputs_defaults_to_3(self, tmp_path):
+        """Checkpoint export TỪ TRƯỚC khi field n_outputs tồn tại (không có
+        key này trong dict) vẫn phải load đúng - tương thích ngược."""
+        from pipeline.phase5_cvae.losses import load_frozen_surrogate
+        path = tmp_path / "old_surrogate.pt"
+        model_old = SurrogateCNN(n_seeds=4, channels=(8, 16), fc_hidden=16)
+        torch.save({
+            "model_state_dict": model_old.state_dict(),
+            "n_seeds": 4, "channels": (8, 16), "fc_hidden": 16,
+            "target_names": ["v12", "v21", "volfrac_achieved"],
+            # cố ý KHÔNG có "n_outputs" - mô phỏng checkpoint cũ.
+        }, path)
+
+        model, _ = load_frozen_surrogate(device="cpu", path=str(path))
+        assert model.n_outputs == 3

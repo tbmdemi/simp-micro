@@ -48,8 +48,10 @@ def reentrant_bowtie_seed(
     directions = [alpha, np.pi - alpha, np.pi + alpha, -alpha]
 
     ii, jj = np.meshgrid(np.arange(nelx), np.arange(nely))
-    dx = (ii - center_x).astype(float)
-    dy = (jj - center_y).astype(float)
+    # Bug đã sửa 2026-08-15: (ii+0.5)/(jj+0.5) không phải ii/jj - xem
+    # simp/seeds/circle.py.
+    dx = (ii + 0.5 - center_x).astype(float)
+    dy = (jj + 0.5 - center_y).astype(float)
 
     # Áp dụng rotation toàn cục
     rx = dx * np.cos(theta) - dy * np.sin(theta)

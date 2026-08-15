@@ -28,7 +28,10 @@ def grid_circular_voids_seed(nelx: int, nely: int, void_size_frac: float, rotati
 
     for i in range(nelx):
         for j in range(nely):
-            dx, dy = i - cx_dom, j - cy_dom
+            # Bug đã sửa 2026-08-15: (i+0.5)/(j+0.5) không phải i/j -
+            # xem simp/seeds/circle.py. Nhất quán với rel_cx/rel_cy ở
+            # trên (đã dùng +0.5 cho tâm từng ô lưới con từ trước).
+            dx, dy = (i + 0.5) - cx_dom, (j + 0.5) - cy_dom
             nx = dx * cos_t - dy * sin_t
             ny = dx * sin_t + dy * cos_t
 

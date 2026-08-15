@@ -43,14 +43,23 @@ def main():
     ckpt_path = args.ckpt
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
 
+    # n_outputs=3 mặc định cho checkpoint CŨ (trước khi field này được lưu) -
+    # KHỚP default của SurrogateCNN.__init__, không phải suy đoán tùy tiện.
+    # Bỏ tham số này (bug đã sửa 2026-08-15) khiến checkpoint 5-output
+    # (--include-f1f2, outputs/phase4/surrogate_f1f2.pt) crash size mismatch
+    # ngay khi load_state_dict().
+    n_outputs = ckpt.get("n_outputs", 3)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SurrogateCNN(
-        n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"]
+        n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"],
+        n_outputs=n_outputs,
     ).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 
-    test_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "test.npz"))
+    # include_f1f2 phải khớp n_outputs, nếu không AuxeticDataset chỉ trả 3
+    # target trong khi target_names/model có 5 -> lệch shape khi index.
+    test_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "test.npz"), include_f1f2=(n_outputs == 5))
     loader = DataLoader(test_ds, batch_size=256, shuffle=False)
 
     preds, targets_all, seed_names_all = [], [], []

@@ -65,13 +65,18 @@ def bootstrap_r2(y_true: np.ndarray, y_pred: np.ndarray, n_boot: int = 10000,
 
 def get_test_predictions(ckpt_path: str, test_npz_path: str, device: str = "cpu"):
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    # n_outputs=3 mặc định cho checkpoint CŨ - xem ghi chú tương tự trong
+    # evaluate.py (bug đã sửa 2026-08-15: thiếu tham số này làm crash
+    # size-mismatch trên checkpoint 5-output --include-f1f2).
+    n_outputs = ckpt.get("n_outputs", 3)
     model = SurrogateCNN(
-        n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"]
+        n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"],
+        n_outputs=n_outputs,
     ).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 
-    test_ds = AuxeticDataset(test_npz_path)
+    test_ds = AuxeticDataset(test_npz_path, include_f1f2=(n_outputs == 5))
     loader = DataLoader(test_ds, batch_size=256, shuffle=False)
 
     preds, targets_all = [], []

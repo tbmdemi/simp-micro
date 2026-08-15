@@ -9,15 +9,18 @@ from pipeline.phase4_surrogate.export_for_phase5 import export_surrogate
 from pipeline.phase4_surrogate.model import SurrogateCNN
 
 
-def _write_fake_train_checkpoint(path, n_seeds=4, channels=(8, 16), fc_hidden=32):
-    model = SurrogateCNN(n_seeds=n_seeds, channels=channels, fc_hidden=fc_hidden)
+def _write_fake_train_checkpoint(path, n_seeds=4, channels=(8, 16), fc_hidden=32,
+                                  n_outputs=3, target_names=None):
+    model = SurrogateCNN(n_seeds=n_seeds, channels=channels, fc_hidden=fc_hidden,
+                          n_outputs=n_outputs)
     torch.save({
         "model_state_dict": model.state_dict(),
         "n_seeds": n_seeds,
         "seed_classes": ["a", "b", "c", "d"],
         "channels": channels,
         "fc_hidden": fc_hidden,
-        "target_names": ["v12", "v21", "volfrac_achieved"],
+        "n_outputs": n_outputs,
+        "target_names": target_names or ["v12", "v21", "volfrac_achieved"],
         "val_loss": 0.1234,
         "epoch": 7,
     }, path)
@@ -54,6 +57,30 @@ class TestExportSurrogate:
         model = SurrogateCNN(
             n_seeds=export["n_seeds"], channels=export["channels"],
             fc_hidden=export["fc_hidden"],
+        )
+        model.load_state_dict(export["model_state_dict"])  # should not raise
+
+    def test_export_preserves_n_outputs_for_f1f2_checkpoint(self, tmp_path):
+        """Bug đã sửa 2026-08-15: export_surrogate() từng bỏ qua n_outputs -
+        gói export cho checkpoint 5-output (--include-f1f2) thiếu field này,
+        khiến pipeline/phase5_cvae/losses.py::load_frozen_surrogate() luôn
+        dựng lại model với n_outputs=3 mặc định và crash size-mismatch."""
+        src = tmp_path / "surrogate_f1f2.pt"
+        dst = tmp_path / "surrogate_f1f2_for_phase5.pt"
+        _write_fake_train_checkpoint(
+            src, n_outputs=5,
+            target_names=["v12", "v21", "volfrac_achieved", "f1", "f2"],
+        )
+
+        export_surrogate(str(src), str(dst))
+
+        export = torch.load(str(dst), map_location="cpu", weights_only=False)
+        assert export["n_outputs"] == 5
+        assert export["target_names"] == ["v12", "v21", "volfrac_achieved", "f1", "f2"]
+
+        model = SurrogateCNN(
+            n_seeds=export["n_seeds"], channels=export["channels"],
+            fc_hidden=export["fc_hidden"], n_outputs=export["n_outputs"],
         )
         model.load_state_dict(export["model_state_dict"])  # should not raise
 

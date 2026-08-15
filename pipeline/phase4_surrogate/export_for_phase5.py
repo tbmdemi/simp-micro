@@ -13,7 +13,7 @@ Cách Phase 5 load lại (ví dụ):
 
     ckpt = torch.load("outputs/phase4/surrogate_for_phase5.pt", weights_only=False)
     model = SurrogateCNN(n_seeds=ckpt["n_seeds"], channels=ckpt["channels"],
-                          fc_hidden=ckpt["fc_hidden"])
+                          fc_hidden=ckpt["fc_hidden"], n_outputs=ckpt["n_outputs"])
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     for p in model.parameters():
@@ -53,6 +53,11 @@ def export_surrogate(src: str, dst: str, eval_report_path: str = None):
         "seed_classes": ckpt["seed_classes"],
         "channels": ckpt["channels"],
         "fc_hidden": ckpt["fc_hidden"],
+        # Bug đã sửa 2026-08-15: thiếu field này khiến losses.py::load_frozen_surrogate
+        # (Phase 5) luôn dựng lại model với n_outputs=3 mặc định, crash size-mismatch
+        # trên checkpoint 5-output (--include-f1f2, surrogate_f1f2.pt). ckpt cũ trước
+        # khi train.py lưu field này thì mặc định 3 (tương thích ngược).
+        "n_outputs": ckpt.get("n_outputs", 3),
         "target_names": ckpt["target_names"],
         "input_spec": {
             "image_shape": [1, 64, 64],

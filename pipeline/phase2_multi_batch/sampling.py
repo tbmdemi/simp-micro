@@ -7,10 +7,28 @@ Provides:
   - Parameter space transformations (normalized ↔ physical)
 """
 
+import hashlib
 import warnings
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+
+
+def _deterministic_seed(text: str) -> int:
+    """Băm CHUỖI thành 1 số nguyên 31-bit KHÔNG ĐỔI giữa các lần chạy/tiến
+    trình khác nhau - dùng thay `hash(str)` builtin của Python.
+
+    Bug đã sửa 2026-08-15: `hash()` cho chuỗi bị Python randomize theo mỗi
+    tiến trình (PYTHONHASHSEED ngẫu nhiên mặc định, không pin ở đâu trong
+    repo này) - generate_design() từng dùng hash(f"{batch_id}_{seed}_{obj}")
+    làm seed cho generate_samples(), khiến chạy lại ĐÚNG batch config 2 lần
+    (vd để tái lập DOE cho luận văn, hoặc resume sau crash) cho ra 2 bộ mẫu
+    Sobol/LHS KHÁC NHAU, dù docstring của generate_design() khẳng định
+    "Random seed for reproducibility". hashlib.md5 tất định trên mọi
+    process/máy, không phụ thuộc PYTHONHASHSEED.
+    """
+    digest = hashlib.md5(text.encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], byteorder="big") & 0x7FFFFFFF
 
 
 def _validate_ranges(
@@ -291,7 +309,7 @@ def generate_design(
                 n=n_for_seed,
                 active_params=active_params,
                 strategy=strategy_str,
-                seed=(hash(f"{batch_id}_{seed}_{obj}") & 0x7FFFFFFF),
+                seed=_deterministic_seed(f"{batch_id}_{seed}_{obj}"),
             )
             for i in range(n_for_seed):
                 row = {

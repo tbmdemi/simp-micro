@@ -16,7 +16,9 @@ def small_square_cross_seed(nelx: int, nely: int, void_size_frac: float, rotatio
 
     for i in range(nelx):
         for j in range(nely):
-            dx, dy = i - cx, j - cy
+            # Bug đã sửa 2026-08-15: dùng (i+0.5)/(j+0.5) không phải i/j - xem
+            # simp/seeds/circle.py cho giải thích đầy đủ (tâm phần tử thật ở i+0.5).
+            dx, dy = (i + 0.5) - cx, (j + 0.5) - cy
             nx = dx * cos_t - dy * sin_t
             ny = dx * sin_t + dy * cos_t
 

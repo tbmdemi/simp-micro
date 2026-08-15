@@ -194,6 +194,19 @@ def run_simp(params: dict) -> dict:
     E0 = params.get('E0', 199.0)
     Emin = params.get('Emin', 1e-9)
     nu = params.get('nu', 0.3)
+
+    # Validate ở biên (CLAUDE.md quy ước): trước đây rmin/penal/volfrac đi
+    # thẳng vào solver không kiểm tra gì - vd rmin=0 khiến build_filter() cho
+    # Hs toàn số 0, gây NaN vài vòng lặp sau, chỉ tình cờ bắt được nhờ
+    # math.isnan(c) ở dưới, không phải validate chủ động (xem LIMITATIONS.md).
+    # E0/Emin/nu đã validate trong Material.__init__ (gọi ngay dưới đây).
+    if rmin <= 0:
+        raise ValueError(f'rmin must be positive, got {rmin}')
+    if penal < 1:
+        raise ValueError(f'penal must be >= 1, got {penal}')
+    if not (0 < volfrac <= 1):
+        raise ValueError(f'volfrac must be in (0, 1], got {volfrac}')
+
     move = params.get('move', 0.1)
     # move_min (mặc định None = TẮT, hành vi cũ - move cố định suốt vòng lặp):
     # nếu đặt, `move` giảm tuyến tính từ giá trị ở trên xuống move_min qua
@@ -327,10 +340,18 @@ def run_simp(params: dict) -> dict:
     )
 
     # Seed ban đầu
-    # Một số seed (hourglass, square) cần volfrac thay vì void_size_frac
+    # Bug đã sửa 2026-08-15: chỉ 2/11 seed nhận `volfrac` làm tham số thứ 3
+    # (hourglass_seed, reentrant_bowtie_seed - kiểm tra bằng chữ ký hàm thật,
+    # không suy đoán); 9 seed còn lại nhận `void_size_frac`. Trước đây chỉ
+    # đặc cách 'hourglass', khiến reentrant_bowtie_seed(nelx, nely, volfrac, ...)
+    # âm thầm nhận void_size_frac (range 0,25-0,55) thay vì volfrac (range
+    # 0,45-0,70) - sai lệch công thức mật độ nền/thanh chéo
+    # (max(0.01,volfrac*0.15), min(1.0,volfrac*2.2)) của TOÀN BỘ seed
+    # reentrant_bowtie đã sinh (1 trong 3 seed production, trọng số 0,15).
+    _VOLFRAC_SEEDS = ('hourglass', 'reentrant_bowtie')
     seed_fn = SEED_MAP.get(seed_name)
     if seed_fn is not None:
-        if seed_name == 'hourglass':
+        if seed_name in _VOLFRAC_SEEDS:
             x = seed_fn(nelx, nely, volfrac, rotation_deg)
         else:
             x = seed_fn(nelx, nely, void_size_frac, rotation_deg)
@@ -386,6 +407,7 @@ def run_simp(params: dict) -> dict:
         beta_proj_t = (penal_at_iteration(beta_proj, beta_proj_init, loop, max_iter)
                        if projection == 'heaviside' else beta_proj)
 
+        iteration_failed = False
         try:
             # solve_fe trả về U là fluctuation chi (K@chi=-K@U0), KHÔNG phải
             # tổng chuyển vị (xem docstring module ở trên).
@@ -411,17 +433,26 @@ def run_simp(params: dict) -> dict:
             print(f'[ERROR] Loop {loop}: {e}')
             c = 1e12
             dc = -np.ones((nely, nelx)) * 1e6
-            if not hasattr(run_simp, '_err_count'):
-                run_simp._err_count = 0
-            run_simp._err_count += 1
+            iteration_failed = True
+            # _err_count đếm lỗi LIÊN TIẾP thật sự - reset về 0 chỉ xảy ra ở
+            # nhánh thành công bên dưới (không phải vô điều kiện mỗi vòng lặp
+            # như bug cũ, khiến ngưỡng 5 lỗi liên tiếp không bao giờ đạt được).
+            run_simp._err_count = getattr(run_simp, '_err_count', 0) + 1
             if run_simp._err_count >= 5:
                 print('[STOP] Quá 5 lỗi liên tiếp, dừng pipeline')
                 break
 
         # Hệ số Poisson tính chính xác qua nghịch đảo ma trận đầy đủ
         # (S = Q^-1), đúng cho cả trường hợp có rotation (Q13, Q23 != 0).
-        v12 = compute_nu12(Q)
-        v21 = compute_nu21(Q)
+        # Nếu vòng lặp NÀY vừa lỗi VÀ Q vẫn là ma trận zero-init (lỗi ngay từ
+        # vòng lặp đầu tiên, chưa từng có Q hợp lệ) - nghịch đảo sẽ crash
+        # LinAlgError (ma trận suy biến), nên giữ NaN thay vì tính.
+        if iteration_failed and not np.any(Q):
+            v12 = float('nan')
+            v21 = float('nan')
+        else:
+            v12 = compute_nu12(Q)
+            v21 = compute_nu21(Q)
 
         # Kiểm tra hội tụ
         if conv_checker.should_stop(change, c, prev_obj, loop, max_iter):
@@ -488,7 +519,7 @@ def run_simp(params: dict) -> dict:
         print(f'Loop:{loop:4d}  obj:{c:+.4e}  vol:{np.mean(xPhys):.3f}  '
                 f'chg:{change:.3f}  v12:{v12:.4f}  v21:{v21:.4f}') if verbose else None
 
-        if hasattr(run_simp, '_err_count'):
+        if not iteration_failed and hasattr(run_simp, '_err_count'):
             run_simp._err_count = 0
 
     # --- Kết thúc ---

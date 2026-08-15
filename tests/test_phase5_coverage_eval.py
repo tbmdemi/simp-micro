@@ -11,29 +11,13 @@ import sys
 
 import numpy as np
 import pytest
-import torch
-
-
-def _write_cvae_checkpoint(path, latent_dim=4, resolution=64,
-                            channels=(4, 8, 16, 32)):
-    from pipeline.phase5_cvae.model import CVAE
-    model = CVAE(condition_dim=2, latent_dim=latent_dim,
-                 resolution=resolution, channels=channels)
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "latent_dim": latent_dim,
-        "condition_dim": 2,
-        "resolution": resolution,
-        "channels": channels,
-    }, path)
 
 
 class TestCoverageEvalGridAndHitLogic:
-    def test_grid_spans_requested_range(self, tmp_path, monkeypatch):
+    def test_grid_spans_requested_range(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -47,15 +31,14 @@ class TestCoverageEvalGridAndHitLogic:
         assert targets[-1] == pytest.approx(0.4)
 
     def test_dead_zone_detected_when_best_of_n_always_wrong_sign(
-        self, tmp_path, monkeypatch,
+        self, tmp_path, monkeypatch, make_cvae_checkpoint,
     ):
         """Force every real-FE evaluation to return a POSITIVE value - every
         auxetic (v12<0) grid target should then be flagged as a dead zone
         (hit=False), and none should be marked hit."""
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -72,11 +55,10 @@ class TestCoverageEvalGridAndHitLogic:
         assert result["hit_rate"] == 0.0
         assert len(result["dead_zone_targets"]) == result["n_auxetic_targets"]
 
-    def test_no_dead_zone_when_fe_matches_target_sign(self, tmp_path, monkeypatch):
+    def test_no_dead_zone_when_fe_matches_target_sign(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -98,11 +80,10 @@ class TestCoverageEvalGridAndHitLogic:
         assert result["hit_rate"] == 1.0
         assert result["dead_zone_targets"] == []
 
-    def test_non_auxetic_targets_excluded_from_hit_rate(self, tmp_path, monkeypatch):
+    def test_non_auxetic_targets_excluded_from_hit_rate(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -122,11 +103,10 @@ class TestCoverageEvalGridAndHitLogic:
             assert t["hit"] is None
         assert result["n_auxetic_targets"] < result["grid_size"]
 
-    def test_all_fe_solves_failing_yields_nan_hit_rate(self, tmp_path, monkeypatch):
+    def test_all_fe_solves_failing_yields_nan_hit_rate(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
 
         def always_fail(img_fe, fe_params):
             raise RuntimeError("forced FE failure")
@@ -143,11 +123,10 @@ class TestCoverageEvalGridAndHitLogic:
 
 
 class TestCoverageEvalManufacturabilityFlag:
-    def test_check_manufacturability_populates_frac(self, tmp_path, monkeypatch):
+    def test_check_manufacturability_populates_frac(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -165,11 +144,10 @@ class TestCoverageEvalManufacturabilityFlag:
         for t in result["per_target"]:
             assert t["frac_manufacturable"] == pytest.approx(1.0)
 
-    def test_disabled_leaves_frac_manufacturable_none(self, tmp_path, monkeypatch):
+    def test_disabled_leaves_frac_manufacturable_none(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -188,11 +166,10 @@ class TestCoverageEvalForcePeriodic:
     coverage_result.json) phản ánh nhầm cấu hình 'trước Fix 2'. Test này xác
     nhận force_periodic() được gọi mặc định và có thể tắt qua tham số."""
 
-    def test_force_periodic_called_by_default(self, tmp_path, monkeypatch):
+    def test_force_periodic_called_by_default(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -211,11 +188,10 @@ class TestCoverageEvalForcePeriodic:
         )
         assert call_count["n"] == 4  # 2 target x 2 mẫu
 
-    def test_force_periodic_disabled_when_requested(self, tmp_path, monkeypatch):
+    def test_force_periodic_disabled_when_requested(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
 
@@ -232,11 +208,10 @@ class TestCoverageEvalForcePeriodic:
 
 
 class TestCoverageEvalCli:
-    def test_main_writes_result_json(self, tmp_path, monkeypatch):
+    def test_main_writes_result_json(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import coverage_eval as cov_mod
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=4)
         tiny_fe_params = dict(cov_mod.FE_PARAMS, nelx=6, nely=6)
         monkeypatch.setattr(cov_mod, "FE_PARAMS", tiny_fe_params)
         out_path = tmp_path / "result.json"

@@ -33,7 +33,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
 from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset            # noqa: E402
+from dataset import CVAEDataset, build_condition_vector  # noqa: E402
 from losses import load_frozen_surrogate   # noqa: E402
 from sample import load_model, CKPT_PATH   # noqa: E402
 
@@ -55,7 +55,10 @@ def property_accuracy(model, surrogate, target_names, test_loader, device):
         idx_v12, idx_v21 = target_names.index("v12"), target_names.index("v21")
         pred_cond = torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
         preds.append(pred_cond.cpu().numpy())
-        targets.append(condition.cpu().numpy())
+        # condition có thể dài hơn 2 chiều (condition_dim=6, --extended-condition)
+        # nhưng surrogate chỉ dự đoán (v12,v21) - luôn so khớp 2 cột đầu, cùng quy
+        # ước với property_consistency_loss()/real_physics_loss() trong losses.py.
+        targets.append(condition[:, :2].cpu().numpy())
     preds = np.concatenate(preds)
     targets = np.concatenate(targets)
 
@@ -115,7 +118,12 @@ def main():
     model = load_model(device=device)
     surrogate, target_names = load_frozen_surrogate(device=device)
 
-    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
+    # Bug đã sửa 2026-08-15: dataset ở đây trước dùng LUÔN condition_dim=2
+    # mặc định, bất kể checkpoint train với --extended-condition
+    # (condition_dim=6) hay không - crash shape mismatch ở model.decoder()
+    # khi đánh giá checkpoint extended-condition.
+    extended = model.condition_dim == 6
+    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"), extended_condition=extended)
     test_loader = DataLoader(test_ds, batch_size=64, shuffle=False)
 
     print("1/3 - Đánh giá property accuracy trên test set...")
@@ -124,8 +132,9 @@ def main():
     print(f"   v21: R2={prop_report['v21']['r2']:.4f} MAE={prop_report['v21']['mae']:.4f}")
 
     print("2/3 - Kiểm tra đa dạng hình học (condition cố định)...")
+    fixed_condition = build_condition_vector(-0.6, -0.6, model.condition_dim)
     diversity_report = diversity_check(
-        model, condition=[-0.6, -0.6], n_samples=8, device=device
+        model, condition=fixed_condition, n_samples=8, device=device
     )
     print(f"   pixel_std={diversity_report['pixel_std']:.4f} "
           f"(gần 0 -> nghi ngờ posterior collapse)")

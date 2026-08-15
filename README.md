@@ -131,7 +131,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 ├── analysis/                 # Phân tích độ nhạy (ANOVA, Sobol, regression), Pareto front, dataset QC
 ├── notebooks/, html/         # Jupyter notebook + dashboard/báo cáo (xem html/index.html)
 ├── html/dashboards/workflow.html        # Dashboard workflow toàn dự án (chi tiết từng phase con)
-├── tests/                     # Bộ kiểm thử PyTest (483 test)
+├── tests/                     # Bộ kiểm thử PyTest (542 test)
 ├── outputs/                   # Dữ liệu sinh ra - phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
 ├── docs/                      # PIPELINE.md, LIMITATIONS.md, PHYSICS_AND_ML.md - xem mục Tài liệu
 ├── EXPERIMENT_LOG.md, CHANGELOG.md   # xem mục Tài liệu
@@ -266,7 +266,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **483/483 test pass** (`pytest tests/ -q`, ~7s) - bao gồm test cho tính năng optional multi-condition (xem [docs/PIPELINE.md § 5.1](docs/PIPELINE.md#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện)).
+Trạng thái hiện tại: **542/542 test pass** (`pytest tests/ -q`, ~7s) - bao gồm test cho tính năng optional multi-condition (xem [docs/PIPELINE.md § 5.1](docs/PIPELINE.md#51-tham-số-input-tùy-chọn-volfrac-và-void-size-frac-chấm-điểm-toàn-diện)).
 
 | Module | Trạng thái |
 |--------|--------|
@@ -290,13 +290,13 @@ Trạng thái hiện tại: **483/483 test pass** (`pytest tests/ -q`, ~7s) - ba
 
 ## Giới hạn Đã biết / Known Limitations
 
-Danh sách đầy đủ 19 mục (song ngữ Việt/English) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
+Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
 
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
 - `f1, f2` (Pha B) chưa nối làm condition cho cVAE — xem `docs/PROJECT_PLAN.md` Nhóm 2.
-- Test tự động (483/483 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, FE call thật).
+- Test tự động (542/542 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, FE call thật).
 - Toàn bộ pipeline dùng FEM tuyến tính (giả định biến dạng nhỏ) - xem mục 14.
 - `hit_rate` là metric yếu do base rate ~92% auxetic của dataset; chưa có bằng chứng cVAE vượt trội baseline nearest-neighbor trong-phân-phối (mục 17-18, phát hiện 2026-08-02).
 
@@ -304,7 +304,7 @@ Danh sách đầy đủ 19 mục (song ngữ Việt/English) đã được tách
 
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 19 mục giới hạn đã biết (song ngữ)
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 21 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`docs/SLIDE_AND_REPORT_GUIDE.md`](docs/SLIDE_AND_REPORT_GUIDE.md) - hướng dẫn dựng slide thuyết trình + báo cáo khoa học (IMRaD): outline chi tiết, kiểm kê hình/dashboard có sẵn, sơ đồ Mermaid cần vẽ, checklist claim khoa học
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án

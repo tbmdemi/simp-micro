@@ -12,32 +12,20 @@ import pytest
 class TestFEM:
     """Smoke tests for core/fem.py - build_dof_mesh."""
 
-    def test_build_dof_mesh_small(self):
+    @pytest.mark.parametrize("nelx,nely", [(1, 1), (2, 2), (5, 5), (3, 3), (4, 2)])
+    def test_various_mesh_sizes(self, nelx, nely):
         from simp.core.fem import build_dof_mesh
-        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(3, 3)
+        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
         # nodenrs: (nely+1) x (nelx+1)
-        assert nodenrs.shape == (4, 4)
+        assert nodenrs.shape == (nely + 1, nelx + 1)
         # edofVec: (nelx*nely,) - one entry per element
-        assert len(edofVec) == 9
+        assert len(edofVec) == nelx * nely
         # edofMat: (nelx*nely, 8) - 8 DOFs per quad element
-        assert edofMat.shape == (9, 8)
+        assert edofMat.shape == (nelx * nely, 8)
         # iK, jK: sparse index vectors for stiffness assembly
         assert len(iK) > 0
         assert len(jK) > 0
         assert len(iK) == len(jK)
-
-    def test_build_dof_mesh_rectangular(self):
-        from simp.core.fem import build_dof_mesh
-        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(4, 2)
-        assert nodenrs.shape == (3, 5)
-        assert edofMat.shape == (8, 8)
-
-    @pytest.mark.parametrize("nelx,nely", [(1, 1), (2, 2), (5, 5)])
-    def test_various_mesh_sizes(self, nelx, nely):
-        from simp.core.fem import build_dof_mesh
-        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
-        assert edofMat.shape == (nelx * nely, 8)
-        assert nodenrs.shape == (nely + 1, nelx + 1)
 
 
 class TestMaterial:
@@ -66,6 +54,22 @@ class TestMaterial:
         mat_hi = Material(nu=0.4)
         # Higher Poisson ratio should affect shear terms
         assert not np.allclose(mat_lo.KE, mat_hi.KE)
+
+    @pytest.mark.parametrize("kwargs,match", [
+        ({'nu': 1.0}, "nu must be"),
+        ({'nu': -1.0}, "nu must be"),
+        ({'E0': 0.0}, "E0 must be positive"),
+        ({'E0': -10.0}, "E0 must be positive"),
+        ({'Emin': 0.0}, "Emin must be positive"),
+        ({'E0': 100.0, 'Emin': 100.0}, "Emin must be"),
+        ({'E0': 100.0, 'Emin': 200.0}, "Emin must be"),
+    ], ids=["nu>0.5", "nu<-1", "E0=0", "E0<0", "Emin=0", "Emin==E0", "Emin>E0"])
+    def test_invalid_material_params_raise(self, kwargs, match):
+        """Validate ở biên (CLAUDE.md) - bug đã sửa 2026-08-15: nu/E0/Emin
+        trước đây đi thẳng vào solver không kiểm tra gì (chỉ nu được check)."""
+        from simp.materials.isotropic import Material
+        with pytest.raises(ValueError, match=match):
+            Material(**kwargs)
 
 
 class TestFilter:
@@ -160,8 +164,12 @@ class TestSolver:
         # U0: (2*n_nodes,) - thermal-like test strain
         assert len(U0) == 2 * n_nodes
 
-    def test_solve_fe_uniform_density(self):
-        """Uniform density should produce symmetric displacements."""
+    @pytest.mark.parametrize("xphys_kind,penal,E0", [
+        ("uniform", 1.0, 1.0),   # xPhys=1, penal=1 -> linear elastic
+        ("random", 3.0, 199.0),  # mixed density, SIMP penalization thật
+    ])
+    def test_solve_fe_no_nan_or_inf(self, xphys_kind, penal, E0):
+        """xPhys đồng nhất hoặc ngẫu nhiên đều không được sinh NaN/Inf ở U."""
         from simp.core.fem import build_dof_mesh
         from simp.core.pbc import build_pbc
         from simp.core.solver import solve_fe
@@ -172,27 +180,8 @@ class TestSolver:
         nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
         pbc = build_pbc(nelx, nely, nodenrs)
 
-        xPhys = np.ones((nely, nelx))
-        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal=1.0, E0=1.0, Emin=1e-9)
-        # With uniform xPhys=1, penal=1 → linear elastic, should not have NaN or Inf
-        assert not np.any(np.isnan(U))
-        assert not np.any(np.isinf(U))
-
-    def test_solve_fe_checks_output(self):
-        """Output U should be non-zero for non-uniform density."""
-        from simp.core.fem import build_dof_mesh
-        from simp.core.pbc import build_pbc
-        from simp.core.solver import solve_fe
-        from simp.materials.isotropic import Material
-
-        nelx, nely = 4, 4
-        material = Material()
-        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
-        pbc = build_pbc(nelx, nely, nodenrs)
-
-        # Mixed density
-        xPhys = np.random.rand(nely, nelx)
-        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal=3.0, E0=199.0, Emin=1e-9)
+        xPhys = np.ones((nely, nelx)) if xphys_kind == "uniform" else np.random.rand(nely, nelx)
+        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal=penal, E0=E0, Emin=1e-9)
         assert not np.any(np.isnan(U))
         assert not np.any(np.isinf(U))
 
@@ -747,7 +736,146 @@ class TestRunner:
         result = run_simp(params)
         assert 'xPhys' in result
         assert 'Q' in result
-        assert 'v12' in result or 'v12' in result or True  # benign
+
+    @pytest.mark.parametrize("override,match", [
+        ({'rmin': 0.0}, "rmin"),
+        ({'penal': 0.5}, "penal"),
+        ({'volfrac': 0.0}, "volfrac"),
+        ({'volfrac': 1.5}, "volfrac"),
+    ], ids=["rmin<=0", "penal<1", "volfrac=0", "volfrac>1"])
+    def test_rejects_invalid_params(self, override, match):
+        """Validate ở biên (CLAUDE.md) - bug đã sửa 2026-08-15: các tham số
+        này trước đây đi thẳng vào solver không kiểm tra gì (vd rmin<=0 sinh
+        Hs toàn số 0 rồi NaN vài vòng lặp sau thay vì báo lỗi ngay tại chỗ)."""
+        from simp.runner import run_simp
+        params = {'nelx': 3, 'nely': 3, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
+                   'ft': 2, 'max_iter': 2, 'seed': 'circle', 'objective': 'auxetic'}
+        params.update(override)
+        with pytest.raises(ValueError, match=match):
+            run_simp(params)
+
+    @pytest.mark.parametrize("seed_name,expected_arg", [
+        ('reentrant_bowtie', 0.55),  # volfrac - bug đã sửa 2026-08-15
+        ('hourglass', 0.55),         # volfrac - hành vi đúng sẵn có
+        ('circle', 0.3),             # void_size_frac - 9/11 seed còn lại
+    ])
+    def test_seed_dispatch_third_arg(self, monkeypatch, seed_name, expected_arg):
+        """Bug đã sửa 2026-08-15: dispatch chỉ đặc cách 'hourglass' truyền
+        volfrac làm tham số thứ 3 của seed_fn - reentrant_bowtie_seed() cũng
+        nhận volfrac (kiểm tra chữ ký hàm thật: `def reentrant_bowtie_seed(
+        nelx, nely, volfrac, ...)`), nhưng trước đây rơi vào nhánh else nên
+        âm thầm nhận void_size_frac (range 0,25-0,55) thay vì volfrac (range
+        0,45-0,70) - sai lệch công thức mật độ nền/thanh chéo của TOÀN BỘ
+        seed reentrant_bowtie đã sinh."""
+        import simp.runner as runner_mod
+
+        captured = {}
+
+        def spy_seed_fn(nelx, nely, third_arg, rotation_deg):
+            captured['third_arg'] = third_arg
+            return np.full((nely, nelx), 0.3)
+
+        monkeypatch.setitem(runner_mod.SEED_MAP, seed_name, spy_seed_fn)
+
+        from simp.runner import run_simp
+        params = {
+            'nelx': 3, 'nely': 3, 'volfrac': 0.55, 'void_size_frac': 0.3,
+            'penal': 3.0, 'rmin': 1.5, 'ft': 2, 'max_iter': 1,
+            'seed': seed_name, 'objective': 'auxetic', 'rotation_deg': 0.0,
+        }
+        run_simp(params)
+
+        assert captured['third_arg'] == expected_arg
+
+
+class TestRunSimpErrorRecovery:
+    """Bug đã sửa 2026-08-15: `run_simp._err_count` (đếm lỗi FE-solve liên
+    tiếp, dừng pipeline sau 5 lỗi) từng bị reset về 0 VÔ ĐIỀU KIỆN ở cuối mỗi
+    vòng lặp - kể cả vòng lặp vừa lỗi - khiến ngưỡng 5 lỗi liên tiếp không
+    bao giờ đạt được. Đồng thời, nếu vòng lặp ĐẦU TIÊN lỗi, Q vẫn là ma trận
+    zero-init nên compute_nu12/21() (nghịch đảo ma trận) crash LinAlgError."""
+
+    @staticmethod
+    def _base_params(**overrides):
+        params = {
+            'nelx': 3, 'nely': 3, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
+            'ft': 2, 'E0': 199.0, 'Emin': 1e-9, 'nu': 0.3, 'move': 0.1,
+            'max_iter': 20, 'tol_change': 0.01, 'tol_obj': 0.05,
+            'window_size': 5, 'seed': 'circle', 'objective': 'auxetic',
+            'void_size_frac': 0.4, 'rotation_deg': 0.0, 'beta': 0.8,
+            'beta_second': 100.0, 'save_every': 999, 'scale_factor': 1,
+        }
+        params.update(overrides)
+        return params
+
+    def setup_method(self):
+        # _err_count là thuộc tính gắn trên function object, tồn tại xuyên
+        # suốt các lần gọi run_simp() khác nhau - phải reset trước mỗi test
+        # để tránh test này ảnh hưởng test kia.
+        from simp.runner import run_simp
+        if hasattr(run_simp, '_err_count'):
+            del run_simp._err_count
+
+    def test_stops_after_5_consecutive_failures(self, monkeypatch):
+        """FE-solve lỗi ở MỌI vòng lặp - pipeline phải dừng sau đúng 5 lần
+        lỗi liên tiếp (không chạy tới max_iter=20)."""
+        import simp.runner as runner_mod
+
+        def always_fail(*args, **kwargs):
+            raise RuntimeError("mocked FE-solve failure")
+
+        monkeypatch.setattr(runner_mod, "solve_fe", always_fail)
+        result = runner_mod.run_simp(self._base_params(max_iter=20))
+
+        assert result['n_iters'] == 5, (
+            "Phải dừng đúng sau 5 lỗi liên tiếp, không chạy hết max_iter "
+            f"(n_iters={result['n_iters']}) - _err_count reset sai chỗ."
+        )
+
+    def test_first_iteration_failure_does_not_crash(self, monkeypatch):
+        """Lỗi ngay từ vòng lặp đầu tiên (Q vẫn zero-init) không được crash
+        LinAlgError khi tính v12/v21 - phải trả về NaN cho vòng lặp đó."""
+        import simp.runner as runner_mod
+
+        call_count = {"n": 0}
+        real_solve_fe = runner_mod.solve_fe
+
+        def fail_once_then_succeed(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise RuntimeError("mocked FE-solve failure on first call")
+            return real_solve_fe(*args, **kwargs)
+
+        monkeypatch.setattr(runner_mod, "solve_fe", fail_once_then_succeed)
+        # Should not raise LinAlgError.
+        result = runner_mod.run_simp(self._base_params(max_iter=3))
+
+        assert np.isnan(result['history']['v12'][1]), (
+            "v12 của vòng lặp lỗi đầu tiên phải là NaN (Q chưa từng hợp lệ), "
+            "không phải kết quả của compute_nu12() trên ma trận suy biến."
+        )
+
+    def test_intermittent_failures_do_not_accumulate_across_successes(self, monkeypatch):
+        """Lỗi - thành công - lỗi - thành công... (không liên tiếp) không
+        được cộng dồn _err_count và dừng sớm - counter phải reset mỗi lần
+        thành công xen giữa."""
+        import simp.runner as runner_mod
+
+        call_count = {"n": 0}
+        real_solve_fe = runner_mod.solve_fe
+
+        def fail_every_other_call(*args, **kwargs):
+            call_count["n"] += 1
+            if call_count["n"] % 2 == 1:
+                raise RuntimeError("mocked intermittent FE-solve failure")
+            return real_solve_fe(*args, **kwargs)
+
+        monkeypatch.setattr(runner_mod, "solve_fe", fail_every_other_call)
+        result = runner_mod.run_simp(self._base_params(max_iter=10))
+
+        # Không lỗi nào liên tiếp quá 1 lần -> phải chạy hết 10 vòng lặp,
+        # KHÔNG dừng sớm vì "5 lỗi liên tiếp" (chỉ là 5 lỗi RỜI RẠC).
+        assert result['n_iters'] == 10
 
 
 class TestMoveAtIteration:

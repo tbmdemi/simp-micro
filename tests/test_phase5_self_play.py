@@ -6,21 +6,6 @@ training subprocesses and is intentionally out of scope for a unit test).
 Imports are lazy inside each test - see tests/conftest.py docstring.
 """
 import numpy as np
-import torch
-
-
-def _write_cvae_checkpoint(path, latent_dim=6, resolution=64,
-                            channels=(4, 8, 16, 32)):
-    from pipeline.phase5_cvae.model import CVAE
-    model = CVAE(condition_dim=2, latent_dim=latent_dim,
-                 resolution=resolution, channels=channels)
-    torch.save({
-        "model_state_dict": model.state_dict(),
-        "latent_dim": latent_dim,
-        "condition_dim": 2,
-        "resolution": resolution,
-        "channels": channels,
-    }, path)
 
 
 def _write_test_npz(path, n_samples=16, n_seeds=2, v12_range=(-0.7, 0.3)):
@@ -41,7 +26,7 @@ def _write_test_npz(path, n_samples=16, n_seeds=2, v12_range=(-0.7, 0.3)):
 
 
 class TestVerifyRound:
-    def test_returns_expected_keys_and_finite_r2(self, tmp_path, monkeypatch):
+    def test_returns_expected_keys_and_finite_r2(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import self_play as sp_mod
 
         tiny_fe_params = dict(sp_mod.FE_PARAMS, nelx=6, nely=6)
@@ -51,8 +36,7 @@ class TestVerifyRound:
         _write_test_npz(test_npz, n_samples=16)
         monkeypatch.setattr(sp_mod, "PHASE3_DIR", str(tmp_path))
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
 
         result = sp_mod.verify_round(
             str(ckpt_path), n_conditions=4, n_per_condition=2,
@@ -63,7 +47,7 @@ class TestVerifyRound:
             assert key in result
         assert result["n_samples"] > 0
 
-    def test_same_seed_is_reproducible(self, tmp_path, monkeypatch):
+    def test_same_seed_is_reproducible(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         """verify_round MUST give identical results across repeated calls
         with the same seed - self-play's round-over-round comparison is
         only meaningful if this holds (see module docstring: this was
@@ -79,8 +63,7 @@ class TestVerifyRound:
         _write_test_npz(test_npz, n_samples=16)
         monkeypatch.setattr(sp_mod, "PHASE3_DIR", str(tmp_path))
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
 
         result_a = sp_mod.verify_round(
             str(ckpt_path), n_conditions=3, n_per_condition=2,
@@ -93,7 +76,7 @@ class TestVerifyRound:
 
         assert result_a == result_b
 
-    def test_different_seed_selects_different_conditions(self, tmp_path, monkeypatch):
+    def test_different_seed_selects_different_conditions(self, tmp_path, monkeypatch, make_cvae_checkpoint):
         from pipeline.phase5_cvae import self_play as sp_mod
 
         tiny_fe_params = dict(sp_mod.FE_PARAMS, nelx=6, nely=6)
@@ -103,8 +86,7 @@ class TestVerifyRound:
         _write_test_npz(test_npz, n_samples=40)
         monkeypatch.setattr(sp_mod, "PHASE3_DIR", str(tmp_path))
 
-        ckpt_path = tmp_path / "cvae.pt"
-        _write_cvae_checkpoint(ckpt_path)
+        ckpt_path = make_cvae_checkpoint("cvae.pt", latent_dim=6)
 
         result_a = sp_mod.verify_round(
             str(ckpt_path), n_conditions=5, n_per_condition=1,

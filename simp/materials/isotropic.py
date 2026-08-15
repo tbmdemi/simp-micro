@@ -34,10 +34,24 @@ class Material:
 
         Raises:
             ValueError: nếu nu nằm ngoài khoảng vật lý hợp lệ (-1, 0.5) cho
-                vật liệu đẳng hướng - nu=1 làm (1 - nu**2) = 0 và D phân kỳ.
+                vật liệu đẳng hướng - nu=1 làm (1 - nu**2) = 0 và D phân kỳ,
+                hoặc nếu E0/Emin không dương, hoặc Emin >= E0 (SIMP
+                penalization nội suy Emin -> E0 theo mật độ, không có nghĩa
+                nếu khoảng nội suy rỗng/đảo ngược).
         """
         if not (-1.0 < nu < 0.5):
             raise ValueError(f'nu must be in (-1, 0.5) for isotropic material, got {nu}')
+        # Validate ở biên (CLAUDE.md): trước đây E0/Emin đi thẳng vào solver
+        # không kiểm tra gì - vd rmin=0 gây Hs toàn 0 rồi NaN vài vòng lặp
+        # sau, chỉ bắt được tình cờ nhờ math.isnan(c) trong runner.py, không
+        # phải validate chủ động (bug tương tự cho E0/Emin, xem LIMITATIONS.md).
+        if E0 <= 0:
+            raise ValueError(f'E0 must be positive, got {E0}')
+        if Emin <= 0:
+            raise ValueError(f'Emin must be positive, got {Emin}')
+        if Emin >= E0:
+            raise ValueError(f'Emin must be < E0 (SIMP interpolates Emin -> E0 by '
+                              f'density), got Emin={Emin} >= E0={E0}')
         self.E0 = E0
         self.Emin = Emin
         self.nu = nu

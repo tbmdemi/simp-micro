@@ -166,19 +166,13 @@ class TestApplyConditionDropout:
     (volfrac at (2,3), void_size_frac at (4,5)) - see train.py docstring.
     Columns 0,1 (v12,v21) must never be touched."""
 
-    def test_never_touches_v12_v21_columns(self):
+    def test_dropout_p_one_never_touches_v12_v21_but_always_zeros_optional(self):
         from pipeline.phase5_cvae.train import apply_condition_dropout
         torch.manual_seed(0)
         condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
         dropped = apply_condition_dropout(condition, dropout_p=1.0)
         assert torch.allclose(dropped[:, 0], condition[:, 0])
         assert torch.allclose(dropped[:, 1], condition[:, 1])
-
-    def test_dropout_p_one_always_zeros_optional_columns(self):
-        from pipeline.phase5_cvae.train import apply_condition_dropout
-        torch.manual_seed(0)
-        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
-        dropped = apply_condition_dropout(condition, dropout_p=1.0)
         assert torch.all(dropped[:, 2:] == 0.0)
 
     def test_dropout_p_zero_never_touches_optional_columns(self):
