@@ -136,7 +136,7 @@ Follow-on trực tiếp của mục thất bại ngay phía trên (OC hai-multip
 4. Ràng buộc volume trong `mma` là BẤT ĐẲNG THỨC (`mean(xPhys)<=volfrac`), không phải bisection nhắm CHÍNH XÁC như `gate` - thực nghiệm cho thấy tại optimum gần như luôn dùng hết ngân sách (sai số trung bình 0,0017%), nhưng đây là khác biệt phương pháp luận cần lưu ý nếu volfrac_achieved là tiêu chí quan trọng cho use-case khác.
 5. Dataset 57k mẫu sản xuất hiện có sinh bằng `gate`/OC - KHÔNG bị ảnh hưởng bởi thay đổi này (chưa đổi bất kỳ default nào).
 
-Code: `simp/mma_runner.py` (mới), `requirements.txt`/`pyproject.toml` (+`nlopt`), `tests/test_mma_runner.py` (5 test), `analysis/scripts/pilot_mma.py`. Trên nhánh `OC-2-multilayer`, uncommitted.
+Code: `simp/mma_runner.py` (mới), `requirements.txt`/`pyproject.toml` (+`nlopt`), `tests/test_mma_runner.py` (5 test). Đã commit vào `main` (nhánh gốc `OC-2-multilayer` không còn tồn tại). Script pilot một lần `analysis/scripts/pilot_mma.py` đã xóa 2026-08-15 sau khi kết quả được ghi đầy đủ vào log này.
 
 ---
 
@@ -217,13 +217,13 @@ Theo dõi trực tiếp Giới hạn Đã biết #15 (README): R²=0,999 của p
 
 **Kết luận:** 2 engine hoàn toàn độc lập (khác thư viện, khác đánh số DOF, khác code lắp ráp ma trận, khác code periodic BC, cùng chung lý thuyết homogenization - điều không thể tránh khỏi ở bất kỳ implementation nào) khớp nhau tới mức sai số làm tròn dấu phẩy động (~1e-9, KHÔNG phải trùng hợp - phù hợp với sai khác round-off giữa 2 sparse solver khác nhau: `splu` trực tiếp ở engine cũ vs `spsolve` ở skfem), trên toàn bộ dải v12 kể cả mẫu auxetic mạnh (-0,82) lẫn gần trung tính (-0,04). Đây là bằng chứng độc lập mạnh nhất có thể có cho tới nay rằng engine FE nội bộ **đúng vật lý**, không chỉ "nhất quán nội bộ" - Giới hạn Đã biết #15 coi như đã giải quyết ở mức độ hợp lý cho 1 dự án ở quy mô này (chưa đối chiếu với phần mềm thương mại như ANSYS/Abaqus, nhưng scikit-fem là 1 implementation FEM độc lập thật, không phải bản sao/wrapper của code hiện tại).
 
-Code: `analysis/scripts/skfem_homogenization.py` (engine độc lập, có thể tái dùng), `analysis/scripts/run_independent_fe_check.py` (script so sánh), `tests/test_skfem_homogenization.py` (7 test, gồm cổng phân tích ô đặc). 437/437 test toàn repo pass. Kết quả đầy đủ: `outputs/phase5/reports/independent_fe_crosscheck.json`. Trên nhánh `OC-2-multilayer`, uncommitted.
+Code: `analysis/scripts/skfem_homogenization.py` (engine độc lập, có thể tái dùng), `analysis/scripts/run_independent_fe_check.py` (script so sánh), `tests/test_skfem_homogenization.py` (7 test, gồm cổng phân tích ô đặc). 437/437 test toàn repo pass. Kết quả đầy đủ: `outputs/phase5/reports/independent_fe_crosscheck.json`. Đã commit vào `main`.
 
 ---
 
 ### 2026-08-02 - Phản hồi audit khoa học: novelty/diversity metric + baseline comparison lần đầu tiên - phát hiện hit_rate là metric yếu, retrieval baseline ngang cVAE trên test set hiện tại
 
-Hai báo cáo audit bên ngoài (`AUDIT_REPORT_SCIENTIFIC_2026-08-02.md`, `AUDIT_REPORT_SCIENTIFIC_REVIEW_2026-08-02.md`) chỉ ra 2 khoảng trống cụ thể chưa có bằng chứng trong pipeline: (1) chưa đo cVAE có sinh thiết kế "mới" hay chỉ tái tạo gần dữ liệu train, (2) chưa có baseline nào ngoài so sánh optimizer nội bộ (OC vs MMA) - không biết nếu bỏ cVAE đi thì kết quả còn giữ được không.
+Hai báo cáo audit bên ngoài (không lưu trong repo) chỉ ra 2 khoảng trống cụ thể chưa có bằng chứng trong pipeline: (1) chưa đo cVAE có sinh thiết kế "mới" hay chỉ tái tạo gần dữ liệu train, (2) chưa có baseline nào ngoài so sánh optimizer nội bộ (OC vs MMA) - không biết nếu bỏ cVAE đi thì kết quả còn giữ được không.
 
 **1. Novelty/diversity (`analysis/scripts/novelty_diversity_eval.py`, mới):** với mỗi target lấy từ `test.npz` (seed=123, giống `best_of_n_eval.py`), sinh K mẫu bằng `cvae_v2_finetuned.pt`, đo khoảng cách L2 (pixel space, density field thô [0,1], không binarize) tới ảnh train GẦN NHẤT trong toàn bộ 57.216 mẫu (không subsample, dùng ma trận-hoá `||a-b||²=||a||²+||b||²-2a·b` theo chunk để tránh cấp phát ma trận khổng lồ). Có đường tham chiếu: khoảng cách NN thật-tới-thật (300 mẫu train ngẫu nhiên, tìm hàng xóm trong phần còn lại của train set, loại bỏ chính nó).
 
@@ -335,7 +335,7 @@ Viết `analysis/scripts/pilot_normalized_objective.py` (cùng pattern `pilot_mm
 
 **Diễn giải:** chuẩn hoá theo `√(Q11·Q22)` tuy đúng và có chặn-biên đẹp về mặt lý thuyết, nhưng đưa vào 1 phép chia phi tuyến trong gradient (`dc` có thêm số hạng `-Q12*dP/(2*denom³)`) làm cảnh quan gradient khó hội tụ hơn nhiều trong khung OC + continuation hiện tại (không phải vấn đề riêng của bất kỳ seed nào - nhất quán cả 3). **Cả 2 hướng thay thế `mu` (phạt tuyến tính VÀ chuẩn hoá tỉ lệ) giờ đều đã bị loại bằng thực nghiệm trực tiếp** - giữ nguyên mặc định `mu=0.0`/`objective_variant='q12'`. Muốn tiếp tục hướng này cần ý tưởng khác hẳn (không phải đổi công thức objective nữa), ví dụ đổi cơ chế tối ưu (MMA đã thắng lớn ở `hexagonal`/`hourglass` cho vấn đề khác - có thể đáng thử kết hợp) hoặc continuation schedule khác cho riêng `normalized`.
 
-Code: `analysis/scripts/pilot_normalized_objective.py` (mới). Manifest đầy đủ: `outputs/pilot_normalized_{hexagonal,hourglass,reentrant_bowtie}/manifest.csv`. Đã cập nhật `docs/LIMITATIONS.md` mục #4 (VI+EN). Trên nhánh `main`, uncommitted.
+Manifest đầy đủ: `outputs/pilot_normalized_{hexagonal,hourglass,reentrant_bowtie}/manifest.csv`. Đã cập nhật `docs/LIMITATIONS.md` mục #4 (VI+EN), đã commit vào `main`. Script pilot một lần đã xóa 2026-08-15 sau khi kết quả được ghi đầy đủ vào log này.
 
 ---
 

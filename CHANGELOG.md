@@ -88,7 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `torch`/`scikit-learn`/`pandas`/`Pillow` thiếu trong `requirements.txt`/`pyproject.toml` dù Phase 3-5 phụ thuộc hoàn toàn - `pip install -r requirements.txt` trước đây không đủ để chạy Phase 3-5.
 - `beta` không được truyền từ Phase 1 sang Phase 2 (`DEFAULT_FIXED` thiếu key) - giờ tường minh `beta=1.0` (khớp dữ liệu production thật, không đổi hành vi). `fixed_parameters` (quyết định active/fixed của Phase 1) bị bỏ quên khi gọi `run_batch_from_design()` trong `main.py` - đã nối lại.
 - `scan_dataset.py` hardcode `N_BATCHES=8`, bỏ sót batch 9-11 (kể cả bản rebuild sửa lỗi `dQ`) - giờ tự động quét mọi thư mục `batch_*`.
-- `outputs/phase3/split_report.json` mô tả dataset CŨ (5.258 mẫu) trong khi `train.npz` thật đã là dataset v2 (57.216 mẫu, seed lệch nặng về `hourglass`) - script `analysis/scripts/regenerate_split_report.py` tính lại khớp dữ liệu thật.
+- `outputs/phase3/split_report.json` mô tả dataset CŨ (5.258 mẫu) trong khi `train.npz` thật đã là dataset v2 (57.216 mẫu, seed lệch nặng về `hourglass`) - script một lần tính lại khớp dữ liệu thật (đã xóa 2026-08-15 sau khi hoàn thành việc regenerate).
 
 #### Added (tính năng thử nghiệm, TẮT mặc định)
 - `simp/core/filter.py::apply_heaviside_projection()` - robust/minimum-length-scale projection (Wang-Lazarov-Sigmund 2011), qua `run_simp(params={'projection': 'heaviside', ...})`. Pilot 3 seed manufacturability thấp: kết quả lẫn lộn (cải thiện rõ `hexagonal`, không cải thiện `four_circle`/`grid_circular_voids`) - có xấp xỉ đã biết (ràng buộc thể tích trong OC nhắm x̃ trước-projection).

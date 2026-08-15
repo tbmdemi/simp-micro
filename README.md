@@ -66,11 +66,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
-Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02: "bạn đang claim cái gì, thật sự, và bằng chứng nào?" Bản đầy đủ (kèm 19 mục Giới hạn Đã biết): [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
-
-- **Claim ĐƯỢC ủng hộ bởi bằng chứng:** engine FE/homogenization đúng vật lý (đối chiếu độc lập bằng `scikit-fem`); checkpoint cVAE hiện tại sinh single-shot đáng tin cậy để dự đoán đúng DẤU (v₁₂,v₂₁) ở tỉ lệ cao (n=789); cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty); cVAE vượt trội retrieval trên trục đổi dấu NGOÀI phân phối train (R²=0,42 vs 0,06, n=12).
-- **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; cVAE vượt trội retrieval về độ chính xác trong-phân-phối (retrieval còn thắng); cVAE ngoại suy được cường độ auxetic vượt xa phạm vi train; `hit_rate` như chỉ số độc lập (base rate ~92% auxetic khiến metric này yếu, R² đáng tin hơn).
-- **Không claim:** "đã giải quyết inverse design", "cVAE tốt hơn phương pháp classical trong mọi trường hợp", "surrogate có thể thay FE ở vùng chưa kiểm chứng".
+Đã tách sang **[docs/LIMITATIONS.md § Phạm vi Claim Khoa học](docs/LIMITATIONS.md#phạm-vi-claim-khoa-học-đọc-trước-khi-trích-dẫn)** để tránh 2 bản trùng lặp dễ lệch nhau — bản đó liệt kê claim được/chưa được ủng hộ bằng chứng, có trích số Giới hạn # cụ thể cho từng dòng.
 
 ---
 
@@ -294,12 +290,12 @@ Trạng thái hiện tại: **483/483 test pass** (`pytest tests/ -q`, ~7s) - ba
 
 ## Giới hạn Đã biết / Known Limitations
 
-Danh sách đầy đủ 18 mục (song ngữ Việt/English) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
+Danh sách đầy đủ 19 mục (song ngữ Việt/English) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
 
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
-- `f1, f2` (Pha B, độ cứng chuẩn hóa) đã backfill + surrogate Phase 4 5-chiều (2026-08-05) nhưng CHƯA nối làm condition cho cVAE - chỉ `volfrac`/`void_size_frac` (Pha A) đã tới Phase 5.
+- `f1, f2` (Pha B) chưa nối làm condition cho cVAE — xem `docs/PROJECT_PLAN.md` Nhóm 2.
 - Test tự động (483/483 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, FE call thật).
 - Toàn bộ pipeline dùng FEM tuyến tính (giả định biến dạng nhỏ) - xem mục 14.
 - `hit_rate` là metric yếu do base rate ~92% auxetic của dataset; chưa có bằng chứng cVAE vượt trội baseline nearest-neighbor trong-phân-phối (mục 17-18, phát hiện 2026-08-02).
@@ -308,7 +304,7 @@ Danh sách đầy đủ 18 mục (song ngữ Việt/English) đã được tách
 
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 18 mục giới hạn đã biết (song ngữ)
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 19 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`docs/SLIDE_AND_REPORT_GUIDE.md`](docs/SLIDE_AND_REPORT_GUIDE.md) - hướng dẫn dựng slide thuyết trình + báo cáo khoa học (IMRaD): outline chi tiết, kiểm kê hình/dashboard có sẵn, sơ đồ Mermaid cần vẽ, checklist claim khoa học
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án

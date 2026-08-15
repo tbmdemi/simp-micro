@@ -34,6 +34,7 @@ env/
 .clinerules/
 .claude/
 .pi-subagents/
+CLAUDE.md
 
 # --- SIMP results (auto-generated at root) ---
 simp_result_*/
