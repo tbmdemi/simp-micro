@@ -4,7 +4,7 @@
 
 ## Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
-Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02 (không lưu trong repo — xem tóm tắt 2 khoảng trống được nêu ở `EXPERIMENT_LOG.md` mục 2026-08-02): "bạn đang claim cái gì, thật sự, và bằng chứng nào?"
+Mục này trả lời trực tiếp câu hỏi lặp lại nhiều nhất trong 2 báo cáo phản biện bên ngoài ngày 2026-08-02 (không lưu trong repo - xem tóm tắt 2 khoảng trống được nêu ở `EXPERIMENT_LOG.md` mục 2026-08-02): "bạn đang claim cái gì, thật sự, và bằng chứng nào?"
 
 - **Claim ĐƯỢC ủng hộ bởi bằng chứng:** (1) engine FE/homogenization đúng vật lý, đối chiếu độc lập bằng `scikit-fem` (Giới hạn #15); (2) `cvae_realphysics.pt` sinh single-shot đáng tin cậy để dự đoán đúng DẤU (v₁₂,v₂₁) ở tỉ lệ cao (n=789); (3) cVAE sinh thiết kế KHÔNG phải sao chép gần training set (novelty, Giới hạn #18); (4) cVAE vượt trội retrieval trên trục đổi dấu NGOÀI phân phối train (OOD, R²=0,42 vs 0,06 - Giới hạn #19).
 - **Claim CHƯA được ủng hộ bởi bằng chứng (dù có thể vẫn đúng):** (1) proxy Q₁₂ tương đương mục tiêu auxetic "thật" dưới mọi điều kiện xoay; (2) cVAE vượt trội retrieval về độ chính xác TRONG-phân-phối - retrieval còn thắng (Giới hạn #18); (3) cVAE ngoại suy được CƯỜNG ĐỘ auxetic cực đoan vượt phạm vi train (Giới hạn #19); (4) `hit_rate` như chỉ số độc lập - metric yếu do base rate ~92% auxetic (Giới hạn #17), R² đáng tin hơn.

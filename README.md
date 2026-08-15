@@ -66,7 +66,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
-Đã tách sang **[docs/LIMITATIONS.md § Phạm vi Claim Khoa học](docs/LIMITATIONS.md#phạm-vi-claim-khoa-học-đọc-trước-khi-trích-dẫn)** để tránh 2 bản trùng lặp dễ lệch nhau — bản đó liệt kê claim được/chưa được ủng hộ bằng chứng, có trích số Giới hạn # cụ thể cho từng dòng.
+Đã tách sang **[docs/LIMITATIONS.md § Phạm vi Claim Khoa học](docs/LIMITATIONS.md#phạm-vi-claim-khoa-học-đọc-trước-khi-trích-dẫn)** để tránh 2 bản trùng lặp dễ lệch nhau - bản đó liệt kê claim được/chưa được ủng hộ bằng chứng, có trích số Giới hạn # cụ thể cho từng dòng.
 
 ---
 
@@ -295,7 +295,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
-- `f1, f2` (Pha B) chưa nối làm condition cho cVAE — xem `docs/PROJECT_PLAN.md` Nhóm 2.
+- `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/PROJECT_PLAN.md` Nhóm 2.
 - Test tự động (542/542 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, FE call thật).
 - Toàn bộ pipeline dùng FEM tuyến tính (giả định biến dạng nhỏ) - xem mục 14.
 - `hit_rate` là metric yếu do base rate ~92% auxetic của dataset; chưa có bằng chứng cVAE vượt trội baseline nearest-neighbor trong-phân-phối (mục 17-18, phát hiện 2026-08-02).
