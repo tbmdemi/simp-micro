@@ -74,6 +74,12 @@ DEFAULT_FIXED: Dict[str, float] = {
     'ft': 2,
     'E0': 199.0,
     'Emin': 1e-9,
+    # 'nu': 0.3 chỉ là FALLBACK khi design DataFrame KHÔNG có cột 'nu' -
+    # build_params_dict() làm params=dict(fixed); params.update(sample_values),
+    # nên nếu generate_design() được gọi với
+    # pipeline/phase2_multi_batch/params.py::NU_ACTIVE_PARAMETERS (Giai đoạn
+    # A, docs/PROJECT_PLAN.md Nhóm 1), cột 'nu' per-sample sẽ tự override giá
+    # trị này - không cần sửa gì thêm ở file này.
     'nu': 0.3,
     'max_iter': 150,
     'tol_change': 0.01,

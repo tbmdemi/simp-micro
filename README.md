@@ -304,6 +304,9 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
+- [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
+- [`docs/END_TO_END_SCENARIO.md`](docs/END_TO_END_SCENARIO.md) - kịch bản mô phỏng **giả định** build end-to-end theo `PROJECT_PLAN.md`: file nào đổi/thêm/bớt, kết quả kỳ vọng ở từng bước (chưa chạy thật)
+- [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 21 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`docs/SLIDE_AND_REPORT_GUIDE.md`](docs/SLIDE_AND_REPORT_GUIDE.md) - hướng dẫn dựng slide thuyết trình + báo cáo khoa học (IMRaD): outline chi tiết, kiểm kê hình/dashboard có sẵn, sơ đồ Mermaid cần vẽ, checklist claim khoa học

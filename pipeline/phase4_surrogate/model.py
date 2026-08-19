@@ -28,10 +28,16 @@ class ConvBlock(nn.Module):
 
 class SurrogateCNN(nn.Module):
     def __init__(self, n_seeds: int, channels=(32, 64, 128, 256), fc_hidden=128,
-                 n_outputs: int = 3):
+                 n_outputs: int = 3, include_nu0: bool = False):
         """n_outputs=3 (mac dinh, tuong thich nguoc): [v12,v21,volfrac_achieved].
         n_outputs=5: them f1=E11/E0, f2=E22/E0 (backfill 2026-08-05, xem
-        dataset.py::AuxeticDataset(include_f1f2=True))."""
+        dataset.py::AuxeticDataset(include_f1f2=True)).
+
+        include_nu0: them nu (he so Poisson vat lieu nen) lam INPUT PHU, concat
+        cung seed one-hot sau GAP - can thiet vi khi nu0 bien thien, quan he
+        hinh hoc->tinh chat khong con la ham 1-1 cua anh mat do (Giai doan A,
+        A4, docs/PROJECT_PLAN.md Nhom 1). Mac dinh False - kien truc/forward()
+        y het truoc day, tuong thich nguoc hoan toan voi checkpoint cu."""
         super().__init__()
         blocks = []
         in_ch = 1
@@ -41,7 +47,8 @@ class SurrogateCNN(nn.Module):
         self.conv = nn.Sequential(*blocks)
         self.gap = nn.AdaptiveAvgPool2d(1)  # -> (B, channels[-1], 1, 1)
 
-        fc_in = channels[-1] + n_seeds  # concat seed one-hot sau GAP
+        self.include_nu0 = include_nu0
+        fc_in = channels[-1] + n_seeds + (1 if include_nu0 else 0)  # concat seed one-hot (+nu0) sau GAP
         self.n_outputs = n_outputs
         self.fc = nn.Sequential(
             nn.Linear(fc_in, fc_hidden),
@@ -50,10 +57,15 @@ class SurrogateCNN(nn.Module):
             nn.Linear(fc_hidden, n_outputs),
         )
 
-    def forward(self, image, seed_vec):
+    def forward(self, image, seed_vec, nu0=None):
         x = self.conv(image)                # (B, C, H', W')
         x = self.gap(x).flatten(1)           # (B, C)
-        x = torch.cat([x, seed_vec], dim=1)  # (B, C + n_seeds)
+        parts = [x, seed_vec]
+        if self.include_nu0:
+            if nu0 is None:
+                raise ValueError("include_nu0=True nhung forward() khong nhan nu0")
+            parts.append(nu0.view(-1, 1).to(x.dtype))
+        x = torch.cat(parts, dim=1)          # (B, C + n_seeds [+ 1])
         return self.fc(x)                    # (B, n_outputs)
 
 

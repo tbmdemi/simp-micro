@@ -115,17 +115,24 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
     return float(1 - ss_res / ss_tot)
 
 
-def apply_condition_dropout(condition: torch.Tensor, dropout_p: float) -> torch.Tensor:
-    """Classifier-free-guidance-style: với MỖI chiều optional (volfrac,
-    void_size_frac - value+mask tại cột (2,3) và (4,5), xem dataset.py
-    extended_condition), zero value + set mask=0 với xác suất dropout_p ĐỘC
-    LẬP theo từng mẫu trong batch. Không đụng cột 0,1 (v12,v21 - luôn bắt
-    buộc). Dạy model bỏ qua đúng những chiều mask=0 lúc suy diễn không được
-    người dùng chỉ định - không dropout thì model chỉ từng thấy mask=1 lúc
-    train, không biết xử lý mask=0 hợp lý lúc inference."""
+def apply_condition_dropout(condition: torch.Tensor, dropout_p: float,
+                             optional_pairs=((2, 3), (4, 5))) -> torch.Tensor:
+    """Classifier-free-guidance-style: với MỖI cặp (value_col, mask_col)
+    trong `optional_pairs` (mặc định volfrac,void_size_frac tại cột (2,3)
+    và (4,5), xem dataset.py extended_condition), zero value + set mask=0
+    với xác suất dropout_p ĐỘC LẬP theo từng mẫu trong batch. Không đụng
+    cột 0,1 (v12,v21 - luôn bắt buộc). Dạy model bỏ qua đúng những chiều
+    mask=0 lúc suy diễn không được người dùng chỉ định - không dropout thì
+    model chỉ từng thấy mask=1 lúc train, không biết xử lý mask=0 hợp lý
+    lúc inference.
+
+    optional_pairs: danh sách (value_col, mask_col) cần dropout - CALLER
+    (run_epoch) tính theo cờ extended_condition/include_nu0 đang bật (xem
+    docs/PROJECT_PLAN.md A6, cột nu0 nằm SAU cột volfrac/void_size_frac nếu
+    cả 2 cùng bật - xem dataset.py CVAEDataset.nu0_col)."""
     condition = condition.clone()
     bsz = condition.size(0)
-    for value_col, mask_col in ((2, 3), (4, 5)):
+    for value_col, mask_col in optional_pairs:
         drop = torch.rand(bsz, device=condition.device) < dropout_p
         condition[drop, value_col] = 0.0
         condition[drop, mask_col] = 0.0
@@ -137,7 +144,8 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
               lambda_periodic=0.0, regularize_prior_samples=False,
               lambda_real_physics=0.0, real_physics_every=1,
               real_physics_subsample=None, real_physics_workers=0, fe_params=None,
-              extended_condition=False, lambda_volfrac=0.0, optional_dropout_p=0.5):
+              extended_condition=False, lambda_volfrac=0.0, optional_dropout_p=0.5,
+              include_nu0=False):
     model.train(mode=train)
     totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
               "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
@@ -147,14 +155,25 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
     n = 0
     real_physics_sum = 0.0
     real_physics_n = 0
+
+    # Cột optional cần condition-dropout + cột nu0 (nếu bật) - tính 1 lần
+    # ngoài vòng lặp, khớp đúng thứ tự CVAEDataset (extended_condition
+    # trước, nu0 sau - xem dataset.py CVAEDataset.nu0_col, A6).
+    optional_pairs = [(2, 3), (4, 5)] if extended_condition else []
+    nu0_col = None
+    if include_nu0:
+        nu0_col = 6 if extended_condition else 2
+        optional_pairs = optional_pairs + [(nu0_col, nu0_col + 1)]
+
     for step, (image, condition, seed_vec, _volfrac) in enumerate(loader):
         image = image.to(device)
         condition = condition.to(device)
         seed_vec = seed_vec.to(device)
         bsz = image.size(0)
 
-        if train and extended_condition:
-            condition = apply_condition_dropout(condition, optional_dropout_p)
+        if train and optional_pairs:
+            condition = apply_condition_dropout(condition, optional_dropout_p,
+                                                 optional_pairs=optional_pairs)
 
         with torch.set_grad_enabled(train):
             recon, mu, logvar = model(image, condition, deterministic=not train)
@@ -164,6 +183,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
                 lambda_tv=lambda_tv, lambda_bin=lambda_bin,
                 lambda_disagreement=lambda_disagreement,
                 lambda_periodic=lambda_periodic,
+                nu0_col=nu0_col,
             )
             if regularize_prior_samples:
                 prior_reg_total, prior_stats = prior_sample_regularization(
@@ -191,6 +211,7 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
                 rp_loss = real_physics_prior_loss(
                     model.decoder, model.latent_dim, condition, fe_params,
                     subsample=real_physics_subsample, n_workers=real_physics_workers,
+                    nu0_col=nu0_col,
                 )
                 losses["total"] = losses["total"] + lambda_real_physics * PROP_LOSS_SCALE * rp_loss
 
@@ -369,6 +390,25 @@ def main():
                               "volfrac_consistency_loss (losses.py) - suy trực tiếp "
                               "từ recon.mean(), không cần surrogate/FE. 0.0 = tắt "
                               "(mặc định).")
+    parser.add_argument("--include-nu0", action="store_true",
+                         help="Giai đoạn A (docs/PROJECT_PLAN.md A6): thêm ν0 (hệ số "
+                              "Poisson vật liệu nền) làm condition OPTIONAL, +2 chiều "
+                              "[nu0,nu0_mask] - độc lập với --extended-condition, có "
+                              "thể bật riêng hoặc cùng lúc (xem dataset.py "
+                              "CVAEDataset.__init__). Dùng condition-dropout giống "
+                              "volfrac/void_size_frac (--optional-dropout-p), và "
+                              "khi --lambda-real-physics>0, FE-solve THẬT dùng đúng "
+                              "ν0 per-sample thay vì fe_params['nu']=0.3 cố định (xem "
+                              "losses.real_physics_loss nu0_col, real_physics.py A5). "
+                              "CẦN dataset có field 'nu' - outputs/phase3/*.npz mặc "
+                              "định KHÔNG có (sinh trước A4), dùng --data-dir trỏ tới "
+                              "dataset đã build lại (vd outputs/phase3_a4/) - dataset.py "
+                              "raise lỗi rõ ràng nếu thiếu field. Mặc định TẮT.")
+    parser.add_argument("--data-dir", type=str, default=PHASE3_DIR,
+                         help="Thư mục chứa {train,val,test}.npz. Mặc định "
+                              "outputs/phase3/ (KHÔNG có field 'nu'). --include-nu0 "
+                              "cần trỏ tới dataset có field này, vd outputs/phase3_a4/ "
+                              "(xem analysis/scripts/assemble_phase3_a4.py, A4).")
     args = parser.parse_args()
 
     if args.select_by == "fe_r2" and args.fe_eval_every <= 0:
@@ -390,10 +430,12 @@ def main():
     print(f"Device: {device}")
     os.makedirs(PHASE5_DIR, exist_ok=True)
 
-    train_ds = CVAEDataset(os.path.join(PHASE3_DIR, "train.npz"),
-                           extended_condition=args.extended_condition)
-    val_ds = CVAEDataset(os.path.join(PHASE3_DIR, "val.npz"),
-                         extended_condition=args.extended_condition)
+    train_ds = CVAEDataset(os.path.join(args.data_dir, "train.npz"),
+                           extended_condition=args.extended_condition,
+                           include_nu0=args.include_nu0)
+    val_ds = CVAEDataset(os.path.join(args.data_dir, "val.npz"),
+                         extended_condition=args.extended_condition,
+                         include_nu0=args.include_nu0)
     condition_dim = train_ds.condition_dim
     if args.weighted_sampling:
         sample_weights = compute_v12_sample_weights(
@@ -425,9 +467,10 @@ def main():
         if resume_condition_dim != condition_dim:
             print(f"CẢNH BÁO: checkpoint resume có condition_dim={resume_condition_dim}, "
                   f"model hiện tại condition_dim={condition_dim} (--extended-condition="
-                  f"{args.extended_condition}) - mở rộng/thu gọn 3 layer fc phụ thuộc "
-                  "condition (giữ cột v12/v21 + toàn bộ CNN backbone, random-init "
-                  "phần condition mới) thay vì crash. Xem resize_condition_dim_weights().")
+                  f"{args.extended_condition}, --include-nu0={args.include_nu0}) - mở "
+                  "rộng/thu gọn 3 layer fc phụ thuộc condition (giữ cột v12/v21 + toàn "
+                  "bộ CNN backbone, random-init phần condition mới) thay vì crash. Xem "
+                  "resize_condition_dim_weights().")
             resume_state_dict = resize_condition_dim_weights(
                 resume_state_dict, resume_condition_dim, condition_dim
             )
@@ -494,6 +537,7 @@ def main():
             extended_condition=args.extended_condition,
             lambda_volfrac=args.lambda_volfrac,
             optional_dropout_p=args.optional_dropout_p,
+            include_nu0=args.include_nu0,
         )
         val_stats = run_epoch(
             model, val_loader, surrogate, target_names,
@@ -506,6 +550,7 @@ def main():
             extended_condition=args.extended_condition,
             lambda_volfrac=args.lambda_volfrac,
             optional_dropout_p=args.optional_dropout_p,
+            include_nu0=args.include_nu0,
         )
 
         current_lr = optimizer.param_groups[0]["lr"]

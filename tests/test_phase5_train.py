@@ -15,6 +15,21 @@ def _dummy_surrogate():
     return DummySurrogate()
 
 
+def _dummy_nu0_surrogate():
+    """include_nu0=True (vd surrogate_a4_nu0.pt) - forward() BẮT BUỘC nhận
+    kwarg nu0, dùng để kiểm tra run_epoch/property_consistency_loss không
+    crash khi surrogate cần ν0 (bug đã sửa 2026-08-19, xem
+    test_phase5_losses.py::TestPropertyConsistencyLoss)."""
+    class DummyNu0Surrogate(torch.nn.Module):
+        include_nu0 = True
+
+        def forward(self, image, seed_vec, nu0=None):
+            if nu0 is None:
+                raise ValueError("include_nu0=True nhung forward() khong nhan nu0")
+            return torch.zeros(image.size(0), 3)
+    return DummyNu0Surrogate()
+
+
 class TestRunEpoch:
     def test_train_mode_updates_model_params(self, phase3_npz_path):
         from pipeline.phase5_cvae.dataset import CVAEDataset
@@ -202,6 +217,26 @@ class TestApplyConditionDropout:
         apply_condition_dropout(condition, dropout_p=1.0)
         assert torch.allclose(condition, original)
 
+    def test_optional_pairs_param_restricts_which_columns_drop(self):
+        """A6: optional_pairs generic hóa dropout để dùng được cho nu0
+        (cột (6,7) khi extended_condition+include_nu0 cùng bật) - chỉ cột
+        được liệt kê trong optional_pairs mới bị dropout."""
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0, 0.28, 1.0]] * 20)
+        dropped = apply_condition_dropout(condition, dropout_p=1.0, optional_pairs=((6, 7),))
+        assert torch.allclose(dropped[:, :6], condition[:, :6])
+        assert torch.all(dropped[:, 6:] == 0.0)
+
+    def test_default_optional_pairs_unchanged(self):
+        """Regression: không truyền optional_pairs vẫn phải dùng đúng mặc
+        định cũ ((2,3),(4,5)) - tương thích ngược với mọi call site trước A6."""
+        from pipeline.phase5_cvae.train import apply_condition_dropout
+        torch.manual_seed(0)
+        condition = torch.tensor([[-0.5, 0.3, 0.4, 1.0, 0.2, 1.0]] * 20)
+        dropped = apply_condition_dropout(condition, dropout_p=1.0)
+        assert torch.all(dropped[:, 2:6] == 0.0)
+
 
 class TestRunEpochExtendedCondition:
     """run_epoch(extended_condition=True, lambda_volfrac>0) - end-to-end
@@ -273,6 +308,174 @@ class TestRunEpochExtendedCondition:
             extended_condition=False, lambda_volfrac=1.0,
         )
         assert stats["volfrac_loss"] == 0.0
+
+
+class TestRunEpochIncludeNu0:
+    """run_epoch(include_nu0=True) - A6 (docs/PROJECT_PLAN.md Nhóm 1), cùng
+    tinh thần end-to-end với TestRunEpochExtendedCondition."""
+
+    def test_include_nu0_only_updates_decoder_params(self, make_phase3_npz):
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        path = make_phase3_npz("val.npz", n_samples=12, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        assert ds.condition_dim == 4
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=4, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        before = [p.clone() for p in model.decoder.parameters()]
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            include_nu0=True, optional_dropout_p=0.5,
+        )
+        after = list(model.decoder.parameters())
+        assert any(not torch.allclose(b, a) for b, a in zip(before, after))
+        assert np.isfinite(stats["total"])
+
+    def test_include_nu0_with_nu0_aware_surrogate_does_not_crash(self, make_phase3_npz):
+        """Bug đã sửa 2026-08-19 (phát hiện lúc chạy thí nghiệm A6 thật lần
+        đầu, surrogate_a4_nu0.pt): property_consistency_loss() gọi
+        surrogate(recon, seed_vec) không có nu0 -> crash ValueError ngay khi
+        surrogate.include_nu0=True, dù cVAE include_nu0=True/condition có
+        đủ cột nu0. Test này dùng surrogate include_nu0=True THẬT (khác
+        _dummy_surrogate() ở các test include_nu0 khác - không có
+        include_nu0 nên không phơi ra bug này) để khớp đúng tình huống
+        surrogate_a4_nu0.pt + --include-nu0."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        path = make_phase3_npz("val.npz", n_samples=12, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=4, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_nu0_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            include_nu0=True, optional_dropout_p=0.5,
+        )
+        assert np.isfinite(stats["total"])
+
+    def test_extended_and_nu0_together_condition_dim_8(self, make_phase3_npz):
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        path = make_phase3_npz("val.npz", n_samples=12, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, extended_condition=True, include_nu0=True)
+        assert ds.condition_dim == 8
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=8, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            extended_condition=True, include_nu0=True,
+            lambda_volfrac=1.0, optional_dropout_p=0.5,
+        )
+        assert np.isfinite(stats["total"])
+        assert np.isfinite(stats["volfrac_loss"])
+
+    def test_real_physics_receives_nu0_col_when_include_nu0(self, make_phase3_npz, monkeypatch):
+        """Khi include_nu0=True VÀ lambda_real_physics>0, run_epoch phải gọi
+        real_physics_prior_loss với nu0_col=2 (không phải None) - kiểm tra
+        'ống dẫn' bằng monkeypatch, tách khỏi kết quả FE thật (đã kiểm
+        chứng riêng ở tests/test_phase5_losses.py::TestRealPhysicsLossNu0Col)."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        import pipeline.phase5_cvae.train as train_mod
+
+        path = make_phase3_npz("val.npz", n_samples=8, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=4, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+        tiny_fe_params = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+
+        captured = {}
+
+        def _fake_real_physics_prior_loss(decoder, latent_dim, condition, fe_params,
+                                           subsample=None, n_workers=0, nu0_col=None):
+            captured["nu0_col"] = nu0_col
+            return torch.tensor(0.0, requires_grad=True)
+
+        monkeypatch.setattr(train_mod, "real_physics_prior_loss", _fake_real_physics_prior_loss)
+
+        train_mod.run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            lambda_real_physics=1.0, real_physics_every=1,
+            fe_params=tiny_fe_params, include_nu0=True,
+        )
+        assert captured["nu0_col"] == 2
+
+    def test_real_physics_nu0_col_none_when_include_nu0_false(self, phase3_npz_path, monkeypatch):
+        """Regression: include_nu0=False (mặc định) - nu0_col phải là None,
+        real_physics_prior_loss dùng đúng hành vi cũ (fe_params['nu'] cho
+        cả batch)."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        import pipeline.phase5_cvae.train as train_mod
+
+        ds = CVAEDataset(phase3_npz_path)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+        tiny_fe_params = dict(nelx=6, nely=6, penal=3.0, E0=199.0, Emin=1e-9, nu=0.3, rho0=1.0)
+
+        captured = {}
+
+        def _fake_real_physics_prior_loss(decoder, latent_dim, condition, fe_params,
+                                           subsample=None, n_workers=0, nu0_col=None):
+            captured["nu0_col"] = nu0_col
+            return torch.tensor(0.0, requires_grad=True)
+
+        monkeypatch.setattr(train_mod, "real_physics_prior_loss", _fake_real_physics_prior_loss)
+
+        train_mod.run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+            lambda_real_physics=1.0, real_physics_every=1,
+            fe_params=tiny_fe_params,
+        )
+        assert captured["nu0_col"] is None
+
+    def test_include_nu0_false_keeps_old_behavior(self, phase3_npz_path):
+        """Backward-compat: include_nu0=False (mặc định) - condition_dim vẫn
+        2, hành vi giống hệt trước khi thêm A6."""
+        from pipeline.phase5_cvae.dataset import CVAEDataset
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import run_epoch
+
+        ds = CVAEDataset(phase3_npz_path)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = CVAE(condition_dim=2, latent_dim=4, resolution=64,
+                      channels=(4, 8, 16, 32))
+        optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
+        stats = run_epoch(
+            model, loader, _dummy_surrogate(), ["v12", "v21", "volfrac_achieved"],
+            optimizer, beta=0.5, gamma=1.0, lambda_tv=0.0, lambda_bin=0.0,
+            device="cpu", train=True,
+        )
+        assert np.isfinite(stats["total"])
 
 
 class TestResizeConditionDimWeights:

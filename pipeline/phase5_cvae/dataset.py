@@ -6,17 +6,23 @@ v12/v21 ở đây là CONDITION đầu vào cVAE (không phải target regress),
 nguyên đơn vị vật lý (không chuẩn hoá). seed_onehot vẫn trả về nhưng chỉ dùng
 phụ ở evaluate.py, không đưa vào condition vector (xem model.py).
 
-Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21] (mặc định) hoặc
-(6,)=[v12,v21,volfrac,volfrac_mask,void_size_frac,void_size_frac_mask] khi
-`extended_condition=True` (xem `CVAEDataset.__init__`), seed_vec (n_seeds,)
-one-hot, volfrac scalar (luôn trả riêng, kể cả khi đã có trong condition -
-dùng cho volfrac_consistency_loss).
+Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21] (mặc định), mở
+rộng theo 2 cờ ĐỘC LẬP cộng dồn (xem `CVAEDataset.__init__`):
+  - `extended_condition=True`: +4 chiều [volfrac,volfrac_mask,
+    void_size_frac,void_size_frac_mask]
+  - `include_nu0=True` (Giai đoạn A, docs/PROJECT_PLAN.md A6): +2 chiều
+    [nu0,nu0_mask] - LUÔN ở 2 cột CUỐI CÙNG của condition, sau nhóm
+    extended_condition nếu cả 2 cùng bật.
+Tổ hợp 2 cờ cho condition_dim ∈ {2,4,6,8}. seed_vec (n_seeds,) one-hot,
+volfrac scalar (luôn trả riêng, kể cả khi đã có trong condition - dùng cho
+volfrac_consistency_loss).
 
-extended_condition thêm volfrac/void_size_frac làm tham số OPTIONAL: mask ở
-đây LUÔN=1 (dataset chỉ mô tả dữ liệu thật, có sẵn); train.py mới là nơi áp
+extended_condition/include_nu0 thêm tham số OPTIONAL: mask ở đây LUÔN=1
+(dataset chỉ mô tả dữ liệu thật, có sẵn); train.py mới là nơi áp
 condition-dropout (zero value + mask=0 ngẫu nhiên) để model học bỏ qua các
 chiều optional lúc suy diễn không được chỉ định - xem losses.py
-`volfrac_consistency_loss` và train.py `run_epoch`.
+`volfrac_consistency_loss`, `real_physics_loss` (dùng đúng nu0 per-sample
+khi mask=1, xem real_physics.py A5) và train.py `run_epoch`.
 """
 import os
 import json
@@ -30,7 +36,20 @@ V12_WEIGHTS_PATH = os.path.join(PHASE3_DIR, "v12_bin_weights.json")
 
 
 class CVAEDataset(Dataset):
-    def __init__(self, npz_path: str, extended_condition: bool = False):
+    def __init__(self, npz_path: str, extended_condition: bool = False,
+                 include_nu0: bool = False):
+        """include_nu0: đọc thêm ν0 (hệ số Poisson vật liệu nền) từ field
+        "nu" trong npz, thêm 2 cột [nu0, nu0_mask] vào CUỐI condition vector
+        (Giai đoạn A, docs/PROJECT_PLAN.md A6 - tái dùng đúng pattern
+        extended_condition/dropout). Độc lập với `extended_condition` (có
+        thể bật riêng hoặc cùng lúc - xem module docstring cho thứ tự cột).
+
+        Field "nu" do `pipeline/phase3_dataset/build_npz.py` ghi (thêm cho
+        A4) - CHỈ npz build lại sau đó mới có (vd `outputs/phase3_a4/`).
+        Các file `outputs/phase3/*.npz` sinh trước A4 KHÔNG có field này -
+        include_nu0=True trên các file đó raise lỗi rõ ràng ngay lúc load,
+        thay vì âm thầm coi mọi mẫu là ν0=0.3 (validate ở biên, CLAUDE.md).
+        """
         data = np.load(npz_path, allow_pickle=True)
         self.images = data["images"]                       # (N, RES, RES) [0,1]
         self.v12 = data["v12"].astype(np.float32)
@@ -46,6 +65,18 @@ class CVAEDataset(Dataset):
             void_idx = param_names.index("void_size_frac")
             self.void_size_frac = data["params"][:, void_idx].astype(np.float32)
 
+        self.include_nu0 = include_nu0
+        self.nu0 = None
+        if include_nu0:
+            if "nu" not in data.files:
+                raise ValueError(
+                    f"include_nu0=True nhưng '{npz_path}' không có field 'nu'. "
+                    "Cần dataset build sau A4 (pipeline/phase3_dataset/build_npz.py "
+                    "đã thêm field này) - vd outputs/phase3_a4/*.npz, KHÔNG phải "
+                    "outputs/phase3/*.npz cũ (xem docs/PROJECT_PLAN.md A6)."
+                )
+            self.nu0 = data["nu"].astype(np.float32)
+
     def __len__(self):
         return len(self.images)
 
@@ -59,6 +90,20 @@ class CVAEDataset(Dataset):
 
     @property
     def condition_dim(self) -> int:
+        dim = 2
+        if self.extended_condition:
+            dim += 4
+        if self.include_nu0:
+            dim += 2
+        return dim
+
+    @property
+    def nu0_col(self):
+        """Cột giá trị nu0 trong condition vector (cột mask = nu0_col+1),
+        hoặc None nếu include_nu0=False - dùng bởi losses.real_physics_loss
+        để trích ν0 THẬT per-sample thay vì fe_params['nu'] cố định (A5)."""
+        if not self.include_nu0:
+            return None
         return 6 if self.extended_condition else 2
 
     def __getitem__(self, idx):
@@ -69,27 +114,53 @@ class CVAEDataset(Dataset):
                 self.volfrac_achieved[idx], 1.0,
                 self.void_size_frac[idx], 1.0,
             ]
+        if self.include_nu0:
+            cond_values += [self.nu0[idx], 1.0]
         condition = torch.tensor(cond_values, dtype=torch.float32)
         seed_vec = torch.from_numpy(self.seed_onehot[idx])
         volfrac = torch.tensor(self.volfrac_achieved[idx], dtype=torch.float32)
         return image, condition, seed_vec, volfrac
 
 
+def condition_flags_from_dim(condition_dim: int):
+    """Suy ngược (extended_condition, include_nu0) từ condition_dim đã lưu
+    trong checkpoint (vd sample.py/best_of_n_eval.py chỉ có condition_dim,
+    không lưu riêng 2 cờ gốc) - NGUỒN DUY NHẤT cho phép ánh xạ {2,4,6,8} ->
+    (extended_condition, include_nu0), tránh suy luận rời rạc kiểu
+    `condition_dim == 6` lặp lại ở nhiều nơi rồi lệch nhau khi thêm A6
+    (condition_dim=4/8 cần include_nu0=True mà check cũ không biết tới)."""
+    if condition_dim not in (2, 4, 6, 8):
+        raise ValueError(
+            f"condition_dim={condition_dim} không được hỗ trợ (chỉ 2, 4, 6 hoặc 8)."
+        )
+    extended_condition = condition_dim in (6, 8)
+    include_nu0 = condition_dim in (4, 8)
+    return extended_condition, include_nu0
+
+
 def build_condition_vector(v12: float, v21: float, condition_dim: int,
-                            volfrac: float = None, void_size_frac: float = None) -> np.ndarray:
+                            volfrac: float = None, void_size_frac: float = None,
+                            nu0: float = None) -> np.ndarray:
     """Dựng condition vector cho suy diễn (sample.py/best_of_n_eval.py) -
-    dùng chung 1 chỗ để 2 script không lệch quy ước. condition_dim==2:
-    hành vi cũ, bỏ qua volfrac/void_size_frac nếu lỡ truyền (in cảnh báo ở
-    caller). condition_dim==6: volfrac/void_size_frac=None -> (0.0, mask=0.0)
-    ĐÚNG quy ước condition-dropout lúc train (xem train.py
-    apply_condition_dropout) - giá trị có -> (value, mask=1.0)."""
+    dùng chung 1 chỗ để các script không lệch quy ước. condition_dim==2:
+    hành vi cũ, bỏ qua volfrac/void_size_frac/nu0 nếu lỡ truyền (in cảnh báo
+    ở caller). condition_dim ∈ {4,6,8}: giá trị optional=None -> (0.0,
+    mask=0.0) ĐÚNG quy ước condition-dropout lúc train (xem train.py
+    apply_condition_dropout) - giá trị có -> (value, mask=1.0). Thứ tự cột
+    khớp CVAEDataset: nhóm volfrac/void_size_frac (nếu condition_dim ∈
+    {6,8}) đứng TRƯỚC nhóm nu0 (nếu condition_dim ∈ {4,8})."""
     if condition_dim == 2:
         return np.array([v12, v21], dtype=np.float32)
-    if condition_dim != 6:
-        raise ValueError(f"condition_dim={condition_dim} không được hỗ trợ (chỉ 2 hoặc 6).")
-    vol_val, vol_mask = (volfrac, 1.0) if volfrac is not None else (0.0, 0.0)
-    void_val, void_mask = (void_size_frac, 1.0) if void_size_frac is not None else (0.0, 0.0)
-    return np.array([v12, v21, vol_val, vol_mask, void_val, void_mask], dtype=np.float32)
+    extended_condition, include_nu0 = condition_flags_from_dim(condition_dim)
+    parts = [v12, v21]
+    if extended_condition:
+        vol_val, vol_mask = (volfrac, 1.0) if volfrac is not None else (0.0, 0.0)
+        void_val, void_mask = (void_size_frac, 1.0) if void_size_frac is not None else (0.0, 0.0)
+        parts += [vol_val, vol_mask, void_val, void_mask]
+    if include_nu0:
+        nu0_val, nu0_mask = (nu0, 1.0) if nu0 is not None else (0.0, 0.0)
+        parts += [nu0_val, nu0_mask]
+    return np.array(parts, dtype=np.float32)
 
 
 def compute_v12_bin_weights(v12: np.ndarray, bin_edges: np.ndarray, alpha: float = 0.5) -> np.ndarray:

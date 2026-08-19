@@ -33,7 +33,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
 from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset, build_condition_vector  # noqa: E402
+from dataset import CVAEDataset, build_condition_vector, condition_flags_from_dim  # noqa: E402
 from losses import load_frozen_surrogate   # noqa: E402
 from sample import load_model, CKPT_PATH   # noqa: E402
 
@@ -122,8 +122,15 @@ def main():
     # mặc định, bất kể checkpoint train với --extended-condition
     # (condition_dim=6) hay không - crash shape mismatch ở model.decoder()
     # khi đánh giá checkpoint extended-condition.
-    extended = model.condition_dim == 6
-    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"), extended_condition=extended)
+    #
+    # Bug tương tự tái phát khi thêm A6 (docs/PROJECT_PLAN.md): `== 6` bỏ
+    # sót include_nu0 (condition_dim ∈ {4,8}) - dùng condition_flags_from_dim()
+    # (nguồn suy luận DUY NHẤT, xem dataset.py) thay vì so sánh rời rạc lặp
+    # lại ở từng file, để không lệch nữa lần thứ 3 nếu condition_dim mở rộng
+    # tiếp (vd Nhóm 6 - Giai đoạn F, CTE).
+    extended, include_nu0 = condition_flags_from_dim(model.condition_dim)
+    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"),
+                           extended_condition=extended, include_nu0=include_nu0)
     test_loader = DataLoader(test_ds, batch_size=64, shuffle=False)
 
     print("1/3 - Đánh giá property accuracy trên test set...")

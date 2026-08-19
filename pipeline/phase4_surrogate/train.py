@@ -65,9 +65,17 @@ def run_epoch(model, loader, optimizer, device, train: bool, loss_weights: torch
 
     context = torch.enable_grad() if train else torch.no_grad()
     with context:
-        for image, seed_vec, targets in loader:
+        for batch in loader:
+            # batch co 4 phan tu khi AuxeticDataset(include_nu0=True) (them
+            # nu0 lam INPUT PHU, xem dataset.py) - 3 phan tu la hanh vi cu.
+            if len(batch) == 4:
+                image, seed_vec, targets, nu0 = batch
+                nu0 = nu0.to(device)
+            else:
+                image, seed_vec, targets = batch
+                nu0 = None
             image, seed_vec, targets = image.to(device), seed_vec.to(device), targets.to(device)
-            pred = model(image, seed_vec)
+            pred = model(image, seed_vec, nu0=nu0)
             loss, per_target = weighted_mse(pred, targets, loss_weights)
 
             if train:
@@ -123,6 +131,11 @@ def main():
                               "analysis/scripts/backfill_f1_f2_npz.py). Cần "
                               "outputs/phase3/{train,val}_ext.npz (mặc định khi bật cờ "
                               "này). Mặc định TẮT - hành vi cũ 3 target.")
+    parser.add_argument("--include-nu0", action="store_true",
+                         help="Them nu (he so Poisson vat lieu nen) lam INPUT PHU "
+                              "cho model (Giai doan A, A4, docs/PROJECT_PLAN.md "
+                              "Nhom 1) - can npz co field 'nu' (build_npz.py da "
+                              "them, fallback 0.3 cho manifest cu). Mac dinh TAT.")
     parser.add_argument("--train-npz", type=str, default=None,
                          help="Override đường dẫn train npz (mặc định train.npz, hoặc "
                               "train_ext.npz nếu --include-f1f2).")
@@ -140,8 +153,8 @@ def main():
     default_suffix = "_ext" if args.include_f1f2 else ""
     train_npz = args.train_npz or os.path.join(PHASE3_DIR, f"train{default_suffix}.npz")
     val_npz = args.val_npz or os.path.join(PHASE3_DIR, f"val{default_suffix}.npz")
-    train_ds = AuxeticDataset(train_npz, include_f1f2=args.include_f1f2)
-    val_ds = AuxeticDataset(val_npz, include_f1f2=args.include_f1f2)
+    train_ds = AuxeticDataset(train_npz, include_f1f2=args.include_f1f2, include_nu0=args.include_nu0)
+    val_ds = AuxeticDataset(val_npz, include_f1f2=args.include_f1f2, include_nu0=args.include_nu0)
     loss_weights = LOSS_WEIGHTS_5 if args.include_f1f2 else LOSS_WEIGHTS_3
     target_names = (["v12", "v21", "volfrac_achieved", "f1", "f2"] if args.include_f1f2
                      else ["v12", "v21", "volfrac_achieved"])
@@ -158,7 +171,7 @@ def main():
         from torch.utils.data import ConcatDataset
         extra = []
         for p in args.adversarial_npz:
-            ds = AuxeticDataset(p, include_f1f2=args.include_f1f2)
+            ds = AuxeticDataset(p, include_f1f2=args.include_f1f2, include_nu0=args.include_nu0)
             assert list(ds.seed_classes) == list(base_seed_classes), (
                 f"seed_classes của {p} ({list(ds.seed_classes)}) không khớp "
                 f"train.npz ({list(base_seed_classes)}) - cột one-hot sẽ lệch."
@@ -177,7 +190,8 @@ def main():
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
                              num_workers=2)
 
-    model = SurrogateCNN(n_seeds=train_ds.n_seeds, n_outputs=len(loss_weights)).to(device)
+    model = SurrogateCNN(n_seeds=train_ds.n_seeds, n_outputs=len(loss_weights),
+                          include_nu0=args.include_nu0).to(device)
     if args.init_from:
         init_ckpt = torch.load(args.init_from, map_location=device, weights_only=False)
         model.load_state_dict(init_ckpt["model_state_dict"])
@@ -223,6 +237,7 @@ def main():
                 "channels": (32, 64, 128, 256),
                 "fc_hidden": 128,
                 "n_outputs": len(loss_weights),
+                "include_nu0": args.include_nu0,
                 "target_names": target_names,
                 "val_loss": val_loss,
                 "epoch": epoch,

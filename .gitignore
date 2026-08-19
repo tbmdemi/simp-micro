@@ -63,9 +63,18 @@ outputs/phase3_v2/*.npz
 outputs/phase3_v2/manifest.csv
 outputs/phase3_v2/split_report.json
 
+# phase3_a4: dataset A4 (nu0 biến thiên, xem assemble_phase3_a4.py) - chưa chốt production
+outputs/phase3_a4/*.npz
+outputs/phase3_a4/manifest.csv
+outputs/phase3_a4/split_report.json
+
 # raw pool scratch (ảnh + manifest thô trước khi lọc) - KHÔNG dùng /tmp (tmpfs,
 # mất dữ liệu qua reboot - đã xảy ra thật, mất ~3.5h compute, xem EXPERIMENT_LOG.md)
 outputs/phase3_v2_raw/
+
+# A4 (Giai đoạn A, docs/PROJECT_PLAN.md Nhóm 1): batch raw ν0 biến thiên, tách
+# riêng khỏi phase3_v2_raw để không lẫn với pool production nu=0.3 cố định
+outputs/phase3_a4_nu_raw/
 
 # backup outputs/phase3/*.npz gốc trước khi thay bằng phase3_v2 (có thể khôi phục)
 outputs/phase3_backup/
@@ -83,6 +92,9 @@ outputs/pilot_mma_*/
 
 # pilot objective_variant='normalized' A/B test (2026-08-05, xem EXPERIMENT_LOG.md) - scratch, không phải dataset
 outputs/pilot_normalized_*/
+
+# pilot A3 xac minh hoi tu FE theo nu0 (2026-08-18, xem EXPERIMENT_LOG.md) - scratch, không phải dataset
+outputs/pilot_nu_convergence/
 
 # --- LaTeX build artifacts ---
 *.aux

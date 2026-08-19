@@ -78,6 +78,39 @@ class TestPropertyAccuracyExtendedCondition:
         assert report["n_samples"] == 8
         assert np.isfinite(report["v12"]["mae"])
 
+    def test_8dim_condition_extended_plus_nu0_does_not_crash(
+        self, tmp_path, make_phase3_npz, make_cvae_checkpoint,
+    ):
+        """A6 (docs/PROJECT_PLAN.md Nhóm 1): condition_dim=8 (extended_condition
+        + include_nu0) - cùng bug class với test 6-chiều ở trên, nhưng ở đây
+        kiểm chứng đúng chỗ evaluate.py::main() dùng condition_flags_from_dim()
+        để suy (extended, include_nu0) từ model.condition_dim (xem comment
+        'Bug tương tự tái phát khi thêm A6' trong evaluate.py main())."""
+        from pipeline.phase5_cvae.evaluate import property_accuracy
+        from pipeline.phase5_cvae.dataset import CVAEDataset, condition_flags_from_dim
+        from pipeline.phase5_cvae.losses import load_frozen_surrogate
+        from pipeline.phase5_cvae.sample import load_model
+
+        surrogate_path = tmp_path / "surrogate.pt"
+        _write_surrogate_export(surrogate_path)
+        surrogate, target_names = load_frozen_surrogate(device="cpu", path=str(surrogate_path))
+
+        ckpt_path = make_cvae_checkpoint("cvae_ext_nu0.pt", condition_dim=8)
+        model = load_model(device="cpu", ckpt_path=ckpt_path)
+
+        extended, include_nu0 = condition_flags_from_dim(model.condition_dim)
+        assert extended is True and include_nu0 is True
+
+        npz_path = make_phase3_npz(n_samples=8, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(npz_path, extended_condition=extended, include_nu0=include_nu0)
+        assert ds.condition_dim == 8
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+
+        report = property_accuracy(model, surrogate, target_names, loader, "cpu")
+        assert set(report.keys()) == {"v12", "v21", "n_samples"}
+        assert report["n_samples"] == 8
+        assert np.isfinite(report["v12"]["mae"])
+
 
 class TestDiversityCheckExtendedCondition:
     def test_6dim_condition_vector_generates_without_crash(self, tmp_path, monkeypatch, make_cvae_checkpoint):

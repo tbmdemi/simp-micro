@@ -1,0 +1,18 @@
+{
+  "git_hash": "bc9d64b7c",
+  "timestamp": "2026-08-19T16:08:01",
+  "version": "1.4.0",
+  "params": {
+    "nelx": 3,
+    "nely": 3,
+    "volfrac": 0.55,
+    "void_size_frac": 0.3,
+    "penal": 3.0,
+    "rmin": 1.5,
+    "ft": 2,
+    "max_iter": 1,
+    "seed": "hourglass",
+    "objective": "auxetic",
+    "rotation_deg": 0.0
+  }
+}

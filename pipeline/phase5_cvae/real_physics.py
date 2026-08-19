@@ -37,19 +37,61 @@ from simp.core.pbc import build_pbc
 from simp.core.solver import solve_fe
 from simp.homogenization.compute import compute_homogenized_tensor
 
-# Cache mesh theo (nelx, nely, E0, Emin, nu) - các thành phần này KHÔNG phụ
-# thuộc density nên tính 1 lần, dùng lại cho mọi mẫu/mọi step trong training.
-_MESH_CACHE = {}
+# Cache TOPOLOGY mesh (edofMat, iK, jK, pbc) theo (nelx, nely) - phần này
+# thật sự tốn kém (build_dof_mesh/build_pbc) nhưng KHÔNG phụ thuộc vật liệu,
+# nên dùng chung cho MỌI (E0, Emin, nu), kể cả khi mỗi sample trong batch có
+# ν0 riêng (Giai đoạn A - vary vật liệu nền, xem docs/PROJECT_PLAN.md A5).
+#
+# Trước đây key cache gộp cả (E0, Emin, nu), tưởng nhầm rằng per-sample nu sẽ
+# làm mất tác dụng cache (rủi ro đã nêu trong PROJECT_PLAN.md mục 4 "A5").
+# Đo thật: Material(E0, Emin, nu) chỉ là tích phân Gauss 2x2 cho ma trận 8x8,
+# ~97 us/lần construct - so với FE-solve ~50-100 ms/mẫu (xem docstring module)
+# thì chiếm ~0,1-0,2%, không đáng kể. Nên tách: cache topology (đắt, không đổi
+# theo vật liệu), dựng Material MỚI mỗi lần gọi (rẻ, cho phép nu/E0 khác nhau
+# từng sample mà không tốn thêm chi phí đo được).
+_MESH_TOPOLOGY_CACHE = {}
+
+
+def _get_mesh_topology(nelx: int, nely: int):
+    """Trả (edofMat, iK, jK, pbc) cho lưới (nelx, nely), cache theo topology
+    (không phụ thuộc vật liệu) - dùng lại cho mọi giá trị E0/Emin/nu.
+
+    Args:
+        nelx: Số phần tử theo phương x.
+        nely: Số phần tử theo phương y.
+
+    Returns:
+        Tuple (edofMat, iK, jK, pbc) - xem build_dof_mesh()/build_pbc().
+    """
+    key = (nelx, nely)
+    if key not in _MESH_TOPOLOGY_CACHE:
+        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
+        pbc = build_pbc(nelx, nely, nodenrs)
+        _MESH_TOPOLOGY_CACHE[key] = (edofMat, iK, jK, pbc)
+    return _MESH_TOPOLOGY_CACHE[key]
 
 
 def _get_mesh(nelx: int, nely: int, E0: float, Emin: float, nu: float):
-    key = (nelx, nely, E0, Emin, nu)
-    if key not in _MESH_CACHE:
-        material = Material(E0=E0, Emin=Emin, nu=nu)
-        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
-        pbc = build_pbc(nelx, nely, nodenrs)
-        _MESH_CACHE[key] = (material, edofMat, iK, jK, pbc)
-    return _MESH_CACHE[key]
+    """Trả (material, edofMat, iK, jK, pbc) cho lưới (nelx, nely) và vật liệu
+    (E0, Emin, nu) - giữ nguyên chữ ký/kiểu trả về cũ để tương thích ngược
+    (test/call site hiện có unpack 5 giá trị). Phần topology lấy từ cache
+    dùng chung (_get_mesh_topology); Material dựng mới mỗi lần gọi (rẻ, xem
+    comment trên _MESH_TOPOLOGY_CACHE) - cho phép mỗi sample trong batch dùng
+    nu/E0 khác nhau mà không cần cache riêng theo vật liệu.
+
+    Args:
+        nelx: Số phần tử theo phương x.
+        nely: Số phần tử theo phương y.
+        E0: Modul đàn hồi Young của vật liệu đặc.
+        Emin: Modul đàn hồi Young của lỗ rỗng.
+        nu: Hệ số Poisson.
+
+    Returns:
+        Tuple (material, edofMat, iK, jK, pbc).
+    """
+    edofMat, iK, jK, pbc = _get_mesh_topology(nelx, nely)
+    material = Material(E0=E0, Emin=Emin, nu=nu)
+    return material, edofMat, iK, jK, pbc
 
 
 def solve_nu_with_grad(
@@ -113,8 +155,10 @@ def solve_nu_with_grad(
 def _solve_worker(args):
     """Hàm top-level (bắt buộc để pickle được cho multiprocessing.Pool) -
     unwrap args rồi gọi solve_nu_with_grad(). Trên Linux (start method
-    'fork', mặc định), tiến trình con kế thừa _MESH_CACHE đã có sẵn của
-    tiến trình cha qua copy-on-write, nên không tốn thêm chi phí dựng mesh."""
+    'fork', mặc định), tiến trình con kế thừa _MESH_TOPOLOGY_CACHE đã có sẵn
+    của tiến trình cha qua copy-on-write, nên không tốn thêm chi phí dựng
+    lại phần topology (Material vẫn dựng riêng mỗi lần, rẻ - xem comment
+    trên _MESH_TOPOLOGY_CACHE)."""
     xPhys, penal, E0, Emin, nu, rho0 = args
     return solve_nu_with_grad(xPhys, penal, E0=E0, Emin=Emin, nu=nu, rho0=rho0)
 
@@ -141,6 +185,22 @@ def shutdown_pool():
     _POOL_CACHE.clear()
 
 
+def _broadcast_per_sample(value, B: int) -> np.ndarray:
+    """Chuẩn hóa `value` (scalar dùng chung cho cả batch, HOẶC mảng/list/
+    tensor độ dài B - per-sample) về np.ndarray shape (B,) float64.
+
+    Args:
+        value: float, hoặc sequence/np.ndarray/torch.Tensor độ dài B.
+        B: kích thước batch.
+
+    Returns:
+        np.ndarray shape (B,) - value[i] dùng cho sample thứ i.
+    """
+    if isinstance(value, torch.Tensor):
+        value = value.detach().cpu().numpy()
+    return np.broadcast_to(np.asarray(value, dtype=np.float64), (B,))
+
+
 class RealPhysicsNu(torch.autograd.Function):
     """torch.autograd.Function bọc FE-solve THẬT làm 1 lớp khả vi trong
     mạng: forward nhận ảnh mật độ (B, nely, nelx) trong [0,1] (đã tách khỏi
@@ -150,26 +210,46 @@ class RealPhysicsNu(torch.autograd.Function):
     Batch xử lý TUẦN TỰ mặc định (n_workers=0); truyền n_workers>0 để chạy
     song song qua multiprocessing.Pool (mỗi mẫu độc lập, ~86ms/mẫu tuần tự
     trên lưới 50x50 - xem benchmark trong tests/test_phase5_real_physics.py,
-    n_workers=12 giảm gần tuyến tính theo số core)."""
+    n_workers=12 giảm gần tuyến tính theo số core).
+
+    E0/nu chấp nhận CẢ scalar (dùng chung cho cả batch, tương thích ngược)
+    LẪN mảng/list/tensor độ dài B (mỗi sample 1 giá trị riêng - phục vụ
+    Giai đoạn A, vary vật liệu nền theo ν0/E0, xem docs/PROJECT_PLAN.md A5).
+    Emin/penal/rho0 vẫn dùng chung cho cả batch (không phải trục biến thiên
+    của Giai đoạn A)."""
 
     @staticmethod
-    def forward(ctx, density_grid: torch.Tensor, penal: float, E0: float, Emin: float, nu: float, rho0: float, n_workers: int = 0):
+    def forward(
+        ctx, density_grid: torch.Tensor, penal: float, E0, Emin: float,
+        nu, rho0: float, n_workers: int = 0,
+    ):
         device = density_grid.device
         dtype = density_grid.dtype
         batch = density_grid.detach().cpu().numpy().astype(np.float64)  # (B, nely, nelx)
         B = batch.shape[0]
         clipped = np.clip(batch, 0.0, 1.0)
 
+        E0_arr = _broadcast_per_sample(E0, B)
+        nu_arr = _broadcast_per_sample(nu, B)
+
         v_out = np.zeros((B, 2), dtype=np.float64)
         grads = np.zeros((B, 2) + batch.shape[1:], dtype=np.float64)
 
         if n_workers > 0:
             pool = _get_pool(n_workers)
-            args = [(clipped[i], penal, E0, Emin, nu, rho0) for i in range(B)]
+            args = [
+                (clipped[i], penal, E0_arr[i], Emin, nu_arr[i], rho0)
+                for i in range(B)
+            ]
             results = pool.map(_solve_worker, args)
         else:
-            results = [solve_nu_with_grad(clipped[i], penal, E0=E0, Emin=Emin, nu=nu, rho0=rho0)
-                       for i in range(B)]
+            results = [
+                solve_nu_with_grad(
+                    clipped[i], penal, E0=E0_arr[i], Emin=Emin,
+                    nu=nu_arr[i], rho0=rho0,
+                )
+                for i in range(B)
+            ]
 
         for i, (v12, v21, d_v12, d_v21) in enumerate(results):
             v_out[i, 0], v_out[i, 1] = v12, v21

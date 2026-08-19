@@ -40,6 +40,37 @@ SEED_WEIGHTS = {"hourglass": 0.70, "hexagonal": 0.15, "reentrant_bowtie": 0.15}
 VOLFRAC_RANGE = (0.3, 0.7)
 VOID_SIZE_FRAC_RANGE = (0.1, 0.4)
 
+# Giai đoạn A (vary vật liệu nền, docs/PROJECT_PLAN.md Nhóm 1 A1/A3): dải hẹp
+# ν0=0.2-0.4 để kiểm tra hội tụ FE trước khi mở rộng, khớp
+# pipeline/params.py::PARAM_SPACE['nu']. Mặc định KHÔNG bật (--vary-nu) để
+# không đổi hành vi sinh dataset production hiện có (nu=0.3 cố định, đúng
+# như toàn bộ outputs/phase3/*.npz đã dùng).
+NU_RANGE = (0.2, 0.4)
+
+# A3 - batch kiểm tra hội tụ THẬT (2026-08-18, n=50/seed, dải 0.2-0.4, xem
+# analysis/scripts/pilot_nu_convergence.py đã xóa sau khi log - EXPERIMENT_LOG.md
+# 2026-08-18). Một comment trước đó ở đây mô tả "ranh giới hội tụ sắc tại
+# ν0≈0.30" cho reentrant_bowtie kèm số liệu cụ thể (corr=0,76, 11/20 sạch) -
+# KHÔNG tìm được bằng chứng nào (không manifest, không EXPERIMENT_LOG entry)
+# rằng batch đó từng thực sự chạy; chạy lại thật cho kết quả KHÁC hẳn phần
+# định lượng (dù đúng hướng định tính): hourglass 44/50 sạch (88%,
+# corr=0,058 - GẦN NHƯ KHÔNG phụ thuộc ν0, không phải corr=0,45 như claim cũ),
+# hexagonal 50/50 (100%, không mẫu nào hỏng nên corr không tính được - claim
+# cũ "corr=0,18" vô nghĩa), reentrant_bowtie 38/50 (76%) NHƯNG dốc MƯỢT theo
+# ν0 (45%->75%->80%->94% qua 4 khoảng 0,05) - không phải vách cắt nhị phân,
+# corr=0,386 (vừa phải, không phải 0,76).
+#
+# QUYẾT ĐỊNH: KHÔNG thu hẹp dải nu theo seed cho A4 - không có vách cắt thật
+# để thu hẹp theo, và mục đích A4 là dạy surrogate quan hệ ν0->tính chất;
+# thu hẹp riêng reentrant_bowtie sẽ tạo lỗ hổng dữ liệu đúng ở vùng ν0 thấp,
+# đúng chỗ cần học quan hệ này nhất. reentrant_bowtie ở ν0<0.25 vẫn đạt 45%
+# sạch (không phải 0%) - chấp nhận được, để quality filter sẵn có lọc sau.
+SEED_NU_RANGE = {
+    "hourglass": NU_RANGE,
+    "hexagonal": NU_RANGE,
+    "reentrant_bowtie": NU_RANGE,
+}
+
 # BUG ĐÃ SỬA #2 (nghiêm trọng hơn, phát hiện sau batch beta=0.8): production
 # pipeline thật (pipeline/phase2_multi_batch/runner.py::build_params_dict)
 # KHÔNG BAO GIỜ set `beta` -> luôn dùng default beta=1.0 của run_simp(). Script
@@ -89,13 +120,13 @@ MANIFEST_FIELDS = [
     "batch", "seed", "sample_id", "image_path", "v12", "v21", "obj_value",
     "converged", "volfrac", "penal", "rmin", "move", "void_size_frac",
     "n_components", "is_connected", "degenerate", "volfrac_achieved",
-    "n_iters", "max_iter", "hit_cap", "osc_score", "osc_unstable", "optimizer",
+    "n_iters", "max_iter", "hit_cap", "osc_score", "osc_unstable", "optimizer", "nu",
 ]
 
 
 def _worker(task):
     """Top-level function (cần cho multiprocessing pickle)."""
-    idx, seed_name, volfrac, void_size_frac, run_dir, optimizer_override = task
+    idx, seed_name, volfrac, void_size_frac, nu, run_dir, optimizer_override = task
 
     # Import trong worker - mỗi process con cần tự import (tránh pickle lỗi
     # module state), theo đúng convention bare-import của project (xem
@@ -108,7 +139,7 @@ def _worker(task):
     sample_id = f"{seed_name}_{idx:06d}"
     output_dir = os.path.join(run_dir, "simp_runs", sample_id)
     params = dict(
-        nelx=50, nely=50, ft=2, E0=199.0, Emin=1e-9, nu=0.3,
+        nelx=50, nely=50, ft=2, E0=199.0, Emin=1e-9, nu=nu,
         max_iter=150, tol_change=0.01, tol_obj=0.05, window_size=20,
         objective="auxetic", rotation_deg=0.0, beta=1.0,
         save_every=999, scale_factor=1, verbose=False,
@@ -145,7 +176,7 @@ def _worker(task):
         "obj_value": result["objective"], "converged": result["converged"],
         "volfrac": volfrac, "penal": FIXED_PARAMETERS["penal"],
         "rmin": FIXED_PARAMETERS["rmin"], "move": FIXED_PARAMETERS["move"],
-        "void_size_frac": void_size_frac,
+        "void_size_frac": void_size_frac, "nu": nu,
         "n_components": conn["n_components"], "is_connected": conn["is_connected"],
         "degenerate": degenerate, "volfrac_achieved": volfrac_achieved,
         "n_iters": result["n_iters"], "max_iter": params["max_iter"],
@@ -171,6 +202,10 @@ def main():
                               "gate cho reentrant_bowtie, xem EXPERIMENT_LOG.md 2026-07-30). "
                               "'gate'/'mma' ép TOÀN BỘ batch dùng 1 optimizer - CẨN THẬN: 'mma' "
                               "toàn cục phá hỏng reentrant_bowtie (đã đo: 90,0%->0,0%).")
+    parser.add_argument("--vary-nu", action="store_true",
+                         help="Giai đoạn A (docs/PROJECT_PLAN.md Nhóm 1 A3): sample nu (hệ số "
+                              f"Poisson vật liệu nền) đều trong NU_RANGE={NU_RANGE} thay vì cố "
+                              "định 0.3. Mặc định TẮT để không đổi hành vi dataset production hiện có.")
     args = parser.parse_args()
     optimizer_override = None if args.optimizer == "auto" else args.optimizer
 
@@ -191,7 +226,9 @@ def main():
         vf_range, vs_range = SEED_PARAM_RANGES[seed_name]
         volfrac = float(rng.uniform(*vf_range))
         void_size_frac = float(rng.uniform(*vs_range))
-        tasks.append((idx, seed_name, volfrac, void_size_frac, args.run_dir, optimizer_override))
+        nu_range = SEED_NU_RANGE.get(seed_name, NU_RANGE)
+        nu = float(rng.uniform(*nu_range)) if args.vary_nu else 0.3
+        tasks.append((idx, seed_name, volfrac, void_size_frac, nu, args.run_dir, optimizer_override))
 
     write_header = not os.path.exists(manifest_path)
     t0 = time.time()

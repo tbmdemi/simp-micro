@@ -12,11 +12,17 @@ from torch.utils.data import Dataset
 
 
 class AuxeticDataset(Dataset):
-    def __init__(self, npz_path: str, include_f1f2: bool = False):
+    def __init__(self, npz_path: str, include_f1f2: bool = False, include_nu0: bool = False):
         """include_f1f2: doc them f1=E11/E0, f2=E22/E0 tu {split}_ext.npz
         (backfill 2026-08-05, xem analysis/scripts/backfill_f1_f2_npz.py) -
         targets thanh 5 chieu [v12,v21,volfrac_achieved,f1,f2] thay vi 3.
-        Mac dinh False (hanh vi cu, tuong thich nguoc voi checkpoint san co)."""
+        Mac dinh False (hanh vi cu, tuong thich nguoc voi checkpoint san co).
+
+        include_nu0: doc them nu (he so Poisson vat lieu nen) tu npz, tra ve
+        nhu 1 INPUT PHU (khong phai target) - xem Giai doan A, A4,
+        docs/PROJECT_PLAN.md Nhom 1. Can npz co field "nu" (build_npz.py da
+        them, fallback 0.3 cho manifest cu). Mac dinh False - __getitem__ tra
+        ve dung 3 phan tu nhu truoc (image, seed_vec, targets)."""
         data = np.load(npz_path, allow_pickle=True)
         self.images = data["images"]                 # (N, RES, RES) float32 [0,1]
         self.v12 = data["v12"].astype(np.float32)
@@ -28,6 +34,9 @@ class AuxeticDataset(Dataset):
         if include_f1f2:
             self.f1 = data["f1"].astype(np.float32)
             self.f2 = data["f2"].astype(np.float32)
+        self.include_nu0 = include_nu0
+        if include_nu0:
+            self.nu = data["nu"].astype(np.float32)
 
     def __len__(self):
         return len(self.images)
@@ -47,6 +56,9 @@ class AuxeticDataset(Dataset):
         if self.include_f1f2:
             vals += [self.f1[idx], self.f2[idx]]
         targets = torch.tensor(vals, dtype=torch.float32)
+        if self.include_nu0:
+            nu0 = torch.tensor(self.nu[idx], dtype=torch.float32)
+            return image, seed_vec, targets, nu0
         return image, seed_vec, targets
 
 

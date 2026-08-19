@@ -54,11 +54,15 @@ def load_frozen_surrogate(device="cpu", path=SURROGATE_PATH):
     # n_outputs=3 mặc định cho gói export CŨ (trước khi export_for_phase5.py
     # lưu field này) - bug đã sửa 2026-08-15: thiếu tham số này làm crash
     # size-mismatch khi load checkpoint 5-output (--include-f1f2).
+    # include_nu0 (Giai đoạn A, A4): bug tương tự phát hiện 2026-08-19 khi
+    # chạy thí nghiệm A6 thật lần đầu (surrogate_a4_nu0.pt) - thiếu field này
+    # làm crash size-mismatch ở fc.0.weight vì fc_in thiếu 1 chiều nu0.
     model = SurrogateCNN(
         n_seeds=ckpt["n_seeds"],
         channels=ckpt["channels"],
         fc_hidden=ckpt["fc_hidden"],
         n_outputs=ckpt.get("n_outputs", 3),
+        include_nu0=ckpt.get("include_nu0", False),
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
@@ -107,11 +111,32 @@ def property_consistency_loss(
     seed_vec: torch.Tensor,
     surrogate: nn.Module,
     target_names,
+    nu0_col: int = None,
 ) -> torch.Tensor:
     """seed_vec dùng seed one-hot THẬT của mẫu gốc (surrogate cần input này)
     vì ảnh generate chưa có nhãn seed - xấp xỉ, TODO: thử trung bình qua
-    nhiều seed_vec hoặc seed phổ biến nhất cho bản tổng quát hơn."""
-    pred = surrogate(recon, seed_vec)  # (B, 3) = [v12, v21, volfrac]
+    nhiều seed_vec hoặc seed phổ biến nhất cho bản tổng quát hơn.
+
+    nu0_col: cột giá trị ν0 trong `condition` (cột mask = nu0_col+1) - CHỈ
+    dùng khi `surrogate.include_nu0=True` (surrogate Phase 4 train với
+    --include-nu0, vd surrogate_a4_nu0.pt - xem model.py SurrogateCNN).
+    mask=0 hoặc nu0_col=None fallback về 0.3, khớp OLD_NU_FALLBACK dùng khi
+    build outputs/phase3_a4/ (assemble_phase3_a4.py) và fe_params['nu'] mặc
+    định ở real_physics_loss() - giữ 1 giá trị fallback duy nhất xuyên suốt
+    pipeline thay vì mỗi chỗ tự chọn 1 số."""
+    surrogate_kwargs = {}
+    if getattr(surrogate, "include_nu0", False):
+        default_nu = 0.3
+        if nu0_col is not None:
+            nu_val = condition[:, nu0_col]
+            nu_mask = condition[:, nu0_col + 1]
+            surrogate_kwargs["nu0"] = torch.where(
+                nu_mask > 0.5, nu_val, torch.full_like(nu_val, default_nu))
+        else:
+            surrogate_kwargs["nu0"] = torch.full(
+                (condition.size(0),), default_nu,
+                device=condition.device, dtype=condition.dtype)
+    pred = surrogate(recon, seed_vec, **surrogate_kwargs)  # (B, 3) = [v12, v21, volfrac]
     idx_v12 = target_names.index("v12")
     idx_v21 = target_names.index("v21")
     pred_cond = torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
@@ -185,6 +210,7 @@ def real_physics_loss(
     fe_params: dict,
     subsample: int = None,
     n_workers: int = 0,
+    nu0_col: int = None,
 ) -> torch.Tensor:
     """MSE(v12,v21) giữa FE-solve THẬT (real_physics.RealPhysicsNu, gradient
     GIẢI TÍCH chính xác - xem docstring real_physics.py) và condition target -
@@ -198,6 +224,8 @@ def real_physics_loss(
         gradient chảy được về tận pixel gốc).
     fe_params: dict {nelx, nely, penal, E0, Emin, nu, rho0} - dùng
         verify_fe.FE_PARAMS làm mẫu (nelx=nely=50 khớp cách sinh dataset).
+        fe_params['nu'] dùng làm ν0 FALLBACK cho mẫu không có nu0_col hoặc
+        có mask=0 (xem nu0_col).
     subsample: nếu đặt, chỉ tính trên `subsample` mẫu NGẪU NHIÊN trong batch
         (chi phí FE-solve ~50-100ms/mẫu tuần tự - xem benchmark trong test -
         quá chậm để chạy full batch mỗi step; loss trả về chỉ trên subset đó,
@@ -206,6 +234,16 @@ def real_physics_loss(
         real_physics._get_pool) - THẬN TRỌNG khi dùng chung với DataLoader
         num_workers>0 (tiến trình chính đã đa luồng, fork() có nguy cơ
         deadlock - xem cảnh báo trong real_physics.py).
+    nu0_col: cột giá trị ν0 trong `condition` (cột mask = nu0_col+1) - xem
+        dataset.py CVAEDataset.nu0_col (Giai đoạn A, docs/PROJECT_PLAN.md
+        A6). Khi đặt, FE-solve dùng ĐÚNG ν0 per-sample (mask=1) thay vì
+        fe_params['nu'] cố định cho MỌI mẫu - tận dụng RealPhysicsNu per-
+        sample nu đã có từ A5 (real_physics.py). Mẫu có mask=0 (nu0 bị
+        condition-dropout hoặc không chỉ định) dùng fe_params['nu'] làm
+        fallback - khớp đúng ngữ nghĩa "không chỉ định -> vật liệu mặc
+        định" của condition-dropout, KHÔNG dùng giá trị 0.0 vô nghĩa vật lý
+        (mask=0 chỉ có nghĩa "không biết", không phải "ν0=0"). None (mặc
+        định) = hành vi cũ, luôn dùng fe_params['nu'] cho cả batch.
     """
     if density.dim() == 4:
         density = density.squeeze(1)
@@ -224,9 +262,17 @@ def real_physics_loss(
         mode="bilinear", align_corners=False,
     ).squeeze(1)
 
+    default_nu = fe_params.get("nu", 0.3)
+    nu_arg = default_nu
+    if nu0_col is not None:
+        nu_val = condition_sub[:, nu0_col]
+        nu_mask = condition_sub[:, nu0_col + 1]
+        nu_arg = torch.where(nu_mask > 0.5, nu_val,
+                              torch.full_like(nu_val, default_nu))
+
     pred = RealPhysicsNu.apply(
         density_fe, fe_params.get("penal", 3.0), fe_params.get("E0", 199.0),
-        fe_params.get("Emin", 1e-9), fe_params.get("nu", 0.3),
+        fe_params.get("Emin", 1e-9), nu_arg,
         fe_params.get("rho0", 1.0), n_workers,
     )
     # RealPhysicsNu chỉ trả (v12, v21) - so khớp 2 chiều đầu của condition,
@@ -237,7 +283,7 @@ def real_physics_loss(
 
 def real_physics_prior_loss(
     decoder, latent_dim: int, condition: torch.Tensor, fe_params: dict,
-    subsample: int = None, n_workers: int = 0,
+    subsample: int = None, n_workers: int = 0, nu0_col: int = None,
 ):
     """Bản áp lên ảnh decode từ z ~ PRIOR N(0,1) (không qua encoder) - CÙNG
     chế độ model.generate() dùng lúc inference, xem lý do trong docstring
@@ -245,13 +291,16 @@ def real_physics_prior_loss(
     lộ đúng hành vi cần sửa). Đây là kênh chính để differentiable-physics
     thực sự sửa exploitation, không phải real_physics_loss() áp lên recon.
 
+    nu0_col: xem real_physics_loss() - truyền thẳng xuống.
+
     Trả về MSE THÔ (không nhân PROP_LOSS_SCALE) - giống property_consistency_loss(),
     caller (train.py::run_epoch) chịu trách nhiệm nhân PROP_LOSS_SCALE trước
     khi cộng vào tổng loss, để --lambda-real-physics cùng thang đo với --gamma."""
     bsz = condition.size(0)
     z_prior = torch.randn(bsz, latent_dim, device=condition.device)
     prior_recon = decoder(z_prior, condition)
-    return real_physics_loss(prior_recon, condition, fe_params, subsample=subsample, n_workers=n_workers)
+    return real_physics_loss(prior_recon, condition, fe_params, subsample=subsample,
+                              n_workers=n_workers, nu0_col=nu0_col)
 
 
 def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tensor,
@@ -308,6 +357,7 @@ def cvae_loss(
     surrogate, target_names, beta: float, gamma: float = 1.0,
     lambda_tv: float = 0.0, lambda_bin: float = 0.0,
     lambda_disagreement: float = 0.0, lambda_periodic: float = 0.0,
+    nu0_col: int = None,
 ):
     """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
     lambda_tv/lambda_bin mặc định 0.0 (tắt, để không phá baseline gamma=1..300
@@ -329,7 +379,7 @@ def cvae_loss(
         )
     else:
         prop_l = property_consistency_loss(
-            recon, condition, seed_vec, surrogate, target_names
+            recon, condition, seed_vec, surrogate, target_names, nu0_col=nu0_col
         )
         disagreement_l = torch.tensor(0.0)
     tv_l = tv_loss(recon)

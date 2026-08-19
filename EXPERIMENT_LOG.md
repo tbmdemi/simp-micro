@@ -359,4 +359,120 @@ Code: `notebooks/07_geometric_feature_influence.ipynb` (mới), hàm dùng chung
 
 ---
 
+### 2026-08-18 - Xác minh lại A3 (hội tụ FE theo ν0 vật liệu nền) - claim cũ không có bằng chứng, số liệu thật khác đáng kể về mặt định lượng
+
+Bối cảnh: chuẩn bị làm A4 (docs/PROJECT_PLAN.md Nhóm 1 - thêm ν0 làm input phụ cho CNN surrogate), phát hiện comment `SEED_NU_RANGE` trong `analysis/scripts/generate_production_batch.py` mô tả 1 batch A3 rất cụ thể (n=20/seed, "ranh giới hội tụ sắc tại ν0≈0.30" cho `reentrant_bowtie`, `corr(nu,clean)=0,76`) nhưng rà soát toàn repo (output dir, `EXPERIMENT_LOG.md`, git log/stash) **không tìm thấy bất kỳ dữ liệu/log nào chứng minh batch đó từng chạy thật** - vi phạm quy ước log-mọi-pilot của project.
+
+Viết lại `analysis/scripts/pilot_nu_convergence.py` (cùng pattern `pilot_normalized_objective.py`) - sweep ν0 đều trong `PARAM_SPACE['nu']=(0.2, 0.4)`, dùng đúng dải volfrac/void_size_frac và optimizer production thật (`SEED_PARAM_RANGES`/`SEED_OPTIMIZER`) cho 3 seed `hourglass`/`hexagonal`/`reentrant_bowtie`, n=50/seed (150 mẫu, 10 worker, 210s).
+
+| Seed | %sạch | corr(nu,clean) | Dạng quan hệ |
+|---|---|---|---|
+| hourglass | 88,0% (44/50) | 0,058 | phẳng, không phụ thuộc ν0 |
+| hexagonal | 100,0% (50/50) | không tính được (0 mẫu hỏng) | hoàn toàn không phụ thuộc ν0 |
+| reentrant_bowtie | 76,0% (38/50) | 0,386 | dốc MƯỢT: 45%(ν0∈[0,20,0,25)) → 75% → 80% → 94%(ν0∈[0,35,0,40)) |
+
+**Kết luận:** hướng định tính của claim cũ đúng (reentrant_bowtie nhạy nhất với ν0, hexagonal gần như miễn nhiễm), nhưng phần định lượng sai đáng kể - không có "ranh giới sắc" nào (ν0∈[0,25,0,30) vẫn đạt 75% sạch, không phải 0% như claim cũ), và mọi hệ số tương quan claim cũ đều bị thổi phồng (0,76 vs 0,386 thật cho reentrant_bowtie; 0,45 vs 0,058 thật cho hourglass). **Quyết định: KHÔNG thu hẹp `SEED_NU_RANGE` theo seed cho A4** - giữ dải đầy đủ (0.2, 0.4) cho cả 3 seed, vì (a) không có cơ sở thật để thu hẹp, và (b) mục đích A4 là dạy surrogate quan hệ ν0→tính chất - thu hẹp riêng `reentrant_bowtie` sẽ tạo lỗ hổng dữ liệu đúng ở vùng ν0 thấp, đúng nơi cần học quan hệ này nhất; 45% sạch ở vùng thấp vẫn đủ dùng, quality filter sẵn có sẽ lọc phần hỏng.
+
+**Bài học quy trình:** mọi claim thực nghiệm trong comment code PHẢI có manifest/log đối chiếu được - comment mô tả số liệu mà không kèm đường dẫn kết quả kiểm chứng được là dấu hiệu cảnh báo, cần chạy lại trước khi dùng để quyết định downstream (ở đây là A4).
+
+Manifest đầy đủ: `outputs/pilot_nu_convergence/manifest.csv` (gitignored, scratch). Đã sửa `analysis/scripts/generate_production_batch.py::SEED_NU_RANGE`. Script pilot một lần đã xóa sau khi kết quả được ghi đầy đủ vào log này. Trên nhánh `main`, uncommitted.
+
+---
+
+### 2026-08-18 (tiếp) - A4: thêm ν0 làm input phụ cho CNN surrogate, retrain, so R² với baseline - ĐẠT sàn, không thấy lợi ích accuracy rõ rệt
+
+Bối cảnh: A3 (mục trên) xác nhận không có vách cắt hội tụ cứng theo ν0, mở đường cho A4 (docs/PROJECT_PLAN.md Nhóm 1, bắt buộc trước A6) - dạy CNN surrogate quan hệ hình học+ν0→tính chất, vì khi ν0 biến thiên quan hệ này không còn là hàm 1-1 của ảnh mật độ.
+
+**Sinh dữ liệu:** `generate_production_batch.py --n-raw 3000 --vary-nu --run-dir outputs/phase3_a4_nu_raw` (dải đầy đủ ν0∈(0.2,0.4), không thu hẹp theo seed - xem quyết định A3) - 3000 mẫu, 2635 sạch (87,8%), 4122s (~69 phút, 10 worker).
+
+**Plumbing (tương thích ngược hoàn toàn, mặc định TẮT):** `pipeline/phase4_surrogate/model.py::SurrogateCNN(include_nu0=...)` - concat ν0 vào `fc_in` cùng seed one-hot sau GAP, `forward(image, seed_vec, nu0=None)`; `dataset.py::AuxeticDataset(include_nu0=...)` - trả về ν0 như phần tử thứ 4 (KHÔNG lẫn vào `targets`, vì ν0 là input không phải mục tiêu dự đoán); `train.py`/`evaluate.py` wiring + `--include-nu0` flag; `pipeline/phase3_dataset/build_npz.py` thêm field `nu` (fallback 0.3). 10 test mới (`test_phase4_dataset.py`, `test_phase4_model.py`, `test_phase4_train.py`), 552/552 test toàn repo pass.
+
+**Build dataset:** `analysis/scripts/assemble_phase3_a4.py` (mới) - gộp `outputs/phase3/dataset_64.npz` (13.624 mẫu, CHÍNH pool đã tạo baseline `surrogate_v2.pt`, ν0=0.3 fallback) + batch mới (2635 mẫu, ν0 thật) = 16.259 mẫu sạch → train 68.286 (sau augment x6, LỚN HƠN baseline 57.216 vì gộp thêm chứ không thay thế) / val 2439 / test 2439. Chủ động dùng `dataset_64.npz` thay vì `manifest_quality.csv` (chỉ 5.215 mẫu sạch) để tránh nhiễu "ít dữ liệu hơn" lẫn vào so sánh hiệu ứng ν0.
+
+**Train 2 model trên CÙNG dataset A4 để tách bạch hiệu ứng ν0 khỏi hiệu ứng cỡ dữ liệu** (60 epoch, không early-stop, val_loss vẫn cải thiện tới cuối - GPU, ~17s/epoch):
+
+| Model | R²(v12) | R²(v21) | R²(volfrac) |
+|---|---|---|---|
+| baseline `surrogate_v2.pt` (57.216 mẫu, ν0=0,3 cố định) | 0,974 | 0,964 | 0,983 |
+| `surrogate_a4_control.pt` (68.286 mẫu, KHÔNG ν0) | **0,9816** | **0,9734** | 0,9889 |
+| `surrogate_a4_nu0.pt` (68.286 mẫu, CÓ ν0 làm input) | **0,9816** | **0,9731** | 0,9887 |
+
+**Kết luận:** sàn cứng ĐẠT (CLAUDE.md: R² không được thấp hơn baseline) - cả 2 model A4 đều vượt 0,974/0,964 rõ ràng, chủ yếu nhờ dataset lớn hơn (68.286 vs 57.216). Nhưng so `control` vs `nu0` (cùng dataset, chỉ khác việc có đưa ν0 vào model hay không): **khác biệt R² không đáng kể** (Δv12=0,0000, Δv21=-0,0003 - trong nhiễu train-to-train, không phải tín hiệu thật) - thêm ν0 làm input KHÔNG cải thiện đo được độ chính xác trên phân bố dữ liệu hiện tại, vì mẫu ν0 biến thiên chỉ chiếm ~16% dataset (2635/16259). Đây KHÔNG phải thất bại của A4: mục tiêu chính là hạ tầng (surrogate giờ NHẬN ν0 làm input, sẵn sàng cho A6 conditioning) chứ không phải tăng R² trên phân bố hiện tại vốn vẫn chủ yếu ν0=0,3; muốn đo lợi ích accuracy thật cần tăng tỉ trọng mẫu ν0 biến thiên trong dataset ở lần lặp sau.
+
+**Đánh đổi 60/40 (CLAUDE.md):** không có đánh đổi thật ở đây - sàn đạt mà không phải hy sinh gì, vì `control` cũng vượt sàn nhờ dataset lớn hơn. Việc thêm ν0 (dù chưa đo được lợi ích) được giữ lại vì đây là mục tiêu hạ tầng bắt buộc của Giai đoạn A (A4 → A6), không phải một lựa chọn accuracy/performance.
+
+**Checkpoint:** `outputs/phase4/surrogate_a4_nu0.pt` (khuyến nghị dùng cho A6), `surrogate_a4_control.pt` (đối chứng, giữ để tái kiểm chứng sau). Chưa promote đè `surrogate_v2.pt`/`outputs/phase3/` production - cần quyết định riêng có "chốt" dataset A4 làm production mới hay không (E0 CHƯA làm, A5 - real_physics.py per-sample nu - vẫn chặn A6 dùng differentiable-physics training như hiện tại dùng cho `cvae_realphysics.pt`). Code: `analysis/scripts/assemble_phase3_a4.py` (mới). Trên nhánh `main`, uncommitted.
+
+---
+
+### 2026-08-18 (tiếp) - A5: `real_physics.py` nhận `nu`/`E0` per-sample - rủi ro cache trong plan KHÔNG xảy ra
+
+Bối cảnh: A4 (mục trên) đã cho surrogate Phase 4 nhận ν0 làm input; A5 (docs/PROJECT_PLAN.md Nhóm 1, chặn A6) là bước tiếp theo - `RealPhysicsNu.forward`/`solve_nu_with_grad` trong `pipeline/phase5_cvae/real_physics.py` trước đó chỉ nhận `nu`/`E0`/`Emin` là 3 scalar áp CHUNG cho cả batch, không cho phép mỗi sample có ν0 riêng khi training differentiable-physics.
+
+**Rủi ro nêu trong plan:** `_get_mesh` cache theo key `(nelx,nely,E0,Emin,nu)` - lo ngại per-sample nu sẽ làm mỗi sample phải build mesh riêng, mất tác dụng tăng tốc cache.
+
+**Kiểm tra lại bằng đo thật (không suy diễn):** `Material(E0,Emin,nu).__init__` chỉ tích phân Gauss 2×2 ra ma trận `KE` 8×8, đo `timeit` = **~97 µs/lần construct**, so với FE-solve ~50-100 ms/mẫu (đã benchmark trước đó) thì chiếm ~0,1-0,2% - không đáng kể. Phần thật sự đắt (`build_dof_mesh`/`build_pbc` dựng `edofMat`/`iK`/`jK`/`pbc`) chỉ phụ thuộc `(nelx,nely)`, KHÔNG phụ thuộc vật liệu.
+
+**Sửa:** tách `_MESH_TOPOLOGY_CACHE` (key `(nelx,nely)`, cache đúng phần đắt) khỏi việc dựng `Material` (rẻ, dựng mới mỗi lần gọi `_get_mesh`, cho phép nu/E0 khác nhau từng sample mà không tốn cache riêng). `RealPhysicsNu.forward` giờ nhận `E0`/`nu` là scalar (tương thích ngược, broadcast qua `_broadcast_per_sample()`) HOẶC mảng/list/tensor độ dài batch (mỗi sample 1 giá trị). `Emin`/`penal`/`rho0` vẫn dùng chung cho cả batch - không phải trục biến thiên của Giai đoạn A.
+
+`pipeline/phase5_cvae/losses.py::real_physics_loss` (call site production duy nhất) KHÔNG cần sửa gì - hàm này chỉ pass-through `fe_params.get("nu"/"E0", ...)` thẳng vào `RealPhysicsNu.apply`, nên tự động hỗ trợ per-sample ngay khi `fe_params["nu"]` được set thành mảng ở A6 (hiện `CVAEDataset` chưa có field `nu0` - nối field đó là phạm vi A6, chưa làm ở đây).
+
+7 test mới trong `tests/test_phase5_real_physics.py` (`TestPerSampleMaterial`): forward/backward khớp đúng khi gọi trực tiếp `solve_nu_with_grad` riêng lẻ với nu/E0 khác nhau từng sample, gradient không lẫn giữa các sample, multiprocessing (`n_workers>0`) khớp tuần tự với per-sample nu, và xác nhận `_MESH_TOPOLOGY_CACHE` không phình theo số giá trị nu (chỉ theo `(nelx,nely)`). **559/559 test toàn repo pass** (từ 552, +7 test mới).
+
+**Còn lại của Giai đoạn A:** A6 (nối ν0/E0 làm condition cho `CVAEDataset`/cVAE, tái dùng pattern `extended_condition`) giờ không còn bị chặn kỹ thuật bởi A5. Code: `pipeline/phase5_cvae/real_physics.py`, `tests/test_phase5_real_physics.py`. Trên nhánh `substrate-material`, uncommitted.
+
+---
+
+### 2026-08-18 (tiếp) - A6: nối ν0 làm condition optional cho cVAE - HOÀN THÀNH hạ tầng toàn bộ Nhóm 1 (Giai đoạn A)
+
+Bối cảnh: A5 (mục trên) đã gỡ điểm nghẽn kỹ thuật cuối cùng (per-sample ν0 trong `real_physics.py`); A6 là mảnh ghép cuối để CNN surrogate (A4) và differentiable-physics (A5) thực sự dạy được cVAE quan hệ ν0→hình học, thay vì chỉ có hạ tầng nằm im.
+
+**Thiết kế:** `CVAEDataset(include_nu0=...)` thêm 2 cột `[nu0, nu0_mask]` vào CUỐI condition vector, ĐỘC LẬP với `extended_condition` (không gộp chung 1 cờ như volfrac/void_size_frac) - lý do: `outputs/phase3/*.npz` (dataset production hiện tại) KHÔNG có field `nu` (sinh trước A4), gộp chung sẽ phá vỡ mọi lệnh `--extended-condition` hiện có. condition_dim giờ composable ∈ {2,4,6,8} tùy tổ hợp 2 cờ. `include_nu0=True` mà npz thiếu field `nu` → raise `ValueError` rõ ràng (validate ở biên), không âm thầm coi ν0=0.3.
+
+**Điểm quan trọng nhất (tận dụng đúng A5):** `losses.py::real_physics_loss` thêm tham số `nu0_col` - khi có, trích ν0 THẬT per-sample từ `condition[:, nu0_col]` (nếu mask=1) làm FE-solve dùng đúng vật liệu của từng mẫu, thay vì `fe_params['nu']=0.3` cố định cho cả batch như trước (sẽ tính SAI vật lý cho mọi mẫu có ν0≠0.3 nếu không sửa - đây chính là lý do A5 phải làm trước A6). mask=0 (dropout/không chỉ định) fallback về `fe_params['nu']` mặc định, không dùng giá trị cột đã bị zero (0.0 không có nghĩa vật lý "ν0=0", chỉ có nghĩa "không biết"). `apply_condition_dropout()` tổng quát hóa nhận `optional_pairs` thay vì hardcode `((2,3),(4,5))`, để nu0 (cột (2,3) hoặc (6,7) tùy `extended_condition`) cũng được dropout đúng kiểu classifier-free-guidance.
+
+**Bug phát hiện khi triple-check (không phải do A6 gây ra trực tiếp nhưng cùng root cause):** `evaluate.py`/`best_of_n_eval.py` suy `extended_condition` từ `condition_dim == 6` - biểu thức này BỎ SÓT `include_nu0` khi `condition_dim` ∈ {4,8}, sẽ tạo `CVAEDataset` sai `condition_dim`, crash shape-mismatch ngay khi decode/encode. Thêm `dataset.py::condition_flags_from_dim()` làm NGUỒN DUY NHẤT suy `(extended_condition, include_nu0)` từ `condition_dim`, dùng lại ở cả 2 file - tránh lệch nhau lần thứ 3 nếu condition_dim mở rộng tiếp (vd Nhóm 6 - CTE). Phát hiện thêm 1 bug CÙNG LOẠI ở `self_play.py::verify_round` (tồn tại từ trước, kể cả với `condition_dim=6`, không phải do A6) - đã tách task riêng (`spawn_task`) thay vì sửa lẫn vào commit A6, giữ diff tập trung.
+
+**CLI mới:** `train.py --include-nu0` (+ `--data-dir` để trỏ dataset có field `nu`, vd `outputs/phase3_a4/`, vì `outputs/phase3/` mặc định không có), `sample.py --nu0`, `best_of_n_eval.py --nu0 --data-dir`.
+
+**Test:** 33 test mới (`tests/test_phase5_dataset.py` `TestIncludeNu0`/mở rộng `TestBuildConditionVector`, `tests/test_phase5_losses.py` `TestRealPhysicsLossNu0Col`/`TestRealPhysicsPriorLossNu0Col`, `tests/test_phase5_train.py` `TestRunEpochIncludeNu0`/mở rộng `TestApplyConditionDropout`, `tests/test_phase5_sample.py` `TestNu0ConditionCli`, `tests/test_phase5_best_of_n_eval.py` `TestBestOfNConditionDimFlags`, `tests/test_phase5_evaluate.py` case condition_dim=8) - trong đó có test chứng minh trực tiếp `real_physics_loss` dùng ĐÚNG ν0 per-sample (so target = giá trị giải bằng `solve_nu_with_grad` với đúng ν0 từng mẫu, loss phải ~0; và test đối chứng KHÔNG truyền `nu0_col` cho loss KHÁC 0 rõ rệt trên cùng input, xác nhận test đầu không đúng do trùng hợp). **593/593 test toàn repo pass** (từ 559).
+
+**Kết luận Nhóm 1 (Giai đoạn A):** hạ tầng đã THÔNG SUỐT từ Phase 1 (`PARAM_SPACE['nu']`) → Phase 2/3 (`build_npz.py` field `nu`) → Phase 4 (`include_nu0` surrogate, A4) → Phase 5 (`real_physics.py` per-sample A5 + `CVAEDataset`/cVAE condition A6). Việc còn lại KHÔNG phải viết thêm code hạ tầng, mà là chạy thí nghiệm thật: train 1 checkpoint `--include-nu0` trên `outputs/phase3_a4/`, đo R²(FE) so với baseline - CHƯA làm ở đây (ngoài phạm vi 1 lần sửa hạ tầng, cần thời gian train + đánh giá riêng). E0 vẫn ngoài phạm vi toàn bộ Nhóm 1 (không có field ở bất kỳ tầng nào của pipeline - `FIXED_PARAMS['E0']=199.0` cố định từ Phase 1).
+
+Code: `pipeline/phase5_cvae/dataset.py`, `train.py`, `losses.py`, `sample.py`, `best_of_n_eval.py`, `evaluate.py`. Trên nhánh `substrate-material`, uncommitted.
+
+---
+
+### 2026-08-19 - Giai đoạn A hoàn thành: đo lợi ích thật của ν0 (chạy thí nghiệm cVAE `--include-nu0` đầu tiên) - CÓ lợi ích đo được, cùng 3 bug hạ tầng chặn thí nghiệm bị phát hiện + sửa
+
+Bối cảnh: A6 (mục trên) đã hoàn thành hạ tầng ν0 xuyên suốt Phase 1→5 nhưng chưa từng chạy thí nghiệm thật - PROJECT_PLAN.md ghi rõ "việc còn lại là chạy thí nghiệm thật: train 1 checkpoint `--include-nu0` trên `outputs/phase3_a4/`, đo R²(FE) so với baseline". Lần chạy đầu tiên này phát hiện hạ tầng A4-A6 **chưa từng được thực thi end-to-end** - lộ ra 3 bug chặn cứng, không phải do A6 gây ra trực tiếp mà do chưa ai thực sự chạy qua đường này.
+
+**Bug 1 - `losses.py::load_frozen_surrogate()` bỏ qua field `include_nu0`:** dựng `SurrogateCNN(include_nu0=False mặc định)` bất kể checkpoint thật (`surrogate_a4_nu0.pt`, từ A4) có `include_nu0=True` - crash `size mismatch` ngay ở `fc.0.weight` (268 vs 267, thiếu đúng 1 chiều ν0) khi vừa load. Sửa: đọc `ckpt.get("include_nu0", False)` giống hệt pattern `n_outputs` đã sửa 2026-08-15.
+
+**Bug 2 - `property_consistency_loss()`/`cvae_loss()` không truyền ν0 vào surrogate:** sau khi sửa Bug 1, surrogate load được nhưng `forward()` raise `ValueError` vì `include_nu0=True` bắt buộc nhận kwarg `nu0`, trong khi `property_consistency_loss()` gọi `surrogate(recon, seed_vec)` thiếu tham số này. Sửa: thêm `nu0_col` (cùng quy ước với `real_physics_loss.nu0_col` đã có từ A6) vào `property_consistency_loss()`/`cvae_loss()`, nối qua `run_epoch()` - mask=0/không truyền `nu0_col` fallback về 0.3 (khớp `OLD_NU_FALLBACK`).
+
+**Bug 3 - `best_of_n_eval.py` verify FE dưới vật liệu SAI:** `evaluate_density_field()` luôn dùng `FE_PARAMS['nu']=0.3` CỐ ĐỊNH cho MỌI condition khi đo R²(FE) chính thức, bất kể target ν0 thật khác 0.3 - hình học ĐÚNG cho ν0 mục tiêu vẫn bị chấm sai vì bị verify dưới vật liệu khác nó được thiết kế cho. Đây là bug nghiêm trọng nhất trong 3 bug vì nó làm SAI chính con số dùng để kết luận thí nghiệm, không chỉ crash. Sửa: thêm `nu0_col` override `fe_params['nu']` theo đúng ν0 từng condition trước khi gọi `evaluate_density_field()` (cả nhánh best-of-N và single-shot), cùng quy ước `nu0_col` với 2 bug trên.
+
+Cả 3 bug đều **cùng 1 root cause**: A4/A5/A6 mở rộng hạ tầng nhận ν0 nhưng chỉ nối tới đúng 1-2 call site đã kiểm chứng bằng test đơn vị (thường dùng surrogate/dummy KHÔNG có `include_nu0=True` nên không phơi ra bug) - chưa từng có 1 lần chạy end-to-end thật với checkpoint `include_nu0=True` thật để bắt các call site còn sót. 5 test hồi quy mới thêm (`tests/test_phase5_losses.py::TestLoadFrozenSurrogate`/`TestPropertyConsistencyLoss`, `tests/test_phase5_train.py::TestRunEpochIncludeNu0`, `tests/test_phase5_best_of_n_eval.py::TestBestOfNConditionDimFlags`) dùng surrogate/stub `include_nu0=True` THẬT để đóng đúng lỗ hổng coverage này. 599/599 test toàn repo pass.
+
+**Quy trình 2-stage** (base rồi fine-tune real-physics, bắt buộc theo kinh nghiệm 2026-07-25 "train from-scratch với real-physics thất bại"), trên `outputs/phase3_a4/` (68.286 mẫu train, ν0∈[0.20,0.40] thật cho ~16% mẫu, còn lại ν0=0.3 fallback từ pool cũ):
+
+| Checkpoint | Surrogate dùng | Base R²(FE, 8 cond) | Fine-tune R²(FE, 8 cond) |
+|---|---|---|---|
+| `cvae_a4_control_base.pt` → `cvae_a4_control_finetuned.pt` (condition_dim=2, KHÔNG ν0) | `surrogate_a4_control.pt` | 0,042 | 0,9596 |
+| `cvae_a4_nu0_base.pt` → `cvae_a4_nu0_finetuned.pt` (condition_dim=4, CÓ ν0) | `surrogate_a4_nu0.pt` | 0,600 | 0,9546 |
+
+**Đo chính thức (`best_of_n_eval.py --n-conditions 300 --n-samples 30`, oracle, cùng test set `outputs/phase3_a4/test.npz`, SAU khi sửa Bug 3 để verify đúng ν0 từng condition):**
+
+| Checkpoint | R²(FE, n=300) | hit_rate single-shot | hit_rate best-of-N | frac_manufacturable |
+|---|---|---|---|---|
+| `cvae_a4_control_finetuned.pt` (không ν0) | 0,9776 | 0,9967 | 1,000 | 0,312 |
+| `cvae_a4_nu0_finetuned.pt` (có ν0) | **0,9843** | 0,9967 | 1,000 | **0,365** |
+
+**Kết luận:** thêm ν0 làm condition cho cVAE cho lợi ích đo được, nhất quán (không chỉ trong nhiễu train-to-train) trên CẢ 2 trục: chính xác Poisson (ΔR²=+0,0067) VÀ khả năng chế tạo (Δfrac_manufacturable=+0,053) - khác với A4 (surrogate Phase 4), nơi thêm ν0 KHÔNG cho lợi ích đo được vì lúc đó dữ liệu ν0 biến thiên chỉ ~16%. Ở tầng cVAE, differentiable real-physics loss (fine-tune) dùng ĐÚNG ν0 per-sample (nhờ A5/A6) để tính gradient - đây có thể là lý do lợi ích xuất hiện rõ hơn ở cVAE so với surrogate thuần túy (property-consistency loss của surrogate không có cùng độ chính xác vật lý). Sàn cứng CLAUDE.md (R² không thấp hơn baseline) không áp dụng trực tiếp ở đây vì đây là 2 checkpoint MỚI trên dataset MỚI (không so được thẳng với `cvae_v2_finetuned.pt` train trên dataset ν0=0.3 cố định) - phép so sánh hợp lệ duy nhất là control-vs-nu0 CÙNG dataset, đã thực hiện đúng ở trên.
+
+**Giai đoạn A (Nhóm 1, PROJECT_PLAN.md) coi là HOÀN THÀNH đầy đủ về khoa học** (hạ tầng + lợi ích đo được), không chỉ hạ tầng như trước 2026-08-19. Checkpoint: `outputs/phase5/cvae_a4_nu0_finetuned.pt`. Chưa promote đè `cvae_v2_finetuned.pt` làm checkpoint production mặc định (cần quyết định riêng có "chốt" dataset A4 ν0-biến thiên làm production hay không - ngoài phạm vi 1 lần đo lợi ích). Báo cáo đầy đủ: `outputs/phase5/self_play/best_of_n_a4_{control,nu0}.json`. Code: `pipeline/phase5_cvae/losses.py`, `train.py`, `best_of_n_eval.py`, `tests/test_phase5_{losses,train,best_of_n_eval}.py`. Trên nhánh `substrate-material`, uncommitted.
+
+---
+
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

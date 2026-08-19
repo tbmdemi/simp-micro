@@ -41,7 +41,7 @@ import torch
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from dataset import CVAEDataset, build_condition_vector         # noqa: E402
+from dataset import CVAEDataset, build_condition_vector, condition_flags_from_dim  # noqa: E402
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
 from self_play import load_cvae                                # noqa: E402
 from losses import load_frozen_surrogate, SURROGATE_PATH        # noqa: E402
@@ -59,8 +59,10 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               min_feature_px: int = 2, periodicity_tol: float = 0.1,
               custom_condition: np.ndarray = None, save_best_png: str = None,
               apply_force_periodic: bool = True, volfrac: float = None,
-              void_size_frac: float = None, w_accuracy: float = 0.6,
-              w_manuf: float = 0.3, w_aesthetic: float = 0.1):
+              void_size_frac: float = None, nu0: float = None,
+              w_accuracy: float = 0.6,
+              w_manuf: float = 0.3, w_aesthetic: float = 0.1,
+              data_dir: str = None):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -88,10 +90,13 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     học đúng. Đặt False để tái hiện hành vi gốc (trước khi có cải tiến
     này) hoặc so sánh có/không.
 
-    volfrac/void_size_frac: target OPTIONAL bổ sung (xem dataset.py
-    extended_condition, train.py --extended-condition) - chỉ có tác dụng
-    với checkpoint condition_dim=6 VÀ custom_condition được dùng (giống
-    sample.py). Bỏ trống = không chỉ định (mask=0).
+    volfrac/void_size_frac/nu0: target OPTIONAL bổ sung (xem dataset.py
+    extended_condition/include_nu0, train.py --extended-condition/
+    --include-nu0, A6 docs/PROJECT_PLAN.md) - volfrac/void_size_frac chỉ có
+    tác dụng với checkpoint condition_dim ∈ {6,8}, nu0 chỉ có tác dụng với
+    condition_dim ∈ {4,8} - VÀ custom_condition được dùng (giống sample.py).
+    Bỏ trống = không chỉ định (mask=0). build_condition_vector() tự bỏ qua
+    tham số không khớp condition_dim (xem condition_flags_from_dim()).
 
     w_accuracy/w_manuf/w_aesthetic: trọng số chấm điểm tổng hợp để CHỌN
     ứng viên tốt nhất trong N mẫu (mặc định 0.6/0.3/0.1 - đúng thứ tự ưu
@@ -102,21 +107,46 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     min_feature_ok, periodic_ok) - graded, không chỉ nhị phân passes_all;
     aesthetic_score xem aesthetics.py (đối xứng + độ trơn viền). Đặt
     w_accuracy=1, w_manuf=w_aesthetic=0 để tái hiện hành vi argmin(|Δv12|)
-    gốc."""
+    gốc.
+
+    data_dir: thư mục chứa test.npz khi custom_condition KHÔNG được dùng
+    (lấy condition thật từ dataset). Mặc định None = PHASE3_DIR
+    (outputs/phase3/, KHÔNG có field 'nu'). Checkpoint condition_dim ∈
+    {4,8} (train với --include-nu0) CẦN trỏ data_dir tới dataset có field
+    này, vd outputs/phase3_a4/ (xem A4/A6, docs/PROJECT_PLAN.md)."""
     torch.manual_seed(seed)
     ckpt_meta = torch.load(cvae_ckpt_path, map_location="cpu", weights_only=False)
     condition_dim = ckpt_meta.get("condition_dim", 2)
     del ckpt_meta
+    # Suy đúng (extended_condition, include_nu0) từ condition_dim thay vì
+    # `condition_dim == 6` (bug tiềm ẩn từ A6: bỏ sót include_nu0 khi
+    # condition_dim ∈ {4,8}, sẽ tạo CVAEDataset condition_dim=2 lệch với
+    # model, crash lúc concat trong Encoder/Decoder - xem
+    # condition_flags_from_dim() trong dataset.py). Cần ở SCOPE NGOÀI cả 2
+    # nhánh custom_condition/dataset vì vòng lặp FE verify bên dưới cũng cần
+    # (xem nu0_col ngay dưới).
+    extended_condition, include_nu0 = condition_flags_from_dim(condition_dim)
     if custom_condition is not None:
         cond0, cond1 = float(custom_condition[0]), float(custom_condition[1])
         conditions = [build_condition_vector(cond0, cond1, condition_dim,
-                                              volfrac=volfrac, void_size_frac=void_size_frac)]
+                                              volfrac=volfrac, void_size_frac=void_size_frac,
+                                              nu0=nu0)]
     else:
-        test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"),
-                               extended_condition=(condition_dim == 6))
+        test_ds = CVAEDataset(os.path.join(data_dir or PHASE3_DIR, "test.npz"),
+                               extended_condition=extended_condition,
+                               include_nu0=include_nu0)
         rng = np.random.default_rng(seed)
         idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
         conditions = [test_ds[i][1].numpy() for i in idxs]
+
+    # Bug đã sửa 2026-08-19 (Giai đoạn A, chạy thí nghiệm A6 thật lần đầu):
+    # evaluate_density_field() dùng FE_PARAMS['nu']=0.3 CỐ ĐỊNH cho MỌI
+    # condition, kể cả khi checkpoint include_nu0=True và target ν0 thật
+    # khác 0.3 - làm R2(FE) sai có hệ thống cho mọi mẫu ν0≠0.3 (hình học
+    # ĐÚNG cho ν0 mục tiêu vẫn bị chấm sai vì verify dưới vật liệu khác).
+    # nu0_col trỏ đúng cột [nu0, nu0_mask] trong condition, cùng quy ước với
+    # losses.py::real_physics_loss/property_consistency_loss (nu0_col).
+    nu0_col = (6 if extended_condition else 2) if include_nu0 else None
 
     model = load_cvae(cvae_ckpt_path, device)
     surrogate = None
@@ -139,6 +169,13 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         is_auxetic_target = cond[0] < 0
         if is_auxetic_target:
             n_auxetic_targets += 1
+
+        # mask=0 (dropout/không chỉ định) fallback về FE_PARAMS['nu'] mặc
+        # định, khớp đúng ngữ nghĩa "không chỉ định -> vật liệu mặc định"
+        # dùng xuyên suốt pipeline (real_physics_loss, property_consistency_loss).
+        fe_params = FE_PARAMS
+        if nu0_col is not None and cond[nu0_col + 1] > 0.5:
+            fe_params = {**FE_PARAMS, "nu": float(cond[nu0_col])}
 
         imgs = []
         for i in range(n_samples):
@@ -190,7 +227,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             img_bin = (imgs[i] > 0.5).astype(np.float32)
             img_fe = resize_to_fe_grid(img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"])
             try:
-                v12_fe, v21_fe, _ = evaluate_density_field(img_fe, FE_PARAMS)
+                v12_fe, v21_fe, _ = evaluate_density_field(img_fe, fe_params)
             except Exception:
                 continue
             v12_reals.append(v12_fe)
@@ -235,7 +272,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         img_bin0 = (imgs[0] > 0.5).astype(np.float32)
         img_fe0 = resize_to_fe_grid(img_bin0, FE_PARAMS["nely"], FE_PARAMS["nelx"])
         try:
-            v12_first, _, _ = evaluate_density_field(img_fe0, FE_PARAMS)
+            v12_first, _, _ = evaluate_density_field(img_fe0, fe_params)
         except Exception:
             v12_first = float("nan")
 
@@ -350,6 +387,16 @@ def main():
     parser.add_argument("--void-size-frac", type=float, default=None,
                          help="Target kích thước lỗ rỗng - OPTIONAL, cùng điều kiện với "
                               "--volfrac ở trên.")
+    parser.add_argument("--nu0", type=float, default=None,
+                         help="Target ν0 (hệ số Poisson vật liệu nền) - OPTIONAL, chỉ có "
+                              "tác dụng nếu checkpoint có condition_dim ∈ {4,8} (train với "
+                              "--include-nu0) VÀ --v12/--v21 được dùng. Bỏ trống = không "
+                              "chỉ định (mask=0). Xem A6, docs/PROJECT_PLAN.md.")
+    parser.add_argument("--data-dir", type=str, default=None,
+                         help="Thư mục chứa test.npz khi KHÔNG dùng --v12/--v21 (lấy "
+                              "condition thật từ dataset). Mặc định outputs/phase3/ (KHÔNG "
+                              "có field 'nu') - checkpoint --include-nu0 cần trỏ tới dataset "
+                              "có field này, vd outputs/phase3_a4/.")
     parser.add_argument("--w-accuracy", type=float, default=0.6,
                          help="Trọng số accuracy trong composite scoring chọn best-of-N "
                               "(xem docstring best_of_n()). Mặc định 0.6 (ưu tiên cao).")
@@ -379,8 +426,9 @@ def main():
         out_path = args.out or os.path.join(PHASE5_DIR, "self_play", "best_of_n_result.json")
     args.out = out_path
 
-    if (args.volfrac is not None or args.void_size_frac is not None) and args.v12 is None:
-        parser.error("--volfrac/--void-size-frac chỉ có tác dụng cùng --v12/--v21 "
+    if (args.volfrac is not None or args.void_size_frac is not None
+            or args.nu0 is not None) and args.v12 is None:
+        parser.error("--volfrac/--void-size-frac/--nu0 chỉ có tác dụng cùng --v12/--v21 "
                      "(custom_condition) - xem docstring best_of_n().")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -393,6 +441,7 @@ def main():
                         save_best_png=save_best_png,
                         apply_force_periodic=not args.no_force_periodic,
                         volfrac=args.volfrac, void_size_frac=args.void_size_frac,
+                        nu0=args.nu0, data_dir=args.data_dir,
                         w_accuracy=args.w_accuracy, w_manuf=args.w_manuf,
                         w_aesthetic=args.w_aesthetic)
 

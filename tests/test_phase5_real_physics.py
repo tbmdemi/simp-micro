@@ -13,7 +13,8 @@ import pytest
 import torch
 
 from pipeline.phase5_cvae.real_physics import (
-    solve_nu_with_grad, RealPhysicsNu, _get_mesh,
+    solve_nu_with_grad, RealPhysicsNu, _get_mesh, _get_mesh_topology,
+    _MESH_TOPOLOGY_CACHE,
 )
 
 
@@ -244,3 +245,136 @@ class TestRealPhysicsNuAutogradFunction:
 
         from pipeline.phase5_cvae.real_physics import shutdown_pool
         shutdown_pool()
+
+
+class TestPerSampleMaterial:
+    """A5 (docs/PROJECT_PLAN.md Nhóm 1): E0/nu giờ chấp nhận mảng per-sample
+    thay vì chỉ scalar áp cho cả batch - kiểm tra giá trị/gradient khớp đúng
+    với việc gọi solve_nu_with_grad() riêng lẻ từng sample với nu/E0 khác
+    nhau, và mesh TOPOLOGY vẫn dùng chung (không cache lại theo vật liệu)."""
+
+    def test_forward_matches_per_sample_direct_call_different_nu(self):
+        nely, nelx = 6, 6
+        x0 = _make_density(nely, nelx, 30)
+        x1 = _make_density(nely, nelx, 31)
+        nu0, nu1 = 0.2, 0.4
+        v12_0, v21_0, _, _ = solve_nu_with_grad(x0, penal=3.0, E0=199.0, Emin=1e-9, nu=nu0, rho0=1.0)
+        v12_1, v21_1, _, _ = solve_nu_with_grad(x1, penal=3.0, E0=199.0, Emin=1e-9, nu=nu1, rho0=1.0)
+
+        batch = torch.tensor(np.stack([x0, x1]), dtype=torch.float32)
+        out = RealPhysicsNu.apply(batch, 3.0, 199.0, 1e-9, [nu0, nu1], 1.0)
+        assert out[0, 0].item() == pytest.approx(v12_0, abs=1e-4)
+        assert out[1, 0].item() == pytest.approx(v12_1, abs=1e-4)
+        assert out[0, 1].item() == pytest.approx(v21_0, abs=1e-4)
+        assert out[1, 1].item() == pytest.approx(v21_1, abs=1e-4)
+
+    def test_forward_matches_per_sample_direct_call_different_e0(self):
+        nely, nelx = 6, 6
+        x0 = _make_density(nely, nelx, 32)
+        x1 = _make_density(nely, nelx, 33)
+        E0_0, E0_1 = 150.0, 250.0
+        v12_0, v21_0, _, _ = solve_nu_with_grad(x0, penal=3.0, E0=E0_0, Emin=1e-9, nu=0.3, rho0=1.0)
+        v12_1, v21_1, _, _ = solve_nu_with_grad(x1, penal=3.0, E0=E0_1, Emin=1e-9, nu=0.3, rho0=1.0)
+
+        batch = torch.tensor(np.stack([x0, x1]), dtype=torch.float32)
+        out = RealPhysicsNu.apply(batch, 3.0, np.array([E0_0, E0_1]), 1e-9, 0.3, 1.0)
+        assert out[0, 0].item() == pytest.approx(v12_0, abs=1e-4)
+        assert out[1, 0].item() == pytest.approx(v12_1, abs=1e-4)
+        assert out[0, 1].item() == pytest.approx(v21_0, abs=1e-4)
+        assert out[1, 1].item() == pytest.approx(v21_1, abs=1e-4)
+
+    def test_backward_gradient_correct_per_sample_nu(self):
+        """Mỗi sample phải nhận đúng gradient của CHÍNH nu của nó, không bị
+        lẫn/broadcast nhầm từ sample khác."""
+        nely, nelx = 6, 6
+        x0 = _make_density(nely, nelx, 34)
+        x1 = _make_density(nely, nelx, 35)
+        nu0, nu1 = 0.15, 0.35
+        _, _, d_v12_0, _ = solve_nu_with_grad(x0, penal=3.0, E0=199.0, Emin=1e-9, nu=nu0, rho0=1.0)
+        _, _, d_v12_1, _ = solve_nu_with_grad(x1, penal=3.0, E0=199.0, Emin=1e-9, nu=nu1, rho0=1.0)
+
+        batch = torch.tensor(np.stack([x0, x1]), dtype=torch.float32, requires_grad=True)
+        out = RealPhysicsNu.apply(batch, 3.0, 199.0, 1e-9, torch.tensor([nu0, nu1]), 1.0)
+        loss = out[:, 0].sum()
+        loss.backward()
+
+        np.testing.assert_allclose(batch.grad[0].numpy(), d_v12_0, atol=1e-4, rtol=1e-3)
+        np.testing.assert_allclose(batch.grad[1].numpy(), d_v12_1, atol=1e-4, rtol=1e-3)
+
+    def test_scalar_nu_still_broadcasts_to_whole_batch(self):
+        """Regression: nu scalar (đường cũ, tương thích ngược) vẫn phải áp
+        dụng đồng nhất cho mọi sample trong batch."""
+        nely, nelx = 6, 6
+        x0 = _make_density(nely, nelx, 36)
+        x1 = _make_density(nely, nelx, 37)
+        v12_0, v21_0, _, _ = solve_nu_with_grad(x0, **FE_KW)
+        v12_1, v21_1, _, _ = solve_nu_with_grad(x1, **FE_KW)
+
+        batch = torch.tensor(np.stack([x0, x1]), dtype=torch.float32)
+        out = RealPhysicsNu.apply(batch, FE_KW["penal"], FE_KW["E0"], FE_KW["Emin"], FE_KW["nu"], FE_KW["rho0"])
+        assert out[0, 0].item() == pytest.approx(v12_0, abs=1e-4)
+        assert out[1, 0].item() == pytest.approx(v12_1, abs=1e-4)
+        assert out[0, 1].item() == pytest.approx(v21_0, abs=1e-4)
+        assert out[1, 1].item() == pytest.approx(v21_1, abs=1e-4)
+
+    @pytest.mark.filterwarnings(
+        "ignore:This process \\(pid=.*\\) is multi-threaded, use of fork\\(\\) "
+        "may lead to deadlocks in the child.:DeprecationWarning"
+    )
+    def test_multiprocessing_matches_serial_with_per_sample_nu(self):
+        """n_workers>0 phải cho đúng kết quả như tuần tự KỂ CẢ khi mỗi
+        sample có nu riêng (không chỉ trường hợp scalar đã test ở trên)."""
+        nely, nelx = 6, 6
+        x0 = _make_density(nely, nelx, 38)
+        x1 = _make_density(nely, nelx, 39)
+        batch = torch.tensor(np.stack([x0, x1]), dtype=torch.float32, requires_grad=True)
+        nu_per_sample = [0.18, 0.42]
+
+        out_serial = RealPhysicsNu.apply(batch, 3.0, 199.0, 1e-9, nu_per_sample, 1.0, 0)
+        loss_serial = out_serial[:, 0].sum()
+        loss_serial.backward()
+        grad_serial = batch.grad.clone()
+        batch.grad = None
+
+        out_parallel = RealPhysicsNu.apply(batch, 3.0, 199.0, 1e-9, nu_per_sample, 1.0, 2)
+        loss_parallel = out_parallel[:, 0].sum()
+        loss_parallel.backward()
+        grad_parallel = batch.grad.clone()
+
+        np.testing.assert_allclose(out_serial.detach().numpy(), out_parallel.detach().numpy(), atol=1e-9)
+        np.testing.assert_allclose(grad_serial.numpy(), grad_parallel.numpy(), atol=1e-9)
+
+        from pipeline.phase5_cvae.real_physics import shutdown_pool
+        shutdown_pool()
+
+    def test_mesh_topology_cache_shared_across_different_nu(self):
+        """_get_mesh với 2 giá trị nu khác nhau trên cùng (nelx,nely) không
+        được tạo 2 entry topology riêng - phần đắt (edofMat/iK/jK/pbc) phải
+        dùng chung, chỉ Material là dựng riêng (xem comment real_physics.py)."""
+        nelx, nely = 9, 9
+        _MESH_TOPOLOGY_CACHE.pop((nelx, nely), None)
+
+        mat_a, edofMat_a, iK_a, jK_a, pbc_a = _get_mesh(nelx, nely, 199.0, 1e-9, 0.2)
+        n_entries_after_first = len(_MESH_TOPOLOGY_CACHE)
+        mat_b, edofMat_b, iK_b, jK_b, pbc_b = _get_mesh(nelx, nely, 199.0, 1e-9, 0.4)
+        n_entries_after_second = len(_MESH_TOPOLOGY_CACHE)
+
+        assert n_entries_after_second == n_entries_after_first
+        assert edofMat_a is edofMat_b
+        assert iK_a is iK_b
+        assert jK_a is jK_b
+        assert pbc_a is pbc_b
+        # Material phải khác nhau thật (nu khác nhau -> KE khác nhau).
+        assert mat_a.nu == pytest.approx(0.2)
+        assert mat_b.nu == pytest.approx(0.4)
+        assert not np.allclose(mat_a.KE, mat_b.KE)
+
+    def test_get_mesh_topology_direct(self):
+        """_get_mesh_topology() (hàm mới) trả đúng 4 thành phần, cache theo
+        (nelx, nely) độc lập với vật liệu."""
+        nelx, nely = 7, 7
+        _MESH_TOPOLOGY_CACHE.pop((nelx, nely), None)
+        edofMat, iK, jK, pbc = _get_mesh_topology(nelx, nely)
+        assert edofMat.shape[0] == nelx * nely
+        edofMat2, iK2, jK2, pbc2 = _get_mesh_topology(nelx, nely)
+        assert edofMat2 is edofMat
