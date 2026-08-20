@@ -6,6 +6,8 @@
 
 Quét không gian tham số (`volfrac`, `penal`, `rmin`, `move`, `void_size_frac`, `rotation_deg`) bằng Latin Hypercube Sampling.
 
+**2026-08-18 - thêm `nu` (ν0, hệ số Poisson vật liệu nền) vào `PARAM_SPACE`** (`pipeline/params.py`, dải `(0.2, 0.4)` - Giai đoạn A, xem mục 4-5 bên dưới): trước đây vật liệu nền cố định (`nu=0.3` mọi mẫu), giờ là 1 trục thiết kế bổ sung được quét cùng các tham số DOE khác. Dải hẹp có chủ đích - `nu=0.5` làm `(1-nu²)=0` trong ma trận độ cứng vật liệu (`Material._compute_element_stiffness`), `nu` gần `-1` cũng phân kỳ - không mở sát biên vật lý `(-1, 0.5)` khi chưa xác nhận hội tụ FE ổn định (đã kiểm chứng bằng pilot 150 mẫu, xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-18).
+
 ```bash
 python -m pipeline.phase1_screening.screening_parallel --objective auxetic --seed hexagonal
 python -m pipeline.phase1_screening.screening_parallel --all   # quét toàn bộ, tất cả seed
@@ -53,6 +55,8 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 - **Chia train/val/test 70/15/15, phân tầng theo seed**; **tăng cường đối xứng** (chỉ train): xoay 90°/270° hoán đổi `ν₁₂↔ν₂₁`, xoay 180°/lật giữ nguyên. Train: 5.520 → 33.120 mẫu (×6) *(số liệu lịch sử - xem cập nhật ngay dưới)*.
 - Target xuất ra: `v12`, `v21`, `volfrac_achieved`. `f1, f2` (roadmap gốc) - xem cập nhật 2026-08-05 ngay dưới.
 
+**2026-08-18 - dataset Giai đoạn A (ν0 vật liệu nền biến thiên):** `analysis/scripts/generate_production_batch.py --n-raw 3000 --vary-nu` sinh 3.000 mẫu quét đầy đủ `nu∈(0.2,0.4)` (không thu hẹp theo seed - pilot xác nhận không có "ranh giới hội tụ sắc" như 1 comment cũ tưởng, xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-18), 2.635 mẫu sạch (87,8%). `analysis/scripts/assemble_phase3_a4.py` gộp với pool `dataset_64.npz` cũ (13.624 mẫu, `nu=0,3` fallback) → `outputs/phase3_a4/` = 16.259 mẫu sạch, train 68.286 (sau augment ×6) / val 2.439 / test 2.439 - **chưa promote thành `outputs/phase3/` production**, dùng `--data-dir outputs/phase3_a4` để trỏ tới. `pipeline/phase3_dataset/build_npz.py` thêm field `nu` (fallback `0.3` cho mẫu cũ không có).
+
 **2026-08-05 - Backfill f1=E₁₁/E₀, f2=E₂₂/E₀ (Pha B), Phase 4 surrogate 5-chiều:** `analysis/scripts/backfill_f1_f2_npz.py` chạy FE trực tiếp trên ảnh đã lưu trong `{train,val,test}.npz` (không join qua manifest.csv - lý do và caveat nhiễu resize xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-05). Surrogate mở rộng (`train.py --include-f1f2`) đạt R²(test): f1=0,933, f2=0,961 - cùng bậc v12/v21. Checkpoint: `outputs/phase4/surrogate_f1f2.pt`. **Chưa làm:** nối f1/f2 làm condition cho cVAE Phase 5.
 
 **2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
@@ -84,6 +88,8 @@ MAE theo seed dao động 0,021–0,048, không seed nào kém nghiêm trọng. 
 > **Bảng trên đo trên `surrogate_best.pt` (data cũ, lẫn 33,6% nhãn lỗi).** Sau khi dọn dữ liệu (mục 3), `surrogate_clean.pt` đo trên cùng 1 test set sạch (789 mẫu): **v12 R²=0,922** [CI 0,907,0,935], **v21 R²=0,889** [CI 0,860,0,913] - so với `surrogate_best.pt` đo trên CHÍNH test set sạch này chỉ 0,484/0,384. Bằng chứng thực nghiệm rằng 33,6% mẫu nhãn lỗi là nguyên nhân chính khiến R² cũ thấp, không phải giới hạn kiến trúc (chi tiết + ablation xác nhận: [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md)). `surrogate_best.pt`/`surrogate_for_phase5.pt` **không bị ghi đè** - dùng `--surrogate-path outputs/phase4/surrogate_clean.pt` cho công việc mới.
 
 > **2026-07-25 - retrain trên dataset v2** (57.216 mẫu train): `surrogate_v2.pt` đo trên test set v2 (2.044 mẫu) - **v12 R²=0,974**, **v21 R²=0,964**, **volfrac R²=0,983** - cải thiện so với `surrogate_clean.pt` (0,922/0,889), chủ yếu nhờ quy mô dữ liệu lớn hơn. Export cho Phase 5 tại `outputs/phase4/surrogate_for_phase5_v2.pt`. Không ghi đè `surrogate_best.pt`/`surrogate_for_phase5.pt` (quy ước cũ) - dùng `--ckpt`/`--surrogate-path` trỏ tới bản `_v2` cho công việc mới.
+
+> **2026-08-18 - `--include-nu0` (Giai đoạn A, A4):** `SurrogateCNN(include_nu0=True)` nhận thêm ν0 (nối vào `fc_in` cùng seed one-hot sau global-average-pool), `--data-dir outputs/phase3_a4` để train trên dataset có field `nu`. So 2 model CÙNG dataset A4 (68.286 mẫu) để tách bạch hiệu ứng ν0 khỏi hiệu ứng cỡ dữ liệu: `surrogate_a4_control.pt` (không ν0, v12 R²=0,9816/v21 R²=0,9734) so với `surrogate_a4_nu0.pt` (có ν0, v12 R²=0,9816/v21 R²=0,9731) - **khác biệt không đáng kể** (trong nhiễu train-to-train), vì mẫu ν0 biến thiên thật chỉ chiếm ~16% dataset (2.635/16.259). Sàn cứng CLAUDE.md vẫn đạt (cả 2 vượt rõ baseline `surrogate_v2.pt` 0,974/0,964, chủ yếu nhờ dataset lớn hơn) - không phải đánh đổi accuracy/performance, mục tiêu A4 là hạ tầng (surrogate sẵn sàng nhận ν0) chứ chưa phải đo lợi ích ở tầng này. Khuyến nghị `surrogate_a4_nu0.pt` cho công việc nối tiếp Phase 5 (mục 5.2). Xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-18 cho số liệu đầy đủ - lợi ích thật của ν0 chỉ lộ rõ ở tầng cVAE (mục 5.2), không phải ở surrogate.
 
 ## 5. Conditional VAE (Phase 5) - ✅✅ đã sửa tận gốc bằng differentiable-physics (2026-07-24)
 
@@ -162,3 +168,35 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_e
 ```
 
 - **[XONG 2026-08-05, chỉ ở mức Phase 4]** `f1=E₁₁/E₀, f2=E₂₂/E₀` (Pha B) đã backfill + surrogate 5-chiều đạt R²≈0,93-0,96 - xem mục 3 ở trên. **Chưa làm:** nối f1/f2 làm condition cho cVAE Phase 5 (mới chỉ Pha A - volfrac/void_size_frac - có ở Phase 5).
+
+### 5.2. Vật liệu nền tùy chọn (ν0) - Giai đoạn A (2026-08-18 → 2026-08-19)
+
+> Đã merge vào nhánh `substrate-material` (chưa merge `main` tại thời điểm viết mục này). `--include-nu0` **độc lập** với `--extended-condition` (mục 5.1) - có thể bật riêng hoặc cùng lúc, `condition_dim` composable ∈ `{2,4,6,8}`.
+
+Roadmap Giai đoạn A (`docs/PROJECT_PLAN.md` Nhóm 1) mở rộng bài toán từ "1 vật liệu nền cố định (`nu=0,3`)" sang "vật liệu nền là 1 trục thiết kế" - cho phép cVAE sinh hình học tối ưu cho **đúng** vật liệu nền mục tiêu thay vì luôn giả định thép/nhựa mặc định.
+
+- **`CVAEDataset(include_nu0=...)`** thêm 2 cột `[nu0, nu0_mask]` vào cuối condition vector (cùng cơ chế presence-mask + condition-dropout kiểu classifier-free-guidance đã dùng cho volfrac/void_size_frac ở mục 5.1) - đòi hỏi dataset có field `nu` (`--data-dir outputs/phase3_a4`, `outputs/phase3/` mặc định KHÔNG có field này vì sinh trước Giai đoạn A).
+- **Điều kiện bắt buộc trước đó (`real_physics.py`, A5):** differentiable-physics fine-tune (mục 5, bước "Fine-tune... differentiable-physics") trước đây chỉ nhận `nu`/`E0` là scalar dùng chung cho cả batch. A5 tách cache mesh topology (`(nelx,nely)`, phần đắt) khỏi việc dựng `Material(E0,Emin,nu)` (rẻ, ~97µs/lần, ~0,1-0,2% chi phí FE-solve) - cho phép mỗi mẫu trong batch có `nu`/`E0` riêng mà không mất tác dụng tăng tốc cache. `losses.py::real_physics_loss` nhận `nu0_col` để trích đúng ν0 per-sample từ condition (mask=1) thay vì `fe_params['nu']=0,3` cố định cho mọi mẫu.
+
+```bash
+# Train với ν0 optional (fine-tune từ checkpoint surrogate A4):
+python3 pipeline/phase5_cvae/train.py --include-nu0 --data-dir outputs/phase3_a4 \
+  --surrogate-path outputs/phase4/surrogate_a4_nu0.pt --resume-from outputs/phase5/cvae_a4_nu0_base.pt \
+  --output-name cvae_a4_nu0_finetuned.pt --lambda-real-physics 20.0
+
+# Suy diễn - ν0 optional, bỏ trống = không ràng buộc vật liệu nền:
+python3 pipeline/phase5_cvae/sample.py --ckpt outputs/phase5/cvae_a4_nu0_finetuned.pt --v12 -0.5 --v21 -0.5 --nu0 0.35
+python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_a4_nu0_finetuned.pt \
+  --v12 -0.5 --v21 -0.5 --nu0 0.35 --data-dir outputs/phase3_a4 --n-samples 30
+```
+
+**2026-08-19 - A7, đo lợi ích thật (2-stage: base rồi fine-tune real-physics trên `outputs/phase3_a4/`, cùng quy trình bắt buộc từ 2026-07-25):**
+
+| Checkpoint | R²(FE, n=300) | hit rate single-shot | frac manufacturable |
+|---|---|---|---|
+| `cvae_a4_control_finetuned.pt` (không ν0, `condition_dim=2`) | 0,9776 | 0,9967 | 0,312 |
+| `cvae_a4_nu0_finetuned.pt` (có ν0, `condition_dim=4`) | **0,9843** | 0,9967 | **0,365** |
+
+Khác A4 (surrogate Phase 4, mục 4) - nơi thêm ν0 KHÔNG cho lợi ích R² đo được - ở tầng cVAE lợi ích **nhất quán trên cả 2 trục**: chính xác Poisson (ΔR²=+0,0067) và khả năng chế tạo (Δfrac_manufacturable=+0,053), nhờ differentiable real-physics loss dùng đúng ν0 per-sample khi tính gradient fine-tune (property-consistency loss của surrogate không có cùng độ chính xác vật lý). **Giai đoạn A coi là hoàn thành đầy đủ về khoa học** từ mốc này - hạ tầng thông suốt Phase 1→5 + lợi ích đo được, không chỉ hạ tầng nằm im. Checkpoint kết quả: `outputs/phase5/cvae_a4_nu0_finetuned.pt` (**chưa promote** thành checkpoint production mặc định thay `cvae_v2_finetuned.pt` - cần quyết định riêng có "chốt" dataset A4 làm production hay không).
+
+Lần chạy A7 cũng phát hiện + sửa 3 bug hạ tầng chặn cứng (cùng root cause: A4-A6 mới nối tới 1-2 call site đã có unit test, chưa từng chạy end-to-end với checkpoint `include_nu0=True` thật) - nghiêm trọng nhất: `best_of_n_eval.py` verify FE dưới `FE_PARAMS['nu']=0,3` cố định cho MỌI condition kể cả khi target ν0 thật khác 0,3, làm sai chính con số dùng để kết luận thí nghiệm. Chi tiết đầy đủ 3 bug: [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-19.

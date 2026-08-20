@@ -113,6 +113,23 @@ Ngay cả với checkpoint differentiable-physics tốt nhất, `best_of_n_eval.
 - **Phase 2 (adaptive DOE)**: không dùng mạng nơ-ron, dùng **ước lượng mật độ hạt nhân** (KDE) để phát hiện vùng thưa dữ liệu trong không gian thuộc tính - một kỹ thuật thống kê phi tham số, không phải deep learning, nhưng cùng họ "học từ dữ liệu" để quyết định lô tiếp theo nên lấy mẫu ở đâu (active learning theo nghĩa cổ điển, khác active learning ở Phase 7).
 - **Phase 7 (active-learning loop)**: dùng đúng checkpoint cVAE hiện có để sinh mẫu mới, verify bằng FE thật, rồi fine-tune tiếp - về mặt lý thuyết đây là active learning cho mô hình sinh (không phải mô hình phân loại/hồi quy kinh điển). Kết quả thực nghiệm: **không cải thiện** thêm vì checkpoint đã gần mức trần hiệu năng khả dĩ với kiến trúc/dữ liệu hiện tại (xem [LIMITATIONS.md](LIMITATIONS.md)) - một kết quả âm tính có giá trị: cho thấy nút thắt hiện tại không phải "thiếu dữ liệu thêm ở vùng đã biết" mà có thể là giới hạn kiến trúc/mục tiêu proxy.
 
+### 6.6. Vật liệu nền (ν0) như một trục thiết kế - cùng 1 lợi ích vật lý, hiện rõ khác nhau ở từng tầng ML (Giai đoạn A, 2026-08-18 → 2026-08-19)
+
+Xuyên suốt mục 1-5, `nu` (ν0, hệ số Poisson của vật liệu **nền** đẳng hướng - khác `ν₁₂/ν₂₁` là kết quả homogenized của cả unit cell) luôn được giả định **cố định** (`0,3`, kiểu thép/nhựa điển hình). Giai đoạn A đặt lại câu hỏi: nếu vật liệu nền không cố định - unit cell auxetic cần thiết kế riêng cho từng vật liệu nền mục tiêu (composite, polymer khác, v.v.) - kiến trúc pipeline hiện tại có mở rộng được không, và lợi ích có đo được không?
+
+**Hạ tầng cần đúng 1 thay đổi khái niệm, không phải kiến trúc mới:** `Material.__init__(E0, Emin, nu)` (`simp/materials/isotropic.py`) đã validate `nu` ở biên từ trước (khoảng hợp lệ `(-1, 0.5)`, đúng nguyên tắc "validate ở biên" của project) - phần thiếu chỉ là để `nu` **biến thiên per-sample** thay vì 1 hằng số toàn cục, xuyên suốt cả pipeline forward (Phase 1-3) lẫn training loop differentiable-physics (Phase 5). Điểm kỹ thuật đáng chú ý nhất: cache mesh trong `real_physics.py` trước đây gộp chung `(nelx, nely, E0, Emin, nu)` làm 1 key - tách đúng phần đắt (`edofMat`/PBC, chỉ phụ thuộc lưới) khỏi phần rẻ (dựng `Material`, ~97µs, ~0,1-0,2% chi phí 1 lần FE-solve) hóa ra không mất tác dụng tăng tốc như lo ngại ban đầu trong roadmap - một ví dụ nhỏ cho việc **đo thật** (`timeit`) thay vì suy diễn trước khi quyết định kiến trúc.
+
+**Kết quả thực nghiệm phân kỳ giữa 2 tầng ML - điểm thú vị nhất của Giai đoạn A:**
+
+| Tầng | Thêm ν0 làm input/condition | Lợi ích đo được? |
+|---|---|---|
+| Phase 4 - CNN Surrogate (`SurrogateCNN(include_nu0=True)`) | ν0 nối vào `fc_in` sau global-average-pool, cùng cấp seed one-hot | **Không** - Δv12 R²≈0,0000, Δv21 R²≈-0,0003 (trong nhiễu train-to-train), cùng dataset |
+| Phase 5 - cVAE (`CVAEDataset(include_nu0=True)`, real-physics fine-tune) | ν0 thành 2 cột `[nu0, nu0_mask]` trong condition, dùng ĐÚNG per-sample khi tính `real_physics_loss` | **Có, nhất quán** - ΔR²(FE)=+0,0067 (0,9776→0,9843), Δfrac_manufacturable=+0,053 (0,312→0,365) |
+
+Đây **không phải** một kết quả mâu thuẫn - nó củng cố đúng luận điểm ở mục 6.3 (surrogate exploitation): `property_consistency_loss` của surrogate là 1 xấp xỉ không hoàn hảo, còn `real_physics_loss` (differentiable-physics, mục 6.3) giải FE thật với đúng vật liệu per-sample mỗi bước gradient. Khi tín hiệu học "ν0 ảnh hưởng thế nào tới hình học tối ưu" đến từ vật lý thật (per-sample, chính xác), nó truyền đạt được cho decoder; khi đến từ 1 mạng nơ-ron xấp xỉ (surrogate, vốn cũng chỉ mới thấy ~16% mẫu có ν0 biến thiên trong dataset A4), tín hiệu quá yếu để đo được ở R². Nói cách khác: **thêm 1 trục vật lý mới không tự động cải thiện mọi tầng của pipeline ML - lợi ích chỉ chắc chắn xuất hiện ở tầng gần vật lý xác định nhất.**
+
+Quy trình phát hiện lại nhấn mạnh 1 bài học đã có ở mục 6.3/6.4: hạ tầng nối `nu0_col` qua nhiều call site (`load_frozen_surrogate`, `property_consistency_loss`, `evaluate_density_field` trong `best_of_n_eval.py`) chỉ thực sự đúng khi có 1 lần chạy **end-to-end** với checkpoint `include_nu0=True` thật - unit test dùng surrogate/stub mặc định (`include_nu0=False`) không phơi ra được 3 bug chặn cứng đã tìm thấy ở A7 (chi tiết: [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-19), trong đó nghiêm trọng nhất là verify FE dùng sai vật liệu (`nu=0,3` cố định thay vì đúng ν0 mục tiêu) - lỗi loại này không crash, chỉ âm thầm làm sai con số kết luận, nguy hiểm hơn lỗi crash rõ ràng.
+
 ## 7. Tổng kết: logic điều phối Vật lý ↔ ML xuyên suốt dự án
 
 | Câu hỏi | Vật lý/Toán trả lời | ML/DL trả lời |

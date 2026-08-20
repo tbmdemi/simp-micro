@@ -58,6 +58,12 @@ simp_result_*/
 outputs/phase3/*.npz
 outputs/phase3/manifest.csv
 
+# multi_batch: giữ batch_N_*.{csv,json}/decision_*.json/reports/ (tham chiếu
+# trong docs), bỏ tracking riêng ảnh/csv per-sample (iteration_*.png,
+# iteration_data.csv, metadata.json) - 41k+ file, ~292M, không nơi nào cite
+# riêng lẻ, đã được tổng hợp vào summary/report ở cấp batch (audit 2026-08-20)
+outputs/multi_batch/*/*/sample_*/
+
 # phase3_v2: dataset regeneration thử nghiệm (xem analysis/scripts/generate_production_batch.py)
 outputs/phase3_v2/*.npz
 outputs/phase3_v2/manifest.csv
@@ -156,5 +162,9 @@ environment.yaml
 
 *.pt
 
-# --- pytest's output---
-outputs/simp_results_circle/
+# --- ad-hoc `simp`/`simp-analysis` CLI output (default output_dir when
+# --output_dir not passed, simp/runner.py:324 / simp/mma_runner.py:117) -
+# regenerable, changes every run, was only partly ignored before (circle only
+# - audit 2026-08-20 found hourglass/hexagonal/reentrant_bowtie also tracked
+# and churning on every smoke test/demo run) ---
+outputs/simp_results_*/

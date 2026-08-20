@@ -304,12 +304,11 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
+- [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) - tổng hợp mọi lệnh dòng lệnh (test suite, `simp`, `simp-analysis`, từng phase 1-5, sự cố thường gặp)
 - [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
-- [`docs/END_TO_END_SCENARIO.md`](docs/END_TO_END_SCENARIO.md) - kịch bản mô phỏng **giả định** build end-to-end theo `PROJECT_PLAN.md`: file nào đổi/thêm/bớt, kết quả kỳ vọng ở từng bước (chưa chạy thật)
 - [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 21 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
-- [`docs/SLIDE_AND_REPORT_GUIDE.md`](docs/SLIDE_AND_REPORT_GUIDE.md) - hướng dẫn dựng slide thuyết trình + báo cáo khoa học (IMRaD): outline chi tiết, kiểm kê hình/dashboard có sẵn, sơ đồ Mermaid cần vẽ, checklist claim khoa học
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án
 - `html/dashboards/workflow.html` - dashboard workflow, chi tiết từng phase con (2.1-2.9, 3.1-3.6, v.v.)
 - `html/index.html` - dashboard/báo cáo bổ sung (lưu ý: một số trang chỉ phản ánh screening Phase 1, chưa tái sinh theo Phase 2-5)
