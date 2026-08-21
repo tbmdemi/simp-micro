@@ -628,6 +628,56 @@ class TestCompositeScoring:
 
         assert result["per_condition"][0]["v12_best"] == pytest.approx(-0.55)
 
+    def test_return_all_scores_off_by_default(self, tmp_path, monkeypatch):
+        """Nhóm 3.2 (PROJECT_PLAN.md): return_all_scores=False (mặc định)
+        PHẢI giữ nguyên hành vi cũ - không thêm key "all_scores"."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=3, device="cpu", seed=1,
+        )
+        assert "all_scores" not in result["per_condition"][0]
+
+    def test_return_all_scores_exposes_full_pool_consistent_with_winner(
+        self, tmp_path, monkeypatch,
+    ):
+        """return_all_scores=True phải trả về đủ N điểm số/thành phần cho
+        TOÀN BỘ pool (không chỉ ứng viên thắng) - và max(all_scores
+        ["composite"]) phải khớp composite_score của ứng viên thắng (best_idx
+        = argmax composite_scores, xem best_of_n() docstring)."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=4, device="cpu", seed=1,
+            return_all_scores=True,
+        )
+        c = result["per_condition"][0]
+        all_scores = c["all_scores"]
+        for key in ("accuracy", "manuf", "aesthetic", "composite"):
+            assert key in all_scores
+            assert len(all_scores[key]) == c["n_valid_samples"]
+        assert max(all_scores["composite"]) == pytest.approx(
+            c["composite_score"], abs=1e-6
+        )
+
 
 class TestBestOfNCli:
     def test_main_writes_result_json(self, tmp_path, monkeypatch):

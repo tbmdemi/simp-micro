@@ -42,7 +42,7 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.dirname(__file__))
 from adversarial_dataset import generate_adversarial_npz, load_cvae  # noqa: E402
 from verify_fe import FE_PARAMS, resize_to_fe_grid, evaluate_density_field  # noqa: E402
-from dataset import CVAEDataset                                     # noqa: E402
+from dataset import CVAEDataset, condition_flags_from_dim  # noqa: E402
 
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE4_DIR = os.path.join(REPO_ROOT, "outputs", "phase4")
@@ -70,7 +70,7 @@ PHASE5_TRAIN = os.path.join(REPO_ROOT, "pipeline", "phase5_cvae", "train.py")
 
 
 def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
-                  device: str, seed: int = 123):
+                  device: str, seed: int = 123, data_dir: str = None):
     """Chấm điểm 1 checkpoint cVAE bằng FE thật trên test.npz. `seed` PHẢI cố
     định giống nhau ở mọi lần gọi (mọi round) để so sánh round-với-round là
     apples-to-apples trên CÙNG 1 tập condition - test.npz vốn đã tách biệt
@@ -83,9 +83,33 @@ def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
     (model.py không tự seed), nên KHÔNG cố định sẽ khiến chấm cùng 1
     checkpoint 2 lần ra 2 kết quả khác nhau (thêm 1 trục nhiễu độc lập với
     trục "tập condition" ở trên) - cả 2 đều phải cố định để so sánh
-    round-over-round có ý nghĩa."""
+    round-over-round có ý nghĩa.
+
+    data_dir: thư mục chứa test.npz - mặc định None = PHASE3_DIR
+    (outputs/phase3/, KHÔNG có field 'nu'). Checkpoint condition_dim ∈
+    {4,6,8} (train với --include-nu0/--extended-condition) CẦN trỏ data_dir
+    tới dataset có field này, vd outputs/phase3_a4/ (xem A6,
+    docs/PROJECT_PLAN.md, LIMITATIONS.md mục 22).
+
+    condition_dim được đọc TRỰC TIẾP từ checkpoint (không giả định 2 như
+    trước) - trước bản vá này, verify_round() luôn dựng CVAEDataset với
+    condition_dim=2 bất kể checkpoint thật là gì, gây crash hoặc âm thầm
+    sai chiều condition khi chấm checkpoint mở rộng (LIMITATIONS.md mục 22).
+    Cùng root cause + cùng cách vá với Bug 1/3 đã sửa ở best_of_n_eval.py
+    (A7, EXPERIMENT_LOG.md 2026-08-19): nu0_col trỏ đúng cột [nu0,nu0_mask]
+    trong condition để override FE_PARAMS['nu'] theo ĐÚNG ν0 từng target khi
+    include_nu0=True, thay vì verify dưới vật liệu mặc định cố định."""
+    ckpt_meta = torch.load(cvae_ckpt_path, map_location="cpu",
+                            weights_only=False)
+    condition_dim = ckpt_meta.get("condition_dim", 2)
+    del ckpt_meta
+    extended_condition, include_nu0 = condition_flags_from_dim(condition_dim)
+    nu0_col = (6 if extended_condition else 2) if include_nu0 else None
+
     torch.manual_seed(seed)
-    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"))
+    test_ds = CVAEDataset(os.path.join(data_dir or PHASE3_DIR, "test.npz"),
+                           extended_condition=extended_condition,
+                           include_nu0=include_nu0)
     rng = np.random.default_rng(seed)
     idxs = rng.choice(len(test_ds), size=n_conditions, replace=False)
     conditions = [test_ds[i][1].numpy() for i in idxs]
@@ -98,6 +122,9 @@ def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
         cond_t = torch.tensor(cond, dtype=torch.float32, device=device)
         is_auxetic_target = cond[0] < 0
         n_auxetic_targets += n_per_condition if is_auxetic_target else 0
+        fe_params = FE_PARAMS
+        if nu0_col is not None and cond[nu0_col + 1] > 0.5:
+            fe_params = {**FE_PARAMS, "nu": float(cond[nu0_col])}
         for _ in range(n_per_condition):
             with torch.no_grad():
                 img = model.generate(cond_t, n_samples=1, device=device)
@@ -105,7 +132,7 @@ def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
             img_bin = (img64 > 0.5).astype(np.float32)
             img_fe = resize_to_fe_grid(img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"])
             try:
-                v12_fe, _v21_fe, _ = evaluate_density_field(img_fe, FE_PARAMS)
+                v12_fe, _v21_fe, _ = evaluate_density_field(img_fe, fe_params)
             except Exception:
                 continue
             targets.append(cond[0])
@@ -128,6 +155,14 @@ def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
 
 
 def run(args):
+    """LƯU Ý PHẠM VI (LIMITATIONS.md mục 22): verify_round() ở trên đã hỗ trợ
+    checkpoint condition_dim mở rộng (đọc đúng từ checkpoint + data_dir
+    riêng). Nhưng vòng lặp round-trip ĐẦY ĐỦ dưới đây (bước 2/4 gọi
+    subprocess phase4_surrogate/train.py, phase5_cvae/train.py) CHƯA truyền
+    --data-dir/--extended-condition/--include-nu0 - self-play full round-trip
+    (không chỉ verify 1 checkpoint có sẵn) trên checkpoint mở rộng vẫn chưa
+    chạy được đúng, cần việc riêng nếu Nhóm 4.3 (hybrid retrieval-gated
+    generative, PROJECT_PLAN.md) cần tới self-play trên checkpoint ν0/8D."""
     os.makedirs(SELF_PLAY_DIR, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -146,7 +181,10 @@ def run(args):
               f"R2(FE)={last['r2_fe_v12']:.4f} hit_rate={last['hit_rate']:.3f}")
     else:
         print("=== Round 0 (baseline, trước self-play) ===")
-        baseline = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device)
+        baseline = verify_round(
+            cvae_ckpt, args.n_conditions, args.n_per_condition, device,
+            data_dir=args.data_dir,
+        )
         print(f"  R2(FE)={baseline['r2_fe_v12']:.4f} hit_rate={baseline['hit_rate']:.3f} "
               f"({baseline['n_auxetic_targets']} auxetic targets)")
         summary = [{"round": 0, "cvae_ckpt": cvae_ckpt, "surrogate_ckpt": surrogate_ckpt,
@@ -206,7 +244,10 @@ def run(args):
         # 5. Verify vòng này bằng FE thật - CÙNG 1 tập condition cố định mọi
         # round (seed mặc định của verify_round) để so sánh round-over-round
         # không bị nhiễu bởi tập test khác nhau (xem docstring verify_round).
-        result = verify_round(cvae_ckpt, args.n_conditions, args.n_per_condition, device)
+        result = verify_round(
+            cvae_ckpt, args.n_conditions, args.n_per_condition, device,
+            data_dir=args.data_dir,
+        )
         print(f"  --> R2(FE)={result['r2_fe_v12']:.4f} hit_rate={result['hit_rate']:.3f}")
         summary.append({"round": k, "cvae_ckpt": cvae_ckpt, "surrogate_ckpt": surrogate_ckpt,
                          **result})
@@ -229,6 +270,15 @@ def main():
                          help="Số mẫu sinh ra mỗi condition lúc VERIFY (bước 5) - "
                               "khác --seeds-per-condition (dùng lúc sinh dữ liệu train "
                               "surrogate ở bước 1).")
+    parser.add_argument(
+        "--data-dir", type=str, default=None,
+        help="Thư mục chứa test.npz cho verify_round() - mặc định "
+             "PHASE3_DIR (outputs/phase3/, không có field 'nu'). "
+             "Checkpoint condition_dim ∈ {4,6,8} cần trỏ tới dataset có "
+             "field này, vd outputs/phase3_a4/ (xem LIMITATIONS.md mục "
+             "22). Chỉ ảnh hưởng bước verify (5), KHÔNG ảnh hưởng bước "
+             "2/4 (xem docstring run()).",
+    )
     parser.add_argument("--seeds-per-condition", type=int, default=2)
     parser.add_argument("--adv-oversample", type=int, default=40,
                          help="Số lần lặp mỗi mẫu đối kháng khi fine-tune surrogate "

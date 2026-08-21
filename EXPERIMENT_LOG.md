@@ -473,6 +473,152 @@ Cả 3 bug đều **cùng 1 root cause**: A4/A5/A6 mở rộng hạ tầng nhậ
 
 **Giai đoạn A (Nhóm 1, PROJECT_PLAN.md) coi là HOÀN THÀNH đầy đủ về khoa học** (hạ tầng + lợi ích đo được), không chỉ hạ tầng như trước 2026-08-19. Checkpoint: `outputs/phase5/cvae_a4_nu0_finetuned.pt`. Chưa promote đè `cvae_v2_finetuned.pt` làm checkpoint production mặc định (cần quyết định riêng có "chốt" dataset A4 ν0-biến thiên làm production hay không - ngoài phạm vi 1 lần đo lợi ích). Báo cáo đầy đủ: `outputs/phase5/self_play/best_of_n_a4_{control,nu0}.json`. Code: `pipeline/phase5_cvae/losses.py`, `train.py`, `best_of_n_eval.py`, `tests/test_phase5_{losses,train,best_of_n_eval}.py`. Trên nhánh `substrate-material`, uncommitted.
 
+### 2026-08-20 - Pilot "curse of dimensionality" (Nhóm 4.2): retrieval KHÔNG suy yếu rõ rệt ở 4D - giả thuyết chưa được ủng hộ ở mức mở rộng hiện có
+
+Bối cảnh: `PROJECT_PLAN.md` Nhóm 4.2 nêu giả thuyết - retrieval thắng cVAE trong-phân-phối ở 2D (`v12,v21`, R²=1,000 vs 0,973, `LIMITATIONS.md` mục 18) là vì dataset đủ dày (`mean_condition_dist`=0,002), nhưng khi Giai đoạn A thêm ν0 làm chiều điều kiện thứ 3-4 thì khoảng cách nearest-neighbor của retrieval "được dự đoán sẽ tăng nhanh hơn sai số cVAE" - đây được ghi rõ là "chưa kiểm chứng, hiện chỉ là giả thuyết". Đây là bài kiểm định trực tiếp đầu tiên.
+
+**Thiết kế:** script mới `analysis/scripts/curse_of_dimensionality_comparison.py` (tái dùng `best_of_n()`, `_hit_rate_and_r2()` có sẵn, không viết lại logic FE/sampling). Lấy 24 target `(v12,v21,ν0)` là joint sample THẬT từ `outputs/phase3_a4/test.npz` (không bịa như thiết kế OOD 2026-08-04, vì ở đây đang đo hiệu ứng MẬT ĐỘ trong-phân-phối, không phải khả năng ngoại suy - cần giữ đúng tương quan dữ liệu thật). So sánh CÙNG 1 tập target giữa 2 không gian điều kiện: "2D" (`cvae_a4_control_finetuned.pt`, condition_dim=2) và "4D" (`cvae_a4_nu0_finetuned.pt`, condition_dim=4, + ν0). Nearest-neighbor ở 4D dùng khoảng cách Euclid **chuẩn hoá z-score** (bắt buộc - std(ν0)≈0,023 nhỏ hơn ~9 lần std(v12,v21)≈0,20 trên `outputs/phase3_a4/train.npz`, đo trực tiếp; nếu dùng khoảng cách thô thì chiều ν0 gần như không ảnh hưởng kết quả nearest-neighbor, làm sai lệch phép đo thành do scale chứ không phải do số chiều).
+
+| Không gian | Retrieval R² | Retrieval mean_dist (z-score) | cVAE best-of-10 R² |
+|---|---|---|---|
+| 2D (v12,v21) | 1,000 | 0,0060 | 0,975 |
+| 4D (+ν0) | 1,000 | **0,0077 (+28%)** | 0,975 |
+
+**Kết quả:** retrieval KHÔNG suy yếu ở 4D - vẫn R²=1,000 tuyệt đối, khoảng cách nearest-neighbor chỉ tăng nhẹ 28% (không phải "dốc đứng" như giả thuyết mô tả). cVAE R² không đổi giữa 2 không gian (0,975 cả hai, dưới retrieval ở cả hai). Nguyên nhân nhiều khả năng: `outputs/phase3_a4/train.npz` vẫn rất dày (68.286 mẫu) ngay cả sau khi thêm 1 chiều ν0 hẹp (dải chỉ [0,20; 0,40], std thật 0,023) - phép "tăng cấp số nhân theo chiều" trong giả thuyết cần dải giá trị rộng hơn nhiều hoặc số chiều cao hơn nhiều (6D với volfrac/void_size_frac qua `--extended-condition`) mới bộc lộ rõ, và **hiện KHÔNG có checkpoint condition_dim∈{6,8} nào đã train** để test trực tiếp (đã kiểm tra toàn bộ `outputs/phase5/*.pt`) - đây là việc lớn hơn nhiều (cần train mới 2-stage, không phải chạy script).
+
+**Kết luận cẩn trọng:** Nhóm 4.2 CHƯA đóng được ở mức 4D hiện có - bằng chứng "curse of dimensionality" chưa xuất hiện rõ, khác kỳ vọng ban đầu của roadmap. Không nên diễn giải kết quả này thành "retrieval luôn thắng bất kể số chiều" (mới test 1 điểm 4D, dải ν0 hẹp) cũng không nên coi giả thuyết đã bị bác bỏ hẳn - chỉ là CHƯA đo được ở quy mô hiện có. Muốn kiểm định đầy đủ giả thuyết trung tâm của Nhóm 4.2 cần: (a) train checkpoint `--extended-condition` (condition_dim=6/8) trên dataset có volfrac/void_size_frac biến thiên đủ rộng, HOẶC (b) thiết kế lại phép đo bằng cách chủ động làm thưa tập train (subsample) để mô phỏng mật độ 6D mà không cần train mới.
+
+Code: `analysis/scripts/curse_of_dimensionality_comparison.py` (mới). Kết quả đầy đủ: `outputs/phase5/reports/curse_of_dimensionality_comparison.json`. Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Train checkpoint 8D (`--extended-condition --include-nu0`) + đo lại 2D→4D→8D: khoảng cách retrieval NHẢY VỌT ở 8D (bằng chứng ủng hộ 1 nửa giả thuyết), nhưng cVAE KHÔNG giữ vững độ chính xác tốt hơn retrieval - kết quả trái kỳ vọng ở nửa còn lại
+
+Bối cảnh: pilot ở trên (4D) không thấy "curse of dimensionality" rõ rệt. `outputs/phase3_a4/` hoá ra đã có sẵn `volfrac_achieved` (0,30-0,72) và `void_size_frac` (0,10-0,55, qua `params`/`param_names`) với dải biến thiên đủ rộng - không cần backfill gì để test 8D thật (`v12,v21,volfrac,void_size_frac,nu0` = 5 biến vật lý + 3 mask).
+
+**Train 2-stage** (`--extended-condition --include-nu0 --data-dir outputs/phase3_a4`, đúng recipe A7): Stage 1 base early-stop epoch 22 (~15 phút, val_loss=760,14) → `cvae_a4_full8d_base.pt`. Stage 2 fine-tune real-physics (`--lambda-real-physics 20.0 --real-physics-subsample 8 --real-physics-every 2 --real-physics-workers 8`, đúng cấu hình đã kiểm chứng cho fine-tune 35-epoch trước đây) early-stop epoch 19 (~15 phút, val_loss=787,32, `real_physics` loss giảm đều 0,0106→0,0006, không NaN/instability) → `cvae_a4_full8d_finetuned.pt` (condition_dim=8, verify trực tiếp qua checkpoint metadata).
+
+Chạy lại `curse_of_dimensionality_comparison.py` (mở rộng thêm `space_8d`, CÙNG 24 target, cùng seed=123):
+
+| Không gian | Retrieval R² | Retrieval mean_dist (z-score) | cVAE best-of-10 R² |
+|---|---|---|---|
+| 2D (v12,v21) | 1,000 | 0,0060 | 0,975 |
+| 4D (+ν0) | 1,000 | 0,0077 (+28%) | 0,975 |
+| 8D (+volfrac,void_size_frac) | 0,998 | **0,0841 (+992% so 4D)** | **0,943** |
+
+Kiểm tra thêm (không chỉ dựa vào mean, tránh outlier đánh lừa): median `condition_dist_z` cũng nhảy tương tự (4D: 0,0026 → 8D: 0,0733, ~28 lần) và **min** ở 8D (0,029) đã cao hơn cả **max** ở 2D/4D (0,025/0,042) - tức toàn bộ phân phối dịch chuyển, không phải do vài outlier.
+
+**Diễn giải 2 chiều, không phóng đại theo hướng nào:**
+- **Nửa ĐƯỢC ủng hộ:** khoảng cách nearest-neighbor của retrieval THẬT SỰ nhảy vọt ở 8D (~30 lần so với 4D) - đây chính là tín hiệu "curse of dimensionality" mà 4D chưa thấy được. Dataset 68k mẫu vẫn dày ở 4D nhưng bắt đầu loãng rõ rệt ở 8D.
+- **Nửa KHÔNG được ủng hộ:** hệ quả về ĐỘ CHÍNH XÁC không đi theo hướng giả thuyết cần - retrieval R² chỉ giảm rất nhẹ (1,000→0,998, vẫn gần như hoàn hảo dù khoảng cách xa hơn nhiều), trong khi **cVAE R² giảm NHIỀU HƠN** (0,975→0,943). Nếu chỉ nhìn con số này, kết luận đảo ngược hoàn toàn kỳ vọng: retrieval "chịu đựng" tốt hơn cVAE khi thêm chiều, không phải ngược lại.
+
+**2 nghi vấn confound quan trọng, CHƯA loại trừ được (khác với nghi vấn cVAE thắng/thua thật):**
+1. **cVAE 8D có thể chưa train đủ chín:** checkpoint 4D/2D đã qua nhiều vòng tinh chỉnh lịch sử (gamma sweep, nhiều lần fine-tune) trước khi có số liệu chính thức `R²(FE,n=300)`; checkpoint 8D hôm nay chỉ mới 1 lần train 2-stage (22+19=41 epoch tổng), CHƯA qua quy trình chọn checkpoint kỹ như các checkpoint production khác - R²=0,943 có thể phản ánh model chưa đủ trưởng thành, không phải giới hạn kiến trúc.
+2. **Nhầm lẫn giữa "curse of dimensionality" và "bài toán khó hơn":** thêm volfrac/void_size_frac làm target không chỉ tăng SỐ CHIỀU mà còn tăng SỐ RÀNG BUỘC đồng thời cVAE phải thỏa mãn cùng lúc (đúng v12/v21 VÀ đúng volfrac VÀ đúng void_size_frac VÀ đúng ν0) - đây là 1 bài toán sinh khó hơn về bản chất, độc lập với hiệu ứng mật độ dữ liệu mà giả thuyết Nhóm 4.2 muốn đo. Phép đo hiện tại KHÔNG tách được 2 hiệu ứng này.
+3. Cỡ mẫu n=24 (giống mọi benchmark khác trong dự án) - CI rộng, chưa đủ để khẳng định chênh lệch 0,975 vs 0,943 có ý nghĩa thống kê hay không.
+
+**Kết luận cẩn trọng:** Nhóm 4.2 vẫn CHƯA đóng được, nhưng theo hướng khác pilot 4D - giờ có bằng chứng thật về hiệu ứng mật độ (retrieval distance tăng mạnh), nhưng bằng chứng đó KHÔNG tự động chuyển thành lợi thế accuracy cho cVAE trong lần đo này, và có 2 confound hợp lý (undertraining + task khó hơn) chưa loại trừ được trước khi kết luận bất cứ điều gì chắc chắn. Không dùng số liệu 8D này để viết vào bài báo ở dạng hiện tại - cần ít nhất: (a) đưa checkpoint 8D qua cùng quy trình tinh chỉnh/chọn lựa như 2D/4D trước khi so sánh công bằng, (b) tách riêng phép đo mật độ (chỉ tính khoảng cách, không cần sinh mẫu) khỏi phép đo độ khó bài toán sinh.
+
+Code: `analysis/scripts/curse_of_dimensionality_comparison.py` (mở rộng thêm `space_8d`). Checkpoint mới: `outputs/phase5/cvae_a4_full8d_{base,finetuned}.pt`. Kết quả đầy đủ: `outputs/phase5/reports/curse_of_dimensionality_comparison.json` (ghi đè, có cả 3 không gian). Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Sửa bug `self_play.py` không hỗ trợ checkpoint mở rộng (LIMITATIONS.md mục 22)
+
+`verify_round()` từng luôn dựng `CVAEDataset(test.npz)` với `condition_dim=2` mặc định bất kể checkpoint thật, và hardcode `PHASE3_DIR=outputs/phase3` (không có field `nu`) - chấm checkpoint `include_nu0`/`extended_condition` sẽ crash hoặc âm thầm sai. Sửa bằng đúng pattern đã dùng ở `best_of_n_eval.py` (A6/A7): đọc `condition_dim` trực tiếp từ checkpoint, suy `(extended_condition, include_nu0)` qua `condition_flags_from_dim()`, dựng `CVAEDataset` đúng cờ, thêm tham số `data_dir`/`--data-dir`.
+
+**Phát hiện thêm trong lúc sửa (chưa có trong mục 22 gốc):** cùng lúc đó, `evaluate_density_field()` trong `verify_round()` cũng bị đúng bug Bug 3 của A7 (verify dưới `FE_PARAMS['nu']` cố định thay vì ν0 thật từng target) - vá bằng `nu0_col` cùng quy ước với `best_of_n_eval.py`/`losses.py::real_physics_loss`.
+
+**Chủ động không mở rộng phạm vi:** vòng lặp round-trip ĐẦY ĐỦ (`run()`, bước 2/4 gọi subprocess `phase4_surrogate/train.py`/`phase5_cvae/train.py`) vẫn CHƯA truyền `--data-dir`/`--extended-condition`/`--include-nu0` - chỉ sửa đường "chấm điểm 1 checkpoint có sẵn" (`verify_round()`), không sửa đường "chạy self-play từ đầu trên checkpoint mở rộng" (việc lớn hơn, ngoài phạm vi bug #22, đã ghi rõ trong docstring `run()` để không quên).
+
+3 test mới (`TestVerifyRoundConditionDimFlags`): không crash ở condition_dim=4, verify đúng ν0 per-target (không phải hằng số 0,3), và regression condition_dim=2 không đổi hành vi. 602/602 test toàn repo pass.
+
+Code: `pipeline/phase5_cvae/self_play.py`, `tests/test_phase5_self_play.py`. Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Phát hiện + sửa bug thật trong `analysis/pareto/frontier.py::is_pareto_efficient()` (chưa từng có test), rồi hoàn thành Nhóm 3.2
+
+Bối cảnh: bắt tay vào Nhóm 3.2 (`PROJECT_PLAN.md`) - đối chiếu composite score (`best_of_n_eval.py`) với Pareto front độc lập. Viết vòng lặp xếp tầng Pareto (NSGA-II style: lặp lại `is_pareto_efficient()`, mỗi lần loại 1 tầng) trên 30 ứng viên/target - **treo vô hạn ngay lần chạy đầu** (~1 giờ không ra kết quả trên tập 24 target thật, dù đo trực tiếp 1 condition×3 mẫu chỉ mất 0,6s - loại trừ được nghi ngờ "máy chậm").
+
+**Cô lập bằng test tối giản:** `is_pareto_efficient(np.array([[1.,1.],[2.,2.]]), maximize=True)` (2 điểm, điểm sau lấn át điểm trước hoàn toàn) trả về `[False, False]` - SAI, phải là `[False, True]`. Thử thêm `is_pareto_efficient(np.array([[1.,2.]]), maximize=True)` (1 điểm) → `[False]` - cũng SAI, phải `[True]` (1 điểm luôn Pareto-efficient tầm thường).
+
+**Root cause:** bản gốc dùng vòng lặp có tác dụng phụ, đánh giá `is_efficient[i] = np.any(costs[i] > costs[i+1:], axis=0).all()` - tại `i = n_points-1` (phần tử CUỐI CÙNG của mảng), `costs[i+1:]` rỗng. `np.any()` trên tập rỗng đúng ngữ nghĩa numpy là `False`, nhưng `.all()` của giá trị `False` đó lại tiếp tục là `False` - trong khi ngữ nghĩa ĐÚNG cần ở đây là "không có điểm nào phía sau lấn át tôi → tôi hiệu quả → **True**". Hệ quả: **phần tử cuối cùng của MỌI mảng đầu vào luôn bị đánh dấu sai là không-Pareto-efficient**, bất kể giá trị thật - kể cả khi đó là điểm tốt nhất tuyệt đối. Khi dùng lặp lại để xếp tầng (loại tầng 1, tìm tầng 2 trên phần còn lại...), điểm cuối cùng còn sót lại ở mỗi tầng không bao giờ được xếp hạng → `remaining` không bao giờ rỗng → vòng lặp vô hạn.
+
+**Mức độ nghiêm trọng:** đây là bug production thật (`analysis/pareto/frontier.py`, dùng bởi `analysis/pareto/runner.py` cho Pareto analysis Phase 1), **chưa từng có 1 test nào** cho module này trước đây. May mắn: kiểm tra `outputs/` không có thư mục `pareto/` nào - module này **chưa từng chạy thật cho kết quả nào đã công bố** trong README/docs/notebooks - không có claim khoa học cũ nào bị ảnh hưởng, chỉ là hạ tầng nằm im bị lỗi từ đầu.
+
+**Sửa:** thay toàn bộ thuật toán bằng phiên bản O(n²) tường minh, không phụ thuộc thứ tự duyệt hay trường hợp biên mảng rỗng - với mỗi điểm i, kiểm tra trực tiếp có tồn tại điểm j≠i thỏa `costs[j]>=costs[i]` ở MỌI trục và `costs[j]>costs[i]` ở ÍT NHẤT 1 trục hay không (đúng định nghĩa Pareto dominance, vectorized, không có tác dụng phụ). Verify bằng tay 6 trường hợp (điểm tốt nhất ở giữa/cuối mảng, 1 điểm, 2 điểm lấn át, 2 điểm không lấn át nhau, minimize mode) - khớp kỳ vọng ở mọi trường hợp.
+
+**Test mới:** `tests/test_pareto_frontier.py` (8 test, module CHƯA từng có test trước đây) - bao gồm test trực tiếp regression cho bug biên (điểm tốt nhất ở hàng cuối, 1 điểm, 2 điểm lấn át) và test lặp lại xếp tầng trên n=30 ngẫu nhiên xác nhận vòng lặp hội tụ. 612/612 test toàn repo pass.
+
+**Sau khi sửa, hoàn thành Nhóm 3.2** (`notebooks/08_composite_score_pareto_validation.ipynb`, checkpoint `cvae_v2_finetuned.pt`, n=24 target × 30 mẫu/target, seed=123, chạy lại mất 62s - đúng như ước tính ban đầu, xác nhận bug ở trên là nguyên nhân duy nhất gây treo):
+
+| Chỉ số | Giá trị |
+|---|---|
+| Spearman trung bình (composite score vs -tầng Pareto) | **0,693** |
+| Spearman trung vị | **0,714** |
+| Spearman min/max (24 target) | 0,432 / 0,889 |
+| Tỉ lệ ứng viên thắng nằm ở tầng Pareto 1 | 1,000 (tất yếu toán học, không phải phát hiện thực nghiệm - xem giải thích dưới) |
+
+**Đối chiếu tiêu chí đã đặt TRƯỚC khi chạy (Spearman trung bình ≥ 0,7):** **KHÔNG đạt** theo trung bình (0,693 < 0,7, sát ngưỡng), **đạt** theo trung vị (0,714). Phân phối trải liên tục 0,43-0,89 trên 24 target, không có nhóm outlier tách biệt - vài target tương quan yếu (0,43-0,56) kéo trung bình xuống dưới ngưỡng.
+
+`frac_winner_on_pareto_front1=1,0` là **hệ quả tất yếu của toán học đa mục tiêu** (argmax của tổng có trọng số DƯƠNG luôn nằm trên Pareto front - nếu 1 điểm khác trội hơn cả 3 trục thì tổng có trọng số của nó cũng phải cao hơn, mâu thuẫn giả thiết argmax), KHÔNG phải bằng chứng thực nghiệm mới - không nên trích dẫn như 1 phát hiện.
+
+**Kết luận cẩn trọng:** composite score có tương quan dương rõ ràng, mức trung bình-khá với cấu trúc Pareto thật (24/24 target dương, phần lớn >0,6) - ủng hộ MỘT PHẦN cho việc đây là cách tổng hợp hợp lý, không tùy tiện. Nhưng chưa đạt ngưỡng "rất mạnh" tự đặt ra theo tiêu chí trung bình - không đủ để tuyên bố "đã xác nhận" phương pháp luận mà không dè dặt. Nghi vấn nguyên nhân (chưa kiểm chứng): `accuracy_score` chuẩn hóa min-max NGAY TRONG pool đang xét (rank-based, phụ thuộc phân phối `|Δv12|` của batch đó) có thể tạo nhiễu khác với cấu trúc dominance tuyệt đối mà Pareto front đo. Chưa đủ cơ sở đổi trọng số mặc định 0,6/0,3/0,1 chỉ từ 1 lần đo này.
+
+Code: `analysis/pareto/frontier.py` (sửa bug), `tests/test_pareto_frontier.py` (mới), `pipeline/phase5_cvae/best_of_n_eval.py` (thêm `return_all_scores=True`, backward-compatible, có test riêng ở `tests/test_phase5_best_of_n_eval.py`), `notebooks/08_composite_score_pareto_validation.ipynb` (mới). Kết quả đầy đủ: `outputs/phase5/reports/composite_score_pareto_validation.json`. Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Loại trừ confound #1 của pilot 8D: tune lại checkpoint bằng `--select-by fe_r2` xác nhận R² thấp trước đó là do landmine chọn checkpoint theo `val_loss`, KHÔNG phải giới hạn kiến trúc
+
+Bối cảnh: pilot "curse of dimensionality" 8D (mục trên) đo được cVAE R²=0,943 - thấp hơn 4D (0,975) và thấp hơn retrieval ở 8D (0,998) - nhưng nêu rõ 2 nghi vấn confound chưa loại trừ, trong đó nghi vấn #1 là checkpoint `cvae_a4_full8d_finetuned.pt` chỉ mới train 1 lần bằng `--select-by val_loss` (mặc định) - đúng tổ hợp đã 2 lần xác nhận CHỌN NHẦM checkpoint trong lịch sử dự án (`LIMITATIONS.md` mục 12, cảnh báo tự in ra ngay khi chạy `train.py` không kèm `--select-by fe_r2`).
+
+**Thử nghiệm loại trừ:** fine-tune lại TỪ CÙNG checkpoint base (`cvae_a4_full8d_base.pt`, không train lại từ đầu), CÙNG mọi tham số real-physics, chỉ đổi `--select-by fe_r2 --fe-eval-every 2 --n-fe-eval-conditions 8` (chọn checkpoint theo R² FE thật đo định kỳ, thay vì val_loss). Chạy đủ 35/35 epoch (không early-stop), R²(FE, n=8 condition validation) dao động mạnh giữa các epoch sau khi đạt đỉnh (0,977→0,79→0,94→0,68→0,83→0,87 ở epoch 24-34) - đúng bằng chứng trực tiếp cho thấy val_loss KHÔNG phản ánh đúng epoch nào thực sự tốt, và việc chọn theo val_loss (thay vì R2 thật) có thể vô tình giữ lại 1 trong các epoch tệ này. `--select-by fe_r2` giữ đúng epoch tốt nhất (24): **R²(FE)=0,9774** → `cvae_a4_full8d_finetuned_v2.pt`.
+
+**Đo lại `curse_of_dimensionality_comparison.py` (CKPT_8D trỏ sang checkpoint mới, cùng 24 target, cùng seed):**
+
+| Không gian | Retrieval R² | cVAE R² (checkpoint cũ, val_loss) | cVAE R² (checkpoint mới, fe_r2) |
+|---|---|---|---|
+| 8D | 0,998 | 0,943 | **0,997** |
+
+**Kết luận:** nghi vấn confound #1 ĐƯỢC XÁC NHẬN ĐÚNG - cVAE R² thấp ở pilot 8D lần đầu là do checkpoint chưa được tune đúng cách (dính landmine `val_loss`), KHÔNG phải giới hạn kiến trúc/năng lực cVAE ở 8D. Sau khi chọn checkpoint đúng bằng R² FE thật, cVAE (0,997) gần như ngang bằng retrieval (0,998) ở 8D - đảo ngược hoàn toàn kết luận trước đó ("cVAE giảm nhiều hơn retrieval khi thêm chiều").
+
+**Ý nghĩa cho Nhóm 4.2:** với bằng chứng mới này, retrieval vẫn chưa "thua" cVAE ở 8D theo accuracy (cả 2 gần như hoàn hảo, 0,997 vs 0,998) - luận điểm trung tâm "curse of dimensionality khiến cVAE thắng vì retrieval kém đi" **vẫn CHƯA được chứng minh về accuracy**, dù đã có bằng chứng thật về mật độ (retrieval distance +992% ở 8D). Confound #2 (thêm biến vừa tăng chiều vừa tăng ràng buộc) vẫn còn treo - nhưng ít nhất giờ đã tách được: sự sụt giảm R² quan sát trước đó là hiện tượng huấn luyện (training artifact), không phải hiện tượng khoa học cần giải thích.
+
+Checkpoint mới: `outputs/phase5/cvae_a4_full8d_finetuned_v2.pt` (R²(FE,n=8)=0,9774, `--select-by fe_r2`). Code: `analysis/scripts/curse_of_dimensionality_comparison.py` (CKPT_8D cập nhật trỏ sang `_v2`). Kết quả đầy đủ: `outputs/phase5/reports/curse_of_dimensionality_comparison.json` (ghi đè). Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Thử hướng lập luận mới cho Nhóm 4.2 (manufacturability thay vì accuracy) ở 8D - kết quả NGƯỢC giả thuyết đề xuất, retrieval THẮNG cVAE cả về khả năng chế tạo
+
+Bối cảnh: sau khi accuracy ở 8D gần như hòa (retrieval 0,998 vs cVAE 0,997, mục trên), có đề xuất hướng lập luận thay thế: retrieval buộc phải chọn mẫu có khoảng cách z-score xa (+992% so 4D) để khớp điều kiện 8D, có thể phải "hy sinh" tính toàn vẹn cấu trúc (liên thông, kích thước nét in, đối xứng) - trong khi cVAE (có `force_periodic()` + composite scoring ưu tiên manuf/aesthetic) giữ được cả hai.
+
+**Lưu ý về giả thuyết trước khi đo (tránh lặp lại lỗi diễn giải có lợi):** retrieval KHÔNG sinh cấu trúc mới - nó trả về NGUYÊN XI 1 ảnh THẬT đã có sẵn trong `train.npz` (đã được SIMP tối ưu thật từ trước). Khoảng cách z-score xa chỉ ảnh hưởng độ khớp ĐIỀU KIỆN của mẫu được chọn, không ảnh hưởng gì đến chính cấu trúc vật lý của ảnh đó - nên giả thuyết "z-score xa → cấu trúc sụp đổ" không có cơ sở cơ chế rõ ràng, cần đo thật thay vì giả định.
+
+**Thiết kế:** script mới `analysis/scripts/manufacturability_retrieval_vs_cvae_8d.py` - tái dùng CHÍNH KẾT QUẢ cVAE đã có sẵn từ `curse_of_dimensionality_comparison.py` (checkpoint `_v2.pt` đã tune đúng, không chạy lại model), chỉ viết thêm phần retrieval: lấy ảnh THẬT của nearest-neighbor 8D (z-score) cho CÙNG 24 target, áp `force_periodic()` (đúng pipeline hậu xử lý cVAE đang dùng, để so sánh công bằng), rồi chấm `check_manufacturability()`/`aesthetic_score()` - tái dùng nguyên hàm có sẵn trong `manufacturability.py`/`aesthetics.py`, không viết lại logic.
+
+| Phương án | manuf_score (ứng viên được chọn) | aesthetic_score | Ghi chú |
+|---|---|---|---|
+| Retrieval (ảnh thật) | **0,889** | 0,913 | `passes_all` nghiêm ngặt: **20/24 (83,3%)** |
+| cVAE (8D, đã tune) | 0,667 | 0,883 | `frac_manufacturable` trong pool N=10 mẫu/condition: 26,3% |
+
+**Kết quả NGƯỢC hoàn toàn giả thuyết đề xuất: retrieval THẮNG cVAE cả về manuf_score lẫn aesthetic_score ở 8D**, không hề "sụp đổ cấu trúc" dù khoảng cách z-score xa. Điều này khớp đúng cơ chế đã nêu trước khi đo: retrieval trả về ảnh THẬT (đã qua tối ưu SIMP thật, vốn có tỉ lệ manufacturable cao hơn dataset thô lọc sẵn theo cách khác), còn cVAE dù có `force_periodic()` vẫn chỉ đạt tỉ lệ manufacturable tự nhiên thấp trong pool sinh ra (26,3%, khớp với con số nền `frac_manufacturable≈0,25-0,35` đã ghi ở [Giới hạn #2](docs/LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)) - composite scoring chỉ CHỌN ứng viên tốt nhất trong N mẫu đã sinh, không thể tạo ra tính liên thông nếu không mẫu nào trong pool có sẵn.
+
+**Ý nghĩa cho Nhóm 4.2:** hướng lập luận "cVAE thắng nhờ bảo toàn chất lượng cấu trúc" **KHÔNG thành lập** - dữ liệu đo được đi ngược hoàn toàn. Retrieval ở 8D hiện đang thắng cVAE trên CẢ accuracy (gần hòa, 0,998 vs 0,997) LẪN manufacturability (0,889 vs 0,667) - luận điểm trung tâm "cần generative vì retrieval kém đi ở nhiều chiều" vẫn chưa có bằng chứng thực nghiệm nào ủng hộ ở mức 8D hiện tại, dù bằng chứng về mật độ dữ liệu (khoảng cách z-score) là thật.
+
+Code: `analysis/scripts/manufacturability_retrieval_vs_cvae_8d.py` (mới). Kết quả đầy đủ: `outputs/phase5/reports/manufacturability_retrieval_vs_cvae_8d.json`. Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-20 (tiếp) - Fast pilot "low-data regime" (chỉ retrieval, không train lại cVAE) - retrieval KHÔNG bế tắc khi khan hiếm dữ liệu, khai tử hướng lập luận này ở 8D mà không cần tốn giờ GPU nào
+
+Bối cảnh: sau khi Hướng "manufacturability" (mục trên) cho kết quả ngược kỳ vọng, đề xuất tiếp theo là kiểm tra xem retrieval có "bế tắc" khi tập tra cứu bị thu nhỏ hay không (mô phỏng kịch bản miền vật lý mới khan hiếm dữ liệu) - trước khi quyết định có đáng đầu tư train lại cVAE trên từng mức dữ liệu nhỏ (1,5-3 giờ GPU, "bản công bằng") hay không. Chạy bản rẻ trước (chỉ retrieval, ~1,4 giây): giữ nguyên checkpoint cVAE 8D hiện tại làm mốc tham chiếu (R²=0,997, không train lại), chỉ giới hạn tập tra cứu của retrieval xuống Ndb=[500, 1.000, 5.000, 10.000, full=68.286], tính lại nearest-neighbor 8D z-score TRÊN ĐÚNG Ndb mẫu đó (chuẩn hoá lại theo chính subset, không phải toàn bộ train).
+
+| Ndb | R²(retrieval) | MAE | mean_dist_z |
+|---|---|---|---|
+| 500 | 0,9837 | 0,0189 | 0,3040 |
+| 1.000 | 0,9850 | 0,0173 | 0,2316 |
+| 5.000 | 0,9950 | 0,0091 | 0,1428 |
+| 10.000 | 0,9983 | 0,0055 | 0,1116 |
+| Full (68.286) | 0,9977 | 0,0058 | 0,0841 |
+
+**Kết quả rõ ràng (Kịch bản B, "bất lợi" theo đúng tiêu chí đã đặt trước khi chạy):** ngay cả khi chỉ còn 500/68.286 mẫu (~0,7% dữ liệu gốc), retrieval vẫn đạt R²=0,984 ở không gian 8D - khoảng cách z-score tăng ~3,6 lần (0,084→0,304) nhưng accuracy chỉ mất 1,4 điểm phần trăm. Retrieval KHÔNG "bế tắc" khi khan hiếm dữ liệu như giả thuyết kỳ vọng.
+
+**Quyết định:** theo đúng tiêu chí đã thống nhất trước khi chạy pilot rẻ này - khai tử hướng lập luận "low-data regime" ở dạng đo trong-phân-phối (in-distribution) này, KHÔNG đầu tư bản "công bằng" (train lại cVAE trên từng mức Ndb, 1,5-3 giờ GPU) vì kết quả retrieval đã đủ rõ để không cần đối chứng tốn kém. Tiết kiệm được toàn bộ ngân sách GPU dự kiến cho hướng này.
+
+**Ý nghĩa tổng hợp cho Nhóm 4.2 sau 3 thí nghiệm liên tiếp hôm nay (accuracy, manufacturability, low-data):** ở mức 8D hiện tại (in-distribution, joint sample thật từ test set), **cVAE không thắng rõ retrieval trên bất kỳ trục nào đã đo** - chỉ có bằng chứng mật độ dữ liệu (khoảng cách retrieval tăng) là thật nhưng chưa chuyển hóa thành lợi thế nào. Luận điểm trung tâm thật sự vững của dự án vẫn là Nhóm 4.1 (sign-flip OOD, R²=0,418 vs 0,057, 2026-08-04) - nơi retrieval THẬT SỰ sụp đổ vì bị ép ngoại suy ra ngoài phạm vi dữ liệu đã thấy, khác hẳn các thí nghiệm hôm nay (vẫn trong-phân-phối, chỉ đổi mật độ/số chiều).
+
+Code: `analysis/scripts/retrieval_low_data_pilot_8d.py` (mới). Kết quả đầy đủ: `outputs/phase5/reports/retrieval_low_data_pilot_8d.json`. Trên nhánh `substrate-material`, uncommitted.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

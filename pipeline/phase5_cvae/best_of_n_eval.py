@@ -62,7 +62,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
               void_size_frac: float = None, nu0: float = None,
               w_accuracy: float = 0.6,
               w_manuf: float = 0.3, w_aesthetic: float = 0.1,
-              data_dir: str = None):
+              data_dir: str = None, return_all_scores: bool = False):
     """CÙNG tập condition với self_play.verify_round (seed mặc định 123,
     test.npz) để so sánh apples-to-apples. Với mỗi condition, sinh n_samples
     ứng viên.
@@ -113,7 +113,15 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     (lấy condition thật từ dataset). Mặc định None = PHASE3_DIR
     (outputs/phase3/, KHÔNG có field 'nu'). Checkpoint condition_dim ∈
     {4,8} (train với --include-nu0) CẦN trỏ data_dir tới dataset có field
-    này, vd outputs/phase3_a4/ (xem A4/A6, docs/PROJECT_PLAN.md)."""
+    này, vd outputs/phase3_a4/ (xem A4/A6, docs/PROJECT_PLAN.md).
+
+    return_all_scores: mặc định False (không đổi hành vi cũ). True -> mỗi
+    per_condition[i] có thêm "all_scores": {"accuracy": [...], "manuf": [...],
+    "aesthetic": [...], "composite": [...]} - điểm số CỦA CẢ N ứng viên
+    trong pool (không chỉ ứng viên thắng như "accuracy_score"/"manuf_score"/
+    "aesthetic_score"/"composite_score" đã có). Dùng cho Nhóm 3.2
+    (PROJECT_PLAN.md) - đối chiếu composite score với Pareto front độc lập
+    trên TOÀN BỘ pool, không chỉ 1 điểm thắng cuộc."""
     torch.manual_seed(seed)
     ckpt_meta = torch.load(cvae_ckpt_path, map_location="cpu", weights_only=False)
     condition_dim = ckpt_meta.get("condition_dim", 2)
@@ -281,7 +289,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
         if is_auxetic_target and not np.isnan(v12_first) and v12_first < 0:
             n_hits_single_shot += 1
 
-        per_condition.append({
+        entry = {
             "target_v12": float(cond[0]),
             "is_auxetic_target": bool(is_auxetic_target),
             "n_valid_samples": len(v12_reals),
@@ -295,7 +303,15 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
             "manuf_score": float(manuf_scores[best_idx]),
             "aesthetic_score": float(aesthetic_scores[best_idx]),
             "composite_score": float(composite_scores[best_idx]),
-        })
+        }
+        if return_all_scores:
+            entry["all_scores"] = {
+                "accuracy": accuracy_scores.tolist(),
+                "manuf": manuf_scores.tolist(),
+                "aesthetic": aesthetic_scores.tolist(),
+                "composite": composite_scores.tolist(),
+            }
+        per_condition.append(entry)
 
     hit_rate_best_of_n = n_hits_best_of_n / n_auxetic_targets if n_auxetic_targets else float("nan")
     hit_rate_single_shot = n_hits_single_shot / n_auxetic_targets if n_auxetic_targets else float("nan")
