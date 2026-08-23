@@ -1,0 +1,16 @@
+{
+  "non_auxetic_sign_flip": {
+    "target_v12": 0.5,
+    "target_v21": 0.5,
+    "cvae_v12_best": 0.27983370568562965,
+    "retrieval_v12": -0.002313536126166582,
+    "retrieval_dist": 0.7103786153532125
+  },
+  "extreme_auxetic": {
+    "target_v12": -2.5,
+    "target_v21": -2.5,
+    "cvae_v12_best": -0.8505070978361446,
+    "retrieval_v12": -0.0930284857749939,
+    "retrieval_dist": 2.5000023465801426
+  }
+}

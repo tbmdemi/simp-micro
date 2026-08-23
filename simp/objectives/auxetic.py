@@ -52,6 +52,50 @@ def compute_nu21(Q: np.ndarray) -> float:
     return float(nu21)
 
 
+def compute_elastic_constants(Q: np.ndarray) -> dict:
+    """Trích xuất hằng số kỹ thuật vĩ mô (Ex, Ey, Gxy, B_eff) từ tensor Q.
+
+    Dùng cùng nghịch đảo ma trận 3x3 đầy đủ như compute_nu12()/compute_nu21()
+    (không giả định orthotropic - đúng cả khi Q13/Q23 != 0 do rotation, xem
+    CẢNH BÁO ROTATION ở đầu module) - gọi lại 2 hàm đó cho nu_12/nu_21 thay vì
+    chép lại công thức, tránh 2 nguồn tính cùng đại lượng bị lệch nhau.
+
+    B_eff là mô-đun khối hiệu dụng 2D (plane stress):
+        B* = Ex*Ey / [Ex*(1-nu21) + Ey*(1-nu12)]
+    Đã kiểm chứng bằng số: rút gọn đúng về E/(2*(1-nu)) khi vật liệu đẳng
+    hướng (Ex=Ey=E, nu12=nu21=nu) - khớp công thức bulk modulus 2D
+    plane-stress chuẩn (xem test_solid_cell_recovers_isotropic_constants).
+
+    Args:
+        Q: Tensor độ cứng đồng nhất hóa (3x3), thứ tự Voigt [11, 22, 12].
+
+    Returns:
+        dict với các khóa 'E_x', 'E_y', 'G_xy', 'nu_12', 'nu_21', 'B_eff'.
+
+    Raises:
+        numpy.linalg.LinAlgError: nếu Q suy biến (không nghịch đảo được) -
+            KHÔNG bắt lỗi ở đây, để caller tự quyết định xử lý (giống
+            compute_nu12()/compute_nu21() - xem simp/runner.py chỗ gọi 2 hàm
+            đó, nơi Q zero-init do FE-solve lỗi được caller kiểm tra TRƯỚC
+            khi gọi, không phải bên trong hàm tính toán).
+    """
+    S = np.linalg.inv(Q)
+    E_x = 1.0 / S[0, 0]
+    E_y = 1.0 / S[1, 1]
+    G_xy = 1.0 / S[2, 2]
+    nu_12 = compute_nu12(Q)
+    nu_21 = compute_nu21(Q)
+    B_eff = (E_x * E_y) / (E_x * (1.0 - nu_21) + E_y * (1.0 - nu_12))
+    return {
+        'E_x': float(E_x),
+        'E_y': float(E_y),
+        'G_xy': float(G_xy),
+        'nu_12': nu_12,
+        'nu_21': nu_21,
+        'B_eff': float(B_eff),
+    }
+
+
 def compute_auxetic_q12_objective(
     Q: np.ndarray,
     dQ: np.ndarray,

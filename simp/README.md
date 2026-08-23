@@ -248,8 +248,8 @@ A `ConvergenceChecker` class handles all three criteria - see `simp/core/converg
 | [`../docs/ARCHITECT.md`](../docs/ARCHITECT.md) | System architecture: module map, 8-phase data flow, extension points |
 | [`../docs/CLI_GUIDE.md`](../docs/CLI_GUIDE.md) | Full CLI reference for every phase (1-5) |
 | [`../analysis/`](../analysis/) | CLI and library for analyzing SIMP outputs (dataset, image metrics, reports) |
-| [`../html/guides/simp_guide_and_roadmap.html`](../html/guides/simp_guide_and_roadmap.html) | SIMP workflow guide (in Vietnamese) |
-| [`../html/dashboards/phase1_screening_dashboard.html`](../html/dashboards/phase1_screening_dashboard.html) | Phase 1 screening dashboard |
+| [`../docs/PIPELINE.md`](../docs/PIPELINE.md) | Pipeline phases, validated results, and experiment history |
+| [`../docs/LIMITATIONS.md`](../docs/LIMITATIONS.md) | Scientific claim scope and known limitations |
 
 ---
 
