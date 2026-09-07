@@ -4,6 +4,47 @@ Tài liệu này chỉ giữ lại **những phát hiện thực sự thay đổ
 
 ---
 
+## 2026-08-24 - Roadmap modules MNO/KINN/ICKAN và benchmark GPU
+
+Đã bổ sung các module độc lập cho ba task còn thiếu:
+
+- `pipeline/mno/`: MNO nhận `images` và dự đoán đúng 18 trường dịch chuyển.
+	Backend `mamba_ssm` được dùng khi cài được; môi trường `simp` hiện chưa có
+	package này nên phép đo dùng fallback GRU hai chiều. Smoke benchmark GPU với
+	lưới 16x16 cho output `(1,18,16,16)` trong khoảng 0,0004 s. Đây chỉ là đo
+	forward, chưa phải nghiệm thu tốc độ production vì chưa có dataset FE chứa
+	trường `displacements` 18 kênh.
+- `pipeline/kinn/`: KINN dùng `EfficientKANLinear`, deep-energy loss lấy đạo
+	hàm không gian bằng PyTorch autograd, và adapter solver tùy chọn JAX-CG/
+	SciPy. Smoke test truyền gradient hữu hạn; `jax`/`jax-amg` chưa có trong
+	môi trường nên chưa thể nghiệm thu KINN phi tuyến + AMG.
+- `pipeline/ickans/`: constitutive energy model với trọng số dương và
+	quadratic curvature floor. Hessian tangent smoke test cho eigenvalue nhỏ
+	nhất khoảng 0,0246 > 0 trên 4 mẫu. Đây là nghiệm thu tính xác định dương,
+	chưa phải KPI R2 >= 0,985 trên dữ liệu composite thực.
+
+Benchmark các task Phase I hiện có:
+
+- WIRE checkpoint `cvae_wire_v2.pt`: sinh 64x64 khoảng 0,09 s và 256x256
+	khoảng 0,0045 s trong một lần đo GPU; output nằm trong `[0,1]`.
+- WIRE best-of-N report hiện có: single-shot 4,17%, best-of-N 16,67%,
+	R2(FE) = -10,29, nên chưa đạt `passes_all >= 75%`.
+- ConvKAN report hiện có: R2 `[v12=0,9636, v21=0,9574, volfrac=0,9161]`,
+	dưới KPI 0,985.
+- 35 test hẹp cho Phase 4/5, tandem và roadmap modules pass; sau khi format
+	Black, toàn bộ suite đạt 633 passed với 4 cảnh báo edge-case đã biết.
+
+Sau đó KINN được nối thêm bằng `pipeline.phase5_cvae.losses.kinn_prior_loss()`;
+hook này tạo lưới tọa độ cùng kích thước density và giữ gradient về đầu ra
+generator. ICKAN sau khi đổi sang signed features `[x,-x]` đạt MSE giảm đều
+trong 200 epoch nhưng R2 smoke = -0,069; eigenvalue tangent nhỏ nhất = 0,00102
+vẫn dương. Vì vậy DoN R2 >= 0,985 chưa đạt, dù điều kiện ổn định vật lý đạt ở
+smoke test.
+
+Giới hạn tái lập: `base` không có PyTorch đầy đủ; mọi lệnh compute trên được
+chạy bằng `conda activate simp`. Không đạt KPI thực nghiệm chỉ được ghi nhận,
+không nâng thành claim khoa học.
+
 ## Bảng tổng hợp các bug lớn đã sửa
 
 | Bug | Ảnh hưởng | Cách sửa |
@@ -619,6 +660,72 @@ Bối cảnh: sau khi Hướng "manufacturability" (mục trên) cho kết quả
 
 Code: `analysis/scripts/retrieval_low_data_pilot_8d.py` (mới). Kết quả đầy đủ: `outputs/phase5/reports/retrieval_low_data_pilot_8d.json`. Trên nhánh `substrate-material`, uncommitted.
 
+### 2026-08-24 - Benchmark ConvKAN Phase 4 và mất ổn định số học khi train WIRE
+
+**ConvKAN:** đã train `SurrogateCNN(use_kan=True)` trên dataset production v2
+(57.216 train / 2.044 validation), RTX 3050 6 GB, batch 128. Training dừng
+early-stopping ở epoch 44/60 sau khoảng 12 phút; val loss tốt nhất = 0,00292.
+Đánh giá độc lập trên `outputs/phase3/test.npz` cho kết quả:
+
+| Target | R² | MAE |
+|---|---:|---:|
+| v12 | 0,9636 | 0,0235 |
+| v21 | 0,9574 | 0,0255 |
+| volfrac_achieved | 0,9161 | 0,0183 |
+
+Checkpoint đã export cho Phase 5 tại
+`outputs/phase4/surrogate_convkan_for_phase5_v2.pt`. ConvKAN hoạt động đúng và
+tương thích metadata, nhưng **chưa đạt DoN cũ R²≥0,985** cho v12/v21; không
+được promote thay checkpoint production hiện tại. Trong quá trình evaluate đã
+bắt và sửa một bug wiring: evaluator Phase 4 không đọc `use_kan`, nên dựng
+Linear rồi crash khi load các khóa `base_weight`/`spline_weight` của KAN.
+
+**WIRE pilot:** cấu hình hidden=64, batch=16, 1 epoch chạy được, không OOM.
+Full run đầu tiên (`lr=1e-3`, 30 epoch) thất bại ở epoch 5: KL/train loss tăng
+đến khoảng 2,17×10¹³, sau đó output decoder không còn hữu hạn và BCE CUDA báo
+`input_val >= zero && input_val <= one`. Đây là gradient explosion trong giai
+đoạn KL warmup, không phải thiếu VRAM; checkpoint run lỗi không được dùng làm
+kết quả.
+
+**Biện pháp đang thử:** thêm gradient clipping `max_norm=1.0` sau backward và
+giảm learning rate xuống `1e-4`, chạy lại với `CUDA_LAUNCH_BLOCKING=1` để bắt
+lỗi đồng bộ. Test training sau thay đổi: 26 passed. Rerun WIRE đã khởi động
+nhưng tại thời điểm ghi mục này chưa có epoch hoàn chỉnh để kết luận; cần chờ
+metric finite trước khi full training/FE verification.
+
+Code/report liên quan: `pipeline/phase4_surrogate/model.py`,
+`pipeline/phase4_surrogate/evaluate.py`, `pipeline/phase4_surrogate/train.py`,
+`pipeline/phase5_cvae/train.py`, `outputs/phase4/evaluation_convkan_v2.json`.
+
+### 2026-08-24 - WIRE checkpoint train được nhưng thất bại khi kiểm chứng FE
+
+Checkpoint `outputs/phase5/cvae_wire_v2.pt` đã train đủ 30/30 epoch trên RTX
+3050 6 GB với `wire_hidden_dim=64`, batch=16, `lr=1e-4` và gradient clipping
+`max_norm=1.0`. Run ổn định số học sau khi sửa gradient explosion, nhưng
+validation loss không dự báo được chất lượng FE thật.
+
+Benchmark best-of-N dùng 24 target auxetic, 10 mẫu/target, force-periodic bật,
+lọc manufacturability bật; report đầy đủ tại
+`outputs/phase5/wire_best_of_n_result.json`:
+
+| Chỉ số | WIRE v2 |
+|---|---:|
+| FE calls | 170 |
+| hit rate single-shot | 0,042 (1/24) |
+| hit rate best-of-N | 0,167 (4/24) |
+| R²(FE, best-of-N) | -10,2888 |
+| mean frac manufacturable | 0,042 |
+
+Kết quả **không đạt DoN** `passes_all≥75%` và regression rất lớn so với
+checkpoint cVAE production. Checkpoint WIRE này chỉ giữ làm research artifact,
+**không promote** và không dùng làm nền cho Tandem L-BFGS. Nguyên nhân hiện
+chưa được quy kết chắc chắn: WIRE đã học reconstruction/property trên surrogate
+(property loss cuối khoảng 0,01) nhưng không được train với real-physics loss,
+đồng thời decoder INR có thể sinh hình học không liên thông dù đã force-periodic.
+Không nên kết luận WIRE thất bại về mặt kiến trúc từ một run hidden=64 duy nhất;
+cần ablation có kiểm soát (real-physics loss, sampling/threshold và hidden size)
+trước khi đầu tư thêm compute.
+
 ### 2026-08-22 - Thêm công cụ trích xuất hằng số kỹ thuật + minh họa định tính synclastic/anticlastic; khảo sát hướng "composite auxetic" cho bài báo #2
 
 **Không phải thí nghiệm khoa học mới** (không có claim/số liệu FE mới) - đây là hạ tầng/tài liệu bổ sung, ghi lại ở đây để tránh khoảng trống giữa code và log.
@@ -662,6 +769,14 @@ User phát hiện qua ảnh chụp: mũi tên nét đứt (adjoint gradient) rou
 - `docs/COMPOSITE_AUXETIC_PLAN.md` (v1) - khảo sát 2 hướng mở rộng "composite auxetic" cho bài báo #2: Hướng A (vật liệu nền đa pha/multiscale, chỉ đụng `simp/materials/`) vs Hướng B (multi-material trong unit cell, đụng cả `solver.py`/`oc.py`/format dữ liệu Phase 3-5). Khuyến nghị Hướng A mức "Thấp" (công thức đóng Halpin-Tsai/Rule of Mixtures) - rủi ro kiến trúc thấp nhất, tái dùng trực tiếp hạ tầng Nhóm 1 (A1-A7). **Chưa quyết định, chưa viết code** - cần xác nhận với GS hướng dẫn (chuyên ngành composite/FGM mechanics) trước khi chọn hướng. Đã nối 1 dòng tham chiếu vào `PROJECT_PLAN.md` mục 3 (bảng "Ngoài phạm vi Bài báo #1"), cùng nhóm với Nhóm 6 (nhiệt/CTE) - không chen vào trước khi Nhóm 4.1/4.2 (đã xong) được viết thành bài báo #1.
 
 Trên nhánh `substrate-material`, uncommitted.
+
+### 2026-08-23 - KAN regression head (Task 1): baseline 0.85 không tái lập; real-physics là chìa khóa property fidelity
+
+**Phát hiện 1 (đột xuất): `outputs/phase5/evaluation_report.json` (2026-07-29, R²=0,8575/0,8492) KHÔNG tái lập với code hiện tại.** Cùng checkpoint `cvae_v2_finetuned.pt` + cùng test set, đo lại bằng `property_accuracy()` hiện hành: R²=0,35 (surrogate v2) và −1,81 (surrogate v1 - đúng file mà report tháng 7 dùng). Đã đối chiếu git: `property_accuracy()` không đổi hành vi cho condition_dim=2, forward surrogate không đổi cho n_outputs=3 (không include_nu0), `test.npz`/surrogate v1 không đổi ngày file - chưa tìm ra gốc rễ khác biệt, khả năng cao report cũ sinh bằng code path khác (script/notebook thời đó). **Hệ quả:** con số "baseline 0.85" trong mọi so sánh cũ (kể cả DoN Task 1) là sai lệch; mọi so sánh R² từ nay phải đo lại cùng code hiện tại. Baseline Linear cũ đo lại: 0,29 (base) / 0,35 (finetuned).
+
+**Phát hiện 2 (phương pháp): chọn checkpoint theo `val_loss` có thể cho property R² ÂM sâu, dù reconstruction TỐT NHẤT.** KAN retry (lr 5e-4, patience 25) đạt recon tốt nhất trong 3 run (val 774) nhưng R² = −1,34 (tệ hơn dự đoán hằng số) - reconstruction tốt hoàn toàn không tương quan với property fidelity trên kiến trúc KAN. Xác nhận định lượng thêm cho dòng "val_loss không an toàn" ở bảng trên.
+
+**Phát hiện 3 (tích cực): KAN + real-physics fine-tune VƯỢT baseline Linear (đo cùng code hiện tại).** KAN base (chọn val_loss) R²=0,19. Fine-tune 50 epoch, resume từ KAN base, `--select-by fe_r2 --fe-eval-every 10 --lambda-real-physics 1.0 --real-physics-subsample 8 --real-physics-every 50 --lr 3e-4` → R²=0,58 (v12 0,74, v21 0,42); R²(FE thật) tốt nhất trong train = 0,7865. **Vòng 2 (60 epoch, resume từ v1, `--lambda-real-physics 2.0 --real-physics-every 20 --lr 2e-4`): R²=0,64 (v12 0,82, v21 0,45), R²(FE thật) tốt nhất = 0,8889** - vượt Linear finetuned cũ (0,35) gần 2×, tiến độ hội tụ (0,58 → 0,64). KAN không phá recipe real-physics đã kiểm chứng (mục 2026-07-24) - đây là hướng đưa KAN lên ngang/vượt Linear. Checkpoints: `cvae_kan_best.pt` (base), `cvae_kan_realphysics.pt` (v1), `cvae_kan_realphysics_v2.pt` (v2, khuyến nghị).
 
 ---
 

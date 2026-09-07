@@ -32,19 +32,26 @@ LƯU Ý: chỉ nên request v12 trong khoảng ~[-0.81, 0.37] (phạm vi dataset
 train, xem usage_note trong outputs/phase4/surrogate_for_phase5.pt). Ngoài
 khoảng này là ngoại suy, surrogate + cVAE đều không đáng tin.
 """
+
+import argparse
 import os
 import sys
-import argparse
+
 import numpy as np
 import torch
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE  # noqa: E402
+from dataset import (  # noqa: E402
+    build_condition_vector,
+    condition_flags_from_dim,
+)
 from manufacturability import force_periodic  # noqa: E402
-from dataset import build_condition_vector, condition_flags_from_dim  # noqa: E402
+from model import CVAE  # noqa: E402
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 CKPT_PATH = os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt")
 
@@ -57,18 +64,28 @@ VALIDATED_CKPT_NAMES = {"cvae_v2_finetuned.pt", "cvae_realphysics.pt"}
 
 def load_model(device="cpu", ckpt_path=CKPT_PATH):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    model = CVAE(condition_dim=ckpt["condition_dim"],
-                 latent_dim=ckpt["latent_dim"],
-                 resolution=ckpt["resolution"],
-                 channels=ckpt.get("channels", (32, 64, 128, 256)))
+    model = CVAE(
+        condition_dim=ckpt["condition_dim"],
+        latent_dim=ckpt["latent_dim"],
+        resolution=ckpt["resolution"],
+        channels=ckpt.get("channels", (32, 64, 128, 256)),
+        decoder_type=ckpt.get("decoder_type", "conv"),
+        wire_hidden_dim=ckpt.get("wire_hidden_dim", 128),
+        wire_omega0=ckpt.get("wire_omega0", 10.0),
+        wire_s0=ckpt.get("wire_s0", 10.0),
+    )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()
-    model.condition_dim = ckpt["condition_dim"]  # tiện tra cứu ở main() khi build condition
+    model.condition_dim = ckpt[
+        "condition_dim"
+    ]  # tiện tra cứu ở main() khi build condition
     return model
 
 
-def save_png(image_tensor: torch.Tensor, path: str, apply_force_periodic: bool = True):
+def save_png(
+    image_tensor: torch.Tensor, path: str, apply_force_periodic: bool = True
+):
     """apply_force_periodic (mặc định True): ép cứng periodicity bằng 1
     phép gán (xem manufacturability.py::force_periodic) trước khi lưu ảnh -
     đo được passes_all 1,7%->19,5% trên cvae_gamma20.pt (nhánh research/
@@ -86,29 +103,60 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--v12", type=float, required=True)
     parser.add_argument("--v21", type=float, required=True)
-    parser.add_argument("--volfrac", type=float, default=None,
-                         help="Target tỉ lệ thể tích - OPTIONAL, chỉ có tác dụng nếu "
-                              "checkpoint được train với --extended-condition "
-                              "(condition_dim=6). Bỏ trống = không chỉ định (mask=0), "
-                              "model tự sinh volfrac không ràng buộc.")
-    parser.add_argument("--void-size-frac", type=float, default=None,
-                         help="Target kích thước lỗ rỗng - OPTIONAL, cùng điều kiện "
-                              "với --volfrac ở trên.")
-    parser.add_argument("--nu0", type=float, default=None,
-                         help="Target ν0 (hệ số Poisson vật liệu nền) - OPTIONAL, chỉ có "
-                              "tác dụng nếu checkpoint được train với --include-nu0 "
-                              "(condition_dim ∈ {4,8}). Bỏ trống = không chỉ định "
-                              "(mask=0). Xem A6, docs/PROJECT_PLAN.md.")
+    parser.add_argument(
+        "--volfrac",
+        type=float,
+        default=None,
+        help="Target tỉ lệ thể tích - OPTIONAL, chỉ có tác dụng nếu "
+        "checkpoint được train với --extended-condition "
+        "(condition_dim=6). Bỏ trống = không chỉ định (mask=0), "
+        "model tự sinh volfrac không ràng buộc.",
+    )
+    parser.add_argument(
+        "--void-size-frac",
+        type=float,
+        default=None,
+        help="Target kích thước lỗ rỗng - OPTIONAL, cùng điều kiện "
+        "với --volfrac ở trên.",
+    )
+    parser.add_argument(
+        "--nu0",
+        type=float,
+        default=None,
+        help="Target ν0 (hệ số Poisson vật liệu nền) - OPTIONAL, chỉ có "
+        "tác dụng nếu checkpoint được train với --include-nu0 "
+        "(condition_dim ∈ {4,8}). Bỏ trống = không chỉ định "
+        "(mask=0). Xem A6, docs/PROJECT_PLAN.md.",
+    )
     parser.add_argument("--n", type=int, default=8, help="số mẫu sinh ra")
-    parser.add_argument("--out", type=str, default=None,
-                         help="thư mục output tuỳ chỉnh (mặc định tự đặt theo v12/v21)")
-    parser.add_argument("--ckpt", type=str, default=CKPT_PATH,
-                         help="checkpoint cVAE (.pt) để load - mặc định outputs/phase5/"
-                              "cvae_v2_finetuned.pt (đã kiểm chứng FE, single-shot đáng tin). "
-                              "Giống --cvae-ckpt của best_of_n_eval.py.")
-    parser.add_argument("--no-force-periodic", action="store_true",
-                         help="Tắt force_periodic() (mặc định BẬT - xem manufacturability.py "
-                              "và EXPERIMENT_LOG.md mục Phase 6) trước khi lưu ảnh.")
+    parser.add_argument(
+        "--resolution",
+        type=int,
+        default=None,
+        help="Task 2 (WIRE): độ phân giải ảnh xuất ra (64/128/256/512...). "
+        "Chỉ tác dụng với checkpoint decoder_type='wire' (resolution-agnostic); "
+        "decoder conv luôn xuất 64x64.",
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="thư mục output tuỳ chỉnh (mặc định tự đặt theo v12/v21)",
+    )
+    parser.add_argument(
+        "--ckpt",
+        type=str,
+        default=CKPT_PATH,
+        help="checkpoint cVAE (.pt) để load - mặc định outputs/phase5/"
+        "cvae_v2_finetuned.pt (đã kiểm chứng FE, single-shot đáng tin). "
+        "Giống --cvae-ckpt của best_of_n_eval.py.",
+    )
+    parser.add_argument(
+        "--no-force-periodic",
+        action="store_true",
+        help="Tắt force_periodic() (mặc định BẬT - xem manufacturability.py "
+        "và EXPERIMENT_LOG.md mục Phase 6) trước khi lưu ảnh.",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.ckpt):
@@ -119,56 +167,97 @@ def main():
     ckpt_name = os.path.basename(args.ckpt)
     print("=" * 70)
     if ckpt_name in VALIDATED_CKPT_NAMES:
-        print(f"Checkpoint '{ckpt_name}' đã kiểm chứng bằng FE thật "
-              "(differentiable-physics, xem EXPERIMENT_LOG.md) - single-shot")
+        print(
+            f"Checkpoint '{ckpt_name}' đã kiểm chứng bằng FE thật "
+            "(differentiable-physics, xem EXPERIMENT_LOG.md) - single-shot"
+        )
         print("hit rate ~98% ở n=789. sample.py vẫn KHÔNG lọc qua FE mỗi lần")
-        print("gọi; dùng best_of_n_eval.py nếu cần đo lường/đảm bảo nghiêm ngặt:")
-        print(f"    python3 pipeline/phase5_cvae/best_of_n_eval.py "
-              f"--cvae-ckpt {args.ckpt} --n-samples 30")
+        print(
+            "gọi; dùng best_of_n_eval.py nếu cần đo lường/đảm bảo nghiêm ngặt:"
+        )
+        print(
+            f"    python3 pipeline/phase5_cvae/best_of_n_eval.py "
+            f"--cvae-ckpt {args.ckpt} --n-samples 30"
+        )
     else:
         print("CẢNH BÁO: sample.py sinh 1 MẪU DUY NHẤT mỗi lần gọi, KHÔNG lọc")
-        print("qua FE thật. verify_fe.py đã xác nhận ảnh sinh ra bởi cVAE thường")
-        print("KHÔNG đạt đúng Poisson ratio mong muốn khi kiểm bằng FE thật, dù")
-        print("R2 qua surrogate trông cao (surrogate exploitation - xem README §5,")
+        print(
+            "qua FE thật. verify_fe.py đã xác nhận ảnh sinh ra bởi cVAE thường"
+        )
+        print(
+            "KHÔNG đạt đúng Poisson ratio mong muốn khi kiểm bằng FE thật, dù"
+        )
+        print(
+            "R2 qua surrogate trông cao (surrogate exploitation - xem README §5,"
+        )
         print("outputs/phase5/fe_verification_report.json).")
-        print(f"Checkpoint '{ckpt_name}' KHÔNG nằm trong danh sách đã kiểm chứng "
-              f"({sorted(VALIDATED_CKPT_NAMES)}).")
-        print("Script này chỉ nên dùng để xem NHANH hình dạng generator sinh ra.")
-        print("Muốn kết quả đáng tin cậy, dùng quy trình CHÍNH THỨC best_of_n_eval.py")
-        print("(sinh N ứng viên, chọn bằng FE thật) hoặc đổi sang checkpoint đã kiểm chứng:")
-        print("    python3 pipeline/phase5_cvae/best_of_n_eval.py "
-              "--cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30")
+        print(
+            f"Checkpoint '{ckpt_name}' KHÔNG nằm trong danh sách đã kiểm chứng "
+            f"({sorted(VALIDATED_CKPT_NAMES)})."
+        )
+        print(
+            "Script này chỉ nên dùng để xem NHANH hình dạng generator sinh ra."
+        )
+        print(
+            "Muốn kết quả đáng tin cậy, dùng quy trình CHÍNH THỨC best_of_n_eval.py"
+        )
+        print(
+            "(sinh N ứng viên, chọn bằng FE thật) hoặc đổi sang checkpoint đã kiểm chứng:"
+        )
+        print(
+            "    python3 pipeline/phase5_cvae/best_of_n_eval.py "
+            "--cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30"
+        )
     print("=" * 70)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model(device=device, ckpt_path=args.ckpt)
 
-    extended_condition, include_nu0 = condition_flags_from_dim(model.condition_dim)
-    if not extended_condition and (args.volfrac is not None or args.void_size_frac is not None):
-        print(f"CẢNH BÁO: checkpoint này có condition_dim={model.condition_dim} (train KHÔNG "
-              "có --extended-condition) - --volfrac/--void-size-frac bị BỎ QUA.")
+    extended_condition, include_nu0 = condition_flags_from_dim(
+        model.condition_dim
+    )
+    if not extended_condition and (
+        args.volfrac is not None or args.void_size_frac is not None
+    ):
+        print(
+            f"CẢNH BÁO: checkpoint này có condition_dim={model.condition_dim} (train KHÔNG "
+            "có --extended-condition) - --volfrac/--void-size-frac bị BỎ QUA."
+        )
     if not include_nu0 and args.nu0 is not None:
-        print(f"CẢNH BÁO: checkpoint này có condition_dim={model.condition_dim} (train KHÔNG "
-              "có --include-nu0) - --nu0 bị BỎ QUA.")
+        print(
+            f"CẢNH BÁO: checkpoint này có condition_dim={model.condition_dim} (train KHÔNG "
+            "có --include-nu0) - --nu0 bị BỎ QUA."
+        )
     cond_np = build_condition_vector(
-        args.v12, args.v21, model.condition_dim,
-        volfrac=args.volfrac, void_size_frac=args.void_size_frac, nu0=args.nu0,
+        args.v12,
+        args.v21,
+        model.condition_dim,
+        volfrac=args.volfrac,
+        void_size_frac=args.void_size_frac,
+        nu0=args.nu0,
     )
     condition = torch.tensor(cond_np, dtype=torch.float32, device=device)
-    samples = model.generate(condition, n_samples=args.n, device=device)  # (n,1,64,64)
+    samples = model.generate(
+        condition, n_samples=args.n, device=device, resolution=args.resolution
+    )  # wire: (n,1,res,res); conv: (n,1,64,64)
 
     out_dir = args.out or os.path.join(
         PHASE5_DIR, "samples", f"v12_{args.v12:.2f}_v21_{args.v21:.2f}"
     )
     os.makedirs(out_dir, exist_ok=True)
     for i in range(args.n):
-        save_png(samples[i], os.path.join(out_dir, f"sample_{i:02d}.png"),
-                 apply_force_periodic=not args.no_force_periodic)
+        save_png(
+            samples[i],
+            os.path.join(out_dir, f"sample_{i:02d}.png"),
+            apply_force_periodic=not args.no_force_periodic,
+        )
 
     print(f"Đã sinh {args.n} mẫu cho target v12={args.v12}, v21={args.v21}")
     print(f"Lưu tại: {out_dir}")
-    print("Nhắc lại: đây là mẫu CHƯA qua lọc FE - dùng best_of_n_eval.py để có "
-          "kết quả đáng tin cậy trước khi dùng cho mục đích thực tế.")
+    print(
+        "Nhắc lại: đây là mẫu CHƯA qua lọc FE - dùng best_of_n_eval.py để có "
+        "kết quả đáng tin cậy trước khi dùng cho mục đích thực tế."
+    )
 
 
 if __name__ == "__main__":

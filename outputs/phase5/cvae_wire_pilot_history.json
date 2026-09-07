@@ -1,0 +1,39 @@
+[
+  {
+    "epoch": 1,
+    "beta": 0.03333333333333333,
+    "train": {
+      "total": 6724688.5423780605,
+      "recon": 2838.016497857352,
+      "kl": 201655163.5252434,
+      "prop": 0.23617450192037312,
+      "prop_weighted": 11.808725094768558,
+      "tv": 0.0002159224057379179,
+      "binarization": 0.24938444823643371,
+      "periodic": 0.00019396464285645907,
+      "disagreement": 0.0,
+      "prior_tv": 0.0,
+      "prior_binarization": 0.0,
+      "prior_periodic": 0.0,
+      "volfrac_loss": 0.0,
+      "real_physics": NaN
+    },
+    "val": {
+      "total": 3094.9184293205726,
+      "recon": 2837.610717056782,
+      "kl": 7363.441811399217,
+      "prop": 0.23719298600450653,
+      "prop_weighted": 11.8596493185383,
+      "tv": 0.00015168722870795206,
+      "binarization": 0.24884780319936123,
+      "periodic": 9.253347724714406e-05,
+      "disagreement": 0.0,
+      "prior_tv": 0.0,
+      "prior_binarization": 0.0,
+      "prior_periodic": 0.0,
+      "volfrac_loss": 0.0,
+      "real_physics": NaN
+    },
+    "fe_r2": null
+  }
+]

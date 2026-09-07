@@ -74,12 +74,18 @@ ml = [
     "pandas>=2.0",
     "Pillow>=10.0",
 ]
+roadmap = [
+    # Optional CUDA Mamba backend; pipeline/mno has a PyTorch fallback.
+    "mamba-ssm>=2.0",
+    # JAX is optional because KINN keeps its training graph in PyTorch.
+    "jax>=0.4",
+]
 all = [
-    "auxforge[dev,analysis,ml]",
+    "auxforge[dev,analysis,ml,roadmap]",
 ]
 
 [tool.setuptools.packages.find]
-include = ["simp*", "analysis*"]
+include = ["simp*", "analysis*", "pipeline*", "efficient_kan*"]
 
 [tool.setuptools.package-data]
 simp = ["*.html"]

@@ -23,36 +23,59 @@ YÊU CẦU TRƯỚC KHI CHẠY:
     outputs/phase4/surrogate_for_phase5.pt phải tồn tại - nếu chưa có, chạy
     trước: python3 pipeline/phase4_surrogate/export_for_phase5.py
 """
+
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, WeightedRandomSampler
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset, compute_v12_sample_weights  # noqa: E402
-from losses import (                       # noqa: E402
-    cvae_loss, kl_beta_schedule, load_frozen_surrogate,
-    load_frozen_surrogate_ensemble, prior_sample_regularization,
-    real_physics_prior_loss, volfrac_consistency_loss, PROP_LOSS_SCALE,
+# efficient_kan được vendor ở repo root (không có trên PyPI, xem
+# efficient_kan/__init__.py) - thêm repo root vào sys.path để import
+# rebuild_kan_grid dùng trong resize_condition_dim_weights().
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 )
-from verify_fe import (                    # noqa: E402
-    FE_PARAMS, resize_to_fe_grid, evaluate_density_field,
+from dataset import CVAEDataset, compute_v12_sample_weights  # noqa: E402
+from losses import (  # noqa: E402
+    PROP_LOSS_SCALE,
+    cvae_loss,
+    kl_beta_schedule,
+    load_frozen_surrogate,
+    load_frozen_surrogate_ensemble,
+    prior_sample_regularization,
+    real_physics_prior_loss,
+    volfrac_consistency_loss,
+)
+from model import CVAE  # noqa: E402
+from verify_fe import (  # noqa: E402
+    FE_PARAMS,
+    evaluate_density_field,
+    resize_to_fe_grid,
 )
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+from efficient_kan import rebuild_kan_grid  # noqa: E402
+
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
-_CONDITION_DEPENDENT_KEYS = ("encoder.fc_mu.weight", "encoder.fc_logvar.weight",
-                             "decoder.fc.weight")
+_CONDITION_DEPENDENT_LAYERS = (
+    "encoder.fc_mu",
+    "encoder.fc_logvar",
+    "decoder.fc",
+)
 
 
-def resize_condition_dim_weights(state_dict: dict, old_condition_dim: int,
-                                  new_condition_dim: int) -> dict:
+def resize_condition_dim_weights(
+    state_dict: dict, old_condition_dim: int, new_condition_dim: int
+) -> dict:
     """--resume-from một checkpoint có condition_dim KHÁC model hiện tại (vd
     fine-tune cvae_realphysics.pt condition_dim=2 thành --extended-condition
     condition_dim=6, đúng lệnh khuyến nghị ở README mục 5.1) trước đây CRASH
@@ -62,24 +85,60 @@ def resize_condition_dim_weights(state_dict: dict, old_condition_dim: int,
     Thay vì bỏ hết pretrained weight (reset toàn bộ model) hay crash, hàm
     này "mở rộng" đúng 3 layer đó: giữ nguyên cột ứng với base features
     (ảnh phẳng/latent z) VÀ cột ứng với v12/v21 (2 chiều đầu của condition
-    theo đúng thứ tự build_condition_vector) - chỉ random-init (init mặc
-    định của nn.Linear) các cột condition MỚI (volfrac/mask/void_size_frac/
-    mask). Giữ được toàn bộ pretrained CNN encoder/decoder (chiếm hầu hết
-    tham số) + phần lớn trọng số 2 layer fc, thay vì train lại từ đầu."""
+    theo đúng thứ tự build_condition_vector) - chỉ random-init các cột
+    condition MỚI (volfrac/mask/void_size_frac/mask). Giữ được toàn bộ
+    pretrained CNN encoder/decoder (chiếm hầu hết tham số) thay vì train
+    lại từ đầu.
+
+    KAN-hóa (Task 1): 3 layer này giờ là EfficientKANLinear, mỗi layer gồm
+    base_weight [out, in], spline_weight [out, in, k] và buffer grid
+    [in, G] - cả 3 đều phụ thuộc in = base_dim + condition_dim nên phải
+    resize. Grid là buffer phi tham số (mọi hàng giống nhau), rebuild bằng
+    rebuild_kan_grid() thay vì copy cột như weight."""
     if old_condition_dim == new_condition_dim:
         return state_dict
     new_state = dict(state_dict)
     n_keep_cond = min(old_condition_dim, new_condition_dim)
-    for key in _CONDITION_DEPENDENT_KEYS:
-        old_w = state_dict[key]
-        out_features, old_in = old_w.shape
+    for layer in _CONDITION_DEPENDENT_LAYERS:
+        base_key = f"{layer}.base_weight"
+        old_base = state_dict[base_key]
+        out_features, old_in = old_base.shape
         base_dim = old_in - old_condition_dim
         new_in = base_dim + new_condition_dim
-        new_w = torch.empty(out_features, new_in, dtype=old_w.dtype, device=old_w.device)
-        torch.nn.init.kaiming_uniform_(new_w, a=5 ** 0.5)
-        new_w[:, :base_dim] = old_w[:, :base_dim]
-        new_w[:, base_dim:base_dim + n_keep_cond] = old_w[:, base_dim:base_dim + n_keep_cond]
-        new_state[key] = new_w
+
+        # base_weight [out, in]: giữ cột base + v12/v21, random-init cột mới.
+        new_base = torch.empty(
+            out_features, new_in, dtype=old_base.dtype, device=old_base.device
+        )
+        torch.nn.init.kaiming_uniform_(new_base, a=5**0.5)
+        new_base[:, :base_dim] = old_base[:, :base_dim]
+        new_base[:, base_dim : base_dim + n_keep_cond] = old_base[
+            :, base_dim : base_dim + n_keep_cond
+        ]
+        new_state[base_key] = new_base
+
+        # spline_weight [out, in, k]: giữ nguyên k, mở rộng chiều giữa.
+        spline_key = f"{layer}.spline_weight"
+        old_spline = state_dict[spline_key]
+        k = old_spline.shape[2]
+        new_spline = torch.empty(
+            out_features,
+            new_in,
+            k,
+            dtype=old_spline.dtype,
+            device=old_spline.device,
+        )
+        torch.nn.init.kaiming_uniform_(new_spline, a=5**0.5)
+        new_spline[:, :base_dim] = old_spline[:, :base_dim]
+        new_spline[:, base_dim : base_dim + n_keep_cond] = old_spline[
+            :, base_dim : base_dim + n_keep_cond
+        ]
+        new_state[spline_key] = new_spline
+
+        # grid [in, G]: buffer phi tham số, rebuild cho in_features mới.
+        grid_key = f"{layer}.grid"
+        new_state[grid_key] = rebuild_kan_grid(state_dict[grid_key], new_in)
+
     return new_state
 
 
@@ -97,7 +156,9 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
             img = model.generate(cond_t, n_samples=1, device=device)
         img64 = img.squeeze().cpu().numpy().astype(np.float32)
         img_bin = (img64 > 0.5).astype(np.float32)
-        img_fe = resize_to_fe_grid(img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"])
+        img_fe = resize_to_fe_grid(
+            img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"]
+        )
         try:
             v12_fe, _v21_fe, _ = evaluate_density_field(img_fe, FE_PARAMS)
         except Exception:
@@ -115,8 +176,9 @@ def real_fe_r2(model, val_conditions: np.ndarray, device) -> float:
     return float(1 - ss_res / ss_tot)
 
 
-def apply_condition_dropout(condition: torch.Tensor, dropout_p: float,
-                             optional_pairs=((2, 3), (4, 5))) -> torch.Tensor:
+def apply_condition_dropout(
+    condition: torch.Tensor, dropout_p: float, optional_pairs=((2, 3), (4, 5))
+) -> torch.Tensor:
     """Classifier-free-guidance-style: với MỖI cặp (value_col, mask_col)
     trong `optional_pairs` (mặc định volfrac,void_size_frac tại cột (2,3)
     và (4,5), xem dataset.py extended_condition), zero value + set mask=0
@@ -139,19 +201,47 @@ def apply_condition_dropout(condition: torch.Tensor, dropout_p: float,
     return condition
 
 
-def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
-              lambda_tv, lambda_bin, device, train: bool, lambda_disagreement=0.0,
-              lambda_periodic=0.0, regularize_prior_samples=False,
-              lambda_real_physics=0.0, real_physics_every=1,
-              real_physics_subsample=None, real_physics_workers=0, fe_params=None,
-              extended_condition=False, lambda_volfrac=0.0, optional_dropout_p=0.5,
-              include_nu0=False):
+def run_epoch(
+    model,
+    loader,
+    surrogate,
+    target_names,
+    optimizer,
+    beta,
+    gamma,
+    lambda_tv,
+    lambda_bin,
+    device,
+    train: bool,
+    lambda_disagreement=0.0,
+    lambda_periodic=0.0,
+    regularize_prior_samples=False,
+    lambda_real_physics=0.0,
+    real_physics_every=1,
+    real_physics_subsample=None,
+    real_physics_workers=0,
+    fe_params=None,
+    extended_condition=False,
+    lambda_volfrac=0.0,
+    optional_dropout_p=0.5,
+    include_nu0=False,
+):
     model.train(mode=train)
-    totals = {"total": 0.0, "recon": 0.0, "kl": 0.0, "prop": 0.0,
-              "prop_weighted": 0.0, "tv": 0.0, "binarization": 0.0,
-              "periodic": 0.0, "disagreement": 0.0,
-              "prior_tv": 0.0, "prior_binarization": 0.0, "prior_periodic": 0.0,
-              "volfrac_loss": 0.0}
+    totals = {
+        "total": 0.0,
+        "recon": 0.0,
+        "kl": 0.0,
+        "prop": 0.0,
+        "prop_weighted": 0.0,
+        "tv": 0.0,
+        "binarization": 0.0,
+        "periodic": 0.0,
+        "disagreement": 0.0,
+        "prior_tv": 0.0,
+        "prior_binarization": 0.0,
+        "prior_periodic": 0.0,
+        "volfrac_loss": 0.0,
+    }
     n = 0
     real_physics_sum = 0.0
     real_physics_n = 0
@@ -172,30 +262,50 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         bsz = image.size(0)
 
         if train and optional_pairs:
-            condition = apply_condition_dropout(condition, optional_dropout_p,
-                                                 optional_pairs=optional_pairs)
+            condition = apply_condition_dropout(
+                condition, optional_dropout_p, optional_pairs=optional_pairs
+            )
 
         with torch.set_grad_enabled(train):
-            recon, mu, logvar = model(image, condition, deterministic=not train)
+            recon, mu, logvar = model(
+                image, condition, deterministic=not train
+            )
             losses = cvae_loss(
-                recon, image, mu, logvar, condition, seed_vec,
-                surrogate, target_names, beta=beta, gamma=gamma,
-                lambda_tv=lambda_tv, lambda_bin=lambda_bin,
+                recon,
+                image,
+                mu,
+                logvar,
+                condition,
+                seed_vec,
+                surrogate,
+                target_names,
+                beta=beta,
+                gamma=gamma,
+                lambda_tv=lambda_tv,
+                lambda_bin=lambda_bin,
                 lambda_disagreement=lambda_disagreement,
                 lambda_periodic=lambda_periodic,
                 nu0_col=nu0_col,
             )
             if regularize_prior_samples:
                 prior_reg_total, prior_stats = prior_sample_regularization(
-                    model.decoder, model.latent_dim, condition,
-                    lambda_tv=lambda_tv, lambda_bin=lambda_bin,
+                    model.decoder,
+                    model.latent_dim,
+                    condition,
+                    lambda_tv=lambda_tv,
+                    lambda_bin=lambda_bin,
                     lambda_periodic=lambda_periodic,
                 )
                 losses["total"] = losses["total"] + prior_reg_total
                 losses.update(prior_stats)
             else:
-                losses.update({"prior_tv": torch.tensor(0.0), "prior_binarization": torch.tensor(0.0),
-                                "prior_periodic": torch.tensor(0.0)})
+                losses.update(
+                    {
+                        "prior_tv": torch.tensor(0.0),
+                        "prior_binarization": torch.tensor(0.0),
+                        "prior_periodic": torch.tensor(0.0),
+                    }
+                )
 
             # Differentiable-physics (xem losses.real_physics_prior_loss,
             # EXPERIMENT_LOG.md "differentiable-physics"): chỉ áp lúc train
@@ -207,13 +317,24 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
             # nên --lambda-real-physics có thể chọn cùng khoảng giá trị với
             # --gamma (vd thử = gamma) thay vì phải tự dò thang đo riêng.
             rp_loss = None
-            if train and lambda_real_physics > 0 and step % real_physics_every == 0:
+            if (
+                train
+                and lambda_real_physics > 0
+                and step % real_physics_every == 0
+            ):
                 rp_loss = real_physics_prior_loss(
-                    model.decoder, model.latent_dim, condition, fe_params,
-                    subsample=real_physics_subsample, n_workers=real_physics_workers,
+                    model.decoder,
+                    model.latent_dim,
+                    condition,
+                    fe_params,
+                    subsample=real_physics_subsample,
+                    n_workers=real_physics_workers,
                     nu0_col=nu0_col,
                 )
-                losses["total"] = losses["total"] + lambda_real_physics * PROP_LOSS_SCALE * rp_loss
+                losses["total"] = (
+                    losses["total"]
+                    + lambda_real_physics * PROP_LOSS_SCALE * rp_loss
+                )
 
             # volfrac là chiều optional RẺ (xem losses.volfrac_consistency_loss
             # docstring: suy trực tiếp từ recon.mean(), không cần surrogate/FE)
@@ -226,17 +347,30 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
             if extended_condition and lambda_volfrac > 0:
                 vol_target = condition[:, 2]
                 vol_mask = condition[:, 3]
-                vol_loss = volfrac_consistency_loss(recon, vol_target, vol_mask)
+                vol_loss = volfrac_consistency_loss(
+                    recon, vol_target, vol_mask
+                )
                 if regularize_prior_samples:
-                    z_prior_v = torch.randn(bsz, model.latent_dim, device=device)
+                    z_prior_v = torch.randn(
+                        bsz, model.latent_dim, device=device
+                    )
                     prior_recon_v = model.decoder(z_prior_v, condition)
-                    vol_loss_prior = volfrac_consistency_loss(prior_recon_v, vol_target, vol_mask)
+                    vol_loss_prior = volfrac_consistency_loss(
+                        prior_recon_v, vol_target, vol_mask
+                    )
                     vol_loss = 0.5 * (vol_loss + vol_loss_prior)
-                losses["total"] = losses["total"] + lambda_volfrac * PROP_LOSS_SCALE * vol_loss
+                losses["total"] = (
+                    losses["total"]
+                    + lambda_volfrac * PROP_LOSS_SCALE * vol_loss
+                )
 
             if train:
                 optimizer.zero_grad()
                 losses["total"].backward()
+                # WIRE's coordinate MLP and the KAN encoder can amplify the
+                # KL-warmup gradient early in training; clipping prevents one
+                # batch from pushing decoder activations into NaN before BCE.
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                 optimizer.step()
 
             if rp_loss is not None:
@@ -253,231 +387,396 @@ def run_epoch(model, loader, surrogate, target_names, optimizer, beta, gamma,
         totals["periodic"] += losses["periodic"].item() * bsz
         totals["disagreement"] += float(losses["disagreement"]) * bsz
         totals["prior_tv"] += losses["prior_tv"].item() * bsz
-        totals["prior_binarization"] += losses["prior_binarization"].item() * bsz
+        totals["prior_binarization"] += (
+            losses["prior_binarization"].item() * bsz
+        )
         totals["prior_periodic"] += losses["prior_periodic"].item() * bsz
         totals["volfrac_loss"] += float(vol_loss.detach()) * bsz
         n += bsz
 
     result = {k: v / n for k, v in totals.items()}
-    result["real_physics"] = real_physics_sum / real_physics_n if real_physics_n > 0 else float("nan")
+    result["real_physics"] = (
+        real_physics_sum / real_physics_n
+        if real_physics_n > 0
+        else float("nan")
+    )
     return result
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--latent-dim", type=int, default=32)
+    parser.add_argument(
+        "--decoder-type",
+        type=str,
+        default="conv",
+        choices=["conv", "wire"],
+        help="Task 2: 'conv' (mặc định, tương thích checkpoint cũ) hay 'wire' "
+        "(WireContinuousDecoder - INR kích hoạt Gabor Wavelet phức, "
+        "resolution-agnostic khi generate/resolution).",
+    )
+    parser.add_argument(
+        "--wire-hidden-dim",
+        type=int,
+        default=128,
+        help="Số neuron ẩn mỗi lớp Gabor của WireContinuousDecoder "
+        "(chỉ dùng khi --decoder-type wire).",
+    )
+    parser.add_argument(
+        "--wire-omega0",
+        type=float,
+        default=10.0,
+        help="Tần số cos của Gabor wavelet (WIRE) - chỉ dùng khi --decoder-type wire.",
+    )
+    parser.add_argument(
+        "--wire-s0",
+        type=float,
+        default=10.0,
+        help="Bề rộng envelope Gaussian của Gabor wavelet (WIRE) - chỉ dùng "
+        "khi --decoder-type wire.",
+    )
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--kl-warmup", type=int, default=30,
-                         help="số epoch để beta KL tăng tuyến tính 0 -> 1")
-    parser.add_argument("--gamma", type=float, default=1.0,
-                         help="trọng số property-consistency loss")
-    parser.add_argument("--lambda-tv", type=float, default=0.0,
-                         help="trọng số total-variation regularization (chống nhiễu/checkerboard). "
-                              "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.")
-    parser.add_argument("--lambda-bin", type=float, default=0.0,
-                         help="trọng số binarization loss (ép ảnh về gần nhị phân 0/1). "
-                              "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.")
-    parser.add_argument("--lambda-periodic", type=float, default=0.0,
-                         help="Roadmap 6.3: trọng số periodicity loss (MSE giữa cột "
-                              "trái/phải + hàng trên/dưới ảnh reconstruct - xem "
-                              "losses.periodicity_loss, manufacturability.check_periodicity). "
-                              "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.")
-    parser.add_argument("--regularize-prior-samples", action="store_true",
-                         help="ÁP THÊM lambda-tv/lambda-bin/lambda-periodic lên ảnh decode "
-                              "từ z ~ PRIOR N(0,1) (cùng chế độ model.generate() dùng lúc "
-                              "inference), KHÔNG chỉ trên `recon` posterior (qua encoder) "
-                              "như mặc định - xem losses.prior_sample_regularization "
-                              "docstring: recon posterior đã gần-tuần hoàn sẵn (ảnh training "
-                              "thật), nên regularize nó không cải thiện manufacturability lúc "
-                              "generate(); cần regularize đúng chế độ prior mới có tác dụng.")
+    parser.add_argument(
+        "--kl-warmup",
+        type=int,
+        default=30,
+        help="số epoch để beta KL tăng tuyến tính 0 -> 1",
+    )
+    parser.add_argument(
+        "--gamma",
+        type=float,
+        default=1.0,
+        help="trọng số property-consistency loss",
+    )
+    parser.add_argument(
+        "--lambda-tv",
+        type=float,
+        default=0.0,
+        help="trọng số total-variation regularization (chống nhiễu/checkerboard). "
+        "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.",
+    )
+    parser.add_argument(
+        "--lambda-bin",
+        type=float,
+        default=0.0,
+        help="trọng số binarization loss (ép ảnh về gần nhị phân 0/1). "
+        "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.",
+    )
+    parser.add_argument(
+        "--lambda-periodic",
+        type=float,
+        default=0.0,
+        help="Roadmap 6.3: trọng số periodicity loss (MSE giữa cột "
+        "trái/phải + hàng trên/dưới ảnh reconstruct - xem "
+        "losses.periodicity_loss, manufacturability.check_periodicity). "
+        "Mặc định 0.0 (tắt) để giữ tương thích baseline cũ.",
+    )
+    parser.add_argument(
+        "--regularize-prior-samples",
+        action="store_true",
+        help="ÁP THÊM lambda-tv/lambda-bin/lambda-periodic lên ảnh decode "
+        "từ z ~ PRIOR N(0,1) (cùng chế độ model.generate() dùng lúc "
+        "inference), KHÔNG chỉ trên `recon` posterior (qua encoder) "
+        "như mặc định - xem losses.prior_sample_regularization "
+        "docstring: recon posterior đã gần-tuần hoàn sẵn (ảnh training "
+        "thật), nên regularize nó không cải thiện manufacturability lúc "
+        "generate(); cần regularize đúng chế độ prior mới có tác dụng.",
+    )
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--lr-min", type=float, default=1e-5,
-                         help="lr tối thiểu ở cuối CosineAnnealing (0 = tắt schedule, giữ lr cố định)")
-    parser.add_argument("--patience", type=int, default=15,
-                         help="early stopping: dừng nếu val loss không giảm sau N epoch")
+    parser.add_argument(
+        "--lr-min",
+        type=float,
+        default=1e-5,
+        help="lr tối thiểu ở cuối CosineAnnealing (0 = tắt schedule, giữ lr cố định)",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=15,
+        help="early stopping: dừng nếu val loss không giảm sau N epoch",
+    )
     parser.add_argument("--resolution", type=int, default=64)
-    parser.add_argument("--surrogate-path", type=str, default=None,
-                         help="Đường dẫn surrogate_for_phase5.pt khác mặc định "
-                              "(vd checkpoint đã fine-tune đối kháng ở 1 vòng self-play). "
-                              "Bỏ trống = dùng SURROGATE_PATH mặc định trong losses.py. "
-                              "Bỏ qua nếu dùng --surrogate-paths (ensemble).")
-    parser.add_argument("--surrogate-paths", type=str, nargs="*", default=None,
-                         help="2+ đường dẫn surrogate_for_phase5.pt độc lập (vd huấn "
-                              "luyện với khởi tạo/seed khác nhau) - dùng ENSEMBLE thay "
-                              "vì 1 surrogate đông cứng: property loss = MSE(trung bình "
-                              "dự đoán, target) + lambda-disagreement * phương sai giữa "
-                              "các surrogate. Biện pháp cấu trúc chống exploitation, "
-                              "khó đánh lừa đồng thời N mô hình độc lập hơn 1 mô hình.")
-    parser.add_argument("--lambda-disagreement", type=float, default=0.0,
-                         help="Trọng số phạt phương sai giữa các surrogate trong "
-                              "ensemble (chỉ có tác dụng khi dùng --surrogate-paths). "
-                              "0.0 = chỉ dùng trung bình, không phạt bất đồng.")
-    parser.add_argument("--resume-from", type=str, default=None,
-                         help="Checkpoint cVAE (.pt) để load model_state_dict trước khi "
-                              "train tiếp, thay vì khởi tạo ngẫu nhiên (self-play).")
-    parser.add_argument("--fe-eval-every", type=int, default=0,
-                         help="Cứ mỗi N epoch, chạy FE THẬT (không qua surrogate) trên 1 "
-                              "tập condition validation cố định, log R2(FE) vào history. "
-                              "0 = tắt (mặc định, giữ nguyên hành vi cũ).")
-    parser.add_argument("--select-by", choices=["val_loss", "fe_r2"], default="val_loss",
-                         help="Tiêu chí chọn checkpoint tốt nhất. 'fe_r2' cần "
-                              "--fe-eval-every > 0 - chọn theo R2(FE thật) thay vì val_loss "
-                              "(vốn có thể bị surrogate exploitation đánh lừa, xem README §5).")
-    parser.add_argument("--n-fe-eval-conditions", type=int, default=8,
-                         help="Số condition validation dùng cho --fe-eval-every.")
-    parser.add_argument("--output-name", type=str, default="cvae_best.pt",
-                         help="Tên checkpoint lưu trong outputs/phase5/ - đổi tên này để "
-                              "không ghi đè cvae_best.pt chính (self-play).")
-    parser.add_argument("--lambda-real-physics", type=float, default=0.0,
-                         help="Differentiable-physics (xem losses.real_physics_prior_loss, "
-                              "pipeline/phase5_cvae/real_physics.py): trọng số MSE(v12,v21) "
-                              "đo bằng FE-solve THẬT + gradient GIẢI TÍCH (không qua surrogate "
-                              "CNN, không thể bị decoder đánh lừa). CÙNG thang đo với --gamma "
-                              "(cả hai đều nhân PROP_LOSS_SCALE=1000 trước khi cộng vào total) "
-                              "- thử bắt đầu bằng giá trị gần với --gamma đang dùng. 0.0 = tắt "
-                              "(mặc định, giữ hành vi cũ). FE-solve thật ~50-100ms/mẫu (lưới "
-                              "50x50) - CHẬM HƠN surrogate rất nhiều, xem "
-                              "--real-physics-subsample/--real-physics-every để giữ chi phí "
-                              "hợp lý.")
-    parser.add_argument("--real-physics-every", type=int, default=1,
-                         help="Chỉ áp real-physics loss mỗi N step train (1 = mọi step). "
-                              "Tăng lên nếu --lambda-real-physics làm training quá chậm.")
-    parser.add_argument("--real-physics-subsample", type=int, default=None,
-                         help="Chỉ tính real-physics loss trên N mẫu ngẫu nhiên/batch thay vì "
-                              "cả batch (giảm chi phí FE-solve). None = cả batch.")
-    parser.add_argument("--real-physics-workers", type=int, default=0,
-                         help="Số tiến trình song song cho FE-solve thật (multiprocessing.Pool, "
-                              "xem real_physics._get_pool). 0 = tuần tự. THẬN TRỌNG khi "
-                              "DataLoader num_workers>0 đã đa luồng - xem cảnh báo fork() trong "
-                              "real_physics.py.")
-    parser.add_argument("--weighted-sampling", action="store_true",
-                         help="Yêu cầu advisor 2026-07-24 (xem "
-                              "analysis/scripts/analyze_auxetic_distribution.py, "
-                              "dataset.compute_v12_sample_weights): lấy mẫu train theo "
-                              "WeightedRandomSampler thay vì shuffle đều - trọng số nghịch "
-                              "đảo mật độ bin v12, để dataloader thấy đều các vùng auxetic "
-                              "thưa mẫu (v12 rất âm hoặc gần 0/dương) thay vì chỉ học tốt "
-                              "vùng mode [-0.45,-0.30) chiếm ~38%% train set. Mặc định tắt "
-                              "(giữ hành vi cũ, shuffle đều).")
-    parser.add_argument("--sampling-weights-path", type=str,
-                         default=os.path.join(PHASE3_DIR, "v12_bin_weights.json"),
-                         help="File bin_edges/bin_weight JSON (từ "
-                              "analyze_auxetic_distribution.py) dùng khi --weighted-sampling. "
-                              "Nếu không tồn tại, tính lại tại chỗ trên train.npz với "
-                              "--sampling-alpha.")
-    parser.add_argument("--sampling-alpha", type=float, default=0.5,
-                         help="Power làm mượt inverse-frequency khi tính lại bin weight tại "
-                              "chỗ (chỉ dùng nếu --sampling-weights-path không tồn tại). "
-                              "0=tắt (weight đều), 1=nghịch đảo tần suất hoàn toàn, "
-                              "0.5=sqrt (mặc định, tránh trọng số quá cực đoan ở bin ít mẫu).")
-    parser.add_argument("--extended-condition", action="store_true",
-                         help="Mở rộng condition từ (v12,v21) 2 chiều lên 6 chiều "
-                              "[v12,v21,volfrac,volfrac_mask,void_size_frac,"
-                              "void_size_frac_mask] - xem dataset.py CVAEDataset "
-                              "extended_condition. volfrac/void_size_frac là OPTIONAL "
-                              "(mask=0 nếu người dùng không chỉ định lúc sample.py/"
-                              "best_of_n_eval.py) - train.py tự áp condition-dropout "
-                              "(--optional-dropout-p) để model học xử lý cả 2 trường "
-                              "hợp. Mặc định TẮT (giữ hành vi cũ, condition_dim=2).")
-    parser.add_argument("--optional-dropout-p", type=float, default=0.5,
-                         help="Chỉ có tác dụng khi --extended-condition: xác suất "
-                              "(độc lập theo từng chiều optional, từng mẫu) zero "
-                              "value+mask lúc train, kiểu classifier-free-guidance - "
-                              "xem apply_condition_dropout().")
-    parser.add_argument("--lambda-volfrac", type=float, default=0.0,
-                         help="Chỉ có tác dụng khi --extended-condition: trọng số "
-                              "volfrac_consistency_loss (losses.py) - suy trực tiếp "
-                              "từ recon.mean(), không cần surrogate/FE. 0.0 = tắt "
-                              "(mặc định).")
-    parser.add_argument("--include-nu0", action="store_true",
-                         help="Giai đoạn A (docs/PROJECT_PLAN.md A6): thêm ν0 (hệ số "
-                              "Poisson vật liệu nền) làm condition OPTIONAL, +2 chiều "
-                              "[nu0,nu0_mask] - độc lập với --extended-condition, có "
-                              "thể bật riêng hoặc cùng lúc (xem dataset.py "
-                              "CVAEDataset.__init__). Dùng condition-dropout giống "
-                              "volfrac/void_size_frac (--optional-dropout-p), và "
-                              "khi --lambda-real-physics>0, FE-solve THẬT dùng đúng "
-                              "ν0 per-sample thay vì fe_params['nu']=0.3 cố định (xem "
-                              "losses.real_physics_loss nu0_col, real_physics.py A5). "
-                              "CẦN dataset có field 'nu' - outputs/phase3/*.npz mặc "
-                              "định KHÔNG có (sinh trước A4), dùng --data-dir trỏ tới "
-                              "dataset đã build lại (vd outputs/phase3_a4/) - dataset.py "
-                              "raise lỗi rõ ràng nếu thiếu field. Mặc định TẮT.")
-    parser.add_argument("--data-dir", type=str, default=PHASE3_DIR,
-                         help="Thư mục chứa {train,val,test}.npz. Mặc định "
-                              "outputs/phase3/ (KHÔNG có field 'nu'). --include-nu0 "
-                              "cần trỏ tới dataset có field này, vd outputs/phase3_a4/ "
-                              "(xem analysis/scripts/assemble_phase3_a4.py, A4).")
+    parser.add_argument(
+        "--surrogate-path",
+        type=str,
+        default=None,
+        help="Đường dẫn surrogate_for_phase5.pt khác mặc định "
+        "(vd checkpoint đã fine-tune đối kháng ở 1 vòng self-play). "
+        "Bỏ trống = dùng SURROGATE_PATH mặc định trong losses.py. "
+        "Bỏ qua nếu dùng --surrogate-paths (ensemble).",
+    )
+    parser.add_argument(
+        "--surrogate-paths",
+        type=str,
+        nargs="*",
+        default=None,
+        help="2+ đường dẫn surrogate_for_phase5.pt độc lập (vd huấn "
+        "luyện với khởi tạo/seed khác nhau) - dùng ENSEMBLE thay "
+        "vì 1 surrogate đông cứng: property loss = MSE(trung bình "
+        "dự đoán, target) + lambda-disagreement * phương sai giữa "
+        "các surrogate. Biện pháp cấu trúc chống exploitation, "
+        "khó đánh lừa đồng thời N mô hình độc lập hơn 1 mô hình.",
+    )
+    parser.add_argument(
+        "--lambda-disagreement",
+        type=float,
+        default=0.0,
+        help="Trọng số phạt phương sai giữa các surrogate trong "
+        "ensemble (chỉ có tác dụng khi dùng --surrogate-paths). "
+        "0.0 = chỉ dùng trung bình, không phạt bất đồng.",
+    )
+    parser.add_argument(
+        "--resume-from",
+        type=str,
+        default=None,
+        help="Checkpoint cVAE (.pt) để load model_state_dict trước khi "
+        "train tiếp, thay vì khởi tạo ngẫu nhiên (self-play).",
+    )
+    parser.add_argument(
+        "--fe-eval-every",
+        type=int,
+        default=10,
+        help="Cứ mỗi N epoch, chạy FE THẬT (không qua surrogate) trên 1 "
+        "tập condition validation cố định, log R2(FE) vào history. "
+        "Đây là tín hiệu bắt buộc để chọn checkpoint trong pipeline v2.",
+    )
+    parser.add_argument(
+        "--select-by",
+        choices=["fe_r2"],
+        default="fe_r2",
+        help="Tiêu chí chọn checkpoint tốt nhất. Pipeline v2 bắt buộc "
+        "chọn theo R2(FE thật), không dùng reconstruction val_loss.",
+    )
+    parser.add_argument(
+        "--n-fe-eval-conditions",
+        type=int,
+        default=8,
+        help="Số condition validation dùng cho --fe-eval-every.",
+    )
+    parser.add_argument(
+        "--output-name",
+        type=str,
+        default="cvae_best.pt",
+        help="Tên checkpoint lưu trong outputs/phase5/ - đổi tên này để "
+        "không ghi đè cvae_best.pt chính (self-play).",
+    )
+    parser.add_argument(
+        "--lambda-real-physics",
+        type=float,
+        default=0.0,
+        help="Differentiable-physics (xem losses.real_physics_prior_loss, "
+        "pipeline/phase5_cvae/real_physics.py): trọng số MSE(v12,v21) "
+        "đo bằng FE-solve THẬT + gradient GIẢI TÍCH (không qua surrogate "
+        "CNN, không thể bị decoder đánh lừa). CÙNG thang đo với --gamma "
+        "(cả hai đều nhân PROP_LOSS_SCALE=1000 trước khi cộng vào total) "
+        "- thử bắt đầu bằng giá trị gần với --gamma đang dùng. 0.0 = tắt "
+        "(mặc định, giữ hành vi cũ). FE-solve thật ~50-100ms/mẫu (lưới "
+        "50x50) - CHẬM HƠN surrogate rất nhiều, xem "
+        "--real-physics-subsample/--real-physics-every để giữ chi phí "
+        "hợp lý.",
+    )
+    parser.add_argument(
+        "--real-physics-every",
+        type=int,
+        default=1,
+        help="Chỉ áp real-physics loss mỗi N step train (1 = mọi step). "
+        "Tăng lên nếu --lambda-real-physics làm training quá chậm.",
+    )
+    parser.add_argument(
+        "--real-physics-subsample",
+        type=int,
+        default=None,
+        help="Chỉ tính real-physics loss trên N mẫu ngẫu nhiên/batch thay vì "
+        "cả batch (giảm chi phí FE-solve). None = cả batch.",
+    )
+    parser.add_argument(
+        "--real-physics-workers",
+        type=int,
+        default=0,
+        help="Số tiến trình song song cho FE-solve thật (multiprocessing.Pool, "
+        "xem real_physics._get_pool). 0 = tuần tự. THẬN TRỌNG khi "
+        "DataLoader num_workers>0 đã đa luồng - xem cảnh báo fork() trong "
+        "real_physics.py.",
+    )
+    parser.add_argument(
+        "--weighted-sampling",
+        action="store_true",
+        help="Yêu cầu advisor 2026-07-24 (xem "
+        "analysis/scripts/analyze_auxetic_distribution.py, "
+        "dataset.compute_v12_sample_weights): lấy mẫu train theo "
+        "WeightedRandomSampler thay vì shuffle đều - trọng số nghịch "
+        "đảo mật độ bin v12, để dataloader thấy đều các vùng auxetic "
+        "thưa mẫu (v12 rất âm hoặc gần 0/dương) thay vì chỉ học tốt "
+        "vùng mode [-0.45,-0.30) chiếm ~38%% train set. Mặc định tắt "
+        "(giữ hành vi cũ, shuffle đều).",
+    )
+    parser.add_argument(
+        "--sampling-weights-path",
+        type=str,
+        default=os.path.join(PHASE3_DIR, "v12_bin_weights.json"),
+        help="File bin_edges/bin_weight JSON (từ "
+        "analyze_auxetic_distribution.py) dùng khi --weighted-sampling. "
+        "Nếu không tồn tại, tính lại tại chỗ trên train.npz với "
+        "--sampling-alpha.",
+    )
+    parser.add_argument(
+        "--sampling-alpha",
+        type=float,
+        default=0.5,
+        help="Power làm mượt inverse-frequency khi tính lại bin weight tại "
+        "chỗ (chỉ dùng nếu --sampling-weights-path không tồn tại). "
+        "0=tắt (weight đều), 1=nghịch đảo tần suất hoàn toàn, "
+        "0.5=sqrt (mặc định, tránh trọng số quá cực đoan ở bin ít mẫu).",
+    )
+    parser.add_argument(
+        "--extended-condition",
+        action="store_true",
+        help="Mở rộng condition từ (v12,v21) 2 chiều lên 6 chiều "
+        "[v12,v21,volfrac,volfrac_mask,void_size_frac,"
+        "void_size_frac_mask] - xem dataset.py CVAEDataset "
+        "extended_condition. volfrac/void_size_frac là OPTIONAL "
+        "(mask=0 nếu người dùng không chỉ định lúc sample.py/"
+        "best_of_n_eval.py) - train.py tự áp condition-dropout "
+        "(--optional-dropout-p) để model học xử lý cả 2 trường "
+        "hợp. Mặc định TẮT (giữ hành vi cũ, condition_dim=2).",
+    )
+    parser.add_argument(
+        "--optional-dropout-p",
+        type=float,
+        default=0.5,
+        help="Chỉ có tác dụng khi --extended-condition: xác suất "
+        "(độc lập theo từng chiều optional, từng mẫu) zero "
+        "value+mask lúc train, kiểu classifier-free-guidance - "
+        "xem apply_condition_dropout().",
+    )
+    parser.add_argument(
+        "--lambda-volfrac",
+        type=float,
+        default=0.0,
+        help="Chỉ có tác dụng khi --extended-condition: trọng số "
+        "volfrac_consistency_loss (losses.py) - suy trực tiếp "
+        "từ recon.mean(), không cần surrogate/FE. 0.0 = tắt "
+        "(mặc định).",
+    )
+    parser.add_argument(
+        "--include-nu0",
+        action="store_true",
+        help="Giai đoạn A (docs/PROJECT_PLAN.md A6): thêm ν0 (hệ số "
+        "Poisson vật liệu nền) làm condition OPTIONAL, +2 chiều "
+        "[nu0,nu0_mask] - độc lập với --extended-condition, có "
+        "thể bật riêng hoặc cùng lúc (xem dataset.py "
+        "CVAEDataset.__init__). Dùng condition-dropout giống "
+        "volfrac/void_size_frac (--optional-dropout-p), và "
+        "khi --lambda-real-physics>0, FE-solve THẬT dùng đúng "
+        "ν0 per-sample thay vì fe_params['nu']=0.3 cố định (xem "
+        "losses.real_physics_loss nu0_col, real_physics.py A5). "
+        "CẦN dataset có field 'nu' - outputs/phase3/*.npz mặc "
+        "định KHÔNG có (sinh trước A4), dùng --data-dir trỏ tới "
+        "dataset đã build lại (vd outputs/phase3_a4/) - dataset.py "
+        "raise lỗi rõ ràng nếu thiếu field. Mặc định TẮT.",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=str,
+        default=PHASE3_DIR,
+        help="Thư mục chứa {train,val,test}.npz. Mặc định "
+        "outputs/phase3/ (KHÔNG có field 'nu'). --include-nu0 "
+        "cần trỏ tới dataset có field này, vd outputs/phase3_a4/ "
+        "(xem analysis/scripts/assemble_phase3_a4.py, A4).",
+    )
     args = parser.parse_args()
 
-    if args.select_by == "fe_r2" and args.fe_eval_every <= 0:
-        raise ValueError("--select-by fe_r2 cần --fe-eval-every > 0.")
-
-    if args.select_by == "val_loss" and args.lambda_real_physics == 0.0:
-        print("=" * 70)
-        print("CẢNH BÁO: --select-by val_loss (mặc định) + --lambda-real-physics 0.0")
-        print("(mặc định) là tổ hợp đã 2 lần độc lập xác nhận CHỌN NHẦM checkpoint")
-        print("(val_loss bị KL-warmup đánh lừa, thiên vị epoch chưa train đủ - xem")
-        print("EXPERIMENT_LOG.md, bảng 'val_loss không an toàn để chọn checkpoint').")
-        print("Khuyến nghị: thêm --select-by fe_r2 --fe-eval-every N (chọn theo R2 FE")
-        print("thật), và --lambda-real-physics > 0 để fine-tune differentiable-physics")
-        print("(cách đã tạo ra checkpoint khuyến nghị cvae_realphysics.pt/")
-        print("cvae_v2_finetuned.pt - xem README mục 5 để lấy đúng câu lệnh đầy đủ).")
-        print("=" * 70)
+    if args.fe_eval_every <= 0:
+        raise ValueError(
+            "Pipeline v2 bắt buộc --fe-eval-every > 0 để chọn checkpoint "
+            "theo R2(FE thật)."
+        )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     os.makedirs(PHASE5_DIR, exist_ok=True)
 
-    train_ds = CVAEDataset(os.path.join(args.data_dir, "train.npz"),
-                           extended_condition=args.extended_condition,
-                           include_nu0=args.include_nu0)
-    val_ds = CVAEDataset(os.path.join(args.data_dir, "val.npz"),
-                         extended_condition=args.extended_condition,
-                         include_nu0=args.include_nu0)
+    train_ds = CVAEDataset(
+        os.path.join(args.data_dir, "train.npz"),
+        extended_condition=args.extended_condition,
+        include_nu0=args.include_nu0,
+    )
+    val_ds = CVAEDataset(
+        os.path.join(args.data_dir, "val.npz"),
+        extended_condition=args.extended_condition,
+        include_nu0=args.include_nu0,
+    )
     condition_dim = train_ds.condition_dim
     if args.weighted_sampling:
         sample_weights = compute_v12_sample_weights(
-            train_ds.v12, weights_path=args.sampling_weights_path,
+            train_ds.v12,
+            weights_path=args.sampling_weights_path,
             alpha=args.sampling_alpha,
         )
         sampler = WeightedRandomSampler(
-            torch.from_numpy(sample_weights).double(), num_samples=len(train_ds),
+            torch.from_numpy(sample_weights).double(),
+            num_samples=len(train_ds),
             replacement=True,
         )
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, sampler=sampler,
-                                   num_workers=2, drop_last=True)
-        print(f"Weighted sampling BẬT (weights={args.sampling_weights_path}, "
-              f"alpha={args.sampling_alpha}, min={sample_weights.min():.3f}, "
-              f"max={sample_weights.max():.3f})")
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=args.batch_size,
+            sampler=sampler,
+            num_workers=2,
+            drop_last=True,
+        )
+        print(
+            f"Weighted sampling BẬT (weights={args.sampling_weights_path}, "
+            f"alpha={args.sampling_alpha}, min={sample_weights.min():.3f}, "
+            f"max={sample_weights.max():.3f})"
+        )
     else:
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True,
-                                   num_workers=2, drop_last=True)
-    val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False,
-                             num_workers=2)
+        train_loader = DataLoader(
+            train_ds,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=2,
+            drop_last=True,
+        )
+    val_loader = DataLoader(
+        val_ds, batch_size=args.batch_size, shuffle=False, num_workers=2
+    )
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
-    model = CVAE(condition_dim=condition_dim, latent_dim=args.latent_dim,
-                 resolution=args.resolution).to(device)
+    model = CVAE(
+        condition_dim=condition_dim,
+        latent_dim=args.latent_dim,
+        resolution=args.resolution,
+        decoder_type=args.decoder_type,
+        wire_hidden_dim=args.wire_hidden_dim,
+        wire_omega0=args.wire_omega0,
+        wire_s0=args.wire_s0,
+    ).to(device)
     if args.resume_from:
-        resume_ckpt = torch.load(args.resume_from, map_location=device, weights_only=False)
+        resume_ckpt = torch.load(
+            args.resume_from, map_location=device, weights_only=False
+        )
         resume_state_dict = resume_ckpt["model_state_dict"]
         resume_condition_dim = resume_ckpt.get("condition_dim", 2)
         if resume_condition_dim != condition_dim:
-            print(f"CẢNH BÁO: checkpoint resume có condition_dim={resume_condition_dim}, "
-                  f"model hiện tại condition_dim={condition_dim} (--extended-condition="
-                  f"{args.extended_condition}, --include-nu0={args.include_nu0}) - mở "
-                  "rộng/thu gọn 3 layer fc phụ thuộc condition (giữ cột v12/v21 + toàn "
-                  "bộ CNN backbone, random-init phần condition mới) thay vì crash. Xem "
-                  "resize_condition_dim_weights().")
+            print(
+                f"CẢNH BÁO: checkpoint resume có condition_dim={resume_condition_dim}, "
+                f"model hiện tại condition_dim={condition_dim} (--extended-condition="
+                f"{args.extended_condition}, --include-nu0={args.include_nu0}) - mở "
+                "rộng/thu gọn 3 layer fc phụ thuộc condition (giữ cột v12/v21 + toàn "
+                "bộ CNN backbone, random-init phần condition mới) thay vì crash. Xem "
+                "resize_condition_dim_weights()."
+            )
             resume_state_dict = resize_condition_dim_weights(
                 resume_state_dict, resume_condition_dim, condition_dim
             )
         model.load_state_dict(resume_state_dict)
-        print(f"Đã load trọng số từ {args.resume_from} "
-              f"(epoch={resume_ckpt.get('epoch')}, val_loss={resume_ckpt.get('val_loss')}) "
-              f"- train tiếp thay vì khởi tạo ngẫu nhiên.")
+        print(
+            f"Đã load trọng số từ {args.resume_from} "
+            f"(epoch={resume_ckpt.get('epoch')}, val_loss={resume_ckpt.get('val_loss')}) "
+            f"- train tiếp thay vì khởi tạo ngẫu nhiên."
+        )
     if args.surrogate_paths:
         assert len(args.surrogate_paths) >= 2, (
             "--surrogate-paths cần >= 2 checkpoint để tạo ensemble có ý nghĩa "
@@ -486,10 +785,14 @@ def main():
         surrogate, target_names = load_frozen_surrogate_ensemble(
             args.surrogate_paths, device=device
         )
-        print(f"Ensemble surrogate: {len(surrogate)} model độc lập "
-              f"({args.surrogate_paths}), lambda_disagreement={args.lambda_disagreement}")
+        print(
+            f"Ensemble surrogate: {len(surrogate)} model độc lập "
+            f"({args.surrogate_paths}), lambda_disagreement={args.lambda_disagreement}"
+        )
     elif args.surrogate_path:
-        surrogate, target_names = load_frozen_surrogate(device=device, path=args.surrogate_path)
+        surrogate, target_names = load_frozen_surrogate(
+            device=device, path=args.surrogate_path
+        )
     else:
         surrogate, target_names = load_frozen_surrogate(device=device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
@@ -508,12 +811,17 @@ def main():
         # không chỉ định volfrac/void_size_frac") khi extended_condition -
         # đo đúng khả năng CỐT LÕI (v12/v21 targeting) không lẫn ảnh hưởng
         # optional dims, so sánh được với lịch sử đo trước khi có tính năng này.
-        fe_eval_conditions = np.stack([
-            [val_ds[i][1][0].item(), val_ds[i][1][1].item()] + [0.0] * (condition_dim - 2)
-            for i in idxs
-        ])
-        print(f"FE-eval bật: mỗi {args.fe_eval_every} epoch chấm R2(FE thật) trên "
-              f"{n_cond} condition validation cố định.")
+        fe_eval_conditions = np.stack(
+            [
+                [val_ds[i][1][0].item(), val_ds[i][1][1].item()]
+                + [0.0] * (condition_dim - 2)
+                for i in idxs
+            ]
+        )
+        print(
+            f"FE-eval bật: mỗi {args.fe_eval_every} epoch chấm R2(FE thật) trên "
+            f"{n_cond} condition validation cố định."
+        )
 
     history = []
     best_val = float("-inf") if args.select_by == "fe_r2" else float("inf")
@@ -523,9 +831,17 @@ def main():
         beta = kl_beta_schedule(epoch, args.kl_warmup, beta_max=1.0)
 
         train_stats = run_epoch(
-            model, train_loader, surrogate, target_names,
-            optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
-            args.lambda_tv, args.lambda_bin, device, train=True,
+            model,
+            train_loader,
+            surrogate,
+            target_names,
+            optimizer,
+            beta,
+            args.gamma * (epoch / 20 if epoch < 20 else 1),
+            args.lambda_tv,
+            args.lambda_bin,
+            device,
+            train=True,
             lambda_disagreement=args.lambda_disagreement,
             lambda_periodic=args.lambda_periodic,
             regularize_prior_samples=args.regularize_prior_samples,
@@ -540,9 +856,17 @@ def main():
             include_nu0=args.include_nu0,
         )
         val_stats = run_epoch(
-            model, val_loader, surrogate, target_names,
-            optimizer, beta, args.gamma * (epoch / 20 if epoch < 20 else 1),
-            args.lambda_tv, args.lambda_bin, device, train=False,
+            model,
+            val_loader,
+            surrogate,
+            target_names,
+            optimizer,
+            beta,
+            args.gamma * (epoch / 20 if epoch < 20 else 1),
+            args.lambda_tv,
+            args.lambda_bin,
+            device,
+            train=False,
             lambda_disagreement=args.lambda_disagreement,
             lambda_periodic=args.lambda_periodic,
             regularize_prior_samples=args.regularize_prior_samples,
@@ -557,94 +881,127 @@ def main():
         if scheduler is not None:
             scheduler.step()
 
-        print(f"[{epoch:03d}/{args.epochs}] beta={beta:.3f} lr={current_lr:.2e} | "
-              f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
-              f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
-              f"prop_w={train_stats['prop_weighted']:.2f} tv={train_stats['tv']:.4f} "
-              f"bin={train_stats['binarization']:.4f} periodic={train_stats['periodic']:.4f} "
-              f"prior[tv={train_stats['prior_tv']:.4f} bin={train_stats['prior_binarization']:.4f} "
-              f"periodic={train_stats['prior_periodic']:.4f}] "
-              f"disagree={train_stats['disagreement']:.5f} "
-              f"real_physics={train_stats['real_physics']:.4f} "
-              f"volfrac_loss={train_stats['volfrac_loss']:.4f} || "
-              f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
-              f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
-              f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
-              f"bin={val_stats['binarization']:.4f} periodic={val_stats['periodic']:.4f} "
-              f"prior[tv={val_stats['prior_tv']:.4f} bin={val_stats['prior_binarization']:.4f} "
-              f"periodic={val_stats['prior_periodic']:.4f}] "
-              f"disagree={val_stats['disagreement']:.5f} "
-              f"volfrac_loss={val_stats['volfrac_loss']:.4f}")
+        print(
+            f"[{epoch:03d}/{args.epochs}] beta={beta:.3f} lr={current_lr:.2e} | "
+            f"train total={train_stats['total']:.2f} recon={train_stats['recon']:.2f} "
+            f"kl={train_stats['kl']:.3f} prop={train_stats['prop']:.4f} "
+            f"prop_w={train_stats['prop_weighted']:.2f} tv={train_stats['tv']:.4f} "
+            f"bin={train_stats['binarization']:.4f} periodic={train_stats['periodic']:.4f} "
+            f"prior[tv={train_stats['prior_tv']:.4f} bin={train_stats['prior_binarization']:.4f} "
+            f"periodic={train_stats['prior_periodic']:.4f}] "
+            f"disagree={train_stats['disagreement']:.5f} "
+            f"real_physics={train_stats['real_physics']:.4f} "
+            f"volfrac_loss={train_stats['volfrac_loss']:.4f} || "
+            f"val total={val_stats['total']:.2f} recon={val_stats['recon']:.2f} "
+            f"kl={val_stats['kl']:.3f} prop={val_stats['prop']:.4f} "
+            f"prop_w={val_stats['prop_weighted']:.2f} tv={val_stats['tv']:.4f} "
+            f"bin={val_stats['binarization']:.4f} periodic={val_stats['periodic']:.4f} "
+            f"prior[tv={val_stats['prior_tv']:.4f} bin={val_stats['prior_binarization']:.4f} "
+            f"periodic={val_stats['prior_periodic']:.4f}] "
+            f"disagree={val_stats['disagreement']:.5f} "
+            f"volfrac_loss={val_stats['volfrac_loss']:.4f}"
+        )
 
         fe_r2 = None
         if fe_eval_conditions is not None and epoch % args.fe_eval_every == 0:
             fe_r2 = real_fe_r2(model, fe_eval_conditions, device)
             print(f"    [FE-eval epoch {epoch}] R2(v12, FE thật)={fe_r2:.4f}")
 
-        history.append({"epoch": epoch, "beta": beta,
-                         "train": train_stats, "val": val_stats, "fe_r2": fe_r2})
+        history.append(
+            {
+                "epoch": epoch,
+                "beta": beta,
+                "train": train_stats,
+                "val": val_stats,
+                "fe_r2": fe_r2,
+            }
+        )
 
         ckpt_path = os.path.join(PHASE5_DIR, args.output_name)
         if args.select_by == "fe_r2":
             if fe_r2 is not None and not np.isnan(fe_r2) and fe_r2 > best_val:
                 best_val = fe_r2
                 epochs_no_improve = 0
-                torch.save({
-                    "model_state_dict": model.state_dict(),
-                    "latent_dim": args.latent_dim,
-                    "condition_dim": condition_dim,
-                    "extended_condition": args.extended_condition,
-                    "resolution": args.resolution,
-                    "epoch": epoch,
-                    "val_loss": val_stats["total"],
-                    "fe_r2": best_val,
-                    "gamma": args.gamma,
-                    "lambda_tv": args.lambda_tv,
-                    "lambda_bin": args.lambda_bin,
-                    "lambda_periodic": args.lambda_periodic,
-                }, ckpt_path)
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "latent_dim": args.latent_dim,
+                        "condition_dim": condition_dim,
+                        "extended_condition": args.extended_condition,
+                        "resolution": args.resolution,
+                        "epoch": epoch,
+                        "val_loss": val_stats["total"],
+                        "fe_r2": best_val,
+                        "gamma": args.gamma,
+                        "lambda_tv": args.lambda_tv,
+                        "lambda_bin": args.lambda_bin,
+                        "lambda_periodic": args.lambda_periodic,
+                        "decoder_type": args.decoder_type,
+                        "wire_hidden_dim": args.wire_hidden_dim,
+                        "wire_omega0": args.wire_omega0,
+                        "wire_s0": args.wire_s0,
+                    },
+                    ckpt_path,
+                )
             elif fe_r2 is not None:
                 epochs_no_improve += 1
                 if epochs_no_improve >= args.patience:
-                    print(f"Early stopping tại epoch {epoch} "
-                          f"(R2(FE thật) không tăng trong {args.patience} lần FE-eval)")
+                    print(
+                        f"Early stopping tại epoch {epoch} "
+                        f"(R2(FE thật) không tăng trong {args.patience} lần FE-eval)"
+                    )
                     break
         else:
             if val_stats["total"] < best_val:
                 best_val = val_stats["total"]
                 epochs_no_improve = 0
-                torch.save({
-                    "model_state_dict": model.state_dict(),
-                    "latent_dim": args.latent_dim,
-                    "condition_dim": condition_dim,
-                    "extended_condition": args.extended_condition,
-                    "resolution": args.resolution,
-                    "epoch": epoch,
-                    "val_loss": best_val,
-                    "fe_r2": fe_r2,
-                    "gamma": args.gamma,
-                    "lambda_tv": args.lambda_tv,
-                    "lambda_bin": args.lambda_bin,
-                    "lambda_periodic": args.lambda_periodic,
-                }, ckpt_path)
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "latent_dim": args.latent_dim,
+                        "condition_dim": condition_dim,
+                        "extended_condition": args.extended_condition,
+                        "resolution": args.resolution,
+                        "epoch": epoch,
+                        "val_loss": best_val,
+                        "fe_r2": fe_r2,
+                        "gamma": args.gamma,
+                        "lambda_tv": args.lambda_tv,
+                        "lambda_bin": args.lambda_bin,
+                        "lambda_periodic": args.lambda_periodic,
+                        "decoder_type": args.decoder_type,
+                        "wire_hidden_dim": args.wire_hidden_dim,
+                        "wire_omega0": args.wire_omega0,
+                        "wire_s0": args.wire_s0,
+                    },
+                    ckpt_path,
+                )
             else:
                 epochs_no_improve += 1
                 if epochs_no_improve >= args.patience:
-                    print(f"Early stopping tại epoch {epoch} "
-                          f"(val loss không giảm trong {args.patience} epoch)")
+                    print(
+                        f"Early stopping tại epoch {epoch} "
+                        f"(val loss không giảm trong {args.patience} epoch)"
+                    )
                     break
 
-    history_name = ("train_history.json" if args.output_name == "cvae_best.pt"
-                     else args.output_name.replace(".pt", "_history.json"))
+    history_name = (
+        "train_history.json"
+        if args.output_name == "cvae_best.pt"
+        else args.output_name.replace(".pt", "_history.json")
+    )
     with open(os.path.join(PHASE5_DIR, history_name), "w") as f:
         json.dump(history, f, indent=2)
 
     metric_name = "R2(FE)" if args.select_by == "fe_r2" else "val_loss"
-    print(f"Đã lưu checkpoint tốt nhất: outputs/phase5/{args.output_name} "
-          f"({metric_name}={best_val:.4f})")
+    print(
+        f"Đã lưu checkpoint tốt nhất: outputs/phase5/{args.output_name} "
+        f"({metric_name}={best_val:.4f})"
+    )
 
     if args.real_physics_workers > 0:
         from real_physics import shutdown_pool
+
         shutdown_pool()
 
 

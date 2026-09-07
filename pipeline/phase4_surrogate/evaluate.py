@@ -55,10 +55,11 @@ def main():
     # include_nu0 vắng mặt ở mọi checkpoint TRƯỚC A4 - False khớp đúng hành
     # vi cũ (forward(image, seed_vec) không đổi), không phải suy đoán tùy tiện.
     include_nu0 = ckpt.get("include_nu0", False)
+    use_kan = ckpt.get("use_kan", False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SurrogateCNN(
         n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"],
-        n_outputs=n_outputs, include_nu0=include_nu0,
+        n_outputs=n_outputs, include_nu0=include_nu0, use_kan=use_kan,
     ).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()

@@ -112,3 +112,32 @@ class TestSurrogateCNNNu0:
         out.sum().backward()
         for name, p in model.named_parameters():
             assert p.grad is not None, f"no gradient reached {name}"
+
+
+class TestSurrogateCNNKAN:
+    """ConvKAN head preserves the surrogate contract and old default path."""
+
+    def test_kan_forward_and_gradients(self):
+        model = SurrogateCNN(n_seeds=3, channels=(8, 16), fc_hidden=12, use_kan=True)
+        image = torch.randn(2, 1, 64, 64)
+        seed_vec = torch.zeros(2, 3)
+        seed_vec[:, 0] = 1.0
+
+        output = model(image, seed_vec)
+        assert output.shape == (2, 3)
+        output.sum().backward()
+        assert all(parameter.grad is not None for parameter in model.parameters())
+
+    def test_kan_head_has_expected_spline_parameters(self):
+        linear = SurrogateCNN(n_seeds=11, channels=(8, 16), fc_hidden=32)
+        kan = SurrogateCNN(n_seeds=11, channels=(8, 16), fc_hidden=32, use_kan=True)
+        linear_fc_params = sum(parameter.numel() for parameter in linear.fc.parameters())
+        kan_fc_params = sum(parameter.numel() for parameter in kan.fc.parameters())
+        # EfficientKANLinear carries base and spline weights, so equal-width
+        # KAN heads intentionally have more parameters than Linear heads.
+        assert kan_fc_params > linear_fc_params
+
+    def test_default_checkpoint_architecture_remains_linear(self):
+        model = SurrogateCNN(n_seeds=3, channels=(8, 16), fc_hidden=12)
+        assert model.use_kan is False
+        assert isinstance(model.fc[0], torch.nn.Linear)

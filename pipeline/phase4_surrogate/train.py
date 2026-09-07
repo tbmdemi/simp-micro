@@ -136,6 +136,9 @@ def main():
                               "cho model (Giai doan A, A4, docs/PROJECT_PLAN.md "
                               "Nhom 1) - can npz co field 'nu' (build_npz.py da "
                               "them, fallback 0.3 cho manifest cu). Mac dinh TAT.")
+    parser.add_argument("--use-kan", action="store_true",
+                        help="Dùng EfficientKANLinear cho FC head thay vì Linear. "
+                             "Mặc định tắt để tương thích checkpoint CNN cũ.")
     parser.add_argument("--train-npz", type=str, default=None,
                          help="Override đường dẫn train npz (mặc định train.npz, hoặc "
                               "train_ext.npz nếu --include-f1f2).")
@@ -191,7 +194,7 @@ def main():
                              num_workers=2)
 
     model = SurrogateCNN(n_seeds=train_ds.n_seeds, n_outputs=len(loss_weights),
-                          include_nu0=args.include_nu0).to(device)
+                          include_nu0=args.include_nu0, use_kan=args.use_kan).to(device)
     if args.init_from:
         init_ckpt = torch.load(args.init_from, map_location=device, weights_only=False)
         model.load_state_dict(init_ckpt["model_state_dict"])
@@ -238,6 +241,7 @@ def main():
                 "fc_hidden": 128,
                 "n_outputs": len(loss_weights),
                 "include_nu0": args.include_nu0,
+                "use_kan": args.use_kan,
                 "target_names": target_names,
                 "val_loss": val_loss,
                 "epoch": epoch,

@@ -13,7 +13,8 @@ Cách Phase 5 load lại (ví dụ):
 
     ckpt = torch.load("outputs/phase4/surrogate_for_phase5.pt", weights_only=False)
     model = SurrogateCNN(n_seeds=ckpt["n_seeds"], channels=ckpt["channels"],
-                          fc_hidden=ckpt["fc_hidden"], n_outputs=ckpt["n_outputs"])
+                          fc_hidden=ckpt["fc_hidden"], n_outputs=ckpt["n_outputs"],
+                          use_kan=ckpt.get("use_kan", False))
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     for p in model.parameters():
@@ -58,6 +59,7 @@ def export_surrogate(src: str, dst: str, eval_report_path: str = None):
         # trên checkpoint 5-output (--include-f1f2, surrogate_f1f2.pt). ckpt cũ trước
         # khi train.py lưu field này thì mặc định 3 (tương thích ngược).
         "n_outputs": ckpt.get("n_outputs", 3),
+        "use_kan": ckpt.get("use_kan", False),
         "target_names": ckpt["target_names"],
         "input_spec": {
             "image_shape": [1, 64, 64],

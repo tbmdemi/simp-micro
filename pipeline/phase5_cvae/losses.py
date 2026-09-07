@@ -14,6 +14,7 @@ khoảng cách surrogate-vs-FE càng doãng ra khi gamma càng tăng (decoder h�
 đánh lừa surrogate, không sinh hình học auxetic thật). Đừng tăng gamma kỳ
 vọng cải thiện thật - xem mục Phase 5 trong README.
 """
+
 import os
 import torch
 import torch.nn as nn
@@ -29,8 +30,53 @@ except ImportError:
     # - xem README "bare-import landmine" note trong CLAUDE.md/memory.
     from real_physics import RealPhysicsNu
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-SURROGATE_PATH = os.path.join(REPO_ROOT, "outputs", "phase4", "surrogate_for_phase5_v2.pt")
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
+SURROGATE_PATH = os.path.join(
+    REPO_ROOT, "outputs", "phase4", "surrogate_for_phase5_v2.pt"
+)
+
+
+def kinn_prior_loss(
+    density: torch.Tensor,
+    kinn_model: nn.Module,
+    young_modulus: float = 1.0,
+    poisson_ratio: float = 0.3,
+) -> torch.Tensor:
+    """Apply the KINN deep-energy prior to a generated density batch.
+
+    The density mean is passed as a material feature, while coordinates are
+    generated on the same square grid. This keeps the prior differentiable
+    with respect to the generator output and gives callers a single loss hook
+    for a future ``lambda_kinn`` training option.
+    """
+    try:
+        from pipeline.kinn.physics import deep_energy_loss
+    except ImportError as exc:
+        raise RuntimeError(
+            "pipeline.kinn is required for kinn_prior_loss"
+        ) from exc
+    if density.ndim != 4 or density.size(1) != 1:
+        raise ValueError("density must have shape (B, 1, H, W)")
+    batch, _, height, width = density.shape
+    ys = torch.linspace(-1.0, 1.0, height, device=density.device)
+    xs = torch.linspace(-1.0, 1.0, width, device=density.device)
+    yy, xx = torch.meshgrid(ys, xs, indexing="ij")
+    coordinates = torch.stack((xx, yy), dim=-1).reshape(1, height * width, 2)
+    coordinates = (
+        coordinates.expand(batch, -1, -1).clone().requires_grad_(True)
+    )
+    material = (
+        density.mean(dim=(-1, -2)).unsqueeze(1).expand(-1, height * width, -1)
+    )
+    return deep_energy_loss(
+        kinn_model,
+        coordinates,
+        material,
+        young_modulus=young_modulus,
+        poisson_ratio=poisson_ratio,
+    )
 
 
 def _import_surrogate_cnn():
@@ -38,8 +84,11 @@ def _import_surrogate_cnn():
     `import model`, vì phase5_cvae cũng có model.py trùng tên - tránh đụng
     module đã cache sai trong sys.modules."""
     import importlib.util
+
     path = os.path.join(REPO_ROOT, "pipeline", "phase4_surrogate", "model.py")
-    spec = importlib.util.spec_from_file_location("phase4_surrogate_model", path)
+    spec = importlib.util.spec_from_file_location(
+        "phase4_surrogate_model", path
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.SurrogateCNN
@@ -63,6 +112,7 @@ def load_frozen_surrogate(device="cpu", path=SURROGATE_PATH):
         fc_hidden=ckpt["fc_hidden"],
         n_outputs=ckpt.get("n_outputs", 3),
         include_nu0=ckpt.get("include_nu0", False),
+        use_kan=ckpt.get("use_kan", False),
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
@@ -83,21 +133,29 @@ def load_frozen_surrogate_ensemble(paths, device="cpu"):
     for p in paths:
         m, tn = load_frozen_surrogate(device=device, path=p)
         models.append(m)
-        target_names = tn  # giống nhau giữa các surrogate (cùng target_names schema)
+        target_names = (
+            tn  # giống nhau giữa các surrogate (cùng target_names schema)
+        )
     return models, target_names
 
 
-def kl_beta_schedule(epoch: int, warmup_epochs: int, beta_max: float = 1.0) -> float:
+def kl_beta_schedule(
+    epoch: int, warmup_epochs: int, beta_max: float = 1.0
+) -> float:
     """Tăng tuyến tính 0 -> beta_max trong warmup_epochs, giữ nguyên sau đó."""
     if warmup_epochs <= 0:
         return beta_max
     return min(beta_max, beta_max * epoch / warmup_epochs)
 
 
-def reconstruction_loss(recon: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+def reconstruction_loss(
+    recon: torch.Tensor, target: torch.Tensor
+) -> torch.Tensor:
     # sum-per-pixel rồi chia theo batch (không mean toàn bộ) - đổi thang này
     # sẽ đổi luôn cân bằng recon/kl, cần retune beta nếu sửa.
-    return F.binary_cross_entropy(recon, target, reduction="sum") / recon.size(0)
+    return F.binary_cross_entropy(recon, target, reduction="sum") / recon.size(
+        0
+    )
 
 
 def kl_divergence(mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
@@ -131,12 +189,18 @@ def property_consistency_loss(
             nu_val = condition[:, nu0_col]
             nu_mask = condition[:, nu0_col + 1]
             surrogate_kwargs["nu0"] = torch.where(
-                nu_mask > 0.5, nu_val, torch.full_like(nu_val, default_nu))
+                nu_mask > 0.5, nu_val, torch.full_like(nu_val, default_nu)
+            )
         else:
             surrogate_kwargs["nu0"] = torch.full(
-                (condition.size(0),), default_nu,
-                device=condition.device, dtype=condition.dtype)
-    pred = surrogate(recon, seed_vec, **surrogate_kwargs)  # (B, 3) = [v12, v21, volfrac]
+                (condition.size(0),),
+                default_nu,
+                device=condition.device,
+                dtype=condition.dtype,
+            )
+    pred = surrogate(
+        recon, seed_vec, **surrogate_kwargs
+    )  # (B, 3) = [v12, v21, volfrac]
     idx_v12 = target_names.index("v12")
     idx_v21 = target_names.index("v21")
     pred_cond = torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
@@ -167,7 +231,9 @@ def property_consistency_loss_ensemble(
     preds_cond = []
     for surrogate in surrogates:
         pred = surrogate(recon, seed_vec)
-        preds_cond.append(torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1))
+        preds_cond.append(
+            torch.stack([pred[:, idx_v12], pred[:, idx_v21]], dim=1)
+        )
     preds_stack = torch.stack(preds_cond, dim=0)  # (N_surrogate, B, 2)
     mean_pred = preds_stack.mean(dim=0)
     # condition[:, :2]: xem ghi chú tương tự trong property_consistency_loss().
@@ -258,8 +324,10 @@ def real_physics_loss(
         condition_sub = condition
 
     density_fe = F.interpolate(
-        density_sub.unsqueeze(1), size=(fe_params["nely"], fe_params["nelx"]),
-        mode="bilinear", align_corners=False,
+        density_sub.unsqueeze(1),
+        size=(fe_params["nely"], fe_params["nelx"]),
+        mode="bilinear",
+        align_corners=False,
     ).squeeze(1)
 
     default_nu = fe_params.get("nu", 0.3)
@@ -267,13 +335,18 @@ def real_physics_loss(
     if nu0_col is not None:
         nu_val = condition_sub[:, nu0_col]
         nu_mask = condition_sub[:, nu0_col + 1]
-        nu_arg = torch.where(nu_mask > 0.5, nu_val,
-                              torch.full_like(nu_val, default_nu))
+        nu_arg = torch.where(
+            nu_mask > 0.5, nu_val, torch.full_like(nu_val, default_nu)
+        )
 
     pred = RealPhysicsNu.apply(
-        density_fe, fe_params.get("penal", 3.0), fe_params.get("E0", 199.0),
-        fe_params.get("Emin", 1e-9), nu_arg,
-        fe_params.get("rho0", 1.0), n_workers,
+        density_fe,
+        fe_params.get("penal", 3.0),
+        fe_params.get("E0", 199.0),
+        fe_params.get("Emin", 1e-9),
+        nu_arg,
+        fe_params.get("rho0", 1.0),
+        n_workers,
     )
     # RealPhysicsNu chỉ trả (v12, v21) - so khớp 2 chiều đầu của condition,
     # cùng lý do với property_consistency_loss() khi condition mở rộng
@@ -282,8 +355,13 @@ def real_physics_loss(
 
 
 def real_physics_prior_loss(
-    decoder, latent_dim: int, condition: torch.Tensor, fe_params: dict,
-    subsample: int = None, n_workers: int = 0, nu0_col: int = None,
+    decoder,
+    latent_dim: int,
+    condition: torch.Tensor,
+    fe_params: dict,
+    subsample: int = None,
+    n_workers: int = 0,
+    nu0_col: int = None,
 ):
     """Bản áp lên ảnh decode từ z ~ PRIOR N(0,1) (không qua encoder) - CÙNG
     chế độ model.generate() dùng lúc inference, xem lý do trong docstring
@@ -295,17 +373,29 @@ def real_physics_prior_loss(
 
     Trả về MSE THÔ (không nhân PROP_LOSS_SCALE) - giống property_consistency_loss(),
     caller (train.py::run_epoch) chịu trách nhiệm nhân PROP_LOSS_SCALE trước
-    khi cộng vào tổng loss, để --lambda-real-physics cùng thang đo với --gamma."""
+    khi cộng vào tổng loss, để --lambda-real-physics cùng thang đo với --gamma.
+    """
     bsz = condition.size(0)
     z_prior = torch.randn(bsz, latent_dim, device=condition.device)
     prior_recon = decoder(z_prior, condition)
-    return real_physics_loss(prior_recon, condition, fe_params, subsample=subsample,
-                              n_workers=n_workers, nu0_col=nu0_col)
+    return real_physics_loss(
+        prior_recon,
+        condition,
+        fe_params,
+        subsample=subsample,
+        n_workers=n_workers,
+        nu0_col=nu0_col,
+    )
 
 
-def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tensor,
-                                 lambda_tv: float = 0.0, lambda_bin: float = 0.0,
-                                 lambda_periodic: float = 0.0):
+def prior_sample_regularization(
+    decoder,
+    latent_dim: int,
+    condition: torch.Tensor,
+    lambda_tv: float = 0.0,
+    lambda_bin: float = 0.0,
+    lambda_periodic: float = 0.0,
+):
     """XÁC NHẬN THỰC NGHIỆM (2026-07-23): áp tv_loss/binarization_loss/
     periodicity_loss lên `recon` trong cvae_loss() KHÔNG cải thiện
     manufacturability lúc generate() - vì `recon` ở đó được decode từ z ~
@@ -324,7 +414,9 @@ def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tenso
     tv_l = tv_loss(prior_recon)
     bin_l = binarization_loss(prior_recon)
     periodic_l = periodicity_loss(prior_recon)
-    total = lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l
+    total = (
+        lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l
+    )
     return total, {
         "prior_tv": tv_l.detach(),
         "prior_binarization": bin_l.detach(),
@@ -337,8 +429,9 @@ def prior_sample_regularization(decoder, latent_dim: int, condition: torch.Tenso
 PROP_LOSS_SCALE = 1000.0
 
 
-def volfrac_consistency_loss(recon: torch.Tensor, target_volfrac: torch.Tensor,
-                              mask: torch.Tensor) -> torch.Tensor:
+def volfrac_consistency_loss(
+    recon: torch.Tensor, target_volfrac: torch.Tensor, mask: torch.Tensor
+) -> torch.Tensor:
     """volfrac = tỉ lệ vật liệu rắn/toàn ô = trung bình pixel density - suy
     trực tiếp từ `recon` (mean pixel), KHÔNG cần surrogate/FE, khác hẳn
     property_consistency_loss()/real_physics_loss() (v12/v21 cần giải FE).
@@ -353,10 +446,20 @@ def volfrac_consistency_loss(recon: torch.Tensor, target_volfrac: torch.Tensor,
 
 
 def cvae_loss(
-    recon, image, mu, logvar, condition, seed_vec,
-    surrogate, target_names, beta: float, gamma: float = 1.0,
-    lambda_tv: float = 0.0, lambda_bin: float = 0.0,
-    lambda_disagreement: float = 0.0, lambda_periodic: float = 0.0,
+    recon,
+    image,
+    mu,
+    logvar,
+    condition,
+    seed_vec,
+    surrogate,
+    target_names,
+    beta: float,
+    gamma: float = 1.0,
+    lambda_tv: float = 0.0,
+    lambda_bin: float = 0.0,
+    lambda_disagreement: float = 0.0,
+    lambda_periodic: float = 0.0,
     nu0_col: int = None,
 ):
     """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
@@ -375,27 +478,49 @@ def cvae_loss(
     is_ensemble = isinstance(surrogate, (list, tuple))
     if is_ensemble:
         prop_l, disagreement_l = property_consistency_loss_ensemble(
-            recon, condition, seed_vec, surrogate, target_names, lambda_disagreement
+            recon,
+            condition,
+            seed_vec,
+            surrogate,
+            target_names,
+            lambda_disagreement,
         )
     else:
         prop_l = property_consistency_loss(
-            recon, condition, seed_vec, surrogate, target_names, nu0_col=nu0_col
+            recon,
+            condition,
+            seed_vec,
+            surrogate,
+            target_names,
+            nu0_col=nu0_col,
         )
         disagreement_l = torch.tensor(0.0)
     tv_l = tv_loss(recon)
     bin_l = binarization_loss(recon)
     periodic_l = periodicity_loss(recon)
-    total = (recon_l + beta * kl_l + gamma * PROP_LOSS_SCALE * prop_l
-             + lambda_tv * tv_l + lambda_bin * bin_l + lambda_periodic * periodic_l)
+    total = (
+        recon_l
+        + beta * kl_l
+        + gamma * PROP_LOSS_SCALE * prop_l
+        + lambda_tv * tv_l
+        + lambda_bin * bin_l
+        + lambda_periodic * periodic_l
+    )
     return {
         "total": total,
         "recon": recon_l.detach(),
         "kl": kl_l.detach(),
-        "prop": prop_l.detach(),                                  # thang gốc (Poisson-ratio MSE), để dễ hiểu ý nghĩa vật lý
-        "prop_weighted": (gamma * PROP_LOSS_SCALE * prop_l).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
+        "prop": prop_l.detach(),  # thang gốc (Poisson-ratio MSE), để dễ hiểu ý nghĩa vật lý
+        "prop_weighted": (
+            gamma * PROP_LOSS_SCALE * prop_l
+        ).detach(),  # phần thật sự đóng góp vào total, để so sánh với recon/kl
         "tv": tv_l.detach(),
         "binarization": bin_l.detach(),
         "periodic": periodic_l.detach(),
-        "disagreement": disagreement_l.detach() if torch.is_tensor(disagreement_l) else disagreement_l,
+        "disagreement": (
+            disagreement_l.detach()
+            if torch.is_tensor(disagreement_l)
+            else disagreement_l
+        ),
         "beta": beta,
     }

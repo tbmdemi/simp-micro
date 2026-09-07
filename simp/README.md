@@ -245,6 +245,7 @@ A `ConvergenceChecker` class handles all three criteria - see `simp/core/converg
 
 | Resource | Description |
 |----------|-------------|
+| [`MATH_FLOW.md`](MATH_FLOW.md) | Mathematical formulation: full derivation of the SIMP + homogenization pipeline (no code) |
 | [`../docs/ARCHITECT.md`](../docs/ARCHITECT.md) | System architecture: module map, 8-phase data flow, extension points |
 | [`../docs/CLI_GUIDE.md`](../docs/CLI_GUIDE.md) | Full CLI reference for every phase (1-5) |
 | [`../analysis/`](../analysis/) | CLI and library for analyzing SIMP outputs (dataset, image metrics, reports) |

@@ -60,7 +60,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability + rebuild dQ | **8/8 lô gốc + batch 11 rebuild**, 7.920 mẫu, **91,9% auxetic** (đã rebuild 3 seed bị lỗi dQ, tăng từ 82,1%). Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: (a) phân tích ngược xác nhận SEED chi phối manufacturability - thêm phân bổ mẫu theo seed; (b) phát hiện + sửa lỗi `dQ` + rebuild đầy đủ 2.160 mẫu (3 seed bất đối xứng). Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2----hoàn-thành) bên dưới và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#bảng-tổng-hợp-lỗi-đã-sửa) |
 | 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành, **đã rebuild lần 2 (v2, 2026-07-25)** | **57.216 mẫu train** (sau aug) / 2.044 val / 2.044 test - dataset production hiện tại. Xem mục "Rebuild v2" ngay dưới bảng này |
 | 4 | CNN Surrogate Model | ✅ Hoàn thành, đã retrain trên dataset v2 | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set v2 (`surrogate_v2.pt`, 2026-07-25): ν₁₂ = **0,974**, ν₂₁ = **0,964**, volfrac = 0,983. Xem [Phase 4](#4-cnn-surrogate-model-phase-4----hoàn-thành) bên dưới |
-| 5 | Conditional VAE | ✅✅ Đã sửa surrogate-exploitation bằng differentiable-physics; đã retrain và mở rộng condition | `cvae_v2_finetuned.pt` là checkpoint production khuyến nghị: R²(FE,n=300)=**0,9953** (oracle), hit rate single-shot=**99,7%**, frac manufacturable=0,247. `cvae_realphysics.pt` trên dataset v1 đạt R²=0,9984/hit-rate 98,3%/manuf=0,280 ở phép đo tương ứng. Condition optional gồm `volfrac`/`void_size_frac` (`--extended-condition`) và ν₀ (`--include-nu0`); A/B trên cùng dataset cho ν₀ tăng R² 0,9776→0,9843 và manufacturability 0,312→0,365. Composite score dùng trọng số accuracy/manufacturability/aesthetic `0,6/0,3/0,1`. Xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). |
+| 5 | Conditional VAE | ✅✅ Đã sửa surrogate-exploitation bằng differentiable-physics; đã retrain và mở rộng condition | `cvae_v2_finetuned.pt` là checkpoint production khuyến nghị: R²(FE,n=300)=**0,9953** (oracle), hit rate single-shot=**99,7%**, frac manufacturable=0,247. `cvae_realphysics.pt` trên dataset v1 đạt R²=0,9984/hit-rate 98,3%/manuf=0,280 ở phép đo tương ứng. Condition optional gồm `volfrac`/`void_size_frac` (`--extended-condition`) và ν₀ (`--include-nu0`); A/B trên cùng dataset cho ν₀ tăng R² 0,9776→0,9843 và manufacturability 0,312→0,365. Composite score dùng trọng số accuracy/manufacturability/aesthetic `0,6/0,3/0,1`. Xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **2026-08-23 (nhánh `substrate-material`):** bộ hồi quy cVAE đã KAN-hóa (`EfficientKANLinear` cho mọi `fc`) + thêm WIRE INR decoder (`decoder_type="conv"|"wire"`, resolution-agnostic). Checkpoint KAN khuyến nghị: `cvae_kan_realphysics_v2.pt` (R² surrogate=0,64, R²(FE thật)=0,8889, vượt baseline Linear đo lại 0,29/0,35). Chi tiết: [task_progress.md](task_progress.md), [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#2026-08-23---kan-regression-head-task-1-baseline-085-không-tái-lập-real-physics-là-chìa-khóa-property-fidelity). |
 | 6 | Hậu xử lý & kiểm định FEA | ✅ Hoàn thành | Nhị phân hoá + connectivity/min-feature/periodicity (`manufacturability.py`) + lọc/verify bằng FE thật (`best_of_n_eval.py`) - đã có sẵn trong pipeline Phase 5 |
 | 7 | Active-learning loop | ✅ Kết luận (2026-07-31) | Implement + chạy production (`pipeline/phase5_cvae/active_learning.py`) - **không cải thiện** checkpoint đã tối ưu (`cvae_realphysics.pt` gần mức trần, mean_abs_error tệ đi 0,0246→0,0686 sau 1 vòng) - giữ nguyên checkpoint production. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-07-31 |
 | 8 | Xác thực cuối & đóng gói | 🟨 Hầu hết hoàn thành | **8.1** đối chiếu FE độc lập: ✅ `scikit-fem` khớp tới 1e-9 (R²=1,000000, n=24). **8.3** thư viện thiết kế: ✅ 24 thiết kế, hit-rate 100%, 87,5% manufacturable. **8.4** báo cáo: ✅. **8.2** biến dạng lớn và **8.5** STL: ⬜ tùy chọn, chưa làm. |
@@ -141,7 +141,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 │
 ├── analysis/                 # Phân tích độ nhạy (ANOVA, Sobol, regression), Pareto front, dataset QC
 ├── notebooks/                # Jupyter notebook phân tích và xác thực
-├── tests/                     # Bộ kiểm thử PyTest (617 test)
+├── tests/                     # Bộ kiểm thử PyTest (số lượng phụ thuộc phiên bản/dependency)
 ├── outputs/                   # Dữ liệu sinh ra - phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
 ├── docs/                      # PIPELINE.md, LIMITATIONS.md, PHYSICS_AND_ML.md - xem mục Tài liệu
 ├── EXPERIMENT_LOG.md, CHANGELOG.md   # xem mục Tài liệu
@@ -195,7 +195,7 @@ Tóm tắt nhanh:
 2. **Multi-Batch Adaptive DOE (Phase 2)** - 8 lô, 7.920 mẫu, tỷ lệ hội tụ FE 100%, auxetic rate 91,9% sau rebuild.
 3. **Dataset Build (Phase 3)** - dataset v2 hiện hành: train=57.216 / val=2.044 / test=2.044.
 4. **CNN Surrogate (Phase 4)** - `surrogate_v2.pt`: R²(v12)=0,974, R²(v21)=0,964, R²(volfrac)=0,983.
-5. **Conditional VAE (Phase 5)** - `cvae_v2_finetuned.pt` (khuyến nghị production): R²(FE,n=300)=0,9953 (oracle), hit rate single-shot=99,7%. Condition optional gồm `volfrac`/`void_size_frac` và ν₀; `best_of_n_eval.py` dùng chấm điểm tổng hợp accuracy/manufacturability/aesthetic.
+5. **Conditional VAE (Phase 5)** - `cvae_v2_finetuned.pt` (khuyến nghị production): R²(FE,n=300)=0,9953 (oracle), hit rate single-shot=99,7%. Condition optional gồm `volfrac`/`void_size_frac` và ν₀; `best_of_n_eval.py` dùng chấm điểm tổng hợp accuracy/manufacturability/aesthetic. **2026-08-23 (nhánh `substrate-material`):** bộ hồi quy KAN-hóa + WIRE decoder (`decoder_type="conv"|"wire"`), checkpoint KAN khuyến nghị `cvae_kan_realphysics_v2.pt` (R² surrogate=0,64, R²(FE thật)=0,8889) - xem [task_progress.md](task_progress.md).
 6. **Xác thực và so sánh (Phase 6-8)** - FE độc lập khớp tới 1e-9; thư viện 24 thiết kế đạt 87,5% manufacturable. Retrieval vẫn là baseline mạnh trong phân phối; lợi thế cVAE được ủng hộ rõ nhất trên sign-flip OOD.
 
 ---
@@ -277,7 +277,7 @@ Dừng khi **bất kỳ** điều kiện nào sau được thỏa mãn:
 pytest tests/ -v
 ```
 
-Trạng thái hiện tại: **617/617 test pass** (`pytest tests/ -q`) - bao gồm condition optional, ν₀ per-sample, MMA optimizer, active-learning, Pareto frontier và kiểm định FE độc lập.
+Trạng thái kiểm thử: chạy `pytest tests/ -q` sau khi cài đủ dependency ML/analysis. Không ghi cố định số test pass ở đây vì bộ test thay đổi theo từng lần bổ sung tính năng.
 
 | Module | Trạng thái |
 |--------|--------|
@@ -307,7 +307,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
 - `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/PROJECT_PLAN.md` Nhóm 2.
-- Test tự động (617/617 pass) chưa phủ hết đường I/O nặng (screening loop, seeds, visualize và FE call thật trong `multi_batch/runner.py::evaluate_single`).
+- Test tự động chưa phủ hết đường I/O nặng (screening loop, seeds, visualize và FE call thật trong `multi_batch/runner.py::evaluate_single`).
 - Kết quả xác thực composite score chỉ ủng hộ một phần: Spearman trung bình so với Pareto front = 0,693 (trung vị 0,714), chưa đạt ngưỡng trung bình 0,7 đặt trước.
 - Ở 8D in-distribution, retrieval không bị suy yếu đáng kể ngay cả với 500 mẫu tra cứu (R²=0,984); không dùng giả thuyết curse-of-dimensionality làm claim chính.
 - Toàn bộ pipeline dùng FEM tuyến tính (giả định biến dạng nhỏ) - xem mục 14.
