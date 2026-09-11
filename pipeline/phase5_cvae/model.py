@@ -79,6 +79,7 @@ class Encoder(nn.Module):
         latent_dim=32,
         channels=(32, 64, 128, 256),
         resolution=64,
+        use_kan=True,
     ):
         super().__init__()
         blocks = []
@@ -93,11 +94,13 @@ class Encoder(nn.Module):
         self.feat_ch = channels[-1]
         flat_dim = self.feat_ch * self.feat_res * self.feat_res
 
-        self.fc_mu = EfficientKANLinear(
-            flat_dim + condition_dim, latent_dim, grid_size=5, spline_order=3
+        fc_layer = EfficientKANLinear if use_kan else nn.Linear
+        fc_kwargs = {"grid_size": 5, "spline_order": 3} if use_kan else {}
+        self.fc_mu = fc_layer(
+            flat_dim + condition_dim, latent_dim, **fc_kwargs
         )
-        self.fc_logvar = EfficientKANLinear(
-            flat_dim + condition_dim, latent_dim, grid_size=5, spline_order=3
+        self.fc_logvar = fc_layer(
+            flat_dim + condition_dim, latent_dim, **fc_kwargs
         )
 
     def forward(self, image, condition):
@@ -114,18 +117,22 @@ class Decoder(nn.Module):
         latent_dim=32,
         channels=(256, 128, 64, 32),
         resolution=64,
+        use_kan=True,
+        enforce_symmetry=True,
     ):
         super().__init__()
         n_ups = len(channels)
         self.feat_res = resolution // (2**n_ups)  # 4
         self.feat_ch = channels[0]  # 256
 
-        self.fc = EfficientKANLinear(
+        fc_layer = EfficientKANLinear if use_kan else nn.Linear
+        fc_kwargs = {"grid_size": 5, "spline_order": 3} if use_kan else {}
+        self.fc = fc_layer(
             latent_dim + condition_dim,
             self.feat_ch * self.feat_res * self.feat_res,
-            grid_size=5,
-            spline_order=3,
+            **fc_kwargs,
         )
+        self.enforce_symmetry = enforce_symmetry
 
         blocks = []
         in_ch = channels[0]
@@ -141,7 +148,10 @@ class Decoder(nn.Module):
         x = torch.cat([z, condition], dim=1)
         x = self.fc(x)
         x = x.view(-1, self.feat_ch, self.feat_res, self.feat_res)
-        return self.deconv(x)  # (B, 1, 64, 64)
+        image = self.deconv(x)  # (B, 1, 64, 64)
+        if self.enforce_symmetry:
+            image = 0.5 * (image + image.transpose(-1, -2))
+        return image
 
 
 class ComplexGaborActivation(nn.Module):
@@ -257,6 +267,8 @@ class CVAE(nn.Module):
         wire_hidden_dim=128,
         wire_omega0=10.0,
         wire_s0=10.0,
+        use_kan=True,
+        enforce_symmetry=True,
     ):
         """channels: kênh encoder tăng dần (VD (32,64,128,256)); decoder tự
         dùng đảo ngược. train.py lưu channels vào checkpoint (sample.py đọc
@@ -271,11 +283,14 @@ class CVAE(nn.Module):
         super().__init__()
         self.latent_dim = latent_dim
         self.decoder_type = decoder_type
+        self.use_kan = use_kan
+        self.enforce_symmetry = enforce_symmetry
         self.encoder = Encoder(
             condition_dim,
             latent_dim,
             channels=tuple(channels),
             resolution=resolution,
+            use_kan=use_kan,
         )
         if decoder_type == "wire":
             self.decoder = WireContinuousDecoder(
@@ -292,6 +307,8 @@ class CVAE(nn.Module):
                 latent_dim,
                 channels=tuple(reversed(channels)),
                 resolution=resolution,
+                use_kan=use_kan,
+                enforce_symmetry=enforce_symmetry,
             )
         else:
             raise ValueError(

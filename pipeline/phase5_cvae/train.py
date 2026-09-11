@@ -27,6 +27,7 @@ YÊU CẦU TRƯỚC KHI CHẠY:
 import argparse
 import json
 import os
+import random
 import sys
 
 import numpy as np
@@ -259,6 +260,7 @@ def run_epoch(
         image = image.to(device)
         condition = condition.to(device)
         seed_vec = seed_vec.to(device)
+        _volfrac = _volfrac.to(device)
         bsz = image.size(0)
 
         if train and optional_pairs:
@@ -286,6 +288,8 @@ def run_epoch(
                 lambda_disagreement=lambda_disagreement,
                 lambda_periodic=lambda_periodic,
                 nu0_col=nu0_col,
+                target_volfrac=_volfrac,
+                lambda_volfrac=lambda_volfrac,
             )
             if regularize_prior_samples:
                 prior_reg_total, prior_stats = prior_sample_regularization(
@@ -343,26 +347,19 @@ def run_epoch(
             # ưu tiên chế độ prior (generate() lúc inference không đi qua
             # encoder). void_size_frac KHÔNG có loss riêng ở Pha A (không có
             # công thức rẻ/khả vi tương tự) - chỉ học ngầm qua reconstruction.
-            vol_loss = torch.tensor(0.0, device=device)
-            if extended_condition and lambda_volfrac > 0:
-                vol_target = condition[:, 2]
-                vol_mask = condition[:, 3]
-                vol_loss = volfrac_consistency_loss(
-                    recon, vol_target, vol_mask
+            vol_loss = losses["volfrac_loss"]
+            if regularize_prior_samples and lambda_volfrac > 0:
+                z_prior_v = torch.randn(bsz, model.latent_dim, device=device)
+                prior_recon_v = model.decoder(z_prior_v, condition)
+                prior_vol_loss = volfrac_consistency_loss(
+                    prior_recon_v,
+                    _volfrac,
+                    torch.ones_like(_volfrac),
                 )
-                if regularize_prior_samples:
-                    z_prior_v = torch.randn(
-                        bsz, model.latent_dim, device=device
-                    )
-                    prior_recon_v = model.decoder(z_prior_v, condition)
-                    vol_loss_prior = volfrac_consistency_loss(
-                        prior_recon_v, vol_target, vol_mask
-                    )
-                    vol_loss = 0.5 * (vol_loss + vol_loss_prior)
-                losses["total"] = (
-                    losses["total"]
-                    + lambda_volfrac * PROP_LOSS_SCALE * vol_loss
+                losses["total"] = losses["total"] + (
+                    lambda_volfrac * PROP_LOSS_SCALE * prior_vol_loss
                 )
+                vol_loss = 0.5 * (vol_loss + prior_vol_loss)
 
             if train:
                 optimizer.zero_grad()
@@ -405,7 +402,18 @@ def run_epoch(
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--latent-dim", type=int, default=32)
+    parser.add_argument(
+        "--use-mlp-head",
+        action="store_true",
+        help="Dùng nn.Linear thay EfficientKANLinear cho ablation MLP.",
+    )
+    parser.add_argument(
+        "--disable-symmetry",
+        action="store_true",
+        help="Tắt phép đối xứng transpose ở output decoder.",
+    )
     parser.add_argument(
         "--decoder-type",
         type=str,
@@ -653,11 +661,10 @@ def main():
     parser.add_argument(
         "--lambda-volfrac",
         type=float,
-        default=0.0,
-        help="Chỉ có tác dụng khi --extended-condition: trọng số "
+        default=3.0,
+        help="Trọng số volfrac consistency loss (khuyến nghị 2-5). "
         "volfrac_consistency_loss (losses.py) - suy trực tiếp "
-        "từ recon.mean(), không cần surrogate/FE. 0.0 = tắt "
-        "(mặc định).",
+        "từ recon.mean(), không cần surrogate/FE.",
     )
     parser.add_argument(
         "--include-nu0",
@@ -686,6 +693,12 @@ def main():
         "(xem analysis/scripts/assemble_phase3_a4.py, A4).",
     )
     args = parser.parse_args()
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
 
     if args.fe_eval_every <= 0:
         raise ValueError(
@@ -752,6 +765,8 @@ def main():
         wire_hidden_dim=args.wire_hidden_dim,
         wire_omega0=args.wire_omega0,
         wire_s0=args.wire_s0,
+        use_kan=not args.use_mlp_head,
+        enforce_symmetry=not args.disable_symmetry,
     ).to(device)
     if args.resume_from:
         resume_ckpt = torch.load(
@@ -926,6 +941,7 @@ def main():
                     {
                         "model_state_dict": model.state_dict(),
                         "latent_dim": args.latent_dim,
+                        "seed": args.seed,
                         "condition_dim": condition_dim,
                         "extended_condition": args.extended_condition,
                         "resolution": args.resolution,
@@ -937,6 +953,8 @@ def main():
                         "lambda_bin": args.lambda_bin,
                         "lambda_periodic": args.lambda_periodic,
                         "decoder_type": args.decoder_type,
+                        "use_kan": not args.use_mlp_head,
+                        "enforce_symmetry": not args.disable_symmetry,
                         "wire_hidden_dim": args.wire_hidden_dim,
                         "wire_omega0": args.wire_omega0,
                         "wire_s0": args.wire_s0,
@@ -959,6 +977,7 @@ def main():
                     {
                         "model_state_dict": model.state_dict(),
                         "latent_dim": args.latent_dim,
+                        "seed": args.seed,
                         "condition_dim": condition_dim,
                         "extended_condition": args.extended_condition,
                         "resolution": args.resolution,

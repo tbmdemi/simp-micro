@@ -778,6 +778,25 @@ Trên nhánh `substrate-material`, uncommitted.
 
 **Phát hiện 3 (tích cực): KAN + real-physics fine-tune VƯỢT baseline Linear (đo cùng code hiện tại).** KAN base (chọn val_loss) R²=0,19. Fine-tune 50 epoch, resume từ KAN base, `--select-by fe_r2 --fe-eval-every 10 --lambda-real-physics 1.0 --real-physics-subsample 8 --real-physics-every 50 --lr 3e-4` → R²=0,58 (v12 0,74, v21 0,42); R²(FE thật) tốt nhất trong train = 0,7865. **Vòng 2 (60 epoch, resume từ v1, `--lambda-real-physics 2.0 --real-physics-every 20 --lr 2e-4`): R²=0,64 (v12 0,82, v21 0,45), R²(FE thật) tốt nhất = 0,8889** - vượt Linear finetuned cũ (0,35) gần 2×, tiến độ hội tụ (0,58 → 0,64). KAN không phá recipe real-physics đã kiểm chứng (mục 2026-07-24) - đây là hướng đưa KAN lên ngang/vượt Linear. Checkpoints: `cvae_kan_best.pt` (base), `cvae_kan_realphysics.pt` (v1), `cvae_kan_realphysics_v2.pt` (v2, khuyến nghị).
 
+### 2026-09-11 - Exp 3: MLP + Physics ablation
+
+Đã thêm nhánh MLP (`--use-mlp-head`) và chạy đủ 150 epoch với seed `123`,
+batch size `512`, learning rate `5e-4`, KL warmup 30, `gamma=1`,
+`lambda_real_physics=20`, FE subsample 8, `lambda_volfrac=3`, và FE-eval
+mỗi 10 epoch trên 24 condition. Đánh giá cuối dùng cùng test loader,
+surrogate `surrogate_for_phase5_v2.pt` và seed prior cố định cho cả hai model.
+
+| Model | R² v12 | R² v21 | R² volfrac | R² FE(v12), n=24 |
+|---|---:|---:|---:|---:|
+| MLP + Physics, `exp3_mlp_physics_150.pt` | 0,432 | 0,087 | -2,483 | -9,834 |
+| KAN + Physics v2, `cvae_kan_realphysics_v2.pt` | **0,836** | **0,476** | **-0,221** | **0,581** |
+
+MLP checkpoint được chọn theo FE-R² là epoch 20 (`-6,2465`); epoch 150
+đạt `-7,4893`. KAN v2 là checkpoint cũ, chưa retrain sau khi thêm decoder
+symmetry và volfrac loss, nên kết quả ủng hộ KAN nhưng chưa đủ để khẳng định
+ảnh hưởng nhân quả của riêng KAN. Cần chạy lại KAN cùng code/recipe để đóng
+ablation 2x2.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

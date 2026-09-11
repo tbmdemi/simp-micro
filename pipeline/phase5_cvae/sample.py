@@ -64,6 +64,12 @@ VALIDATED_CKPT_NAMES = {"cvae_v2_finetuned.pt", "cvae_realphysics.pt"}
 
 def load_model(device="cpu", ckpt_path=CKPT_PATH):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
+    # Infer the head type for older checkpoints that predate the explicit
+    # `use_kan` metadata; spline weights are unique to EfficientKANLinear.
+    use_kan = ckpt.get(
+        "use_kan",
+        any("spline_weight" in key for key in ckpt["model_state_dict"]),
+    )
     model = CVAE(
         condition_dim=ckpt["condition_dim"],
         latent_dim=ckpt["latent_dim"],
@@ -73,6 +79,8 @@ def load_model(device="cpu", ckpt_path=CKPT_PATH):
         wire_hidden_dim=ckpt.get("wire_hidden_dim", 128),
         wire_omega0=ckpt.get("wire_omega0", 10.0),
         wire_s0=ckpt.get("wire_s0", 10.0),
+        use_kan=use_kan,
+        enforce_symmetry=ckpt.get("enforce_symmetry", False),
     )
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)

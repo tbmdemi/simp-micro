@@ -426,10 +426,8 @@ class TestRunEpochExtendedCondition:
         )
         assert stats["volfrac_loss"] == 0.0
 
-    def test_non_extended_condition_ignores_new_args(self, phase3_npz_path):
-        """Backward-compat: extended_condition=False (mặc định) - lambda_volfrac
-        bị bỏ qua hoàn toàn dù truyền >0, không lỗi shape trên condition 2 chiều.
-        """
+    def test_non_extended_condition_uses_dataset_volfrac(self, phase3_npz_path):
+        """The physical volfrac label is available without extended inputs."""
         from pipeline.phase5_cvae.dataset import CVAEDataset
         from pipeline.phase5_cvae.model import CVAE
         from pipeline.phase5_cvae.train import run_epoch
@@ -459,7 +457,7 @@ class TestRunEpochExtendedCondition:
             extended_condition=False,
             lambda_volfrac=1.0,
         )
-        assert stats["volfrac_loss"] == 0.0
+        assert stats["volfrac_loss"] > 0.0
 
 
 class TestRunEpochIncludeNu0:

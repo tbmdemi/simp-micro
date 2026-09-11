@@ -148,6 +148,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Đồng bộ đường dẫn trong notebooks sang dùng `utils.REPO_ROOT` thay vì đường dẫn tương đối cứng.
 - README §Giới hạn Đã biết cập nhật phản ánh các phát hiện audit/OOD ở trên.
 
+### 2026-09-11 - Exp 3 MLP/KAN ablation và hiệu chỉnh metric
+
+#### Added
+- Thêm nhánh `--use-mlp-head` để đối chứng `nn.Linear` với
+  `EfficientKANLinear` trên cùng CVAE.
+- Bổ sung `lambda_volfrac` dùng nhãn `volfrac_achieved` thực từ dataset,
+  đối xứng transpose ở output decoder, seed reproducibility và metadata
+  `use_kan`/`enforce_symmetry` trong checkpoint.
+
+#### Results
+- Exp 3 MLP + Physics 150 epoch: `R²(v12)=0,432`, `R²(v21)=0,087`,
+  `R²(volfrac)=-2,483`, `R²(FE,v12)=-9,834` trên cùng test protocol.
+- KAN + Physics v2 đo lại cùng protocol: `0,836`, `0,476`, `-0,221`,
+  `0,581` tương ứng.
+- KAN v2 chưa retrain lại với code mới; không xem chênh lệch này là claim
+  nhân quả cuối cùng cho tới khi chạy cặp retrain đồng nhất.
+
 ### 2026-08-23 - KAN regression head + WIRE INR decoder (Task 1/2, nhánh `substrate-material`)
 
 > Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [task_progress.md](task_progress.md).

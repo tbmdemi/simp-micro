@@ -461,6 +461,8 @@ def cvae_loss(
     lambda_disagreement: float = 0.0,
     lambda_periodic: float = 0.0,
     nu0_col: int = None,
+    target_volfrac: torch.Tensor = None,
+    lambda_volfrac: float = 0.0,
 ):
     """Tổng hợp các thành phần, trả dict để log riêng từng loss trong train.py.
     lambda_tv/lambda_bin mặc định 0.0 (tắt, để không phá baseline gamma=1..300
@@ -498,6 +500,13 @@ def cvae_loss(
     tv_l = tv_loss(recon)
     bin_l = binarization_loss(recon)
     periodic_l = periodicity_loss(recon)
+    volfrac_l = torch.tensor(0.0, device=recon.device)
+    if target_volfrac is not None and lambda_volfrac > 0:
+        volfrac_l = volfrac_consistency_loss(
+            recon,
+            target_volfrac,
+            torch.ones_like(target_volfrac),
+        )
     total = (
         recon_l
         + beta * kl_l
@@ -505,6 +514,7 @@ def cvae_loss(
         + lambda_tv * tv_l
         + lambda_bin * bin_l
         + lambda_periodic * periodic_l
+        + lambda_volfrac * PROP_LOSS_SCALE * volfrac_l
     )
     return {
         "total": total,
@@ -517,6 +527,7 @@ def cvae_loss(
         "tv": tv_l.detach(),
         "binarization": bin_l.detach(),
         "periodic": periodic_l.detach(),
+        "volfrac_loss": volfrac_l.detach(),
         "disagreement": (
             disagreement_l.detach()
             if torch.is_tensor(disagreement_l)

@@ -65,6 +65,14 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 7 | Active-learning loop | ✅ Kết luận (2026-07-31) | Implement + chạy production (`pipeline/phase5_cvae/active_learning.py`) - **không cải thiện** checkpoint đã tối ưu (`cvae_realphysics.pt` gần mức trần, mean_abs_error tệ đi 0,0246→0,0686 sau 1 vòng) - giữ nguyên checkpoint production. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-07-31 |
 | 8 | Xác thực cuối & đóng gói | 🟨 Hầu hết hoàn thành | **8.1** đối chiếu FE độc lập: ✅ `scikit-fem` khớp tới 1e-9 (R²=1,000000, n=24). **8.3** thư viện thiết kế: ✅ 24 thiết kế, hit-rate 100%, 87,5% manufacturable. **8.4** báo cáo: ✅. **8.2** biến dạng lớn và **8.5** STL: ⬜ tùy chọn, chưa làm. |
 
+**Cập nhật Exp 3 (2026-09-11):** đối chứng cùng test protocol giữa MLP +
+real-physics và checkpoint KAN v2 cho kết quả lần lượt là
+`R²=[0,432; 0,087; -2,483]` và `[0,836; 0,476; -0,221]` cho
+`[v12, v21, volfrac]`; R² FE(v12), n=24 lần lượt là `-9,834` và `0,581`.
+MLP đã chạy đủ 150 epoch. KAN v2 chưa được retrain lại với các chỉnh sửa
+đối xứng decoder/volfrac loss mới, vì vậy đây chưa phải claim nhân quả cuối
+cùng về riêng KAN.
+
 > Chi tiết từng phase con: xem [docs/PIPELINE.md](docs/PIPELINE.md), [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) và [docs/ARCHITECT.md](docs/ARCHITECT.md).
 > 
 > **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative hiện rõ nhất ở sign-flip OOD (R²=0,418 so với 0,057). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
