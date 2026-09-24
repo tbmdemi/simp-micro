@@ -203,7 +203,7 @@ Theo đúng khuyến nghị "chưa vội đổi default toàn cục" ở mục t
 
 ### 2026-07-30 (tiếp) - Xác nhận N=400 cho `hexagonal`/`hourglass`: kết quả N=100 KHÔNG phải may mắn mẫu nhỏ
 
-Theo đúng chuẩn nghiêm ngặt dự án đã dùng (`PILOT_REPORT.md` 2026-07-26: luôn lên N=400 trước khi cân nhắc đổi default) - nhân đôi rồi gấp 4 lần N cho 2 seed đã thắng/cải thiện ở pilot N=100. Bỏ qua `reentrant_bowtie` - N=100 đã cho CI cực hẹp [0,0%,3,7%], scale thêm không đổi kết luận, lãng phí compute.
+Theo đúng chuẩn nghiêm ngặt dự án đã dùng (báo cáo pilot 2026-07-26, script/report một lần đã xóa sau khi ghi kết quả vào log này - quy ước chung của dự án cho pilot ngoài production, xem `LIMITATIONS.md` mục 4: luôn lên N=400 trước khi cân nhắc đổi default) - nhân đôi rồi gấp 4 lần N cho 2 seed đã thắng/cải thiện ở pilot N=100. Bỏ qua `reentrant_bowtie` - N=100 đã cho CI cực hẹp [0,0%,3,7%], scale thêm không đổi kết luận, lãng phí compute.
 
 | Seed | `gate` N=400 | `mma` N=400 | So với N=100 |
 |---|---|---|---|
@@ -588,12 +588,12 @@ Bối cảnh: bắt tay vào Nhóm 3.2 (`PROJECT_PLAN.md`) - đối chiếu comp
 
 **Sau khi sửa, hoàn thành Nhóm 3.2** (`notebooks/08_composite_score_pareto_validation.ipynb`, checkpoint `cvae_v2_finetuned.pt`, n=24 target × 30 mẫu/target, seed=123, chạy lại mất 62s - đúng như ước tính ban đầu, xác nhận bug ở trên là nguyên nhân duy nhất gây treo):
 
-| Chỉ số | Giá trị |
-|---|---|
-| Spearman trung bình (composite score vs -tầng Pareto) | **0,693** |
-| Spearman trung vị | **0,714** |
-| Spearman min/max (24 target) | 0,432 / 0,889 |
-| Tỉ lệ ứng viên thắng nằm ở tầng Pareto 1 | 1,000 (tất yếu toán học, không phải phát hiện thực nghiệm - xem giải thích dưới) |
+| Chỉ số | Giá trị | Mục tiêu (đặt trước khi chạy) |
+|---|---|---|
+| Spearman trung bình (composite score vs -tầng Pareto) | **0,693** | ≥ 0,7 — **KHÔNG đạt** (sát ngưỡng) |
+| Spearman trung vị | **0,714** | ≥ 0,7 — **đạt** |
+| Spearman min/max (24 target) | 0,432 / 0,889 | - (không đặt DoN riêng) |
+| Tỉ lệ ứng viên thắng nằm ở tầng Pareto 1 | 1,000 (tất yếu toán học, không phải phát hiện thực nghiệm - xem giải thích dưới) | - (không đặt DoN riêng) |
 
 **Đối chiếu tiêu chí đã đặt TRƯỚC khi chạy (Spearman trung bình ≥ 0,7):** **KHÔNG đạt** theo trung bình (0,693 < 0,7, sát ngưỡng), **đạt** theo trung vị (0,714). Phân phối trải liên tục 0,43-0,89 trên 24 target, không có nhóm outlier tách biệt - vài target tương quan yếu (0,43-0,56) kéo trung bình xuống dưới ngưỡng.
 
@@ -667,11 +667,11 @@ Code: `analysis/scripts/retrieval_low_data_pilot_8d.py` (mới). Kết quả đ�
 early-stopping ở epoch 44/60 sau khoảng 12 phút; val loss tốt nhất = 0,00292.
 Đánh giá độc lập trên `outputs/phase3/test.npz` cho kết quả:
 
-| Target | R² | MAE |
-|---|---:|---:|
-| v12 | 0,9636 | 0,0235 |
-| v21 | 0,9574 | 0,0255 |
-| volfrac_achieved | 0,9161 | 0,0183 |
+| Target | R² | MAE | Mục tiêu R² (DoN Task 3) |
+|---|---:|---:|---:|
+| v12 | 0,9636 | 0,0235 | ≥ 0,985 |
+| v21 | 0,9574 | 0,0255 | ≥ 0,985 |
+| volfrac_achieved | 0,9161 | 0,0183 | ≥ 0,985 |
 
 Checkpoint đã export cho Phase 5 tại
 `outputs/phase4/surrogate_convkan_for_phase5_v2.pt`. ConvKAN hoạt động đúng và
@@ -708,13 +708,13 @@ Benchmark best-of-N dùng 24 target auxetic, 10 mẫu/target, force-periodic b�
 lọc manufacturability bật; report đầy đủ tại
 `outputs/phase5/wire_best_of_n_result.json`:
 
-| Chỉ số | WIRE v2 |
-|---|---:|
-| FE calls | 170 |
-| hit rate single-shot | 0,042 (1/24) |
-| hit rate best-of-N | 0,167 (4/24) |
-| R²(FE, best-of-N) | -10,2888 |
-| mean frac manufacturable | 0,042 |
+| Chỉ số | WIRE v2 | Mục tiêu (DoN Task 2) |
+|---|---:|---:|
+| FE calls | 170 | - |
+| hit rate single-shot (= `passes_all` single-shot) | 0,042 (1/24) | ≥ 0,75 |
+| hit rate best-of-N | 0,167 (4/24) | - (không đặt DoN riêng) |
+| R²(FE, best-of-N) | -10,2888 | - (không đặt DoN riêng) |
+| mean frac manufacturable | 0,042 | - (không đặt DoN riêng) |
 
 Kết quả **không đạt DoN** `passes_all≥75%` và regression rất lớn so với
 checkpoint cVAE production. Checkpoint WIRE này chỉ giữ làm research artifact,
@@ -766,7 +766,7 @@ User phát hiện qua ảnh chụp: mũi tên nét đứt (adjoint gradient) rou
 
 **Tài liệu mới (untracked, chưa commit):**
 - `docs/ARCHITECT.md`, `docs/CLI_GUIDE.md` - tài liệu kiến trúc/hướng dẫn CLI tham chiếu, không phải log thí nghiệm.
-- `docs/COMPOSITE_AUXETIC_PLAN.md` (v1) - khảo sát 2 hướng mở rộng "composite auxetic" cho bài báo #2: Hướng A (vật liệu nền đa pha/multiscale, chỉ đụng `simp/materials/`) vs Hướng B (multi-material trong unit cell, đụng cả `solver.py`/`oc.py`/format dữ liệu Phase 3-5). Khuyến nghị Hướng A mức "Thấp" (công thức đóng Halpin-Tsai/Rule of Mixtures) - rủi ro kiến trúc thấp nhất, tái dùng trực tiếp hạ tầng Nhóm 1 (A1-A7). **Chưa quyết định, chưa viết code** - cần xác nhận với GS hướng dẫn (chuyên ngành composite/FGM mechanics) trước khi chọn hướng. Đã nối 1 dòng tham chiếu vào `PROJECT_PLAN.md` mục 3 (bảng "Ngoài phạm vi Bài báo #1"), cùng nhóm với Nhóm 6 (nhiệt/CTE) - không chen vào trước khi Nhóm 4.1/4.2 (đã xong) được viết thành bài báo #1.
+- **`docs/COMPOSITE_AUXETIC_PLAN.md` chưa từng được tạo trên đĩa** - nội dung khảo sát dưới đây chỉ ghi lại ở log này, không có file riêng. Khảo sát 2 hướng mở rộng "composite auxetic" cho bài báo #2: Hướng A (vật liệu nền đa pha/multiscale, chỉ đụng `simp/materials/`) vs Hướng B (multi-material trong unit cell, đụng cả `solver.py`/`oc.py`/format dữ liệu Phase 3-5). Khuyến nghị Hướng A mức "Thấp" (công thức đóng Halpin-Tsai/Rule of Mixtures) - rủi ro kiến trúc thấp nhất, tái dùng trực tiếp hạ tầng Nhóm 1 (A1-A7). **Chưa quyết định, chưa viết code** - cần xác nhận với GS hướng dẫn (chuyên ngành composite/FGM mechanics) trước khi chọn hướng. Đã nối 1 dòng tham chiếu vào `PROJECT_PLAN.md` mục 3 (bảng "Ngoài phạm vi Bài báo #1"), cùng nhóm với Nhóm 6 (nhiệt/CTE) - không chen vào trước khi Nhóm 4.1/4.2 (đã xong) được viết thành bài báo #1.
 
 Trên nhánh `substrate-material`, uncommitted.
 
@@ -796,6 +796,46 @@ MLP checkpoint được chọn theo FE-R² là epoch 20 (`-6,2465`); epoch 150
 symmetry và volfrac loss, nên kết quả ủng hộ KAN nhưng chưa đủ để khẳng định
 ảnh hưởng nhân quả của riêng KAN. Cần chạy lại KAN cùng code/recipe để đóng
 ablation 2x2.
+
+### 2026-09-23 - WIRE thiếu enforce_symmetry; physics-guided latent refinement (Task 4) benchmark đầu tiên trên checkpoint thật
+
+**Phát hiện (root-cause WIRE thất bại KPI, không phải bug resize/mismatch với surrogate như nghi ngờ ban đầu):** đối chiếu checkpoint metadata + `cvae_wire_v2_history.json` (cả 30 epoch có `real_physics: NaN`) xác nhận `cvae_wire_v2.pt` train với `--lambda-real-physics 0.0` (mặc định, chưa từng dùng real-physics loss), `wire_hidden_dim=64` (không phải 128), `lr=1e-4`, chỉ 30 epoch - ngân sách nhỏ hơn hẳn KAN/conv. Đồng thời phát hiện `WireContinuousDecoder` **không có cơ chế `enforce_symmetry`** như `Decoder` (conv) đang có (`model.py`, `image = 0.5*(image+image.transpose(-1,-2))`) dù `CVAE.__init__` nhận tham số này cho mọi decoder_type - nhánh `wire` âm thầm bỏ qua, mất hẳn 1 prior hình học có lợi. **Đã sửa:** thêm `enforce_symmetry` cho `WireContinuousDecoder` + nối từ `CVAE.__init__` (trước đây bị bỏ qua) - tương thích ngược qua `--disable-symmetry` (flag đã có, giờ áp dụng đúng cho cả 2 decoder_type). 3 test mới (`tests/test_phase5_model.py::TestWireDecoder`), 638/638 pass. Đã launch retrain `cvae_wire_realphysics_v3.pt` (`--wire-hidden-dim 128 --lambda-real-physics 1.0 --real-physics-every 10 --real-physics-subsample 8 --epochs 60 --select-by fe_r2 --fe-eval-every 5`, chạy nền, ETA ~2,5-3 giờ đo bằng calib 1 epoch=3m22s) - kết quả sẽ ghi bổ sung khi xong.
+
+**Physics-guided latent refinement (Task 4, `pipeline/phase5_cvae/tandem_lbfgs.py`):** thêm `guidance_source="real_physics"` - dùng gradient GIẢI TÍCH từ `RealPhysicsNu`/`losses.real_physics_loss` (FE thật) thay cho surrogate CNN đã biết "exploitable" (cảnh báo đầu `losses.py`), tái dùng nguyên hàm có sẵn, không viết lại logic FE. `surrogate_model` giờ optional. 9 test mới (`tests/test_tandem_lbfgs.py`), 643/643 pass toàn repo.
+
+**Benchmark đầu tiên trên checkpoint thật** (`pipeline/phase5_cvae/benchmark_physics_guided_refinement.py`, mới - so sánh z ngẫu nhiên (baseline, đúng hành vi `model.generate()` hiện tại) với z SAU KHI tối ưu bằng `guidance_source="real_physics"`, cùng 1 z khởi tạo, 1-mẫu-1-lần-sinh KHÔNG best-of-N để cô lập đúng tác dụng refinement): trên `cvae_kan_realphysics_v2.pt`, 24 condition test set (seed=123, khớp `best_of_n_eval.py`), 30 bước L-BFGS -
+
+| | R²(v12) | MAE(v12) |
+|---|---:|---:|
+| Baseline (z ngẫu nhiên) | -16,00 | 0,587 |
+| Refined (physics-guided, 30 bước) | **-7,60** | **0,355** |
+
+*(DoN gốc Task 4 = sai số ≤8% so với target OOD cực đoan ν\*=-2,5 - không ghi được trực tiếp vào bảng trên vì khác đơn vị đo (%sai số so target, không phải R²/MAE) VÀ khác kịch bản (OOD cực đoan, không phải 24 condition trong-phân-phối đo ở đây) - xem đoạn dưới.)*
+
+Cải thiện thật, đo bằng FE thật độc lập với chính loss dùng để tối ưu (không tự chấm điểm bằng hàm mình vừa minimize) - MAE giảm ~40%. R² tuyệt đối vẫn rất âm vì đây là so sánh 1-mẫu-1-lần-sinh KHÔNG lọc/best-of-N (khắt khe hơn nhiều so với pipeline production dùng best-of-30 + force_periodic), và target lấy trong-phân-phối (KHÔNG phải kịch bản OOD cực đoan ν*=-2,5 mà DoN gốc Task 4 nhắm tới) - chưa đóng được DoN "sai số ≤8% so với target OOD", cần thí nghiệm riêng cho đúng kịch bản đó. Kết quả này là tín hiệu quyết định cho bước tiếp theo (latent diffusion prior, xem `docs/plan.md` Giai đoạn 2): refinement đơn giản đã cải thiện đáng kể mà không cần train model mới, ủng hộ hướng tiếp tục đầu tư vào physics-guided sampling.
+
+**Retrain WIRE (`cvae_wire_realphysics_v3.pt`) DỪNG GIỮA CHỪNG (2026-09-23, người dùng cần tắt máy) - CHƯA có kết luận.** Chạy nền được 40/60 epoch (dừng an toàn bằng `TaskStop`, không kill giữa lúc ghi checkpoint - đã load lại kiểm chứng OK) trước khi phải dừng. Checkpoint trên đĩa ứng với epoch 25 (điểm cải thiện R²(FE) gần nhất trước lúc dừng): `fe_r2=-10,7690` - **chưa vượt** baseline cũ đang thất bại (`cvae_wire_v2.pt`, R²(FE)=-10,29) sau 40 epoch quan sát được (dao động -10,77 đến -11,22 suốt epoch 5-40, không thấy xu hướng cải thiện rõ). Không kết luận được symmetry-fix + real-physics có sửa được WIRE hay không từ dữ liệu này - có thể cần nhiều epoch hơn (LR mới giảm tới 4.8e-05/60 epoch tại lúc dừng, chưa vào vùng hội tụ cuối như KAN v2 từng cần) hoặc recipe 2-giai-đoạn (base rồi fine-tune real-physics) giống KAN thay vì 1 giai đoạn từ đầu. Không có file lịch sử `_history.json` (chỉ ghi lúc vòng lặp kết thúc tự nhiên) - số liệu epoch-by-epoch nằm trong log đã sao lưu `outputs/phase5/cvae_wire_realphysics_v3_partial_log.txt`.
+
+**Resume round 2 (2026-09-23, máy bật lại):** `--resume-from outputs/phase5/cvae_wire_realphysics_v3.pt --decoder-type wire --wire-hidden-dim 128 --epochs 35 --lr 1e-4 --lambda-real-physics 2.0 --real-physics-every 10 --real-physics-subsample 8 --fe-eval-every 5 --select-by fe_r2 --output-name cvae_wire_realphysics_v3_round2.pt`. **Cố ý đổi `--output-name`** (không ghi đè `cvae_wire_realphysics_v3.pt`) vì `train.py` khởi tạo lại `best_val=-inf` mỗi lần chạy bất kể `--resume-from` - nếu dùng cùng tên file, epoch fe-eval ĐẦU TIÊN của round 2 (dù tệ hơn epoch 25 cũ) sẽ ghi đè mất checkpoint tốt hiện có. Cũng tăng `lambda_real_physics` 1.0→2.0 và giảm `lr` 1.5e-4→1e-4 (giống pattern KAN v1→v2) để đẩy mạnh hơn tín hiệu real-physics ở vòng 2.
+
+**KẾT QUẢ ROUND 2 (chạy đủ 35/35 epoch) - CẢI THIỆN trên tập FE-eval nhỏ (8 condition) NHƯNG THẤT BẠI trên benchmark chính thức (24 condition) - phát hiện quan trọng về overfitting lên validation subset.**
+
+R²(FE) đo trên 8 condition validation dùng trong lúc train cải thiện đều đặn tới cuối: epoch 15=-10,42 → epoch 25=-10,35 → epoch 30=-10,18 → **epoch 35=-10,10** (tốt nhất trong TOÀN BỘ 2 round, vượt cả round 1 lẫn baseline gốc `cvae_wire_v2.pt`=-10,29).
+
+**Nhưng chạy `best_of_n_eval.py` chính thức (24 condition, 30 mẫu/condition, seed=123 - đúng benchmark dùng để báo cáo số liệu, KHÁC 8 condition dùng nội bộ lúc train) cho kết quả TỆ HƠN baseline gốc trên mọi trục:**
+
+| | `cvae_wire_v2.pt` (baseline gốc, thất bại) | `cvae_wire_realphysics_v3_round2.pt` (mới) | Mục tiêu (DoN Task 2) |
+|---|---:|---:|---:|
+| hit_rate single-shot (= `passes_all` single-shot) | 4,17% | **0,00%** | ≥ 75% |
+| hit_rate best-of-N | 16,67% | **0,00%** | - (không đặt DoN riêng) |
+| R²(FE, best-of-N) | -10,29 | **-13,87** | - (không đặt DoN riêng, chỉ có mốc định tính "dương") |
+| frac_manufacturable | 4,17% | 2,78% | - (không đặt DoN riêng) |
+
+**Kết luận trung thực:** cải thiện R² đo trên 8 condition validation KHÔNG chuyển hóa thành cải thiện thật trên benchmark 24-condition đầy đủ - đây là bằng chứng cụ thể của việc **overfit lên chính tập validation nhỏ dùng để chọn checkpoint** (8 condition cố định, lặp lại `--fe-eval-every 5` suốt cả round 1+2 ~75 epoch hiệu dụng - đủ để mô hình "học" đặc thù của đúng 8 condition đó thay vì tổng quát hóa). Việc thêm `enforce_symmetry` + bật `lambda_real_physics` **KHÔNG sửa được** WIRE decoder trong ngân sách đã thử (75 epoch hiệu dụng, 2 round) - Task 2 (WIRE INR decoder) vẫn **CHƯA đạt KPI**, thậm chí kết quả chính thức tệ hơn baseline gốc. File kết quả đầy đủ: `outputs/phase5/self_play/best_of_n_result_wire_realphysics_v3_round2.json`.
+
+**Khuyến nghị cho lần thử tiếp theo (chưa làm):** (1) tăng `--n-fe-eval-conditions` lên gần 24 (hoặc dùng đúng 24 condition benchmark) để validation-during-train không lệch khỏi benchmark cuối; (2) thử lại recipe 2-giai-đoạn ĐÚNG kiểu KAN (base thuần property-consistency trước, fine-tune real-physics sau) thay vì bật real-physics từ epoch 1; (3) cân nhắc việc thiếu `enforce_symmetry` không phải nguyên nhân chính - có thể vấn đề nằm sâu hơn ở kiến trúc Gabor/INR không phù hợp với bài toán density-field nhị phân hoá cứng (khác domain ảnh liên tục mà WIRE gốc thiết kế cho).
+
+**Latent dataset cho Giai đoạn 2 (Latent diffusion prior, `docs/plan.md`) - script mới `build_latent_dataset.py`, phát hiện đáng chú ý.** Mã hoá cả train/val/test bằng encoder đóng băng của `cvae_kan_realphysics_v2.pt` (deterministic, `z=mu`, không sample qua reparameterization). **`mu` thật lệch rõ so với N(0,1) prior mặc định của `CVAE.generate()`:** mean≈0,35-0,36, std≈1,28-1,32 (nhất quán cả 3 split, không phải nhiễu 1 lần đo) - xác nhận bằng số liệu thật giả thuyết nền tảng của Giai đoạn 2 (aggregate posterior KHÔNG khớp Gaussian chuẩn, sample ngẫu nhiên từ N(0,1) đang lấy mẫu ở vùng latent space không đại diện đúng cho dữ liệu thật). 3 test mới (`tests/test_phase5_build_latent_dataset.py`), 646/646 pass. File latent: `outputs/phase5/cvae_kan_realphysics_v2_latents_{train,val,test}.npz`.
 
 ---
 

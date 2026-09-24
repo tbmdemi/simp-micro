@@ -139,6 +139,45 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --n-samples 1500 --k-fe-verify 8 
 
 Hai checkpoint ngang ngửa nhau (cả hai đạt hit-rate best-of-N=1,0); `cvae_v2_finetuned.pt` nhỉnh hơn ở hit-rate single-shot (số quan trọng nhất cho dùng thực tế không lọc), `cvae_realphysics.pt` nhỉnh hơn nhẹ ở R²/manufacturability. **Khuyến nghị: dùng `cvae_v2_finetuned.pt` cho nhất quán với dataset production hiện tại**; `cvae_realphysics.pt` vẫn được giữ nguyên làm tham chiếu lịch sử, không bị ghi đè.
 
+**2026-08-23 - KAN regression head + WIRE decoder (Task 1/2, nhánh `substrate-material`):**
+
+Kiến trúc `pipeline/phase5_cvae/model.py` mở rộng:
+- **KAN-hóa bộ hồi quy (Task 1):** `Encoder.fc_mu`/`fc_logvar` + `Decoder.fc` đều là `EfficientKANLinear` (base_weight + spline_weight + grid B-spline bậc 3). `resize_condition_dim_weights()` đã xử lý đúng cấu trúc KAN khi `--resume-from` condition_dim khác.
+- **WIRE decoder (Task 2):** flag `decoder_type="conv"|"wire"` (mặc định `conv`, tương thích ngược). `wire` dùng `WireContinuousDecoder` - kích hoạt Gabor Wavelet phức, sinh mật độ ρ ∈ [0,1] tại tọa độ liên tục `(x,y) ∈ [-1,1]²`, resolution-agnostic qua `generate(resolution=...)` (128²/256²/512²); API đầu ra `(B,1,H,W)` giữ nguyên cho downstream (`sample.py`/`best_of_n_eval.py`/`verify_fe.py`).
+- CLI mới: `train.py --decoder-type --wire-hidden-dim --wire-omega0 --wire-s0`; `sample.py --resolution`.
+
+Kết quả train KAN (đo bằng `evaluate.property_accuracy`, surrogate v2 hiện tại): KAN base (chọn val_loss) R²=0,19; fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật) tốt nhất trong train = 0,8889 - vượt baseline Linear đo lại (0,29/0,35) gần 2×. **Mục tiêu (DoN v2, Task 1): R² tổng≥0,60 VÀ R²(FE)≥0,85 - ĐÃ ĐẠT cả 2.** **Lưu ý:** report tháng 7 (R²=0,85) không tái lập với code hiện tại (cùng checkpoint đo lại = 0,35) - chi tiết [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-23. WIRE đã có checkpoint `cvae_wire_v2.pt`, nhưng benchmark best-of-N mới đạt 16,67% và R²(FE)=-10,29, chưa đạt KPI. **Mục tiêu (DoN Task 2): hit-rate/`passes_all` single-shot ≥75% - đo được 4,17%, còn cách rất xa.**
+
+**Exp 3 — đối chứng MLP/KAN (2026-09-11):** với cùng test loader, surrogate
+v2 và seed prior cố định, MLP + Physics đạt `R²(v12)=0,432`,
+`R²(v21)=0,087`, `R²(volfrac)=-2,483`, `R²(FE,v12)=-9,834` (n=24).
+Checkpoint KAN v2 đạt tương ứng `0,836`, `0,476`, `-0,221`, `0,581`.
+MLP đã chạy đủ 150 epoch; checkpoint tốt nhất theo FE-R² là epoch 20
+(`-6,2465`). Vì KAN v2 chưa retrain lại sau khi thêm decoder symmetry và
+volfrac loss, kết quả này là ablation định hướng, chưa phải so sánh hoàn toàn
+đồng nhất về thời điểm mã nguồn.
+
+**2026-09-23 - WIRE (Task 2): root-cause tìm ra, thử sửa, vẫn THẤT BẠI - cập nhật con số `16,67%`/`-10,29` ở trên (đó vẫn là kết quả TỐT NHẤT từng đo cho WIRE, mọi lần thử sau đều tệ hơn).** Root-cause thật: `cvae_wire_v2.pt` train với `--lambda-real-physics 0.0` (chưa từng dùng real-physics loss) + `WireContinuousDecoder` thiếu `enforce_symmetry` mà `Decoder` (conv) có sẵn - đã sửa cả hai. Retrain 2 round (~75 epoch hiệu dụng, `--wire-hidden-dim 128 --lambda-real-physics 1.0→2.0`): R²(FE) đo trên 8-condition validation dùng lúc train cải thiện đều (tới -10,10, tốt nhất từng đo), nhưng benchmark CHÍNH THỨC 24-condition (`best_of_n_eval.py`) cho `cvae_wire_realphysics_v3_round2.pt` **tệ hơn baseline gốc trên mọi trục**: hit-rate single-shot/best-of-N = 0%/0% (gốc 4,17%/16,67%), R²(FE)=-13,87 (gốc -10,29), frac_manufacturable=2,78% (gốc 4,17%). Bằng chứng cụ thể của overfitting lên validation subset nhỏ dùng để chọn checkpoint. **Task 2 (WIRE) coi như đóng ở trạng thái thất bại** - chi tiết đầy đủ [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-09-23, [task_progress.md](task_progress.md) Task 2.
+
+**2026-08-24 - các module roadmap bổ sung:**
+
+- `pipeline/mno/` cung cấp MNO dự đoán 18 trường displacement, dataset adapter
+  NPZ và train/evaluate CLI. `mamba_ssm` là backend tùy chọn; fallback GRU hai
+  chiều giữ pipeline chạy được khi CUDA kernel chưa cài.
+- `pipeline/kinn/` cung cấp KINN dùng `EfficientKANLinear`, deep-energy loss
+  differentiable bằng PyTorch autograd và adapter JAX-CG/SciPy. Hook
+  `losses.kinn_prior_loss()` đã nối vào namespace Phase 5; chưa phải solver
+  hyperelastic production.
+- `pipeline/ickans/` cung cấp mô hình năng lượng lồi cho composite với signed
+  features, trọng số hiệu dụng dương và quadratic curvature floor; evaluate CLI
+  báo R² cùng eigenvalue nhỏ nhất của tangent Hessian.
+- Kết quả compute: MNO smoke đúng shape `(1,18,16,16)` và khoảng 0,0004 s/sample
+  trên GPU fallback; KINN gradient hữu hạn; ICKAN eigenvalue nhỏ nhất 0,00102,
+  nhưng R² smoke=-0,069. Các KPI MNO/KINN/ICKAN production chưa đạt vì thiếu
+  dataset displacement FE 18 kênh và môi trường chưa có `mamba_ssm`/`jax-amg`.
+
+Các lệnh roadmap xem trong `CLI_GUIDE.md`; luôn chạy sau `conda activate simp`.
+
 ### 5.1. Tham số input tùy chọn volfrac và void size frac, chấm điểm toàn diện
 
 > Tính năng này đã merge vào `main` (PR #13, nhánh phát triển cũ `feature/optional-multi-condition`). Mục này mô tả hành vi hiện có, có thể bật qua cờ `--extended-condition` khi cần - **không** phải hành vi mặc định của các lệnh ở mục 5 phía trên (checkpoint mặc định vẫn `condition_dim=2`, chỉ `v12/v21`).

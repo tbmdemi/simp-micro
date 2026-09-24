@@ -206,11 +206,27 @@ class WireContinuousDecoder(nn.Module):
         resolution=64,
         omega0=10.0,
         s0=10.0,
+        enforce_symmetry=True,
     ):
+        """Args:
+        latent_dim: số chiều latent z.
+        cond_dim: số chiều condition vector.
+        hidden_dim: số neuron mỗi lớp Gabor ẩn.
+        resolution: độ phân giải lưới mặc định khi forward() không
+            truyền resolution (train ở giá trị này).
+        omega0, s0: tham số tần số/độ định xứ của ComplexGaborActivation.
+        enforce_symmetry: nếu True, áp cùng ràng buộc đối xứng gương
+            `0.5*(image+image.T)` mà Decoder (conv) đã có sẵn
+            (model.py Decoder.forward) - trước đây WireContinuousDecoder
+            thiếu hẳn prior hình học này so với Decoder conv, một phần
+            nguyên nhân khiến ảnh sinh ra kém khả năng chế tạo hơn hẳn
+            (xem EXPERIMENT_LOG.md 2026-08-24, frac_manufacturable thấp).
+        """
         super().__init__()
         self.latent_dim = latent_dim
         self.cond_dim = cond_dim
         self.resolution = resolution
+        self.enforce_symmetry = enforce_symmetry
         input_dim = 2 + latent_dim + cond_dim  # coords (2) + z + condition
         self.layer1 = ComplexGaborActivation(
             input_dim, hidden_dim, omega0=omega0, s0=s0
@@ -248,12 +264,20 @@ class WireContinuousDecoder(nn.Module):
 
     def forward(self, z, condition, resolution=None):
         """Sinh ảnh mật độ (B, 1, H, W) từ latent z + condition - API tương
-        thích với Decoder conv. resolution mặc định = resolution khởi tạo."""
+        thích với Decoder conv. resolution mặc định = resolution khởi tạo.
+
+        Nếu `enforce_symmetry=True`, áp cùng công thức đối xứng gương
+        `0.5*(image+image.T)` mà Decoder (conv) dùng, sau khi reshape về
+        lưới vuông - hợp lệ với mọi `resolution` truyền vào vì `_coords_grid`
+        luôn sinh lưới H=W."""
         res = resolution or self.resolution
         coords = self._coords_grid(res, z.device)  # (N, 2)
         coords_b = coords.unsqueeze(0).expand(z.size(0), -1, -1)  # (B, N, 2)
         rho = self.forward_coords(coords_b, z, condition)  # (B, N, 1)
-        return rho.view(-1, 1, res, res)
+        image = rho.view(-1, 1, res, res)
+        if self.enforce_symmetry:
+            image = 0.5 * (image + image.transpose(-1, -2))
+        return image
 
 
 class CVAE(nn.Module):
@@ -300,6 +324,7 @@ class CVAE(nn.Module):
                 resolution=resolution,
                 omega0=wire_omega0,
                 s0=wire_s0,
+                enforce_symmetry=enforce_symmetry,
             )
         elif decoder_type == "conv":
             self.decoder = Decoder(

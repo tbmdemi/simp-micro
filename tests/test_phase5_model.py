@@ -268,3 +268,52 @@ class TestWireDecoder:
         assert model.decoder.layer1.linear.weight.grad is not None
         assert model.decoder.output_layer.weight.grad is not None
         assert torch.isfinite(model.decoder.layer1.linear.weight.grad).all()
+
+    def test_enforce_symmetry_true_produces_mirror_symmetric_image(self):
+        torch.manual_seed(0)
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=True,
+        )
+        assert model.decoder.enforce_symmetry is True
+        cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
+        out = model.generate(cond, n_samples=2, device="cpu")
+        assert torch.allclose(out, out.transpose(-1, -2), atol=1e-6)
+
+    def test_enforce_symmetry_false_keeps_raw_asymmetric_output(self):
+        torch.manual_seed(0)
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=False,
+        )
+        assert model.decoder.enforce_symmetry is False
+        cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
+        out = model.generate(cond, n_samples=2, device="cpu")
+        # Raw WIRE output có đối xứng gần-hoàn-hảo là không chắc chắn (weight
+        # init ngẫu nhiên) - chỉ cần xác nhận KHÔNG bị ép đối xứng, tức khác
+        # test trên (không assert allclose với transpose).
+        assert not torch.allclose(out, out.transpose(-1, -2), atol=1e-6)
+
+    def test_enforce_symmetry_gradients_still_flow(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=True,
+        )
+        img = torch.rand(2, 1, 32, 32)
+        cond = torch.zeros(2, 2)
+        recon, _, _ = model(img, cond)
+        recon.sum().backward()
+        assert model.decoder.layer1.linear.weight.grad is not None
+        assert torch.isfinite(model.decoder.layer1.linear.weight.grad).all()

@@ -167,7 +167,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 2026-08-23 - KAN regression head + WIRE INR decoder (Task 1/2, nhánh `substrate-material`)
 
-> Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [task_progress.md](task_progress.md).
+> Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [docs/task_progress.md](docs/task_progress.md).
 
 #### Added
 - `pipeline/phase5_cvae/model.py`: `WireContinuousDecoder` + `ComplexGaborActivation` (Gabor Wavelet phức) - WIRE INR decoder sinh mật độ ρ ∈ [0,1] tại tọa độ liên tục (x,y) ∈ [-1,1]², resolution-agnostic. `CVAE` thêm flag `decoder_type="conv"|"wire"` (mặc định `conv`, tương thích ngược) và `generate(resolution=...)` (128²/256²/512²) giữ API đầu ra `(B,1,H,W)`.
@@ -177,7 +177,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Changed
 - **KAN-hóa bộ hồi quy cVAE (Task 1):** `Decoder.fc` chuyển từ `nn.Linear` sang `EfficientKANLinear` (khớp `Encoder.fc_mu`/`fc_logvar` đã KAN) - mọi `fc` của cVAE giờ là KAN. `resize_condition_dim_weights()` đã xử lý KAN (`base_weight`/`spline_weight`/grid).
-- Training KAN chạy 5 lần: base val_loss R²(surrogate)=0,19; **fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật)=0,8889** - vượt baseline Linear đo lại (0,29/0,35) gần 2×. DoN R² ≥ 0,990 chưa đạt (xem task_progress.md).
+- Training KAN chạy 5 lần: base val_loss R²(surrogate)=0,19; **fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật)=0,8889** - vượt baseline Linear đo lại (0,29/0,35) gần 2×. DoN R² ≥ 0,990 chưa đạt (xem docs/task_progress.md).
 
 #### Fixed
 - Phát hiện `outputs/phase5/evaluation_report.json` (2026-07-29, R²=0,85) **không tái lập** với code hiện tại (cùng checkpoint đo lại = 0,35 với surrogate v2, −1,81 với v1) - chưa tìm ra gốc rễ, khả năng report cũ sinh bằng code path khác; mọi so sánh R² cũ cần đo lại cùng code hiện tại (xem EXPERIMENT_LOG.md 2026-08-23).
