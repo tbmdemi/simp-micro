@@ -23,6 +23,8 @@ Output:
     outputs/phase5/diagnostics/diversity_condition_X.png
     outputs/phase5/diagnostics/interpolation_XX.png
 """
+
+import argparse
 import os
 import sys
 import json
@@ -32,12 +34,18 @@ from torch.utils.data import DataLoader
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset, build_condition_vector  # noqa: E402
-from losses import load_frozen_surrogate   # noqa: E402
-from sample import load_model, CKPT_PATH   # noqa: E402
+from model import CVAE  # noqa: E402
+from dataset import (
+    CVAEDataset,
+    build_condition_vector,
+    condition_flags_from_dim,
+)  # noqa: E402
+from losses import load_frozen_surrogate  # noqa: E402
+from sample import load_model, CKPT_PATH  # noqa: E402
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 DIAG_DIR = os.path.join(PHASE5_DIR, "diagnostics")
@@ -76,16 +84,25 @@ def property_accuracy(model, surrogate, target_names, test_loader, device):
 def diversity_check(model, condition, n_samples, device):
     samples = model.generate(
         torch.tensor(condition, dtype=torch.float32, device=device),
-        n_samples=n_samples, device=device,
+        n_samples=n_samples,
+        device=device,
     )  # (n, 1, 64, 64)
-    pixel_std = samples.std(dim=0).mean().item()  # trung bình std theo pixel qua n mẫu
+    pixel_std = (
+        samples.std(dim=0).mean().item()
+    )  # trung bình std theo pixel qua n mẫu
 
-    grid = (samples.squeeze(1).cpu().numpy() * 255).astype(np.uint8)  # (n,64,64)
+    grid = (samples.squeeze(1).cpu().numpy() * 255).astype(
+        np.uint8
+    )  # (n,64,64)
     strip = np.concatenate(list(grid), axis=1)  # ghép ngang thành 1 ảnh dài
     os.makedirs(DIAG_DIR, exist_ok=True)
     fname = f"diversity_v12_{condition[0]:.2f}_v21_{condition[1]:.2f}.png"
     Image.fromarray(strip, mode="L").save(os.path.join(DIAG_DIR, fname))
-    return {"condition": condition, "pixel_std": pixel_std, "preview": fname}
+    return {
+        "condition": np.asarray(condition).tolist(),
+        "pixel_std": pixel_std,
+        "preview": fname,
+    }
 
 
 def interpolation(model, ds, device, n_steps=8, idx_a=0, idx_b=1):
@@ -96,12 +113,16 @@ def interpolation(model, ds, device, n_steps=8, idx_a=0, idx_b=1):
 
     with torch.no_grad():
         mu_a, _ = model.encoder(img_a, cond_a)
-        mu_b, _ = model.encoder(img_b, cond_a)  # dùng chung condition của mẫu A
+        mu_b, _ = model.encoder(
+            img_b, cond_a
+        )  # dùng chung condition của mẫu A
         frames = []
         for t in np.linspace(0, 1, n_steps):
             z = (1 - t) * mu_a + t * mu_b
             recon = model.decoder(z, cond_a)
-            frames.append((recon.squeeze().cpu().numpy() * 255).astype(np.uint8))
+            frames.append(
+                (recon.squeeze().cpu().numpy() * 255).astype(np.uint8)
+            )
 
     strip = np.concatenate(frames, axis=1)
     os.makedirs(DIAG_DIR, exist_ok=True)
@@ -111,36 +132,80 @@ def interpolation(model, ds, device, n_steps=8, idx_a=0, idx_b=1):
 
 
 def main():
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if not os.path.exists(CKPT_PATH):
-        raise FileNotFoundError(f"Không tìm thấy {CKPT_PATH} - hãy chạy train.py trước.")
+    """Evaluate a cVAE checkpoint with surrogate-based diagnostics.
 
-    model = load_model(device=device)
-    surrogate, target_names = load_frozen_surrogate(device=device)
+    Returns:
+        None. The report and diagnostic images are written under Phase 5
+        output directories.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--ckpt",
+        type=str,
+        default=CKPT_PATH,
+        help="cVAE checkpoint to evaluate.",
+    )
+    parser.add_argument(
+        "--surrogate-path",
+        type=str,
+        default=None,
+        help="Optional Phase 4 surrogate checkpoint override.",
+    )
+    args = parser.parse_args()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if not os.path.exists(args.ckpt):
+        raise FileNotFoundError(
+            f"Không tìm thấy {args.ckpt} - hãy chạy train.py trước."
+        )
+
+    model = load_model(device=device, ckpt_path=args.ckpt)
+    surrogate, target_names = load_frozen_surrogate(
+        device=device, path=args.surrogate_path
+    )
 
     # Bug đã sửa 2026-08-15: dataset ở đây trước dùng LUÔN condition_dim=2
     # mặc định, bất kể checkpoint train với --extended-condition
     # (condition_dim=6) hay không - crash shape mismatch ở model.decoder()
     # khi đánh giá checkpoint extended-condition.
-    extended = model.condition_dim == 6
-    test_ds = CVAEDataset(os.path.join(PHASE3_DIR, "test.npz"), extended_condition=extended)
+    #
+    # Bug tương tự tái phát khi thêm A6 (docs/PROJECT_PLAN.md): `== 6` bỏ
+    # sót include_nu0 (condition_dim ∈ {4,8}) - dùng condition_flags_from_dim()
+    # (nguồn suy luận DUY NHẤT, xem dataset.py) thay vì so sánh rời rạc lặp
+    # lại ở từng file, để không lệch nữa lần thứ 3 nếu condition_dim mở rộng
+    # tiếp (vd Nhóm 6 - Giai đoạn F, CTE).
+    extended, include_nu0 = condition_flags_from_dim(model.condition_dim)
+    test_ds = CVAEDataset(
+        os.path.join(PHASE3_DIR, "test.npz"),
+        extended_condition=extended,
+        include_nu0=include_nu0,
+    )
     test_loader = DataLoader(test_ds, batch_size=64, shuffle=False)
 
     print("1/3 - Đánh giá property accuracy trên test set...")
-    prop_report = property_accuracy(model, surrogate, target_names, test_loader, device)
-    print(f"   v12: R2={prop_report['v12']['r2']:.4f} MAE={prop_report['v12']['mae']:.4f}")
-    print(f"   v21: R2={prop_report['v21']['r2']:.4f} MAE={prop_report['v21']['mae']:.4f}")
+    prop_report = property_accuracy(
+        model, surrogate, target_names, test_loader, device
+    )
+    print(
+        f"   v12: R2={prop_report['v12']['r2']:.4f} MAE={prop_report['v12']['mae']:.4f}"
+    )
+    print(
+        f"   v21: R2={prop_report['v21']['r2']:.4f} MAE={prop_report['v21']['mae']:.4f}"
+    )
 
     print("2/3 - Kiểm tra đa dạng hình học (condition cố định)...")
     fixed_condition = build_condition_vector(-0.6, -0.6, model.condition_dim)
     diversity_report = diversity_check(
         model, condition=fixed_condition, n_samples=8, device=device
     )
-    print(f"   pixel_std={diversity_report['pixel_std']:.4f} "
-          f"(gần 0 -> nghi ngờ posterior collapse)")
+    print(
+        f"   pixel_std={diversity_report['pixel_std']:.4f} "
+        f"(gần 0 -> nghi ngờ posterior collapse)"
+    )
 
     print("3/3 - Nội suy latent space giữa 2 mẫu test...")
-    interp_report = interpolation(model, test_ds, device, n_steps=8, idx_a=0, idx_b=1)
+    interp_report = interpolation(
+        model, test_ds, device, n_steps=8, idx_a=0, idx_b=1
+    )
 
     report = {
         "property_accuracy": prop_report,

@@ -43,7 +43,8 @@ SEED_CLASSES = np.array(
 
 
 def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
-                      seed_classes=SEED_CLASSES, v12_range=(-0.8, 0.35)):
+                      seed_classes=SEED_CLASSES, v12_range=(-0.8, 0.35),
+                      nu_range=None):
     """Write a synthetic .npz matching outputs/phase3/{train,val,test}.npz's
     schema (images/v12/v21/volfrac_achieved/seed_onehot/seed_classes), small
     enough to load instantly, so tests never depend on the real (gitignored,
@@ -69,6 +70,13 @@ def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
     params = np.stack([volfrac, penal, rmin, move, void_size_frac], axis=1).astype(np.float32)
     param_names = np.array(["volfrac", "penal", "rmin", "move", "void_size_frac"])
 
+    extra = {}
+    if nu_range is not None:
+        # Giai đoạn A/A4 (docs/PROJECT_PLAN.md Nhóm 1): field 'nu' chỉ có
+        # trong npz khi test cần AuxeticDataset(include_nu0=True) - opt-in,
+        # không ảnh hưởng schema mặc định của mọi test khác.
+        extra["nu"] = rng.uniform(nu_range[0], nu_range[1], size=n_samples).astype(np.float32)
+
     np.savez(
         path,
         images=images,
@@ -79,6 +87,7 @@ def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
         seed_classes=seed_classes,
         params=params,
         param_names=param_names,
+        **extra,
     )
     return path
 

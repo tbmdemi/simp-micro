@@ -589,6 +589,160 @@ class TestHomogenization:
         assert np.allclose(Q, D, rtol=1e-6)
 
 
+class TestElasticConstants:
+    """Tests cho compute_elastic_constants() (simp/objectives/auxetic.py)."""
+
+    def test_solid_cell_recovers_isotropic_constants(self):
+        """Đồng nhất hóa ô cơ sở ĐẶC HOÀN TOÀN (x=1, penal=1) phải cho ra
+        đúng hằng số kỹ thuật đẳng hướng gốc: Ex=Ey=E0, Gxy=E0/(2(1+nu)),
+        nu12=nu21=nu, B_eff=E0/(2(1-nu)) - suy trực tiếp từ nghịch đảo giải
+        tích ma trận D plane-stress (D*S=I kiểm chứng bằng tay), cùng bất
+        biến đồng nhất hóa dùng ở
+        test_homogenized_tensor_matches_input_material_for_solid_cell."""
+        from simp.core.fem import build_dof_mesh
+        from simp.core.pbc import build_pbc
+        from simp.core.solver import solve_fe
+        from simp.homogenization.compute import compute_homogenized_tensor
+        from simp.materials.isotropic import Material
+        from simp.objectives.auxetic import compute_elastic_constants
+
+        nelx, nely = 10, 10
+        E0, Emin, nu = 199.0, 1e-9, 0.3
+        material = Material(E0, Emin, nu)
+        nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
+        pbc = build_pbc(nelx, nely, nodenrs)
+
+        xPhys = np.ones((nely, nelx))
+        U, U0 = solve_fe(
+            xPhys, material.KE, iK, jK, pbc, penal=1.0, E0=E0, Emin=Emin
+        )
+        U_total = U0 + U
+
+        Q, _, _ = compute_homogenized_tensor(
+            U_total, U0, xPhys, material.KE, edofMat,
+            penal=1.0, E0=E0, Emin=Emin,
+        )
+        constants = compute_elastic_constants(Q)
+
+        assert constants['E_x'] == pytest.approx(E0, rel=1e-6)
+        assert constants['E_y'] == pytest.approx(E0, rel=1e-6)
+        assert constants['G_xy'] == pytest.approx(
+            E0 / (2 * (1 + nu)), rel=1e-6
+        )
+        assert constants['nu_12'] == pytest.approx(nu, rel=1e-6)
+        assert constants['nu_21'] == pytest.approx(nu, rel=1e-6)
+        assert constants['B_eff'] == pytest.approx(
+            E0 / (2 * (1 - nu)), rel=1e-6
+        )
+
+    def test_matches_compute_nu12_nu21_on_asymmetric_q(self):
+        """nu_12/nu_21 trả về phải khớp CHÍNH XÁC compute_nu12()/
+        compute_nu21() độc lập (cùng công thức, tránh 2 nguồn lệch nhau) -
+        thử trên Q bất đối xứng (Q13/Q23 != 0, mô phỏng trường hợp rotation)
+        để không vô tình chỉ đúng ở case orthotropic đặc biệt."""
+        from simp.objectives.auxetic import (
+            compute_elastic_constants, compute_nu12, compute_nu21,
+        )
+
+        Q = np.array([
+            [200.0, 40.0, 15.0],
+            [40.0, 180.0, -8.0],
+            [15.0, -8.0, 60.0],
+        ])
+        constants = compute_elastic_constants(Q)
+        assert constants['nu_12'] == pytest.approx(compute_nu12(Q))
+        assert constants['nu_21'] == pytest.approx(compute_nu21(Q))
+
+    def test_singular_q_raises_linalgerror(self):
+        """Q suy biến (vd zero-init khi FE-solve lỗi ngay vòng lặp đầu, xem
+        simp/runner.py) phải raise LinAlgError, KHÔNG âm thầm trả 0 - cùng
+        quy ước với compute_nu12()/compute_nu21() đã có (caller tự quyết
+        định xử lý, không bắt lỗi bên trong hàm tính toán)."""
+        from simp.objectives.auxetic import compute_elastic_constants
+
+        Q_singular = np.zeros((3, 3))
+        with pytest.raises(np.linalg.LinAlgError):
+            compute_elastic_constants(Q_singular)
+
+
+class TestWaveSpeeds:
+    """Tests cho compute_wave_speeds() (simp/objectives/auxetic.py) - tốc
+    độ sóng quasi-static từ bài toán Christoffel trên Q."""
+
+    def test_solid_isotropic_matches_closed_form(self):
+        """Ô đặc đẳng hướng plane-stress: Q11 = E/(1-nu^2), Q33 = G =
+        E/(2(1+nu)), Q13 = 0 -> c_qL = sqrt(1/(1-nu^2)), c_qT =
+        sqrt(1/(2(1+nu))) (chuẩn hóa theo sqrt(E0/rho_s)), 2 trục bằng
+        nhau."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        E0, nu = 199.0, 0.3
+        Q = E0 / (1 - nu**2) * np.array([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, (1 - nu) / 2],
+        ])
+        c = compute_wave_speeds(Q, rel_density=1.0, E0=E0)
+        assert c['c_qL_x'] == pytest.approx(np.sqrt(1 / (1 - nu**2)))
+        assert c['c_qT_x'] == pytest.approx(np.sqrt(1 / (2 * (1 + nu))))
+        assert c['c_qL_y'] == pytest.approx(c['c_qL_x'])
+        assert c['c_qT_y'] == pytest.approx(c['c_qT_x'])
+
+    def test_lower_density_same_stiffness_is_faster(self):
+        """Cùng Q, rel_density giảm 4 lần -> tốc độ tăng đúng 2 lần
+        (c ~ 1/sqrt(rho)) - bắt lỗi đặt sai rel_density ở tử/mẫu."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        Q = np.array([[50.0, 5.0, 2.0], [5.0, 30.0, -1.0], [2.0, -1.0, 10.0]])
+        c1 = compute_wave_speeds(Q, rel_density=0.8, E0=199.0)
+        c2 = compute_wave_speeds(Q, rel_density=0.2, E0=199.0)
+        for k in c1:
+            assert c2[k] == pytest.approx(2.0 * c1[k])
+
+    def test_axis_swap_swaps_speeds(self):
+        """Hoán đổi vai trò trục x<->y trong Q (Q11<->Q22, Q13<->Q23) phải
+        hoán đổi tốc độ theo x và y - kiểm tra đúng chỉ số Christoffel."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        Q = np.array([[80.0, 5.0, 3.0], [5.0, 20.0, -2.0], [3.0, -2.0, 10.0]])
+        P = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
+        c = compute_wave_speeds(Q, 0.5, 199.0)
+        c_sw = compute_wave_speeds(P @ Q @ P.T, 0.5, 199.0)
+        assert c_sw['c_qL_x'] == pytest.approx(c['c_qL_y'])
+        assert c_sw['c_qT_x'] == pytest.approx(c['c_qT_y'])
+
+
+class TestReconstructBentSurface:
+    """Tests cho reconstruct_3d_bent_surface() (simp/io/visualizer.py) -
+    hình minh họa hình học, không phải mô phỏng FE (xem docstring hàm)."""
+
+    def test_curvature_ratio_sign(self):
+        from simp.io.visualizer import _bending_curvature_ratio
+
+        # nu* < 0 (auxetic) -> tỉ số dương -> 2 độ cong CÙNG dấu (synclastic).
+        assert _bending_curvature_ratio(-0.3) > 0
+        # nu* > 0 (thường) -> tỉ số âm -> 2 độ cong NGƯỢC dấu (anticlastic).
+        assert _bending_curvature_ratio(0.3) < 0
+
+    def test_returns_figure_for_auxetic_and_normal_nu(self):
+        import matplotlib.figure
+        import matplotlib.pyplot as plt
+
+        from simp.io.visualizer import reconstruct_3d_bent_surface
+
+        fig_auxetic = reconstruct_3d_bent_surface(
+            nu_star=-0.3, grid_resolution=5
+        )
+        fig_normal = reconstruct_3d_bent_surface(
+            nu_star=0.3, grid_resolution=5
+        )
+
+        assert isinstance(fig_auxetic, matplotlib.figure.Figure)
+        assert isinstance(fig_normal, matplotlib.figure.Figure)
+        plt.close(fig_auxetic)
+        plt.close(fig_normal)
+
+
 class TestNudgeDisconnectedIslands:
     """Unit tests for runner.py::nudge_disconnected_islands (B2)."""
 

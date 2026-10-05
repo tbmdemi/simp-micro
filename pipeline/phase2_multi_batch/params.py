@@ -46,6 +46,17 @@ ACTIVE_PARAMETERS: Dict[str, Dict[str, List[float]]] = {
     "void_size_frac": {"range": [0.1, 0.4]},
 }
 
+# Giai đoạn A (vary vật liệu nền, docs/PROJECT_PLAN.md Nhóm 1 A1/A3): dải hẹp
+# ν0=0.2-0.4 để kiểm tra hội tụ FE trước khi mở rộng, khớp
+# pipeline/params.py::PARAM_SPACE['nu']. Không gộp thẳng vào ACTIVE_PARAMETERS
+# ở trên vì đó là default cho MỌI lần chạy main.py hiện có (kể cả tái tạo
+# dataset production cũ) - việc bật nu biến thiên phải là lựa chọn tường minh
+# (xem runner.py::DEFAULT_FIXED['nu'] vẫn giữ 0.3 làm fallback khi không
+# truyền qua NU_ACTIVE_PARAMETERS).
+NU_ACTIVE_PARAMETERS: Dict[str, Dict[str, List[float]]] = {
+    "nu": {"range": [0.2, 0.4]},
+}
+
 
 # ── Dataclasses ──
 

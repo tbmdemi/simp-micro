@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-30 - Tính chất vật lý suy từ Q (nhánh `substrate-material`)
+
+#### Added
+- `real_physics.solve_elastic_with_grad()`: v12/v21/E_x/E_y/G_xy/B_eff kèm gradient giải tích theo pixel, chỉ 1 lần FE-solve; hằng `ELASTIC_KEYS`.
+- `auxetic.compute_wave_speeds()`: tốc độ sóng quasi-static (bài toán Christoffel trên Q), chuẩn hóa theo sqrt(E0/ρs).
+- `analysis/scripts/backfill_elastic_props_npz.py`: backfill Q + 13 tính chất cho `outputs/phase3_a4/{train,val,test}_props.npz` (73.164 mẫu, 0 lỗi FE).
+- `notebooks/09_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
+- 14 test mới (679 → 693).
+
+#### Changed
+- `real_physics.solve_nu_with_grad()` giờ là lát cắt ν của `solve_elastic_with_grad()` (1 nguồn công thức đạo hàm; giá trị và gradient không đổi, có test regression).
+
+### 2026-09-25 - plan v3 (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/heaviside.py`: Heaviside projection, force_periodic và resize nearest (khớp PIL tuyệt đối) bản torch khả vi + `project_for_fe()` dùng chung cho refine và loss train.
+- `tandem_lbfgs(projection_betas=, periodic=)`: refine latent nhận thức nhị phân hóa (β continuation, L-BFGS khởi động lại mỗi mức β).
+- `benchmark_physics_guided_refinement.py`: `--targets/--target-v21/--n-samples/--force-periodic/--projection-betas/--n-boot`, chỉ số guarded, CI paired; `bootstrap_ci.bootstrap_paired_mae_reduction()`.
+- `train.py --rp-projection-beta-max/--rp-periodic`: real-physics loss trên ảnh đã chiếu Heaviside.
+- `model.cvae_kwargs_from_checkpoint()`: nguồn suy luận kiến trúc duy nhất cho mọi loader.
+- 33 test mới (646 → 679).
+
+#### Fixed
+- `adversarial_dataset.load_cvae()` (và `verify_fe`) bỏ qua `use_kan`/`enforce_symmetry` của checkpoint - checkpoint KAN cũ bị ép đối xứng lúc đánh giá, checkpoint Linear crash (`docs/LIMITATIONS.md` mục 28).
+
+#### Changed
+- `docs/plan.md` viết lại thành v3 - nguồn kế hoạch + trạng thái duy nhất; Bài báo #1 định vị lại quanh physics-guided refinement. `PROJECT_PLAN.md`, `task_progress.md`, bản nháp paper #1 thêm banner trỏ về plan v3.
+
 > Ghi chú: khối lượng công việc dưới đây (Phase 3-5 đầy đủ) đã hoàn thành và có mặt trong `main`/`FixLoss` từ lâu, nhưng chưa từng được ghi vào CHANGELOG - mục này bù lại khoảng trống đó. Chưa gắn số phiên bản mới vì đó là quyết định phát hành, không tự ý bump.
 
 ### Added
@@ -147,6 +175,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tách `docs/PIPELINE.md` ra thành file riêng khỏi tài liệu gộp trước đó; xoá script gamma-sweep không còn dùng.
 - Đồng bộ đường dẫn trong notebooks sang dùng `utils.REPO_ROOT` thay vì đường dẫn tương đối cứng.
 - README §Giới hạn Đã biết cập nhật phản ánh các phát hiện audit/OOD ở trên.
+
+### 2026-09-11 - Exp 3 MLP/KAN ablation và hiệu chỉnh metric
+
+#### Added
+- Thêm nhánh `--use-mlp-head` để đối chứng `nn.Linear` với
+  `EfficientKANLinear` trên cùng CVAE.
+- Bổ sung `lambda_volfrac` dùng nhãn `volfrac_achieved` thực từ dataset,
+  đối xứng transpose ở output decoder, seed reproducibility và metadata
+  `use_kan`/`enforce_symmetry` trong checkpoint.
+
+#### Results
+- Exp 3 MLP + Physics 150 epoch: `R²(v12)=0,432`, `R²(v21)=0,087`,
+  `R²(volfrac)=-2,483`, `R²(FE,v12)=-9,834` trên cùng test protocol.
+- KAN + Physics v2 đo lại cùng protocol: `0,836`, `0,476`, `-0,221`,
+  `0,581` tương ứng.
+- KAN v2 chưa retrain lại với code mới; không xem chênh lệch này là claim
+  nhân quả cuối cùng cho tới khi chạy cặp retrain đồng nhất.
+
+### 2026-08-23 - KAN regression head + WIRE INR decoder (Task 1/2, nhánh `substrate-material`)
+
+> Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [docs/task_progress.md](docs/task_progress.md).
+
+#### Added
+- `pipeline/phase5_cvae/model.py`: `WireContinuousDecoder` + `ComplexGaborActivation` (Gabor Wavelet phức) - WIRE INR decoder sinh mật độ ρ ∈ [0,1] tại tọa độ liên tục (x,y) ∈ [-1,1]², resolution-agnostic. `CVAE` thêm flag `decoder_type="conv"|"wire"` (mặc định `conv`, tương thích ngược) và `generate(resolution=...)` (128²/256²/512²) giữ API đầu ra `(B,1,H,W)`.
+- `train.py`: `--decoder-type --wire-hidden-dim --wire-omega0 --wire-s0` (lưu vào checkpoint); `sample.py`: `--resolution`.
+- Loader cập nhật đọc `decoder_type` từ checkpoint: `sample.py::load_model`, `adversarial_dataset.py::load_cvae` (self-play/best_of_n), `verify_fe.py::load_cvae_checkpoint`.
+- Tests: `TestWireDecoder` (forward/shape/unit range/resolution-agnostic/gradient flow) + cập nhật mock `tracking_generate` (tổng **625/625 pass**).
+
+#### Changed
+- **KAN-hóa bộ hồi quy cVAE (Task 1):** `Decoder.fc` chuyển từ `nn.Linear` sang `EfficientKANLinear` (khớp `Encoder.fc_mu`/`fc_logvar` đã KAN) - mọi `fc` của cVAE giờ là KAN. `resize_condition_dim_weights()` đã xử lý KAN (`base_weight`/`spline_weight`/grid).
+- Training KAN chạy 5 lần: base val_loss R²(surrogate)=0,19; **fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật)=0,8889** - vượt baseline Linear đo lại (0,29/0,35) gần 2×. DoN R² ≥ 0,990 chưa đạt (xem docs/task_progress.md).
+
+#### Fixed
+- Phát hiện `outputs/phase5/evaluation_report.json` (2026-07-29, R²=0,85) **không tái lập** với code hiện tại (cùng checkpoint đo lại = 0,35 với surrogate v2, −1,81 với v1) - chưa tìm ra gốc rễ, khả năng report cũ sinh bằng code path khác; mọi so sánh R² cũ cần đo lại cùng code hiện tại (xem EXPERIMENT_LOG.md 2026-08-23).
 
 ## [1.4.0] - 2026-07-10
 

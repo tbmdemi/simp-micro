@@ -20,28 +20,34 @@ import torch
 
 
 def _write_cvae_checkpoint(path, latent_dim=4, resolution=64,
-                            channels=(4, 8, 16, 32)):
+                            channels=(4, 8, 16, 32), condition_dim=2):
     from pipeline.phase5_cvae.model import CVAE
-    model = CVAE(condition_dim=2, latent_dim=latent_dim,
+    model = CVAE(condition_dim=condition_dim, latent_dim=latent_dim,
                  resolution=resolution, channels=channels)
     torch.save({
         "model_state_dict": model.state_dict(),
         "latent_dim": latent_dim,
-        "condition_dim": 2,
+        "condition_dim": condition_dim,
         "resolution": resolution,
         "channels": channels,
     }, path)
 
 
-def _write_test_npz(path, v12_values, n_seeds=1):
+def _write_test_npz(path, v12_values, n_seeds=1, nu_values=None):
     """Write a test.npz with EXACTLY len(v12_values) samples, so
     `rng.choice(len(test_ds), size=n_conditions, replace=False)` is forced
     to select all of them (in some order) - makes which target conditions
-    get used in the test fully deterministic regardless of the RNG seed."""
+    get used in the test fully deterministic regardless of the RNG seed.
+
+    nu_values: nếu truyền vào (độ dài = len(v12_values)), thêm field 'nu' -
+    cần cho test condition_dim ∈ {4,8} (A6, CVAEDataset(include_nu0=True))."""
     n = len(v12_values)
     seed_classes = np.array([f"seed{i}" for i in range(n_seeds)], dtype=object)
     seed_onehot = np.zeros((n, n_seeds), dtype=np.float32)
     seed_onehot[:, 0] = 1.0
+    extra = {}
+    if nu_values is not None:
+        extra["nu"] = np.array(nu_values, dtype=np.float32)
     np.savez(
         path,
         images=np.random.default_rng(0).random((n, 64, 64)).astype(np.float32),
@@ -50,6 +56,7 @@ def _write_test_npz(path, v12_values, n_seeds=1):
         volfrac_achieved=np.full(n, 0.4, dtype=np.float32),
         seed_onehot=seed_onehot,
         seed_classes=seed_classes,
+        **extra,
     )
 
 
@@ -284,6 +291,156 @@ class TestBestOfNEdgeCases:
         assert result_a["hit_rate_best_of_n"] == result_b["hit_rate_best_of_n"]
 
 
+class TestBestOfNConditionDimFlags:
+    """A6 (docs/PROJECT_PLAN.md Nhóm 1): trước fix, đường sweep test.npz
+    (custom_condition=None) suy extended_condition=(condition_dim==6) - BỎ
+    SÓT include_nu0 khi condition_dim ∈ {4,8}, tạo CVAEDataset condition_dim
+    lệch với model -> crash concat trong Encoder/Decoder. condition_flags_
+    from_dim() sửa lỗi này - test xác nhận sweep path chạy được với đủ 4
+    condition_dim {2,4,6,8}, không chỉ path custom_condition (--v12/--v21)."""
+
+    def test_condition_dim_4_nu0_only_sweep_does_not_crash(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4, 0.2], nu_values=[0.25, 0.35])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=4)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=2, n_samples=2, device="cpu", seed=1,
+        )
+        assert result["condition_dim"] == 4
+
+    def test_condition_dim_8_extended_and_nu0_sweep_does_not_crash(self, tmp_path, monkeypatch):
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        # extended_condition=True cần param_names/params (void_size_frac) -
+        # CVAEDataset đọc từ đây, xem dataset.py.
+        n, n_seeds = 2, 1
+        seed_classes = np.array(["seed0"], dtype=object)
+        seed_onehot = np.zeros((n, n_seeds), dtype=np.float32)
+        seed_onehot[:, 0] = 1.0
+        params = np.stack([
+            np.full(n, 0.4, dtype=np.float32),   # volfrac
+            np.full(n, 3.0, dtype=np.float32),   # penal
+            np.full(n, 1.5, dtype=np.float32),   # rmin
+            np.full(n, 0.1, dtype=np.float32),   # move
+            np.full(n, 0.35, dtype=np.float32),  # void_size_frac
+        ], axis=1)
+        np.savez(
+            test_npz,
+            images=np.random.default_rng(0).random((n, 64, 64)).astype(np.float32),
+            v12=np.array([-0.4, 0.2], dtype=np.float32),
+            v21=np.array([-0.4, 0.2], dtype=np.float32),
+            volfrac_achieved=np.full(n, 0.4, dtype=np.float32),
+            seed_onehot=seed_onehot,
+            seed_classes=seed_classes,
+            params=params,
+            param_names=np.array(["volfrac", "penal", "rmin", "move", "void_size_frac"]),
+            nu=np.array([0.25, 0.35], dtype=np.float32),
+        )
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=8)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=2, n_samples=2, device="cpu", seed=1,
+        )
+        assert result["condition_dim"] == 8
+
+    def test_fe_verification_uses_per_condition_nu0_not_fixed_default(
+        self, tmp_path, monkeypatch,
+    ):
+        """Bug đã sửa 2026-08-19 (phát hiện lúc chạy thí nghiệm A6 thật lần
+        đầu, đo R2(FE) cho checkpoint --include-nu0 trên outputs/phase3_a4/):
+        evaluate_density_field() luôn nhận FE_PARAMS['nu'] CỐ ĐỊNH (0.3, xem
+        verify_fe.FE_PARAMS), bất kể target nu0 thật của condition khác 0.3
+        - hình học ĐÚNG cho nu0 mục tiêu vẫn bị chấm R2(FE) SAI vì verify
+        dưới vật liệu khác với vật liệu nó được thiết kế cho. nu0_col (cùng
+        quy ước losses.py::real_physics_loss) phải override fe_params['nu']
+        đúng theo từng condition trước khi gọi evaluate_density_field()."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4, 0.2], nu_values=[0.25, 0.35])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6, nu=0.3)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        seen_nu = []
+
+        def fake_evaluate_density_field(img_fe, fe_params):
+            seen_nu.append(fe_params["nu"])
+            return -0.4, -0.4, None
+
+        monkeypatch.setattr(boe_mod, "evaluate_density_field", fake_evaluate_density_field)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=4)
+
+        boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=2, n_samples=2, device="cpu", seed=1,
+        )
+
+        # Cả 2 condition (nu0 thật = 0.25 và 0.35) đều PHẢI xuất hiện trong
+        # các lần gọi evaluate_density_field() - KHÔNG được toàn bộ là 0.3
+        # (giá trị FE_PARAMS mặc định, dấu hiệu bug chưa sửa). float32 (npz)
+        # -> so sánh xấp xỉ, không so bằng tuyệt đối.
+        assert any(v == pytest.approx(0.25, abs=1e-5) for v in seen_nu)
+        assert any(v == pytest.approx(0.35, abs=1e-5) for v in seen_nu)
+        assert not any(v == pytest.approx(0.3, abs=1e-5) for v in seen_nu)
+
+    def test_condition_dim_2_sweep_unaffected_regression(self, tmp_path, monkeypatch):
+        """Regression: condition_dim=2 (mặc định, không A6) vẫn hoạt động
+        y hệt trước khi có condition_flags_from_dim()."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4, 0.2])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=2)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=2, n_samples=2, device="cpu", seed=1,
+        )
+        assert result["condition_dim"] == 2
+
+    def test_data_dir_overrides_phase3_dir(self, tmp_path, monkeypatch):
+        """--data-dir (mới, A6) phải trỏ CVAEDataset tới thư mục khác
+        PHASE3_DIR - cần thiết vì outputs/phase3/ KHÔNG có field 'nu'."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        other_dir = tmp_path / "phase3_a4"
+        other_dir.mkdir()
+        _write_test_npz(other_dir / "test.npz", v12_values=[-0.4, 0.2],
+                         nu_values=[0.25, 0.35])
+        # PHASE3_DIR trỏ tới thư mục KHÔNG có test.npz - nếu code lỡ dùng
+        # PHASE3_DIR thay vì data_dir, sẽ crash FileNotFoundError ngay.
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path / "does_not_exist"))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path, condition_dim=4)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=2, n_samples=2, device="cpu", seed=1,
+            data_dir=str(other_dir),
+        )
+        assert result["condition_dim"] == 4
+
+
 class TestRequireManufacturable:
     """Roadmap 6.2/6.3: --require-manufacturable should restrict the
     candidate pool (ranking + FE verification) to images that pass
@@ -470,6 +627,56 @@ class TestCompositeScoring:
         )
 
         assert result["per_condition"][0]["v12_best"] == pytest.approx(-0.55)
+
+    def test_return_all_scores_off_by_default(self, tmp_path, monkeypatch):
+        """Nhóm 3.2 (PROJECT_PLAN.md): return_all_scores=False (mặc định)
+        PHẢI giữ nguyên hành vi cũ - không thêm key "all_scores"."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=3, device="cpu", seed=1,
+        )
+        assert "all_scores" not in result["per_condition"][0]
+
+    def test_return_all_scores_exposes_full_pool_consistent_with_winner(
+        self, tmp_path, monkeypatch,
+    ):
+        """return_all_scores=True phải trả về đủ N điểm số/thành phần cho
+        TOÀN BỘ pool (không chỉ ứng viên thắng) - và max(all_scores
+        ["composite"]) phải khớp composite_score của ứng viên thắng (best_idx
+        = argmax composite_scores, xem best_of_n() docstring)."""
+        from pipeline.phase5_cvae import best_of_n_eval as boe_mod
+
+        test_npz = tmp_path / "test.npz"
+        _write_test_npz(test_npz, v12_values=[-0.4])
+        monkeypatch.setattr(boe_mod, "PHASE3_DIR", str(tmp_path))
+        tiny_fe_params = dict(boe_mod.FE_PARAMS, nelx=6, nely=6)
+        monkeypatch.setattr(boe_mod, "FE_PARAMS", tiny_fe_params)
+
+        ckpt_path = tmp_path / "cvae.pt"
+        _write_cvae_checkpoint(ckpt_path)
+
+        result = boe_mod.best_of_n(
+            str(ckpt_path), n_conditions=1, n_samples=4, device="cpu", seed=1,
+            return_all_scores=True,
+        )
+        c = result["per_condition"][0]
+        all_scores = c["all_scores"]
+        for key in ("accuracy", "manuf", "aesthetic", "composite"):
+            assert key in all_scores
+            assert len(all_scores[key]) == c["n_valid_samples"]
+        assert max(all_scores["composite"]) == pytest.approx(
+            c["composite_score"], abs=1e-6
+        )
 
 
 class TestBestOfNCli:

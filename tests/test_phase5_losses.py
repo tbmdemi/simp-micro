@@ -48,6 +48,18 @@ class _PerfectSurrogate(torch.nn.Module):
         return self._target
 
 
+class _Nu0EchoSurrogate(torch.nn.Module):
+    """Stub surrogate with include_nu0=True: echoes the received nu0 value
+    into v12/v21 (ignoring image/seed_vec) so a test can assert the exact
+    per-sample nu0 that property_consistency_loss() passed through."""
+    include_nu0 = True
+
+    def forward(self, image, seed_vec, nu0=None):
+        if nu0 is None:
+            raise ValueError("include_nu0=True nhung forward() khong nhan nu0")
+        return torch.stack([nu0, nu0, torch.zeros_like(nu0)], dim=1)
+
+
 def _write_surrogate_export(path, n_seeds=4, channels=(8, 16), fc_hidden=16,
                              n_outputs=3, target_names=None):
     model = SurrogateCNN(n_seeds=n_seeds, channels=channels, fc_hidden=fc_hidden,
@@ -134,6 +146,41 @@ class TestPropertyConsistencyLoss:
             recon, condition, seed_vec, surrogate, ["v12", "v21", "volfrac_achieved"]
         )
         assert loss.item() == pytest.approx(1.0, abs=1e-5)
+
+    def test_include_nu0_surrogate_receives_per_sample_nu0(self):
+        """Bug đã sửa 2026-08-19 (Giai đoạn A): surrogate.include_nu0=True
+        (vd surrogate_a4_nu0.pt) nhưng property_consistency_loss() gọi
+        surrogate(recon, seed_vec) không có nu0 -> SurrogateCNN.forward()
+        raise ValueError. nu0_col trỏ đúng cột [nu0, nu0_mask] trong
+        condition (giống nu0_col của real_physics_loss(), xem A6)."""
+        surrogate = _Nu0EchoSurrogate()
+        recon = torch.rand(2, 1, 8, 8)
+        seed_vec = torch.zeros(2, 2)
+        # condition = [v12, v21, nu0, nu0_mask]; mẫu 0 có mask=1 (nu0=0.25
+        # thật), mẫu 1 có mask=0 (không chỉ định -> fallback 0.3).
+        condition = torch.tensor([[0.0, 0.0, 0.25, 1.0], [0.0, 0.0, 0.99, 0.0]])
+        loss = property_consistency_loss(
+            recon, condition, seed_vec, surrogate,
+            ["v12", "v21", "volfrac_achieved"], nu0_col=2,
+        )
+        # _Nu0EchoSurrogate dự đoán v12=v21=nu0 nhận được -> so khớp condition[:, :2]=0
+        # => loss = mean(nu0_used^2) với nu0_used=[0.25, 0.3] (mẫu 1 fallback default).
+        expected = torch.tensor([0.25, 0.3]).pow(2).mean()
+        assert loss.item() == pytest.approx(expected.item(), abs=1e-5)
+
+    def test_include_nu0_surrogate_without_nu0_col_uses_default(self):
+        """nu0_col=None (caller không truyền, vd cVAE condition_dim=2 không
+        có cột nu0) nhưng surrogate.include_nu0=True vẫn phải chạy được -
+        fallback toàn batch về 0.3, không crash."""
+        surrogate = _Nu0EchoSurrogate()
+        recon = torch.rand(2, 1, 8, 8)
+        seed_vec = torch.zeros(2, 2)
+        condition = torch.tensor([[0.0, 0.0], [0.0, 0.0]])
+        loss = property_consistency_loss(
+            recon, condition, seed_vec, surrogate,
+            ["v12", "v21", "volfrac_achieved"], nu0_col=None,
+        )
+        assert loss.item() == pytest.approx(0.3 ** 2, abs=1e-5)
 
 
 class TestPropertyConsistencyLossEnsemble:
@@ -310,6 +357,117 @@ class TestRealPhysicsLoss:
         assert torch.isfinite(loss)
         loss.backward()
         assert density.grad.shape == density.shape
+
+
+class TestRealPhysicsLossNu0Col:
+    """A6 (docs/PROJECT_PLAN.md Nhóm 1): nu0_col phải khiến real_physics_loss
+    dùng ĐÚNG ν0 per-sample (khi mask=1) thay vì fe_params['nu'] cố định cho
+    cả batch - kiểm tra bằng cách đặt target = giá trị THẬT tính sẵn qua
+    solve_nu_with_grad với đúng ν0 của từng mẫu, rồi xác nhận loss ~0 (nếu
+    code dùng sai ν0, Q khác -> v12/v21 khác -> loss KHÔNG thể ~0)."""
+
+    def _fe_kw(self, nu):
+        return dict(penal=3.0, E0=199.0, Emin=1e-9, nu=nu, rho0=1.0)
+
+    def test_uses_per_sample_nu_when_mask_set(self):
+        from pipeline.phase5_cvae.real_physics import solve_nu_with_grad
+        torch.manual_seed(0)
+        density = torch.rand(2, 1, 6, 6)
+        nu0, nu1 = 0.15, 0.4
+        v12_0, v21_0, _, _ = solve_nu_with_grad(
+            density[0, 0].numpy().astype("float64"), **self._fe_kw(nu0))
+        v12_1, v21_1, _, _ = solve_nu_with_grad(
+            density[1, 0].numpy().astype("float64"), **self._fe_kw(nu1))
+
+        # condition = [v12_target, v21_target, nu0, nu0_mask] - target ĐÚNG
+        # bằng giá trị giải với ν0 riêng của từng mẫu.
+        condition = torch.tensor([
+            [v12_0, v21_0, nu0, 1.0],
+            [v12_1, v21_1, nu1, 1.0],
+        ], dtype=torch.float32)
+
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL, nu0_col=2)
+        assert loss.item() == pytest.approx(0.0, abs=1e-6)
+
+    def test_ignoring_nu0_col_gives_wrong_loss_for_non_default_nu(self):
+        """Regression guard: nếu KHÔNG truyền nu0_col (hành vi cũ), loss
+        phải KHÁC 0 rõ rệt cho cùng input ở test trên (dùng fe_params['nu']
+        =0.3 sai cho cả 2 mẫu có ν0 thật =0.15/0.4) - xác nhận test trên
+        thực sự đang kiểm tra đúng thứ (không phải loss ~0 do trùng hợp)."""
+        from pipeline.phase5_cvae.real_physics import solve_nu_with_grad
+        torch.manual_seed(0)
+        density = torch.rand(2, 1, 6, 6)
+        nu0, nu1 = 0.15, 0.4
+        v12_0, v21_0, _, _ = solve_nu_with_grad(
+            density[0, 0].numpy().astype("float64"), **self._fe_kw(nu0))
+        v12_1, v21_1, _, _ = solve_nu_with_grad(
+            density[1, 0].numpy().astype("float64"), **self._fe_kw(nu1))
+        condition = torch.tensor([
+            [v12_0, v21_0, nu0, 1.0],
+            [v12_1, v21_1, nu1, 1.0],
+        ], dtype=torch.float32)
+
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL)  # nu0_col=None
+        assert loss.item() > 1e-4
+
+    def test_masked_off_sample_falls_back_to_fe_params_default(self):
+        """mask=0 (nu0 bị condition-dropout/không chỉ định) phải dùng
+        fe_params['nu'] LÀM FALLBACK, không dùng giá trị cột (đã bị zero
+        theo đúng quy ước dropout) - value=0.0 không có nghĩa vật lý
+        "ν0=0", chỉ có nghĩa "không biết"."""
+        from pipeline.phase5_cvae.real_physics import solve_nu_with_grad
+        torch.manual_seed(1)
+        density = torch.rand(1, 1, 6, 6)
+        default_nu = FE_PARAMS_SMALL["nu"]  # 0.3
+        v12_default, v21_default, _, _ = solve_nu_with_grad(
+            density[0, 0].numpy().astype("float64"), **self._fe_kw(default_nu))
+
+        # value=0.0 (đã dropout), mask=0.0 -> PHẢI fallback fe_params['nu'],
+        # không dùng nu=0.0 (khác 0.3, sẽ cho Q/v12/v21 khác).
+        condition = torch.tensor([[v12_default, v21_default, 0.0, 0.0]], dtype=torch.float32)
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL, nu0_col=2)
+        assert loss.item() == pytest.approx(0.0, abs=1e-6)
+
+    def test_subsample_slices_nu0_column_consistently(self):
+        """subsample phải cắt condition_sub TRƯỚC khi trích cột nu0 - nếu
+        không, index sẽ lệch giữa density_sub và nu per-sample."""
+        from pipeline.phase5_cvae.real_physics import solve_nu_with_grad
+        torch.manual_seed(2)
+        density = torch.rand(3, 1, 6, 6, requires_grad=True)
+        nus = [0.15, 0.25, 0.4]
+        targets = [
+            solve_nu_with_grad(density[i, 0].detach().numpy().astype("float64"),
+                                **self._fe_kw(nus[i]))[:2]
+            for i in range(3)
+        ]
+        condition = torch.tensor([
+            [targets[i][0], targets[i][1], nus[i], 1.0] for i in range(3)
+        ], dtype=torch.float32)
+
+        loss = real_physics_loss(density, condition, FE_PARAMS_SMALL,
+                                  subsample=3, nu0_col=2)
+        assert loss.item() == pytest.approx(0.0, abs=1e-6)
+
+
+class TestRealPhysicsPriorLossNu0Col:
+    def test_forwards_nu0_col_to_real_physics_loss(self, monkeypatch):
+        """real_physics_prior_loss phải truyền nu0_col xuống real_physics_loss
+        nguyên vẹn - kiểm tra 'ống dẫn', không lặp lại kiểm chứng vật lý."""
+        import pipeline.phase5_cvae.losses as losses_mod
+        captured = {}
+
+        def _fake_real_physics_loss(density, condition, fe_params, subsample=None,
+                                     n_workers=0, nu0_col=None):
+            captured["nu0_col"] = nu0_col
+            return torch.tensor(0.0, requires_grad=True)
+
+        monkeypatch.setattr(losses_mod, "real_physics_loss", _fake_real_physics_loss)
+        from pipeline.phase5_cvae.model import Decoder
+        decoder = Decoder(condition_dim=4, latent_dim=4, channels=(8, 4), resolution=8)
+        condition = torch.zeros(2, 4)
+        real_physics_prior_loss(decoder, latent_dim=4, condition=condition,
+                                 fe_params=FE_PARAMS_SMALL, nu0_col=2)
+        assert captured["nu0_col"] == 2
 
 
 class TestRealPhysicsPriorLoss:
@@ -527,3 +685,42 @@ class TestLoadFrozenSurrogate:
 
         model, _ = load_frozen_surrogate(device="cpu", path=str(path))
         assert model.n_outputs == 3
+
+    def test_load_nu0_checkpoint(self, tmp_path):
+        """Bug đã sửa 2026-08-19 (Giai đoạn A, chạy thí nghiệm A6 thật lần
+        đầu): load_frozen_surrogate() bỏ qua field include_nu0 trong
+        checkpoint, luôn dựng SurrogateCNN(include_nu0=False mặc định) ->
+        load_state_dict() crash size-mismatch ở fc.0.weight trên checkpoint
+        include_nu0=True (surrogate_a4_nu0.pt, thiếu 1 chiều input nu0)."""
+        from pipeline.phase5_cvae.losses import load_frozen_surrogate
+        path = tmp_path / "surrogate_nu0_for_phase5.pt"
+        model_nu0 = SurrogateCNN(n_seeds=4, channels=(8, 16), fc_hidden=16,
+                                  include_nu0=True)
+        torch.save({
+            "model_state_dict": model_nu0.state_dict(),
+            "n_seeds": 4, "channels": (8, 16), "fc_hidden": 16,
+            "n_outputs": 3, "include_nu0": True,
+            "target_names": ["v12", "v21", "volfrac_achieved"],
+        }, path)
+
+        model, target_names = load_frozen_surrogate(device="cpu", path=str(path))
+
+        assert model.include_nu0 is True
+        out = model(torch.rand(2, 1, 64, 64), torch.zeros(2, 4), nu0=torch.tensor([0.3, 0.25]))
+        assert out.shape == (2, 3)
+
+    def test_load_old_checkpoint_without_include_nu0_defaults_to_false(self, tmp_path):
+        """Checkpoint export TỪ TRƯỚC khi field include_nu0 tồn tại vẫn phải
+        load đúng - tương thích ngược, cùng pattern với n_outputs ở trên."""
+        from pipeline.phase5_cvae.losses import load_frozen_surrogate
+        path = tmp_path / "old_surrogate.pt"
+        model_old = SurrogateCNN(n_seeds=4, channels=(8, 16), fc_hidden=16)
+        torch.save({
+            "model_state_dict": model_old.state_dict(),
+            "n_seeds": 4, "channels": (8, 16), "fc_hidden": 16,
+            "target_names": ["v12", "v21", "volfrac_achieved"],
+            # cố ý KHÔNG có "include_nu0" - mô phỏng checkpoint cũ.
+        }, path)
+
+        model, _ = load_frozen_surrogate(device="cpu", path=str(path))
+        assert model.include_nu0 is False

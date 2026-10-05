@@ -1,0 +1,50 @@
+{
+  "n_conditions": 24,
+  "target_seed": 123,
+  "subsample_seed": 999,
+  "n_total_train": 68286,
+  "cvae_reference_r2_8d": 0.997,
+  "cvae_reference_ckpt": "cvae_a4_full8d_finetuned_v2.pt (not rerun here)",
+  "results_by_n_db": [
+    {
+      "hit_rate": 1.0,
+      "r2": 0.9836967520257124,
+      "mae_v12": 0.018896089401096106,
+      "n_auxetic_targets": 24,
+      "n_db": 500,
+      "mean_condition_dist_z": 0.3039752473567377
+    },
+    {
+      "hit_rate": 1.0,
+      "r2": 0.9849675503062523,
+      "mae_v12": 0.01726236326309542,
+      "n_auxetic_targets": 24,
+      "n_db": 1000,
+      "mean_condition_dist_z": 0.23158067519261558
+    },
+    {
+      "hit_rate": 1.0,
+      "r2": 0.995018654049549,
+      "mae_v12": 0.009120366380860409,
+      "n_auxetic_targets": 24,
+      "n_db": 5000,
+      "mean_condition_dist_z": 0.14282358964941802
+    },
+    {
+      "hit_rate": 1.0,
+      "r2": 0.9983225912997142,
+      "mae_v12": 0.005517596534142892,
+      "n_auxetic_targets": 24,
+      "n_db": 10000,
+      "mean_condition_dist_z": 0.11162533428937312
+    },
+    {
+      "hit_rate": 1.0,
+      "r2": 0.9977374097100971,
+      "mae_v12": 0.005794913275167346,
+      "n_auxetic_targets": 24,
+      "n_db": 68286,
+      "mean_condition_dist_z": 0.08413049067853036
+    }
+  ]
+}

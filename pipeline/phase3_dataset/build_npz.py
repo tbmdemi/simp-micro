@@ -19,6 +19,9 @@ Output: outputs/phase3/dataset_{RESOLUTION}.npz với các mảng:
     seed_onehot     (N, n_seeds) float32
     params          (N, 5) float32  [volfrac, penal, rmin, move, void_size_frac]
     batch           (N,) int32
+    nu              (N,) float32  hệ số Poisson vật liệu nền (fallback 0.3
+                    nếu manifest không có cột này - Giai đoạn A/A4,
+                    docs/PROJECT_PLAN.md Nhóm 1)
 """
 import os
 import argparse
@@ -79,6 +82,15 @@ def main():
     batch = manifest["batch"].to_numpy(dtype=np.int32)
     converged = manifest["converged"].to_numpy(dtype=bool)
 
+    # nu (he so Poisson vat lieu nen, Giai doan A/A4, docs/PROJECT_PLAN.md
+    # Nhom 1): manifest CU khong co cot nay - toan bo du lieu do sinh voi
+    # nu=0.3 co dinh (xem generate_production_batch.py truoc --vary-nu), nen
+    # fallback 0.3 la SU THAT lich su, khong phai gia dinh tuy tien.
+    if "nu" in manifest.columns:
+        nu = manifest["nu"].fillna(0.3).to_numpy(dtype=np.float32)
+    else:
+        nu = np.full(n, 0.3, dtype=np.float32)
+
     out_path = os.path.join(PHASE3_DIR, f"dataset_{res}.npz")
     np.savez_compressed(
         out_path,
@@ -93,6 +105,7 @@ def main():
         param_names=np.array(["volfrac", "penal", "rmin", "move", "void_size_frac"]),
         batch=batch,
         converged=converged,
+        nu=nu,
     )
     size_mb = os.path.getsize(out_path) / 1e6
     print(f"\nĐã lưu: {out_path} ({size_mb:.1f} MB)")
@@ -100,6 +113,7 @@ def main():
     print(f"v12 range: [{v12.min():.3f}, {v12.max():.3f}]")
     print(f"v21 range: [{v21.min():.3f}, {v21.max():.3f}]")
     print(f"volfrac_achieved range: [{volfrac_achieved.min():.3f}, {volfrac_achieved.max():.3f}]")
+    print(f"nu range: [{nu.min():.3f}, {nu.max():.3f}]")
     print(f"seed classes ({len(unique_seeds)}): {unique_seeds}")
 
 

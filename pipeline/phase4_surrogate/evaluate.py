@@ -39,6 +39,9 @@ def main():
                          help="Đường dẫn ghi report JSON. Mặc định: outputs/phase4/evaluation_report.json "
                               "TRỪ KHI --ckpt khác surrogate_best.pt, khi đó mặc định đổi sang "
                               "evaluation_report_<tên-ckpt>.json để không ghi đè report của checkpoint khác.")
+    parser.add_argument("--test-npz", type=str, default=None,
+                         help="Override đường dẫn test npz (mặc định outputs/phase3/test.npz) - "
+                              "vd outputs/phase3_a4/test.npz cho checkpoint A4 (--include-nu0).")
     args = parser.parse_args()
     ckpt_path = args.ckpt
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
@@ -49,23 +52,35 @@ def main():
     # (--include-f1f2, outputs/phase4/surrogate_f1f2.pt) crash size mismatch
     # ngay khi load_state_dict().
     n_outputs = ckpt.get("n_outputs", 3)
+    # include_nu0 vắng mặt ở mọi checkpoint TRƯỚC A4 - False khớp đúng hành
+    # vi cũ (forward(image, seed_vec) không đổi), không phải suy đoán tùy tiện.
+    include_nu0 = ckpt.get("include_nu0", False)
+    use_kan = ckpt.get("use_kan", False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SurrogateCNN(
         n_seeds=ckpt["n_seeds"], channels=ckpt["channels"], fc_hidden=ckpt["fc_hidden"],
-        n_outputs=n_outputs,
+        n_outputs=n_outputs, include_nu0=include_nu0, use_kan=use_kan,
     ).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
 
     # include_f1f2 phải khớp n_outputs, nếu không AuxeticDataset chỉ trả 3
     # target trong khi target_names/model có 5 -> lệch shape khi index.
-    test_ds = AuxeticDataset(os.path.join(PHASE3_DIR, "test.npz"), include_f1f2=(n_outputs == 5))
+    test_npz = args.test_npz or os.path.join(PHASE3_DIR, "test.npz")
+    test_ds = AuxeticDataset(test_npz, include_f1f2=(n_outputs == 5),
+                              include_nu0=include_nu0)
     loader = DataLoader(test_ds, batch_size=256, shuffle=False)
 
     preds, targets_all, seed_names_all = [], [], []
     with torch.no_grad():
-        for image, seed_vec, targets in loader:
-            pred = model(image.to(device), seed_vec.to(device)).cpu().numpy()
+        for batch in loader:
+            if len(batch) == 4:
+                image, seed_vec, targets, nu0 = batch
+                nu0 = nu0.to(device)
+            else:
+                image, seed_vec, targets = batch
+                nu0 = None
+            pred = model(image.to(device), seed_vec.to(device), nu0=nu0).cpu().numpy()
             preds.append(pred)
             targets_all.append(targets.numpy())
     preds = np.concatenate(preds)

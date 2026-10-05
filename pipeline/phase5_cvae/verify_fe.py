@@ -27,18 +27,22 @@ Cách chạy: sanity-check trước (bắt buộc pass, xác nhận FE_PARAMS/re
 
 Output: outputs/phase5/fe_verification_report.json
 """
+
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
+
 import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE                     # noqa: E402
-from dataset import CVAEDataset            # noqa: E402
+from dataset import CVAEDataset  # noqa: E402
+from model import CVAE, cvae_kwargs_from_checkpoint  # noqa: E402
 
-REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+REPO_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
 PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
@@ -52,7 +56,7 @@ FE_PARAMS = {
     "E0": 199.0,
     "Emin": 1e-9,
     "nu": 0.3,
-    "penal": 3.0,     # xấp xỉ - xem ghi chú docstring
+    "penal": 3.0,  # xấp xỉ - xem ghi chú docstring
     "rho0": 1.0,
 }
 
@@ -61,38 +65,67 @@ def _import_simp():
     """Import các hàm simp cần thiết. Tách riêng thành hàm để lỗi import
     (nếu FE_PARAMS/API không khớp phiên bản simp/ đang dùng) báo rõ ràng
     ngay từ đầu, thay vì lỗi mơ hồ giữa chừng."""
-    from simp.materials.isotropic import Material
     from simp.core.fem import build_dof_mesh
     from simp.core.pbc import build_pbc
     from simp.core.solver import solve_fe
     from simp.homogenization.compute import compute_homogenized_tensor
+    from simp.materials.isotropic import Material
     from simp.objectives.auxetic import compute_nu12, compute_nu21
-    return (Material, build_dof_mesh, build_pbc, solve_fe,
-            compute_homogenized_tensor, compute_nu12, compute_nu21)
+
+    return (
+        Material,
+        build_dof_mesh,
+        build_pbc,
+        solve_fe,
+        compute_homogenized_tensor,
+        compute_nu12,
+        compute_nu21,
+    )
 
 
 def evaluate_density_field(xPhys: np.ndarray, fe_params: dict = FE_PARAMS):
     """1 lần FE solve + homogenization THẬT (không optimize, chỉ forward-eval)
     trên xPhys (nely, nelx) trong [0,1] -> (v12, v21, Q)."""
-    (Material, build_dof_mesh, build_pbc, solve_fe,
-     compute_homogenized_tensor, compute_nu12, compute_nu21) = _import_simp()
+    (
+        Material,
+        build_dof_mesh,
+        build_pbc,
+        solve_fe,
+        compute_homogenized_tensor,
+        compute_nu12,
+        compute_nu21,
+    ) = _import_simp()
 
     nely, nelx = xPhys.shape
-    material = Material(E0=fe_params["E0"], Emin=fe_params["Emin"], nu=fe_params["nu"])
+    material = Material(
+        E0=fe_params["E0"], Emin=fe_params["Emin"], nu=fe_params["nu"]
+    )
     nodenrs, edofVec, edofMat, iK, jK = build_dof_mesh(nelx, nely)
     pbc = build_pbc(nelx, nely, nodenrs)
 
     U, U0 = solve_fe(
-        xPhys, material.KE, iK, jK, pbc,
-        fe_params["penal"], fe_params["E0"], fe_params["Emin"],
+        xPhys,
+        material.KE,
+        iK,
+        jK,
+        pbc,
+        fe_params["penal"],
+        fe_params["E0"],
+        fe_params["Emin"],
         rho0=fe_params["rho0"],
     )
     # U là trường dao động (fluctuation) - phải cộng U0 trước khi tính Q
     # (xem README "Key Bugfixes" - runner.py từng có bug thiếu bước này).
     U_total = U0 + U
     Q, dQ, _ = compute_homogenized_tensor(
-        U_total, U0, xPhys, material.KE, edofMat,
-        fe_params["penal"], fe_params["E0"], fe_params["Emin"],
+        U_total,
+        U0,
+        xPhys,
+        material.KE,
+        edofMat,
+        fe_params["penal"],
+        fe_params["E0"],
+        fe_params["Emin"],
         rho0=fe_params["rho0"],
     )
     v12 = compute_nu12(Q)
@@ -105,6 +138,7 @@ def resize_to_fe_grid(img64: np.ndarray, nely: int, nelx: int) -> np.ndarray:
     bằng nearest-neighbor qua PIL (đơn giản, tránh phụ thuộc thêm thư viện;
     nearest giữ ảnh gần-nhị-phân sau khi binarize, không làm mờ lại)."""
     from PIL import Image
+
     im = Image.fromarray((img64 * 255).astype(np.uint8), mode="L")
     im = im.resize((nelx, nely), resample=Image.NEAREST)
     return np.asarray(im, dtype=np.float32) / 255.0
@@ -119,8 +153,10 @@ def sanity_check():
     xấp xỉ penal vào sai số cần cô lập ở bước này."""
     test_path = os.path.join(PHASE3_DIR, "test.npz")
     if not os.path.exists(test_path):
-        print(f"[LỖI] Không tìm thấy {test_path}. Chạy script này trên máy "
-              f"có sẵn outputs/phase3/test.npz.")
+        print(
+            f"[LỖI] Không tìm thấy {test_path}. Chạy script này trên máy "
+            f"có sẵn outputs/phase3/test.npz."
+        )
         return
 
     ds = CVAEDataset(test_path)
@@ -132,8 +168,10 @@ def sanity_check():
     n_check = min(10, len(ds))
     errors = []
     print(f"Sanity check trên {n_check} mẫu THẬT (không qua cVAE)...")
-    print(f"FE_PARAMS đang dùng: {FE_PARAMS} (penal sẽ bị ghi đè bằng penal "
-          f"THẬT của từng mẫu bên dưới)")
+    print(
+        f"FE_PARAMS đang dùng: {FE_PARAMS} (penal sẽ bị ghi đè bằng penal "
+        f"THẬT của từng mẫu bên dưới)"
+    )
     for i in range(n_check):
         img, cond, seed_vec, vf = ds[i]
         img64 = img.squeeze(0).numpy()  # (64,64) trong [0,1]
@@ -147,24 +185,30 @@ def sanity_check():
         err12 = abs(v12_fe - v12_saved)
         err21 = abs(v21_fe - v21_saved)
         errors.append((err12, err21))
-        print(f"  mẫu {i}: penal={fe_params_i['penal']:.3f} | "
-              f"v12 lưu={v12_saved:+.4f} FE_tính_lại={v12_fe:+.4f} "
-              f"(sai lệch={err12:.4f}) | v21 lưu={v21_saved:+.4f} "
-              f"FE_tính_lại={v21_fe:+.4f} (sai lệch={err21:.4f})")
+        print(
+            f"  mẫu {i}: penal={fe_params_i['penal']:.3f} | "
+            f"v12 lưu={v12_saved:+.4f} FE_tính_lại={v12_fe:+.4f} "
+            f"(sai lệch={err12:.4f}) | v21 lưu={v21_saved:+.4f} "
+            f"FE_tính_lại={v21_fe:+.4f} (sai lệch={err21:.4f})"
+        )
 
     mean_err12 = np.mean([e[0] for e in errors])
     mean_err21 = np.mean([e[1] for e in errors])
     print(f"\nSai lệch trung bình: v12={mean_err12:.4f}, v21={mean_err21:.4f}")
     if mean_err12 > 0.05 or mean_err21 > 0.05:
-        print("[CẢNH BÁO] Sai lệch > 0.05 - KHÔNG nên tin kết quả verify_fe "
-              "ở phần dưới cho tới khi tìm ra nguyên nhân (khả năng cao: "
-              "FE_PARAMS['nelx']/['nely']/['penal'] sai, hoặc cách resize/"
-              "binarize không khớp cách outputs/phase3 được tạo ra - kiểm "
-              "tra lại pipeline/phase3_dataset/build_npz.py để xem chính xác cách "
-              "PNG gốc -> 64x64 được tạo).")
+        print(
+            "[CẢNH BÁO] Sai lệch > 0.05 - KHÔNG nên tin kết quả verify_fe "
+            "ở phần dưới cho tới khi tìm ra nguyên nhân (khả năng cao: "
+            "FE_PARAMS['nelx']/['nely']/['penal'] sai, hoặc cách resize/"
+            "binarize không khớp cách outputs/phase3 được tạo ra - kiểm "
+            "tra lại pipeline/phase3_dataset/build_npz.py để xem chính xác cách "
+            "PNG gốc -> 64x64 được tạo)."
+        )
     else:
-        print("[OK] Sai lệch nhỏ - FE_PARAMS và cách resize đáng tin cậy. "
-              "Có thể chạy full verification (bỏ --sanity-check).")
+        print(
+            "[OK] Sai lệch nhỏ - FE_PARAMS và cách resize đáng tin cậy. "
+            "Có thể chạy full verification (bỏ --sanity-check)."
+        )
 
 
 def load_cvae_checkpoint(gamma_tag: str, device):
@@ -172,8 +216,12 @@ def load_cvae_checkpoint(gamma_tag: str, device):
     cvae_best.pt (xem output ls outputs/phase5/ trong terminal của bạn)."""
     candidates = [
         os.path.join(PHASE5_DIR, f"cvae_gamma{gamma_tag}.pt"),
-        os.path.join(PHASE5_DIR, "gamma_sweep_results", f"cvae_gamma{gamma_tag}.pt"),
-        os.path.join(PHASE5_DIR, "gamma_sweep_results", f"cvae_best_gamma{gamma_tag}.pt"),
+        os.path.join(
+            PHASE5_DIR, "gamma_sweep_results", f"cvae_gamma{gamma_tag}.pt"
+        ),
+        os.path.join(
+            PHASE5_DIR, "gamma_sweep_results", f"cvae_best_gamma{gamma_tag}.pt"
+        ),
     ]
     ckpt_path = next((p for p in candidates if os.path.exists(p)), None)
     if ckpt_path is None:
@@ -183,16 +231,13 @@ def load_cvae_checkpoint(gamma_tag: str, device):
             f"thư mục thật của bạn (xem output `ls outputs/phase5/`)."
         )
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    model = CVAE(
-        condition_dim=ckpt.get("condition_dim", 2),
-        latent_dim=ckpt["latent_dim"],
-        resolution=ckpt.get("resolution", 64),
-        channels=ckpt.get("channels", (32, 64, 128, 256)),
-    ).to(device)
+    model = CVAE(**cvae_kwargs_from_checkpoint(ckpt)).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
-    print(f"  Đã load {ckpt_path} (epoch={ckpt.get('epoch')}, "
-          f"val_loss={ckpt.get('val_loss'):.2f}, gamma={ckpt.get('gamma')})")
+    print(
+        f"  Đã load {ckpt_path} (epoch={ckpt.get('epoch')}, "
+        f"val_loss={ckpt.get('val_loss'):.2f}, gamma={ckpt.get('gamma')})"
+    )
     return model
 
 
@@ -221,28 +266,40 @@ def run_verification(gammas, n_conditions=10, n_per_condition=3, device="cpu"):
                     img = model.generate(cond_t, n_samples=1, device=device)
                 img64 = img.squeeze().cpu().numpy()
                 img_bin = (img64 > 0.5).astype(np.float32)
-                img_fe = resize_to_fe_grid(img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"])
+                img_fe = resize_to_fe_grid(
+                    img_bin, FE_PARAMS["nely"], FE_PARAMS["nelx"]
+                )
                 try:
                     v12_fe, v21_fe, _ = evaluate_density_field(img_fe)
                 except Exception as e:
                     print(f"  [LỖI FE] condition={cond}: {e}")
                     continue
-                rows.append({
-                    "target_v12": float(cond[0]), "target_v21": float(cond[1]),
-                    "fe_v12": float(v12_fe), "fe_v21": float(v21_fe),
-                })
-                print(f"  target=({cond[0]:+.3f},{cond[1]:+.3f}) -> "
-                      f"FE_thật=({v12_fe:+.3f},{v21_fe:+.3f})")
+                rows.append(
+                    {
+                        "target_v12": float(cond[0]),
+                        "target_v21": float(cond[1]),
+                        "fe_v12": float(v12_fe),
+                        "fe_v21": float(v21_fe),
+                    }
+                )
+                print(
+                    f"  target=({cond[0]:+.3f},{cond[1]:+.3f}) -> "
+                    f"FE_thật=({v12_fe:+.3f},{v21_fe:+.3f})"
+                )
 
         if rows:
-            targets = np.array([[r["target_v12"], r["target_v21"]] for r in rows])
+            targets = np.array(
+                [[r["target_v12"], r["target_v21"]] for r in rows]
+            )
             fe_preds = np.array([[r["fe_v12"], r["fe_v21"]] for r in rows])
             mae = np.abs(fe_preds - targets).mean(axis=0)
             ss_res = ((targets - fe_preds) ** 2).sum(axis=0)
             ss_tot = ((targets - targets.mean(axis=0)) ** 2).sum(axis=0)
             r2 = 1 - ss_res / ss_tot
-            print(f"  --> R2(FE thật) v12={r2[0]:.4f} v21={r2[1]:.4f} | "
-                  f"MAE v12={mae[0]:.4f} v21={mae[1]:.4f}")
+            print(
+                f"  --> R2(FE thật) v12={r2[0]:.4f} v21={r2[1]:.4f} | "
+                f"MAE v12={mae[0]:.4f} v21={mae[1]:.4f}"
+            )
             report["results"][str(gamma)] = {
                 "rows": rows,
                 "r2_fe": {"v12": float(r2[0]), "v21": float(r2[1])},
@@ -255,26 +312,44 @@ def run_verification(gammas, n_conditions=10, n_per_condition=3, device="cpu"):
         json.dump(report, f, indent=2)
     print(f"\nĐã lưu: {out_path}")
 
-    print("\n=== SO SÁNH R2(surrogate, từ evaluation_report cũ) vs R2(FE thật) ===")
+    print(
+        "\n=== SO SÁNH R2(surrogate, từ evaluation_report cũ) vs R2(FE thật) ==="
+    )
     for gamma in gammas:
-        eval_path = os.path.join(PHASE5_DIR, "gamma_sweep_results", f"eval_gamma{gamma}.json")
+        eval_path = os.path.join(
+            PHASE5_DIR, "gamma_sweep_results", f"eval_gamma{gamma}.json"
+        )
         if os.path.exists(eval_path) and str(gamma) in report["results"]:
             with open(eval_path) as f:
                 surro = json.load(f)["property_accuracy"]["v12"]["r2"]
             fe_r2 = report["results"][str(gamma)]["r2_fe"]["v12"]
             gap = surro - fe_r2
-            flag = "  <-- CHÊNH LỆCH LỚN, nghi ngờ exploitation" if gap > 0.15 else ""
-            print(f"  gamma={gamma:4d} | R2(surrogate)={surro:.3f} | "
-                  f"R2(FE thật)={fe_r2:.3f} | gap={gap:+.3f}{flag}")
+            flag = (
+                "  <-- CHÊNH LỆCH LỚN, nghi ngờ exploitation"
+                if gap > 0.15
+                else ""
+            )
+            print(
+                f"  gamma={gamma:4d} | R2(surrogate)={surro:.3f} | "
+                f"R2(FE thật)={fe_r2:.3f} | gap={gap:+.3f}{flag}"
+            )
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sanity-check", action="store_true",
-                         help="Chỉ chạy Bước 1.2 (kiểm tra FE_PARAMS đúng chưa)")
-    parser.add_argument("--gammas", type=int, nargs="+", default=[20, 100, 300],
-                         help="Danh sách gamma cần verify (khớp tên file "
-                              "cvae_gamma{N}.pt đang có)")
+    parser.add_argument(
+        "--sanity-check",
+        action="store_true",
+        help="Chỉ chạy Bước 1.2 (kiểm tra FE_PARAMS đúng chưa)",
+    )
+    parser.add_argument(
+        "--gammas",
+        type=int,
+        nargs="+",
+        default=[20, 100, 300],
+        help="Danh sách gamma cần verify (khớp tên file "
+        "cvae_gamma{N}.pt đang có)",
+    )
     parser.add_argument("--n-conditions", type=int, default=10)
     parser.add_argument("--n-per-condition", type=int, default=3)
     args = parser.parse_args()
@@ -284,7 +359,9 @@ def main():
     if args.sanity_check:
         sanity_check()
     else:
-        run_verification(args.gammas, args.n_conditions, args.n_per_condition, device)
+        run_verification(
+            args.gammas, args.n_conditions, args.n_per_condition, device
+        )
 
 
 if __name__ == "__main__":

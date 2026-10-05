@@ -5,6 +5,7 @@ Imports are lazy inside each test - sample.py does `sys.path.insert(...)` +
 bare `from model import CVAE` at import time (see tests/conftest.py
 docstring).
 """
+
 import numpy as np
 import torch
 from PIL import Image
@@ -13,6 +14,7 @@ from PIL import Image
 class TestLoadModel:
     def test_load_model_returns_eval_mode_cvae(self, make_cvae_checkpoint):
         from pipeline.phase5_cvae.sample import load_model
+
         ckpt_path = make_cvae_checkpoint()
 
         model = load_model(device="cpu", ckpt_path=ckpt_path)
@@ -22,6 +24,7 @@ class TestLoadModel:
 
     def test_loaded_model_generates_correct_shape(self, make_cvae_checkpoint):
         from pipeline.phase5_cvae.sample import load_model
+
         ckpt_path = make_cvae_checkpoint()
         model = load_model(device="cpu", ckpt_path=ckpt_path)
 
@@ -38,6 +41,7 @@ class TestSavePng:
         change both to 0.5 - this test isolates the pure tensor->PNG
         conversion, not the periodicity post-processing."""
         from pipeline.phase5_cvae.sample import save_png
+
         img = torch.zeros(1, 64, 64)
         img[:, :32, :] = 1.0
         out_path = tmp_path / "sample.png"
@@ -57,8 +61,11 @@ class TestSavePngForcePeriodic:
 
     def test_default_forces_matching_edges(self, tmp_path):
         from pipeline.phase5_cvae.sample import save_png
+
         img = torch.zeros(1, 64, 64)
-        img[:, :32, :] = 1.0  # top half solid, bottom half void -> mismatched edges
+        img[:, :32, :] = (
+            1.0  # top half solid, bottom half void -> mismatched edges
+        )
         out_path = tmp_path / "sample.png"
 
         save_png(img, str(out_path))  # apply_force_periodic defaults to True
@@ -69,6 +76,7 @@ class TestSavePngForcePeriodic:
 
     def test_no_force_periodic_flag_preserves_raw_edges(self, tmp_path):
         from pipeline.phase5_cvae.sample import save_png
+
         img = torch.zeros(1, 64, 64)
         img[:, :32, :] = 1.0
         out_path = tmp_path / "sample.png"
@@ -76,8 +84,8 @@ class TestSavePngForcePeriodic:
         save_png(img, str(out_path), apply_force_periodic=False)
 
         loaded = np.array(Image.open(str(out_path)))
-        assert loaded[0, 0] == 255    # top row, untouched -> stays solid
-        assert loaded[-1, 0] == 0     # bottom row, untouched -> stays void
+        assert loaded[0, 0] == 255  # top row, untouched -> stays solid
+        assert loaded[-1, 0] == 0  # bottom row, untouched -> stays void
 
 
 class TestOptionalConditionCli:
@@ -85,74 +93,151 @@ class TestOptionalConditionCli:
     chỉ có tác dụng với checkpoint condition_dim=6."""
 
     def test_extended_checkpoint_builds_6dim_condition_with_values(
-        self, tmp_path, monkeypatch, make_cvae_checkpoint,
+        self,
+        tmp_path,
+        monkeypatch,
+        make_cvae_checkpoint,
     ):
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
+
         ckpt_path = make_cvae_checkpoint("cvae_ext.pt", condition_dim=6)
         out_dir = tmp_path / "out"
 
         captured = {}
         real_generate = sample_module.CVAE.generate
 
-        def tracking_generate(self, condition, n_samples=1, device="cpu"):
+        def tracking_generate(
+            self, condition, n_samples=1, device="cpu", resolution=None
+        ):
             captured["condition"] = condition.detach().cpu().numpy().copy()
-            return real_generate(self, condition, n_samples=n_samples, device=device)
+            return real_generate(
+                self,
+                condition,
+                n_samples=n_samples,
+                device=device,
+                resolution=resolution,
+            )
 
         monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
         monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
-            "--volfrac", "0.35", "--n", "1", "--out", str(out_dir),
-            "--ckpt", str(ckpt_path),
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--volfrac",
+                "0.35",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
 
         sample_module.main()
 
         cond = captured["condition"]
-        np.testing.assert_allclose(cond, [-0.5, -0.4, 0.35, 1.0, 0.0, 0.0], atol=1e-5)
+        np.testing.assert_allclose(
+            cond, [-0.5, -0.4, 0.35, 1.0, 0.0, 0.0], atol=1e-5
+        )
 
     def test_extended_checkpoint_unset_optional_gives_zero_mask(
-        self, tmp_path, monkeypatch, make_cvae_checkpoint,
+        self,
+        tmp_path,
+        monkeypatch,
+        make_cvae_checkpoint,
     ):
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
+
         ckpt_path = make_cvae_checkpoint("cvae_ext.pt", condition_dim=6)
         out_dir = tmp_path / "out"
 
         captured = {}
         real_generate = sample_module.CVAE.generate
 
-        def tracking_generate(self, condition, n_samples=1, device="cpu"):
+        def tracking_generate(
+            self, condition, n_samples=1, device="cpu", resolution=None
+        ):
             captured["condition"] = condition.detach().cpu().numpy().copy()
-            return real_generate(self, condition, n_samples=n_samples, device=device)
+            return real_generate(
+                self,
+                condition,
+                n_samples=n_samples,
+                device=device,
+                resolution=resolution,
+            )
 
         monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
         monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
-            "--n", "1", "--out", str(out_dir), "--ckpt", str(ckpt_path),
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
 
         sample_module.main()
 
         cond = captured["condition"]
-        np.testing.assert_allclose(cond, [-0.5, -0.4, 0.0, 0.0, 0.0, 0.0], atol=1e-5)
+        np.testing.assert_allclose(
+            cond, [-0.5, -0.4, 0.0, 0.0, 0.0, 0.0], atol=1e-5
+        )
 
     def test_condition_dim_2_checkpoint_warns_and_ignores_volfrac(
-        self, tmp_path, monkeypatch, capsys, make_cvae_checkpoint,
+        self,
+        tmp_path,
+        monkeypatch,
+        capsys,
+        make_cvae_checkpoint,
     ):
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
+
         ckpt_path = make_cvae_checkpoint()
         out_dir = tmp_path / "out"
 
         monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.4",
-            "--volfrac", "0.35", "--n", "1", "--out", str(out_dir),
-            "--ckpt", str(ckpt_path),
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--volfrac",
+                "0.35",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
 
         sample_module.main()  # must not crash (shape mismatch) despite --volfrac
 
@@ -162,38 +247,276 @@ class TestOptionalConditionCli:
         assert len(pngs) == 1
 
 
-class TestMainCli:
-    def test_main_writes_expected_number_of_samples(self, tmp_path, monkeypatch, capsys, make_cvae_checkpoint):
+class TestNu0ConditionCli:
+    """--nu0 (A6, docs/PROJECT_PLAN.md Nhóm 1) - chỉ có tác dụng với
+    checkpoint condition_dim ∈ {4,8} (train với --include-nu0)."""
+
+    def test_nu0_only_checkpoint_builds_4dim_condition_with_value(
+        self,
+        tmp_path,
+        monkeypatch,
+        make_cvae_checkpoint,
+    ):
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
+
+        ckpt_path = make_cvae_checkpoint("cvae_nu0.pt", condition_dim=4)
+        out_dir = tmp_path / "out"
+
+        captured = {}
+        real_generate = sample_module.CVAE.generate
+
+        def tracking_generate(
+            self, condition, n_samples=1, device="cpu", resolution=None
+        ):
+            captured["condition"] = condition.detach().cpu().numpy().copy()
+            return real_generate(
+                self,
+                condition,
+                n_samples=n_samples,
+                device=device,
+                resolution=resolution,
+            )
+
+        monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--nu0",
+                "0.28",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
+
+        sample_module.main()
+
+        cond = captured["condition"]
+        np.testing.assert_allclose(cond, [-0.5, -0.4, 0.28, 1.0], atol=1e-5)
+
+    def test_nu0_at_columns_6_7_when_extended_and_nu0_checkpoint(
+        self,
+        tmp_path,
+        monkeypatch,
+        make_cvae_checkpoint,
+    ):
+        import sys
+
+        from pipeline.phase5_cvae import sample as sample_module
+
+        ckpt_path = make_cvae_checkpoint("cvae_ext_nu0.pt", condition_dim=8)
+        out_dir = tmp_path / "out"
+
+        captured = {}
+        real_generate = sample_module.CVAE.generate
+
+        def tracking_generate(
+            self, condition, n_samples=1, device="cpu", resolution=None
+        ):
+            captured["condition"] = condition.detach().cpu().numpy().copy()
+            return real_generate(
+                self,
+                condition,
+                n_samples=n_samples,
+                device=device,
+                resolution=resolution,
+            )
+
+        monkeypatch.setattr(sample_module.CVAE, "generate", tracking_generate)
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--volfrac",
+                "0.35",
+                "--nu0",
+                "0.28",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
+
+        sample_module.main()
+
+        cond = captured["condition"]
+        np.testing.assert_allclose(
+            cond,
+            [-0.5, -0.4, 0.35, 1.0, 0.0, 0.0, 0.28, 1.0],
+            atol=1e-5,
+        )
+
+    def test_condition_dim_2_checkpoint_warns_and_ignores_nu0(
+        self,
+        tmp_path,
+        monkeypatch,
+        capsys,
+        make_cvae_checkpoint,
+    ):
+        import sys
+
+        from pipeline.phase5_cvae import sample as sample_module
+
         ckpt_path = make_cvae_checkpoint()
         out_dir = tmp_path / "out"
 
         monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.5",
-            "--n", "3", "--out", str(out_dir),
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--nu0",
+                "0.28",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
+
+        sample_module.main()  # must not crash despite --nu0
+
+        out = capsys.readouterr().out
+        assert "condition_dim=2" in out
+        pngs = sorted(out_dir.glob("sample_*.png"))
+        assert len(pngs) == 1
+
+    def test_extended_only_checkpoint_warns_and_ignores_nu0(
+        self,
+        tmp_path,
+        monkeypatch,
+        capsys,
+        make_cvae_checkpoint,
+    ):
+        """condition_dim=6 (extended_condition, KHÔNG include_nu0) - --nu0
+        phải bị bỏ qua + cảnh báo, không lẫn vào 2 cột volfrac/void_size_frac.
+        """
+        import sys
+
+        from pipeline.phase5_cvae import sample as sample_module
+
+        ckpt_path = make_cvae_checkpoint("cvae_ext.pt", condition_dim=6)
+        out_dir = tmp_path / "out"
+
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.4",
+                "--nu0",
+                "0.28",
+                "--n",
+                "1",
+                "--out",
+                str(out_dir),
+                "--ckpt",
+                str(ckpt_path),
+            ],
+        )
+
+        sample_module.main()
+
+        out = capsys.readouterr().out
+        assert "condition_dim=6" in out
+        pngs = sorted(out_dir.glob("sample_*.png"))
+        assert len(pngs) == 1
+
+
+class TestMainCli:
+    def test_main_writes_expected_number_of_samples(
+        self, tmp_path, monkeypatch, capsys, make_cvae_checkpoint
+    ):
+        import sys
+
+        from pipeline.phase5_cvae import sample as sample_module
+
+        ckpt_path = make_cvae_checkpoint()
+        out_dir = tmp_path / "out"
+
+        monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.5",
+                "--n",
+                "3",
+                "--out",
+                str(out_dir),
+            ],
+        )
 
         sample_module.main()
 
         pngs = sorted(out_dir.glob("sample_*.png"))
         assert len(pngs) == 3
 
-    def test_main_warns_single_shot_is_unreliable(self, tmp_path, monkeypatch, capsys, make_cvae_checkpoint):
+    def test_main_warns_single_shot_is_unreliable(
+        self, tmp_path, monkeypatch, capsys, make_cvae_checkpoint
+    ):
         """sample.py generates ONE candidate with no FE filtering - the CLI
         must steer users toward best_of_n_eval.py (the actual, FE-verified
         pipeline; see README Phase 5 / outputs/phase5/fe_verification_report.json),
         not let them silently trust a single-shot sample."""
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
+
         ckpt_path = make_cvae_checkpoint()
 
         monkeypatch.setattr(sample_module, "CKPT_PATH", str(ckpt_path))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.5",
-            "--n", "1", "--out", str(tmp_path / "out"),
-        ])
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.5",
+                "--n",
+                "1",
+                "--out",
+                str(tmp_path / "out"),
+            ],
+        )
 
         sample_module.main()
 
@@ -202,13 +525,25 @@ class TestMainCli:
 
     def test_main_raises_if_checkpoint_missing(self, tmp_path, monkeypatch):
         import sys
+
         from pipeline.phase5_cvae import sample as sample_module
 
-        monkeypatch.setattr(sample_module, "CKPT_PATH", str(tmp_path / "nope.pt"))
-        monkeypatch.setattr(sys, "argv", [
-            "sample.py", "--v12", "-0.5", "--v21", "-0.5",
-        ])
+        monkeypatch.setattr(
+            sample_module, "CKPT_PATH", str(tmp_path / "nope.pt")
+        )
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "sample.py",
+                "--v12",
+                "-0.5",
+                "--v21",
+                "-0.5",
+            ],
+        )
 
         import pytest
+
         with pytest.raises(FileNotFoundError):
             sample_module.main()

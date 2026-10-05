@@ -1,6 +1,7 @@
 """
 Tests for pipeline/phase5_cvae/model.py - CVAE / Encoder / Decoder.
 """
+
 import torch
 
 from pipeline.phase5_cvae.model import CVAE
@@ -8,8 +9,12 @@ from pipeline.phase5_cvae.model import CVAE
 
 class TestCVAEForward:
     def test_forward_shapes(self):
-        model = CVAE(condition_dim=2, latent_dim=16, resolution=64,
-                      channels=(8, 16, 32, 64))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=16,
+            resolution=64,
+            channels=(8, 16, 32, 64),
+        )
         img = torch.rand(3, 1, 64, 64)
         cond = torch.tensor([[-0.5, -0.5]] * 3, dtype=torch.float32)
         recon, mu, logvar = model(img, cond)
@@ -19,8 +24,12 @@ class TestCVAEForward:
 
     def test_recon_in_unit_range(self):
         """Decoder ends in Sigmoid - output must stay in [0, 1]."""
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         img = torch.rand(2, 1, 64, 64)
         cond = torch.zeros(2, 2)
         recon, _, _ = model(img, cond)
@@ -28,8 +37,12 @@ class TestCVAEForward:
         assert recon.max().item() <= 1.0
 
     def test_deterministic_uses_mu_not_sample(self):
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         model.eval()
         img = torch.rand(2, 1, 64, 64)
         cond = torch.zeros(2, 2)
@@ -41,8 +54,12 @@ class TestCVAEForward:
         assert torch.allclose(mu_a, mu_b)
 
     def test_stochastic_forward_varies_across_calls(self):
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         img = torch.rand(2, 1, 64, 64)
         cond = torch.zeros(2, 2)
         torch.manual_seed(0)
@@ -70,23 +87,284 @@ class TestReparameterize:
 
 class TestGenerate:
     def test_generate_shape_single_condition(self):
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
         out = model.generate(cond, n_samples=5, device="cpu")
         assert out.shape == (5, 1, 64, 64)
 
     def test_generate_shape_batched_condition(self):
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         cond = torch.tensor([[-0.6, -0.6]], dtype=torch.float32)
         out = model.generate(cond, n_samples=1, device="cpu")
         assert out.shape == (1, 1, 64, 64)
 
     def test_generate_output_in_unit_range(self):
-        model = CVAE(condition_dim=2, latent_dim=8, resolution=64,
-                      channels=(4, 8, 16, 32))
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
         cond = torch.tensor([0.1, 0.2], dtype=torch.float32)
         out = model.generate(cond, n_samples=3, device="cpu")
         assert out.min().item() >= 0.0
         assert out.max().item() <= 1.0
+
+
+class TestKANRegressionHead:
+    """Task 1 - KAN-hóa bộ hồi quy Co-VAE: Encoder.fc_mu/fc_logvar và
+    Decoder.fc dùng EfficientKANLinear thay vì nn.Linear."""
+
+    def test_fc_layers_are_kan(self):
+        from efficient_kan import EfficientKANLinear
+
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
+        assert isinstance(model.encoder.fc_mu, EfficientKANLinear)
+        assert isinstance(model.encoder.fc_logvar, EfficientKANLinear)
+        assert isinstance(model.decoder.fc, EfficientKANLinear)
+
+    def test_spline_weight_is_3d(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
+        # spline_weight [out, in, grid_size + spline_order] = [*, *, 8]
+        assert model.decoder.fc.spline_weight.dim() == 3
+        assert model.decoder.fc.spline_weight.shape[2] == 8
+
+    def test_decoder_fc_gradients_flow(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
+        z = torch.randn(2, 8)
+        cond = torch.zeros(2, 2)
+        out = model.decoder(z, cond)
+        assert out.shape == (2, 1, 64, 64)
+        out.sum().backward()
+        assert model.decoder.fc.base_weight.grad is not None
+        assert model.decoder.fc.spline_weight.grad is not None
+        assert torch.isfinite(model.decoder.fc.spline_weight.grad).all()
+
+    def test_mlp_ablation_head_uses_linear_layers(self):
+        """The MLP ablation must keep the same CVAE tensor contract."""
+        from torch import nn
+
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            use_kan=False,
+        )
+        assert isinstance(model.encoder.fc_mu, nn.Linear)
+        assert isinstance(model.encoder.fc_logvar, nn.Linear)
+        assert isinstance(model.decoder.fc, nn.Linear)
+
+    def test_decoder_output_is_transpose_symmetric(self):
+        """The default decoder removes orthotropic transpose asymmetry."""
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
+        output = model.decoder(torch.randn(2, 8), torch.zeros(2, 2))
+        assert torch.allclose(output, output.transpose(-1, -2), atol=1e-6)
+
+
+class TestWireDecoder:
+    """Task 2 - WIRE INR Decoder: decoder_type='wire' dùng
+    WireContinuousDecoder, resolution-agnostic, API (B,1,H,W) giữ nguyên."""
+
+    def test_forward_shapes_unit_range(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+        )
+        img = torch.rand(2, 1, 64, 64)
+        cond = torch.zeros(2, 2)
+        recon, mu, logvar = model(img, cond)
+        assert recon.shape == (2, 1, 64, 64)
+        assert recon.min().item() >= 0.0
+        assert recon.max().item() <= 1.0
+
+    def test_generate_resolution_agnostic(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+        )
+        cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
+        out = model.generate(cond, n_samples=1, device="cpu", resolution=128)
+        assert out.shape == (1, 1, 128, 128)
+        assert out.min().item() >= 0.0
+        assert out.max().item() <= 1.0
+
+    def test_forward_coords_continuous_api(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+        )
+        coords = torch.rand(3, 100, 2) * 2 - 1  # tọa độ liên tục tùy ý
+        z = torch.randn(3, 8)
+        cond = torch.zeros(3, 2)
+        rho = model.decoder.forward_coords(coords, z, cond)
+        assert rho.shape == (3, 100, 1)
+        assert rho.min().item() >= 0.0
+        assert rho.max().item() <= 1.0
+
+    def test_conv_is_default_backward_compat(self):
+        from pipeline.phase5_cvae.model import Decoder
+
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+        )
+        assert model.decoder_type == "conv"
+        assert isinstance(model.decoder, Decoder)
+
+    def test_gradients_flow(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+        )
+        img = torch.rand(2, 1, 64, 64)
+        cond = torch.zeros(2, 2)
+        recon, _, _ = model(img, cond)
+        recon.sum().backward()
+        assert model.decoder.layer1.linear.weight.grad is not None
+        assert model.decoder.output_layer.weight.grad is not None
+        assert torch.isfinite(model.decoder.layer1.linear.weight.grad).all()
+
+    def test_enforce_symmetry_true_produces_mirror_symmetric_image(self):
+        torch.manual_seed(0)
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=True,
+        )
+        assert model.decoder.enforce_symmetry is True
+        cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
+        out = model.generate(cond, n_samples=2, device="cpu")
+        assert torch.allclose(out, out.transpose(-1, -2), atol=1e-6)
+
+    def test_enforce_symmetry_false_keeps_raw_asymmetric_output(self):
+        torch.manual_seed(0)
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=False,
+        )
+        assert model.decoder.enforce_symmetry is False
+        cond = torch.tensor([-0.6, -0.6], dtype=torch.float32)
+        out = model.generate(cond, n_samples=2, device="cpu")
+        # Raw WIRE output có đối xứng gần-hoàn-hảo là không chắc chắn (weight
+        # init ngẫu nhiên) - chỉ cần xác nhận KHÔNG bị ép đối xứng, tức khác
+        # test trên (không assert allclose với transpose).
+        assert not torch.allclose(out, out.transpose(-1, -2), atol=1e-6)
+
+    def test_enforce_symmetry_gradients_still_flow(self):
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=8,
+            resolution=32,
+            channels=(4, 8, 16, 32),
+            decoder_type="wire",
+            enforce_symmetry=True,
+        )
+        img = torch.rand(2, 1, 32, 32)
+        cond = torch.zeros(2, 2)
+        recon, _, _ = model(img, cond)
+        recon.sum().backward()
+        assert model.decoder.layer1.linear.weight.grad is not None
+        assert torch.isfinite(model.decoder.layer1.linear.weight.grad).all()
+
+
+class TestCvaeKwargsFromCheckpoint:
+    """Hồi quy bug 2026-09-25: load_cvae() bỏ qua use_kan/enforce_symmetry
+    -> checkpoint Linear crash, checkpoint cũ bị ép đối xứng lúc đánh giá."""
+
+    @staticmethod
+    def _save(tmp_path, model, **meta):
+        """Lưu checkpoint tối giản cùng schema train.py."""
+        path = tmp_path / "ck.pt"
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "latent_dim": 4,
+                "condition_dim": 2,
+                "resolution": 64,
+                **meta,
+            },
+            path,
+        )
+        return str(path)
+
+    def test_legacy_linear_checkpoint_loads_without_symmetry(self, tmp_path):
+        import importlib
+
+        adv = importlib.import_module(
+            "pipeline.phase5_cvae.adversarial_dataset"
+        )
+        src = CVAE(latent_dim=4, use_kan=False, enforce_symmetry=False)
+        # Checkpoint cũ: không có field use_kan/enforce_symmetry.
+        model = adv.load_cvae(self._save(tmp_path, src), "cpu")
+        assert model.use_kan is False
+        assert model.enforce_symmetry is False
+
+    def test_explicit_metadata_is_respected(self, tmp_path):
+        from pipeline.phase5_cvae.model import cvae_kwargs_from_checkpoint
+
+        src = CVAE(latent_dim=4, use_kan=True, enforce_symmetry=True)
+        ckpt = torch.load(
+            self._save(tmp_path, src, use_kan=True, enforce_symmetry=True),
+            weights_only=False,
+        )
+        kw = cvae_kwargs_from_checkpoint(ckpt)
+        assert kw["use_kan"] is True and kw["enforce_symmetry"] is True
+
+    def test_kan_head_inferred_from_state_dict(self, tmp_path):
+        from pipeline.phase5_cvae.model import cvae_kwargs_from_checkpoint
+
+        src = CVAE(latent_dim=4, use_kan=True, enforce_symmetry=False)
+        ckpt = torch.load(self._save(tmp_path, src), weights_only=False)
+        assert cvae_kwargs_from_checkpoint(ckpt)["use_kan"] is True

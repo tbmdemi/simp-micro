@@ -2,6 +2,7 @@
 Tests for pipeline/phase5_cvae/dataset.py - CVAEDataset.
 """
 import numpy as np
+import pytest
 import torch
 
 from pipeline.phase5_cvae.dataset import (
@@ -85,6 +86,70 @@ class TestExtendedCondition:
         assert torch.all(condition[:, 5] == 1.0)
 
 
+class TestIncludeNu0:
+    """A6 (docs/PROJECT_PLAN.md Nhóm 1): include_nu0 thêm 2 cột [nu0,nu0_mask]
+    VÀO CUỐI condition, độc lập với extended_condition (có thể bật riêng
+    hoặc cùng lúc). condition_dim ∈ {2,4,6,8} tùy tổ hợp 2 cờ."""
+
+    def test_condition_dim_4_when_nu0_only(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=3, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        assert ds.condition_dim == 4
+        _, condition, _, _ = ds[0]
+        assert condition.shape == (4,)
+
+    def test_condition_dim_8_when_extended_and_nu0(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=3, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, extended_condition=True, include_nu0=True)
+        assert ds.condition_dim == 8
+        _, condition, _, _ = ds[0]
+        assert condition.shape == (8,)
+
+    def test_nu0_columns_at_end_when_nu0_only(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=3, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        _, condition, _, _ = ds[0]
+        assert condition[0].item() == ds.v12[0]
+        assert condition[1].item() == ds.v21[0]
+        assert condition[2].item() == pytest.approx(ds.nu0[0], abs=1e-6)
+        assert condition[3].item() == 1.0  # nu0 mask
+
+    def test_nu0_columns_after_extended_group_when_both(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=3, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, extended_condition=True, include_nu0=True)
+        _, condition, _, _ = ds[0]
+        assert condition[2].item() == pytest.approx(ds.volfrac_achieved[0], abs=1e-6)
+        assert condition[3].item() == 1.0
+        assert condition[4].item() == pytest.approx(ds.void_size_frac[0], abs=1e-6)
+        assert condition[5].item() == 1.0
+        assert condition[6].item() == pytest.approx(ds.nu0[0], abs=1e-6)
+        assert condition[7].item() == 1.0  # nu0 mask
+
+    def test_nu0_col_property(self, make_phase3_npz):
+        path = make_phase3_npz("val.npz", n_samples=2, nu_range=(0.2, 0.4))
+        assert CVAEDataset(path).nu0_col is None
+        assert CVAEDataset(path, include_nu0=True).nu0_col == 2
+        assert CVAEDataset(path, extended_condition=True).nu0_col is None
+        assert CVAEDataset(path, extended_condition=True, include_nu0=True).nu0_col == 6
+
+    def test_raises_when_npz_missing_nu_field(self, make_phase3_npz):
+        """npz sinh trước A4 (vd outputs/phase3/*.npz thật) không có field
+        'nu' - include_nu0=True phải raise rõ ràng, không âm thầm coi mọi
+        mẫu là ν0=0.3 (validate ở biên, CLAUDE.md)."""
+        path = make_phase3_npz("val.npz", n_samples=2)  # nu_range=None -> không có field 'nu'
+        with pytest.raises(ValueError, match="nu"):
+            CVAEDataset(path, include_nu0=True)
+
+    def test_dataloader_batching_dim_4(self, make_phase3_npz):
+        from torch.utils.data import DataLoader
+        path = make_phase3_npz("val.npz", n_samples=5, nu_range=(0.2, 0.4))
+        ds = CVAEDataset(path, include_nu0=True)
+        loader = DataLoader(ds, batch_size=5)
+        _, condition, _, _ = next(iter(loader))
+        assert condition.shape == (5, 4)
+        assert torch.all(condition[:, 3] == 1.0)
+
+
 class TestBuildConditionVector:
     def test_condition_dim_2_ignores_optional_args(self):
         cond = build_condition_vector(-0.5, -0.3, condition_dim=2, volfrac=0.4)
@@ -106,7 +171,37 @@ class TestBuildConditionVector:
     def test_invalid_condition_dim_raises(self):
         import pytest
         with pytest.raises(ValueError):
-            build_condition_vector(-0.5, -0.3, condition_dim=4)
+            build_condition_vector(-0.5, -0.3, condition_dim=5)
+
+    def test_condition_dim_4_unset_nu0_gives_zero_mask(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=4)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.0, 0.0])
+
+    def test_condition_dim_4_with_nu0(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=4, nu0=0.28)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.28, 1.0])
+
+    def test_condition_dim_4_ignores_volfrac_void(self):
+        """condition_dim=4 = nu0-only (KHÔNG extended_condition) - volfrac/
+        void_size_frac không có chỗ trong vector 4 chiều, phải bị bỏ qua."""
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=4,
+                                       volfrac=0.4, void_size_frac=0.3, nu0=0.28)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.28, 1.0])
+
+    def test_condition_dim_8_unset_all_gives_zero_masks(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=8)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    def test_condition_dim_8_with_all_optional(self):
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=8,
+                                       volfrac=0.35, void_size_frac=0.4, nu0=0.28)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.35, 1.0, 0.4, 1.0, 0.28, 1.0])
+
+    def test_condition_dim_8_nu0_at_columns_6_7(self):
+        """nu0 PHẢI ở 2 cột cuối (6,7), sau nhóm volfrac/void_size_frac -
+        khớp đúng CVAEDataset.nu0_col khi extended_condition=True."""
+        cond = build_condition_vector(-0.5, -0.3, condition_dim=8, nu0=0.28)
+        np.testing.assert_allclose(cond, [-0.5, -0.3, 0.0, 0.0, 0.0, 0.0, 0.28, 1.0])
 
 
 class TestV12BinWeights:

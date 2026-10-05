@@ -82,3 +82,19 @@ class TestRunEpoch:
         optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
         loss, _ = run_epoch(model, loader, optimizer, "cpu", train=True)
         assert torch.isfinite(torch.tensor(loss))
+
+    def test_run_epoch_with_include_nu0(self, make_phase3_npz):
+        """Giai đoạn A/A4: batch 4 phần tử (image,seed_vec,targets,nu0) phải
+        chạy hết run_epoch (train + eval) không lỗi, loss hữu hạn."""
+        from pipeline.phase4_surrogate.train import run_epoch
+        path = make_phase3_npz("train.npz", n_samples=8, nu_range=(0.2, 0.4))
+        ds = AuxeticDataset(path, include_nu0=True)
+        loader = DataLoader(ds, batch_size=4, shuffle=False)
+        model = SurrogateCNN(n_seeds=ds.n_seeds, channels=(4, 8), fc_hidden=8, include_nu0=True)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+
+        train_loss, _ = run_epoch(model, loader, optimizer, "cpu", train=True)
+        eval_loss, _ = run_epoch(model, loader, optimizer, "cpu", train=False)
+
+        assert torch.isfinite(torch.tensor(train_loss))
+        assert torch.isfinite(torch.tensor(eval_loss))
