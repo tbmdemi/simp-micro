@@ -21,7 +21,7 @@ Two sources of gradient guidance are supported via `guidance_source`:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 import torch
 import torch.nn.functional as F
@@ -29,6 +29,7 @@ import torch.nn.functional as F
 try:
     # Khi tandem_lbfgs.py được import theo đường dẫn dotted đầy đủ
     # (pipeline.phase5_cvae.tandem_lbfgs, vd tests/test_tandem_lbfgs.py).
+    from .heaviside import project_for_fe
     from .losses import real_physics_loss
     from .real_physics import RealPhysicsNu
     from .verify_fe import FE_PARAMS as _DEFAULT_FE_PARAMS
@@ -37,6 +38,7 @@ except ImportError:
     # sau sys.path.insert(dirname(__file__)) - xem README "bare-import
     # landmine" note trong CLAUDE.md/memory (phase4/phase5 module trùng tên
     # sibling collide trong sys.modules nếu import lẫn lộn 2 kiểu).
+    from heaviside import project_for_fe
     from losses import real_physics_loss
     from real_physics import RealPhysicsNu
     from verify_fe import FE_PARAMS as _DEFAULT_FE_PARAMS
@@ -59,6 +61,8 @@ def tandem_inverse_design_lbfgs(
     fe_params: Optional[dict] = None,
     subsample: Optional[int] = None,
     n_workers: int = 0,
+    projection_betas: Optional[Sequence[float]] = None,
+    periodic: bool = False,
 ) -> Dict[str, Any]:
     """Optimize a latent vector against a Poisson-ratio target.
 
@@ -93,6 +97,17 @@ def tandem_inverse_design_lbfgs(
             chữ ký với ``real_physics_loss``).
         n_workers: chỉ dùng khi ``guidance_source="real_physics"`` - số
             worker `multiprocessing.Pool` cho FE-solve (0 = tuần tự).
+        projection_betas: chỉ dùng khi ``guidance_source="real_physics"``.
+            None (mặc định) = hành vi cũ: FE trên ảnh liên tục, resize
+            bilinear. Có giá trị (vd ``(1, 4, 16, 64)``) = refine nhận thức
+            nhị phân hóa (plan.md v3 P1.1e): ảnh -> [force_periodic] ->
+            Heaviside projection (η=0,5) -> resize nearest khớp verify, β
+            tăng dần theo từng giai đoạn; ``steps`` chia đều cho các giai
+            đoạn và L-BFGS khởi động lại mỗi khi đổi β (bộ nhớ độ cong của
+            giai đoạn trước không còn đúng với objective mới).
+        periodic: áp force_periodic khả vi trước projection - chỉ có tác
+            dụng khi ``projection_betas`` được đặt; bật khi verify dùng
+            ``--force-periodic``.
 
     Returns:
         A dictionary containing ``z``, ``image``, ``prediction``, ``loss``
@@ -154,15 +169,23 @@ def tandem_inverse_design_lbfgs(
         surrogate_model.eval()
 
     values = history if history is not None else []
-    optimizer = torch.optim.LBFGS(
-        [z], lr=learning_rate, max_iter=1, line_search_fn="strong_wolfe"
-    )
 
-    def objective() -> torch.Tensor:
+    def density_for_fe(image: torch.Tensor, beta) -> torch.Tensor:
+        """Ảnh decoder -> mật độ đưa vào FE. beta=None: hành vi cũ (ảnh
+        liên tục, real_physics_loss tự resize bilinear)."""
+        if beta is None:
+            return image
+        # Đã ở đúng lưới FE -> bilinear cùng kích thước bên trong
+        # real_physics_loss là identity.
+        return project_for_fe(
+            image, beta, fe_params["nely"], fe_params["nelx"], periodic
+        )
+
+    def objective(beta) -> torch.Tensor:
         image = generator_model.decoder(z, condition)
         if guidance_source == "real_physics":
             return real_physics_loss(
-                image,
+                density_for_fe(image, beta),
                 target,
                 fe_params,
                 subsample=subsample,
@@ -172,21 +195,37 @@ def tandem_inverse_design_lbfgs(
         predicted_poisson = prediction[:, :2]
         return F.mse_loss(predicted_poisson, target)
 
-    for _ in range(steps):
+    if guidance_source == "real_physics" and projection_betas:
+        betas = [float(b) for b in projection_betas]
+        # Chia đều steps cho các mức β, phần dư dồn vào mức cuối (β lớn
+        # nhất - gần verify nhất nên đáng nhận thêm bước).
+        per = [steps // len(betas)] * len(betas)
+        per[-1] += steps - sum(per)
+        stages = [(b, n) for b, n in zip(betas, per) if n > 0]
+    else:
+        stages = [(None, steps)]
 
-        def closure() -> torch.Tensor:
-            optimizer.zero_grad()
-            loss = objective()
-            loss.backward()
-            values.append(float(loss.detach().cpu()))
-            return loss
+    for beta, n_steps in stages:
+        optimizer = torch.optim.LBFGS(
+            [z], lr=learning_rate, max_iter=1, line_search_fn="strong_wolfe"
+        )
+        for _ in range(n_steps):
 
-        optimizer.step(closure)
+            def closure(beta=beta) -> torch.Tensor:
+                optimizer.zero_grad()
+                loss = objective(beta)
+                loss.backward()
+                values.append(float(loss.detach().cpu()))
+                return loss
 
+            optimizer.step(closure)
+
+    final_beta = stages[-1][0]
     with torch.no_grad():
         image = generator_model.decoder(z, condition)
         if guidance_source == "real_physics":
-            density = image.squeeze(1) if image.dim() == 4 else image
+            density = density_for_fe(image, final_beta)
+            density = density.squeeze(1) if density.dim() == 4 else density
             density_fe = F.interpolate(
                 density.unsqueeze(1),
                 size=(fe_params["nely"], fe_params["nelx"]),

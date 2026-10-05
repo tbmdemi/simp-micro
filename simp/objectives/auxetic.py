@@ -96,6 +96,55 @@ def compute_elastic_constants(Q: np.ndarray) -> dict:
     }
 
 
+def compute_wave_speeds(
+    Q: np.ndarray, rel_density: float, E0: float
+) -> dict:
+    """Tốc độ sóng đàn hồi giới hạn bước sóng dài (quasi-static) theo 2 trục.
+
+    Khi bước sóng >> kích thước ô cơ sở, vật liệu tuần hoàn truyền sóng như
+    môi trường đồng nhất có độ cứng Q và khối lượng riêng hiệu dụng
+    rho_eff = rel_density * rho_s. Tốc độ pha theo hướng n là nghiệm bài toán
+    Christoffel det(Gamma - rho*c^2*I) = 0 với Gamma_ik = C_ijkl n_j n_l.
+    Trong ký hiệu Voigt [11, 22, 12] (Q33 = C1212, ứng với biến dạng cắt
+    kỹ thuật gamma12):
+        n = x: Gamma = [[Q11, Q13], [Q13, Q33]]
+        n = y: Gamma = [[Q33, Q23], [Q23, Q22]]
+    Dùng trị riêng đầy đủ (không giả định Q13 = Q23 = 0) nên đúng cả khi ô
+    cơ sở bị xoay - cùng nguyên tắc với compute_nu12().
+
+    Kết quả không thứ nguyên, chuẩn hóa theo c_s = sqrt(E0 / rho_s) của vật
+    liệu nền: c_tilde = sqrt(lambda / (E0 * rel_density)). Không áp dụng cho
+    vùng tần số cao/band gap (cần bài toán trị riêng Bloch riêng).
+
+    Args:
+        Q: Tensor độ cứng đồng nhất hóa (3x3), thứ tự Voigt [11, 22, 12],
+            cùng đơn vị với E0.
+        rel_density: Mật độ tương đối (mean xPhys, 0 < rel_density <= 1).
+        E0: Modul Young vật liệu nền (cùng đơn vị với Q).
+
+    Returns:
+        dict với 'c_qL_x', 'c_qT_x', 'c_qL_y', 'c_qT_y' - tốc độ chuẩn hóa
+        c/c_s của sóng quasi-longitudinal / quasi-transverse theo trục x, y.
+        Ô đặc hoàn toàn đẳng hướng cho c_qL = sqrt(1/(1-nu^2)),
+        c_qT = sqrt(1/(2(1+nu))).
+    """
+    gamma_x = np.array([[Q[0, 0], Q[0, 2]], [Q[0, 2], Q[2, 2]]])
+    gamma_y = np.array([[Q[2, 2], Q[1, 2]], [Q[1, 2], Q[1, 1]]])
+    # eigvalsh trả trị riêng tăng dần: [quasi-transverse, quasi-longitudinal].
+    # clip >= 0 chỉ để chặn nhiễu số âm ~1e-15 khi Q gần suy biến.
+    scale = E0 * rel_density
+    lam_x = np.clip(np.linalg.eigvalsh(gamma_x), 0.0, None)
+    lam_y = np.clip(np.linalg.eigvalsh(gamma_y), 0.0, None)
+    c_x = np.sqrt(lam_x / scale)
+    c_y = np.sqrt(lam_y / scale)
+    return {
+        'c_qL_x': float(c_x[1]),
+        'c_qT_x': float(c_x[0]),
+        'c_qL_y': float(c_y[1]),
+        'c_qT_y': float(c_y[0]),
+    }
+
+
 def compute_auxetic_q12_objective(
     Q: np.ndarray,
     dQ: np.ndarray,

@@ -317,3 +317,54 @@ class TestWireDecoder:
         recon.sum().backward()
         assert model.decoder.layer1.linear.weight.grad is not None
         assert torch.isfinite(model.decoder.layer1.linear.weight.grad).all()
+
+
+class TestCvaeKwargsFromCheckpoint:
+    """Hồi quy bug 2026-09-25: load_cvae() bỏ qua use_kan/enforce_symmetry
+    -> checkpoint Linear crash, checkpoint cũ bị ép đối xứng lúc đánh giá."""
+
+    @staticmethod
+    def _save(tmp_path, model, **meta):
+        """Lưu checkpoint tối giản cùng schema train.py."""
+        path = tmp_path / "ck.pt"
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "latent_dim": 4,
+                "condition_dim": 2,
+                "resolution": 64,
+                **meta,
+            },
+            path,
+        )
+        return str(path)
+
+    def test_legacy_linear_checkpoint_loads_without_symmetry(self, tmp_path):
+        import importlib
+
+        adv = importlib.import_module(
+            "pipeline.phase5_cvae.adversarial_dataset"
+        )
+        src = CVAE(latent_dim=4, use_kan=False, enforce_symmetry=False)
+        # Checkpoint cũ: không có field use_kan/enforce_symmetry.
+        model = adv.load_cvae(self._save(tmp_path, src), "cpu")
+        assert model.use_kan is False
+        assert model.enforce_symmetry is False
+
+    def test_explicit_metadata_is_respected(self, tmp_path):
+        from pipeline.phase5_cvae.model import cvae_kwargs_from_checkpoint
+
+        src = CVAE(latent_dim=4, use_kan=True, enforce_symmetry=True)
+        ckpt = torch.load(
+            self._save(tmp_path, src, use_kan=True, enforce_symmetry=True),
+            weights_only=False,
+        )
+        kw = cvae_kwargs_from_checkpoint(ckpt)
+        assert kw["use_kan"] is True and kw["enforce_symmetry"] is True
+
+    def test_kan_head_inferred_from_state_dict(self, tmp_path):
+        from pipeline.phase5_cvae.model import cvae_kwargs_from_checkpoint
+
+        src = CVAE(latent_dim=4, use_kan=True, enforce_symmetry=False)
+        ckpt = torch.load(self._save(tmp_path, src), weights_only=False)
+        assert cvae_kwargs_from_checkpoint(ckpt)["use_kan"] is True

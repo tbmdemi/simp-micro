@@ -60,22 +60,20 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 2 | Multi-Batch Adaptive DOE | ✅ Hoàn thành + cải tiến manufacturability + rebuild dQ | **8/8 lô gốc + batch 11 rebuild**, 7.920 mẫu, **91,9% auxetic** (đã rebuild 3 seed bị lỗi dQ, tăng từ 82,1%). Pipeline thích ứng tự dừng sau 2 lô liên tiếp không cải thiện mục tiêu. **2026-07-24**: (a) phân tích ngược xác nhận SEED chi phối manufacturability - thêm phân bổ mẫu theo seed; (b) phát hiện + sửa lỗi `dQ` + rebuild đầy đủ 2.160 mẫu (3 seed bất đối xứng). Xem [Phase 2](#2-multi-batch-adaptive-doe-phase-2----hoàn-thành) bên dưới và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#bảng-tổng-hợp-lỗi-đã-sửa) |
 | 3 | Dataset Build (trường mật độ + target) | ✅ Hoàn thành, **đã rebuild lần 2 (v2, 2026-07-25)** | **57.216 mẫu train** (sau aug) / 2.044 val / 2.044 test - dataset production hiện tại. Xem mục "Rebuild v2" ngay dưới bảng này |
 | 4 | CNN Surrogate Model | ✅ Hoàn thành, đã retrain trên dataset v2 | Dự đoán (ν₁₂, ν₂₁, volfrac) từ trường mật độ. R² trên test set v2 (`surrogate_v2.pt`, 2026-07-25): ν₁₂ = **0,974**, ν₂₁ = **0,964**, volfrac = 0,983. Xem [Phase 4](#4-cnn-surrogate-model-phase-4----hoàn-thành) bên dưới |
-| 5 | Conditional VAE | ✅✅ Đã sửa surrogate-exploitation bằng differentiable-physics; đã retrain và mở rộng condition | `cvae_v2_finetuned.pt` là checkpoint production khuyến nghị: R²(FE,n=300)=**0,9953** (oracle), hit rate single-shot=**99,7%**, frac manufacturable=0,247. `cvae_realphysics.pt` trên dataset v1 đạt R²=0,9984/hit-rate 98,3%/manuf=0,280 ở phép đo tương ứng. Condition optional gồm `volfrac`/`void_size_frac` (`--extended-condition`) và ν₀ (`--include-nu0`); A/B trên cùng dataset cho ν₀ tăng R² 0,9776→0,9843 và manufacturability 0,312→0,365. Composite score dùng trọng số accuracy/manufacturability/aesthetic `0,6/0,3/0,1`. Xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **2026-08-23 (nhánh `substrate-material`):** bộ hồi quy cVAE đã KAN-hóa (`EfficientKANLinear` cho mọi `fc`) + thêm WIRE INR decoder (`decoder_type="conv"|"wire"`, resolution-agnostic). Checkpoint KAN khuyến nghị: `cvae_kan_realphysics_v2.pt` (R² surrogate=0,64, R²(FE thật)=0,8889 - mục tiêu DoN v2: R² tổng≥0,60 VÀ R²(FE)≥0,85, đã đạt cả 2 - vượt baseline Linear đo lại 0,29/0,35). Chi tiết: [docs/task_progress.md](docs/task_progress.md), [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md#2026-08-23---kan-regression-head-task-1-baseline-085-không-tái-lập-real-physics-là-chìa-khóa-property-fidelity). |
+| 5 | Conditional VAE | ✅✅ Đã sửa surrogate-exploitation bằng differentiable-physics; đã retrain và mở rộng condition | `cvae_v2_finetuned.pt` là checkpoint production khuyến nghị: R²(FE,n=300)=**0,9953** (oracle), hit rate single-shot=**99,7%**, frac manufacturable=0,247. `cvae_realphysics.pt` trên dataset v1 đạt R²=0,9984/hit-rate 98,3%/manuf=0,280 ở phép đo tương ứng. Condition optional gồm `volfrac`/`void_size_frac` (`--extended-condition`) và ν₀ (`--include-nu0`); A/B trên cùng dataset cho ν₀ tăng R² 0,9776→0,9843 và manufacturability 0,312→0,365. Composite score dùng trọng số accuracy/manufacturability/aesthetic `0,6/0,3/0,1`. Xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **2026-09-25 (nhánh `substrate-material`, [docs/plan.md](docs/plan.md) v3):** tinh chỉnh latent bằng gradient FE khả vi *nhận thức nhị phân hóa* (`--projection-betas`) đưa R²(FE,v12) single-shot 0,874→**0,998** và best-of-30 0,986→0,997 trên `cvae_v2_finetuned.pt`; ablation có kiểm soát KAN vs Linear (2 seed, FE thật) - **KAN không thắng**, giữ Linear; WIRE decoder đã đóng (không đạt tiêu chí dừng). Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-09-25. |
 | 6 | Hậu xử lý & kiểm định FEA | ✅ Hoàn thành | Nhị phân hoá + connectivity/min-feature/periodicity (`manufacturability.py`) + lọc/verify bằng FE thật (`best_of_n_eval.py`) - đã có sẵn trong pipeline Phase 5 |
 | 7 | Active-learning loop | ✅ Kết luận (2026-07-31) | Implement + chạy production (`pipeline/phase5_cvae/active_learning.py`) - **không cải thiện** checkpoint đã tối ưu (`cvae_realphysics.pt` gần mức trần, mean_abs_error tệ đi 0,0246→0,0686 sau 1 vòng) - giữ nguyên checkpoint production. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-07-31 |
 | 8 | Xác thực cuối & đóng gói | 🟨 Hầu hết hoàn thành | **8.1** đối chiếu FE độc lập: ✅ `scikit-fem` khớp tới 1e-9 (R²=1,000000, n=24). **8.3** thư viện thiết kế: ✅ 24 thiết kế, hit-rate 100%, 87,5% manufacturable. **8.4** báo cáo: ✅. **8.2** biến dạng lớn và **8.5** STL: ⬜ tùy chọn, chưa làm. |
 
-**Cập nhật Exp 3 (2026-09-11):** đối chứng cùng test protocol giữa MLP +
-real-physics và checkpoint KAN v2 cho kết quả lần lượt là
-`R²=[0,432; 0,087; -2,483]` và `[0,836; 0,476; -0,221]` cho
-`[v12, v21, volfrac]`; R² FE(v12), n=24 lần lượt là `-9,834` và `0,581`.
-MLP đã chạy đủ 150 epoch. KAN v2 chưa được retrain lại với các chỉnh sửa
-đối xứng decoder/volfrac loss mới, vì vậy đây chưa phải claim nhân quả cuối
-cùng về riêng KAN.
+**Cập nhật 2026-09-25 (plan v3, nhánh `substrate-material`):** so sánh "KAN vượt Linear ~2×"
+và Exp 3 (2026-09-11) trước đây dựa trên `property_accuracy()` (chấm qua surrogate - xếp hạng ngược
+FE thật) và một phần trên bug loader `load_cvae` (ép đối xứng lúc đánh giá, `docs/LIMITATIONS.md`
+mục 28) - **không còn dùng làm kết luận**. Ablation lại có kiểm soát bằng FE thật: KAN không thắng
+Linear. Xem [docs/plan.md](docs/plan.md) mục P1.2.
 
 > Chi tiết từng phase con: xem [docs/PIPELINE.md](docs/PIPELINE.md), [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) và [docs/ARCHITECT.md](docs/ARCHITECT.md).
 > 
-> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative hiện rõ nhất ở sign-flip OOD (R²=0,418 so với 0,057). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative hiện rõ nhất ở sign-flip OOD (ν₁₂ dương 6/6 mục tiêu, MAE 0,19 so với 0,40 của retrieval); không ngoại suy được biên độ ra ngoài dải train. Refine nhận thức nhị phân hóa nâng R²(FE) trong phân phối lên ~0,998 (LIMITATIONS #29). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
@@ -203,7 +201,7 @@ Tóm tắt nhanh:
 2. **Multi-Batch Adaptive DOE (Phase 2)** - 8 lô, 7.920 mẫu, tỷ lệ hội tụ FE 100%, auxetic rate 91,9% sau rebuild.
 3. **Dataset Build (Phase 3)** - dataset v2 hiện hành: train=57.216 / val=2.044 / test=2.044.
 4. **CNN Surrogate (Phase 4)** - `surrogate_v2.pt`: R²(v12)=0,974, R²(v21)=0,964, R²(volfrac)=0,983.
-5. **Conditional VAE (Phase 5)** - `cvae_v2_finetuned.pt` (khuyến nghị production): R²(FE,n=300)=0,9953 (oracle), hit rate single-shot=99,7%. Condition optional gồm `volfrac`/`void_size_frac` và ν₀; `best_of_n_eval.py` dùng chấm điểm tổng hợp accuracy/manufacturability/aesthetic. **2026-08-23 (nhánh `substrate-material`):** bộ hồi quy KAN-hóa + WIRE decoder (`decoder_type="conv"|"wire"`), checkpoint KAN khuyến nghị `cvae_kan_realphysics_v2.pt` (R² surrogate=0,64, R²(FE thật)=0,8889, mục tiêu DoN v2: ≥0,60/≥0,85, đã đạt) - xem [docs/task_progress.md](docs/task_progress.md).
+5. **Conditional VAE (Phase 5)** - `cvae_v2_finetuned.pt` (khuyến nghị production): R²(FE,n=300)=0,9953 (oracle), hit rate single-shot=99,7%. Condition optional gồm `volfrac`/`void_size_frac` và ν₀; `best_of_n_eval.py` dùng chấm điểm tổng hợp accuracy/manufacturability/aesthetic. **2026-08-23 (nhánh `substrate-material`):** bộ hồi quy KAN-hóa + WIRE decoder (`decoder_type="conv"|"wire"`), ablation 2026-09-25 cho thấy KAN không thắng Linear khi đo bằng FE thật, production giữ Linear; tinh chỉnh latent nhận thức nhị phân hóa đạt R²(FE) ~0,998 - xem [docs/plan.md](docs/plan.md).
 6. **Xác thực và so sánh (Phase 6-8)** - FE độc lập khớp tới 1e-9; thư viện 24 thiết kế đạt 87,5% manufacturable. Retrieval vẫn là baseline mạnh trong phân phối; lợi thế cVAE được ủng hộ rõ nhất trên sign-flip OOD.
 
 ---
@@ -328,7 +326,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) - tổng hợp mọi lệnh dòng lệnh (test suite, `simp`, `simp-analysis`, từng phase 1-5, sự cố thường gặp)
 - [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
 - [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 27 mục giới hạn đã biết (song ngữ)
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 30 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án
 - `outputs/figures/` - năm figure đã dựng cho bài báo (kiến trúc, data hygiene, OOD, Pareto và uốn tấm)
@@ -338,6 +336,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - Pilot damping/continuation có kiểm soát (N=400/config, Wilson CI) cho thấy `use_sqrt` (damping η=0.5) + `penal_init=2.0` gần gấp đôi yield `reentrant_bowtie` (46%→76-80%) - **kết quả tốt, đã kiểm chứng thống kê, nhưng CHƯA được áp dụng vào cấu hình production**; xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 - `outputs/{phase3,phase4,phase5}/` - báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `self_play/`, v.v.)
 - `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` - notebook phân tích Phase 1-5 và tổng kết end-to-end
+- `notebooks/09_cheap_physical_properties.ipynb` - tính chất suy từ Q (E/G/B, proxy ấn lõm, tốc độ sóng quasi-static) trên dataset A4: kiểm tra cận vật lý, đo tính chất nào mang thông tin mới, biên Pareto ν ↔ độ cứng riêng
 
 ---
 

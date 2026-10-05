@@ -47,7 +47,7 @@ from dataset import (  # noqa: E402
     condition_flags_from_dim,
 )
 from manufacturability import force_periodic  # noqa: E402
-from model import CVAE  # noqa: E402
+from model import CVAE, cvae_kwargs_from_checkpoint  # noqa: E402
 
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
@@ -64,24 +64,7 @@ VALIDATED_CKPT_NAMES = {"cvae_v2_finetuned.pt", "cvae_realphysics.pt"}
 
 def load_model(device="cpu", ckpt_path=CKPT_PATH):
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    # Infer the head type for older checkpoints that predate the explicit
-    # `use_kan` metadata; spline weights are unique to EfficientKANLinear.
-    use_kan = ckpt.get(
-        "use_kan",
-        any("spline_weight" in key for key in ckpt["model_state_dict"]),
-    )
-    model = CVAE(
-        condition_dim=ckpt["condition_dim"],
-        latent_dim=ckpt["latent_dim"],
-        resolution=ckpt["resolution"],
-        channels=ckpt.get("channels", (32, 64, 128, 256)),
-        decoder_type=ckpt.get("decoder_type", "conv"),
-        wire_hidden_dim=ckpt.get("wire_hidden_dim", 128),
-        wire_omega0=ckpt.get("wire_omega0", 10.0),
-        wire_s0=ckpt.get("wire_s0", 10.0),
-        use_kan=use_kan,
-        enforce_symmetry=ckpt.get("enforce_symmetry", False),
-    )
+    model = CVAE(**cvae_kwargs_from_checkpoint(ckpt))
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()

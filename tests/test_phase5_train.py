@@ -426,7 +426,9 @@ class TestRunEpochExtendedCondition:
         )
         assert stats["volfrac_loss"] == 0.0
 
-    def test_non_extended_condition_uses_dataset_volfrac(self, phase3_npz_path):
+    def test_non_extended_condition_uses_dataset_volfrac(
+        self, phase3_npz_path
+    ):
         """The physical volfrac label is available without extended inputs."""
         from pipeline.phase5_cvae.dataset import CVAEDataset
         from pipeline.phase5_cvae.model import CVAE
@@ -887,3 +889,24 @@ class TestRealFeR2:
 
         r2 = train_mod.real_fe_r2(model, conditions, device="cpu")
         assert np.isnan(r2)
+
+
+class TestRpProjectionBeta:
+    """Lịch β Heaviside cho real-physics loss lúc train (plan.md v3 P1.3)."""
+
+    def test_disabled_returns_none(self):
+        from pipeline.phase5_cvae.train import rp_projection_beta
+
+        assert rp_projection_beta(None, 5, 10) is None
+
+    def test_geometric_ramp_from_one_to_max(self):
+        from pipeline.phase5_cvae.train import rp_projection_beta
+
+        assert rp_projection_beta(64.0, 1, 7) == 1.0
+        assert rp_projection_beta(64.0, 7, 7) == 64.0
+        assert rp_projection_beta(64.0, 4, 7) == 8.0  # 64 ** 0.5
+
+    def test_single_epoch_run_does_not_divide_by_zero(self):
+        from pipeline.phase5_cvae.train import rp_projection_beta
+
+        assert rp_projection_beta(16.0, 1, 1) == 1.0

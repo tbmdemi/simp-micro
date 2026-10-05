@@ -837,6 +837,39 @@ R²(FE) đo trên 8 condition validation dùng trong lúc train cải thiện đ
 
 **Latent dataset cho Giai đoạn 2 (Latent diffusion prior, `docs/plan.md`) - script mới `build_latent_dataset.py`, phát hiện đáng chú ý.** Mã hoá cả train/val/test bằng encoder đóng băng của `cvae_kan_realphysics_v2.pt` (deterministic, `z=mu`, không sample qua reparameterization). **`mu` thật lệch rõ so với N(0,1) prior mặc định của `CVAE.generate()`:** mean≈0,35-0,36, std≈1,28-1,32 (nhất quán cả 3 split, không phải nhiễu 1 lần đo) - xác nhận bằng số liệu thật giả thuyết nền tảng của Giai đoạn 2 (aggregate posterior KHÔNG khớp Gaussian chuẩn, sample ngẫu nhiên từ N(0,1) đang lấy mẫu ở vùng latent space không đại diện đúng cho dữ liệu thật). 3 test mới (`tests/test_phase5_build_latent_dataset.py`), 646/646 pass. File latent: `outputs/phase5/cvae_kan_realphysics_v2_latents_{train,val,test}.npz`.
 
+
+### 2026-09-25 - plan.md v3 P1.0/P1.1: bug `load_cvae` làm sai benchmark 09-23; refinement đạt ở single-shot, thua ở best-of-N/OOD vì khai thác vật liệu xám
+
+**Bug loader (đã sửa, `LIMITATIONS.md` mục 28):** `adversarial_dataset.load_cvae()` bỏ qua `use_kan`/`enforce_symmetry` từ khi mặc định `CVAE(enforce_symmetry=True)` được thêm (2026-09-11) → checkpoint KAN cũ bị ép đối xứng qua đường chéo lúc đánh giá, checkpoint Linear crash. Benchmark refinement 2026-09-23 (KAN v2, 24 condition) đo lại đúng: R²(v12) baseline **0,058** (không phải −16,00), refined **0,92** (không phải −7,60), MAE giảm 68% [CI95 57-76%]. Chỉ 2,5% ảnh train đối xứng qua đường chéo và 45% mẫu có |v12−v21|>0,1 → mọi checkpoint train với mặc định đối xứng mới không biểu diễn được dữ liệu dị hướng (ứng viên nguyên nhân Exp 3 MLP/WIRE v3 thất bại, chưa kiểm chứng).
+
+**Harness (P1.0):** `benchmark_physics_guided_refinement.py` thêm `--targets/--target-v21/--n-samples/--force-periodic/--projection-betas` + CI paired bootstrap (`bootstrap_ci.bootstrap_paired_mae_reduction`) + chỉ số "guarded". Với loader cũ tái lập bit-for-bit baseline 09-23 (MAE 0,5868); refined lệch nhẹ (0,384 vs 0,355) do L-BFGS trên GPU không tất định (2 lần chạy liên tiếp lệch R² ~0,006).
+
+**P1.1a - refinement single-shot, 100 condition, 30 bước:** `cvae_v2_finetuned` (production) R²(v12) 0,874→**0,976**, MAE giảm **57,7%** [49,4; 64,6] - ĐẠT tiêu chí ≥20%. `cvae_realphysics` 19,4% [0,2; 35,0] (sát ngưỡng). KAN v2 57,1% [49,5; 64,6]. Phụ: R²(v12) single-shot FE thật của `cvae_v2_finetuned` = 0,874 trong khi `property_accuracy()` (surrogate) báo 0,27 - thước đo surrogate xếp hạng sai.
+
+**P1.1c - khả thi vật lý (giải tích):** vật liệu trực hướng 2D cần ν12·ν21<1 → target đối xứng ν12=ν21≤−1 không tồn tại. Dữ liệu khớp (max v12·v21=0,43; mẫu v12=−1,95 đi với v21=−0,04). Quét OOD phải dùng target dị hướng.
+
+**P1.1b/d - KHÔNG ĐẠT (best-of-30 + `force_periodic`, `cvae_v2_finetuned`):** (b) refine sau best-of-30 làm tệ hơn: MAE(v12) 0,0152→0,0246 (−62,5% [−98,3; −33,9]). (d) OOD dị hướng (v21=−0,05, 10 lặp/target): best-of-30 không refine đạt sai số tương đối v12 trung vị 0,5%/0,9%/4,1% tại −1,0/−1,5/−1,75 nhưng **bão hòa ~−1,95** (= min tập train): 11%/16%/23% tại −2,0/−2,25/−2,5; refine làm tệ hơn ngoài dải (36-44%). **Nguyên nhân đã xác nhận:** loss liên tục cuối ~1e-10 (khớp target gần tuyệt đối kể cả ν*=−2,5) nhưng MSE sau force_periodic+nhị phân hóa+resize nearest 1e-3-1e-2 → refine khai thác **vật liệu xám** (mật độ trung gian), cùng họ surrogate exploitation. Hướng sửa (P1.1e): đưa force_periodic + Heaviside projection khả vi (β tăng dần) + resize nearest khớp PIL tuyệt đối (`pipeline/phase5_cvae/heaviside.py`) vào objective.
+
+
+**P1.1e - ĐỘT PHÁ: refine nhận thức nhị phân hóa** (objective: force_periodic → Heaviside β {1,4,16,64}, L-BFGS khởi động lại mỗi β → resize nearest khớp PIL tuyệt đối; 32 bước; `cvae_v2_finetuned`): (a) single-shot `IN100`: MAE(v12) −91,8% [89,0; 93,9], R²(v12) 0,874→**0,998**; (b) sau best-of-30: MAE −62,6% [50,7; 72,1], R² 0,986→0,997 (trước đó làm TỆ hơn 62%); (d) OOD sai số tương đối v12 trung vị −2,0: 12,5% (bản thường) / 4,9% (guarded = chỉ nhận refine khi FE verify tốt hơn), −2,25: 22%/15%, −2,5: 32%/22% - vẫn bão hòa ngoài dải train, không claim ngoại suy biên độ. Chi phí ~77 FE-solve/condition. `pipeline/phase5_cvae/heaviside.py` (mới, 8 test), `tandem_lbfgs(projection_betas=, periodic=)`, 674/674 test pass.
+
+**P1.2 - Ablation KAN vs Linear có kiểm soát** (cùng recipe 2 giai đoạn production: base γ=20 50 epoch → fine-tune real-physics λ=20 35 epoch, `--disable-symmetry`, chọn theo `fe_r2` trên 24 condition validation; 2 seed fine-tune; đánh giá `IN100` + refine P1.1e): theo tiêu chí đặt trước (KAN thắng khi CI paired > 0 trên cả 2 seed) **KAN không thắng ở chế độ nào**. Best-of-30 (production): **Linear thắng cả 2 seed** (KAN MAE kém hơn 25% [−56; −1] / 20% [−42; −2]). Có refine: cả 2 head R²(v12) 0,994-0,999. KAN có xu hướng tốt hơn ở single-shot (+18% [4; 30] seed 7, không có ý nghĩa ở seed 123). KAN 4,79M tham số vs Linear 1,49M. Giữ Linear cho production; luận điểm "KAN vượt Linear ~2×" của plan v2 bị bác bỏ bằng thước đo FE thật.
+
+**P1.3 - WIRE lần cuối, ĐÓNG:** base 25 epoch → fine-tune real-physics 25 epoch với Heaviside trong loss train (`train.py --rp-projection-beta-max 64 --rp-periodic`, β tăng hình học, dùng chung `heaviside.project_for_fe`), `--disable-symmetry`. `IN24`: hit-rate single-shot 12,5% (tiêu chí ≥30%), R²(FE, best-of-30) −7,19 (tiêu chí >0), manufacturable 4,6%; có refine P1.1e R² −1,20. Tốt hơn mọi WIRE trước (0-4,2% / −10,3 đến −13,9) nhưng không đạt tiêu chí đặt trước → không đầu tư thêm, ghi kết quả âm tính.
+### 2026-09-30 - Tính chất "rẻ" suy từ Q: E/G/B, proxy ấn lõm, tốc độ sóng quasi-static (dataset A4)
+
+**Code:** `real_physics.solve_elastic_with_grad()` trả về v12/v21/E_x/E_y/G_xy/B_eff kèm gradient giải tích theo pixel, chỉ cần 1 lần FE (dS = −S·dQ·S; B_eff = 1/(S00+S11+2S01)). `solve_nu_with_grad()` giờ là lát cắt ν của hàm này, không đổi hành vi. `auxetic.compute_wave_speeds()` giải bài toán Christoffel trên Q, chuẩn hóa theo sqrt(E0/ρs). Thêm 14 test (FD gradient cho 4 mô-đun, đối chiếu `compute_elastic_constants`, ô đặc đẳng hướng closed-form); tổng 693/693 pass.
+
+**Backfill:** `analysis/scripts/backfill_elastic_props_npz.py` chạy trên toàn bộ `outputs/phase3_a4/{train,val,test}.npz` (73.164 mẫu, penal và ν0 thật từng mẫu, ~25 phút/12 worker) và ghi ra `{split}_props.npz` (Q thô + 13 cột). Không có lỗi FE nào. Sanity |Δv12| median 0,0012, 1,9–2,7% mẫu lệch >0,1 do resize 64→50 (khớp backfill f1/f2 2026-08-05).
+
+**Phân tích** (`notebooks/09_cheap_physical_properties.ipynb`, val+test n=4778 sau QC; không dùng train vì augment ×6 làm rò rỉ CV):
+- 0% vi phạm cận Voigt và Hashin–Shtrikman (xác nhận FE đúng). Median B_eff/B_HS = 0,17: auxetic kém hiệu quả về độ cứng khối.
+- R² (5-fold CV) dự đoán từ 5 điều kiện hiện có: E/B/M/c_qL đạt 0,92–0,97, gần như dư thừa nếu thêm làm condition. **G_xy 0,84, c_qT 0,80**: mang nhiều thông tin mới nhất, ứng viên ưu tiên cho condition/refinement.
+- Proxy ấn lõm M_y = E_y/(1−ν12ν21): khi cố định mật độ, tương quan với ν đổi dấu giữa các nhóm (+0,54…−0,32), nên KHÔNG có quy luật chung "auxetic cứng hơn". Riêng cụm ν21 < −1,2 có M_y/ρ ≈ 0,6 (gấp 2–3 lần), do 1−ν12ν21 → 0.
+- Biên Pareto ν12 ↔ E_x/ρ: độ cứng riêng giảm ~5,7× (0,53 → 0,09) khi ν12 đi từ −0,27 đến −1,19. Biên do hexagonal/hourglass chi phối.
+
+**Chưa làm:** nối `solve_elastic_with_grad` vào refinement (target đa tính chất), solver dẫn nhiệt κ.
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

@@ -372,6 +372,49 @@ class CVAE(nn.Module):
             return self.decoder(z, condition)
 
 
+def cvae_kwargs_from_checkpoint(ckpt: dict) -> dict:
+    """Dựng kwargs cho `CVAE(...)` từ 1 checkpoint đã lưu - nguồn suy luận
+    kiến trúc DUY NHẤT cho mọi loader (sample.load_model,
+    adversarial_dataset.load_cvae, verify_fe).
+
+    Bug đã sửa 2026-09-25: load_cvae() (dùng bởi best_of_n_eval, self_play,
+    benchmark refinement, coverage_eval, active_learning, ...) tự dựng CVAE
+    mà không đọc `use_kan`/`enforce_symmetry` -> luôn rơi về mặc định
+    True/True của CVAE.__init__: checkpoint KAN train TRƯỚC khi có symmetry
+    (vd cvae_kan_realphysics_v2.pt) bị ép đối xứng lúc đánh giá, checkpoint
+    Linear (vd cvae_realphysics.pt) không load được. Hai loader lệch nhau vì
+    mỗi nơi tự chép danh sách field - gom về 1 chỗ để không lệch lần nữa.
+
+    Mặc định cho checkpoint cũ thiếu field (tương thích ngược):
+      - use_kan: suy từ state_dict (khóa `spline_weight` chỉ có ở
+        EfficientKANLinear).
+      - enforce_symmetry: False - checkpoint trước 2026-09-11 train không có
+        ràng buộc này; mặc định True của CVAE.__init__ chỉ dành cho train mới.
+
+    Args:
+        ckpt: dict đã torch.load, có ít nhất `latent_dim` và
+            `model_state_dict`.
+
+    Returns:
+        dict kwargs truyền thẳng vào CVAE(**kwargs).
+    """
+    state = ckpt["model_state_dict"]
+    return {
+        "condition_dim": ckpt.get("condition_dim", 2),
+        "latent_dim": ckpt["latent_dim"],
+        "resolution": ckpt.get("resolution", 64),
+        "channels": ckpt.get("channels", (32, 64, 128, 256)),
+        "decoder_type": ckpt.get("decoder_type", "conv"),
+        "wire_hidden_dim": ckpt.get("wire_hidden_dim", 128),
+        "wire_omega0": ckpt.get("wire_omega0", 10.0),
+        "wire_s0": ckpt.get("wire_s0", 10.0),
+        "use_kan": ckpt.get(
+            "use_kan", any("spline_weight" in key for key in state)
+        ),
+        "enforce_symmetry": ckpt.get("enforce_symmetry", False),
+    }
+
+
 if __name__ == "__main__":
     # Self-test: `python3 pipeline/phase5_cvae/model.py`
     model = CVAE(condition_dim=2, latent_dim=32)

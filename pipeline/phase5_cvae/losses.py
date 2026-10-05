@@ -23,11 +23,13 @@ import torch.nn.functional as F
 try:
     # Khi losses.py được import theo đường dẫn dotted đầy đủ
     # (pipeline.phase5_cvae.losses, vd tests/test_phase5_losses.py).
+    from .heaviside import project_for_fe
     from .real_physics import RealPhysicsNu
 except ImportError:
     # Khi losses.py được import bằng "from losses import ..." sau
     # sys.path.insert(dirname(__file__)) (train.py/evaluate.py/best_of_n_eval.py)
     # - xem README "bare-import landmine" note trong CLAUDE.md/memory.
+    from heaviside import project_for_fe
     from real_physics import RealPhysicsNu
 
 REPO_ROOT = os.path.abspath(
@@ -362,6 +364,8 @@ def real_physics_prior_loss(
     subsample: int = None,
     n_workers: int = 0,
     nu0_col: int = None,
+    projection_beta: float = None,
+    periodic: bool = False,
 ):
     """Bản áp lên ảnh decode từ z ~ PRIOR N(0,1) (không qua encoder) - CÙNG
     chế độ model.generate() dùng lúc inference, xem lý do trong docstring
@@ -371,6 +375,12 @@ def real_physics_prior_loss(
 
     nu0_col: xem real_physics_loss() - truyền thẳng xuống.
 
+    projection_beta: None (mặc định) = hành vi cũ, FE trên ảnh liên tục.
+    Có giá trị = FE trên ảnh đã qua heaviside.project_for_fe (force_periodic
+    tùy `periodic` -> Heaviside β -> resize nearest khớp verify) - chống
+    decoder học khai thác vật liệu xám (plan.md v3 P1.1e/P1.3). Caller tăng
+    dần β theo epoch (continuation).
+
     Trả về MSE THÔ (không nhân PROP_LOSS_SCALE) - giống property_consistency_loss(),
     caller (train.py::run_epoch) chịu trách nhiệm nhân PROP_LOSS_SCALE trước
     khi cộng vào tổng loss, để --lambda-real-physics cùng thang đo với --gamma.
@@ -378,6 +388,14 @@ def real_physics_prior_loss(
     bsz = condition.size(0)
     z_prior = torch.randn(bsz, latent_dim, device=condition.device)
     prior_recon = decoder(z_prior, condition)
+    if projection_beta is not None:
+        prior_recon = project_for_fe(
+            prior_recon,
+            projection_beta,
+            fe_params["nely"],
+            fe_params["nelx"],
+            periodic,
+        )
     return real_physics_loss(
         prior_recon,
         condition,

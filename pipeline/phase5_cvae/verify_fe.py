@@ -38,7 +38,7 @@ import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
 from dataset import CVAEDataset  # noqa: E402
-from model import CVAE  # noqa: E402
+from model import CVAE, cvae_kwargs_from_checkpoint  # noqa: E402
 
 REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..")
@@ -231,16 +231,7 @@ def load_cvae_checkpoint(gamma_tag: str, device):
             f"thư mục thật của bạn (xem output `ls outputs/phase5/`)."
         )
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    model = CVAE(
-        condition_dim=ckpt.get("condition_dim", 2),
-        latent_dim=ckpt["latent_dim"],
-        resolution=ckpt.get("resolution", 64),
-        channels=ckpt.get("channels", (32, 64, 128, 256)),
-        decoder_type=ckpt.get("decoder_type", "conv"),
-        wire_hidden_dim=ckpt.get("wire_hidden_dim", 128),
-        wire_omega0=ckpt.get("wire_omega0", 10.0),
-        wire_s0=ckpt.get("wire_s0", 10.0),
-    ).to(device)
+    model = CVAE(**cvae_kwargs_from_checkpoint(ckpt)).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     print(

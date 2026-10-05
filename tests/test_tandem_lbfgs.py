@@ -128,3 +128,41 @@ class TestGuidanceSourceRealPhysics:
                 surrogate_model=None,
                 guidance_source="surrogate",
             )
+
+
+class TestProjectionStages:
+    """Refine nhận thức nhị phân hóa (plan.md v3 P1.1e)."""
+
+    def test_runs_with_projection_and_periodic(self):
+        torch.manual_seed(0)
+        gen = _TinyFEGenerator(latent_dim=4, resolution=6)
+        result = tandem_inverse_design_lbfgs(
+            torch.tensor([-0.2, -0.2]),
+            gen,
+            guidance_source="real_physics",
+            fe_params=FE_PARAMS_SMALL,
+            steps=4,
+            learning_rate=0.1,
+            projection_betas=(1.0, 8.0),
+            periodic=True,
+        )
+        assert result["image"].shape == (1, 1, 6, 6)
+        assert len(result["history"]) >= 4
+        assert torch.isfinite(result["prediction"]).all()
+
+    def test_no_projection_keeps_legacy_single_stage(self):
+        """projection_betas=None phải cho đúng kết quả như trước (cùng z0)."""
+        gen = _TinyFEGenerator(latent_dim=4, resolution=6)
+        z0 = torch.randn(1, 4, generator=torch.Generator().manual_seed(1))
+        kw = dict(
+            guidance_source="real_physics",
+            fe_params=FE_PARAMS_SMALL,
+            steps=3,
+            learning_rate=0.1,
+            initial_z=z0,
+        )
+        a = tandem_inverse_design_lbfgs(torch.tensor([-0.2, -0.2]), gen, **kw)
+        b = tandem_inverse_design_lbfgs(
+            torch.tensor([-0.2, -0.2]), gen, projection_betas=None, **kw
+        )
+        assert torch.allclose(a["z"], b["z"])

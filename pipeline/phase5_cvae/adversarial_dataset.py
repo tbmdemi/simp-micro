@@ -31,7 +31,7 @@ import numpy as np
 import torch
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE  # noqa: E402
+from model import CVAE, cvae_kwargs_from_checkpoint  # noqa: E402
 from verify_fe import (  # noqa: E402
     FE_PARAMS,
     evaluate_density_field,
@@ -45,17 +45,17 @@ PHASE3_DIR = os.path.join(REPO_ROOT, "outputs", "phase3")
 
 
 def load_cvae(ckpt_path: str, device):
+    """Load cVAE đã train (eval mode) với đúng kiến trúc lưu trong checkpoint.
+
+    Args:
+        ckpt_path: đường dẫn file .pt do train.py lưu.
+        device: thiết bị đích ("cpu"/"cuda" hoặc torch.device).
+
+    Returns:
+        CVAE ở eval mode.
+    """
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    model = CVAE(
-        condition_dim=ckpt.get("condition_dim", 2),
-        latent_dim=ckpt["latent_dim"],
-        resolution=ckpt.get("resolution", 64),
-        channels=ckpt.get("channels", (32, 64, 128, 256)),
-        decoder_type=ckpt.get("decoder_type", "conv"),
-        wire_hidden_dim=ckpt.get("wire_hidden_dim", 128),
-        wire_omega0=ckpt.get("wire_omega0", 10.0),
-        wire_s0=ckpt.get("wire_s0", 10.0),
-    ).to(device)
+    model = CVAE(**cvae_kwargs_from_checkpoint(ckpt)).to(device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     return model

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-09-30 - Tính chất vật lý suy từ Q (nhánh `substrate-material`)
+
+#### Added
+- `real_physics.solve_elastic_with_grad()`: v12/v21/E_x/E_y/G_xy/B_eff kèm gradient giải tích theo pixel, chỉ 1 lần FE-solve; hằng `ELASTIC_KEYS`.
+- `auxetic.compute_wave_speeds()`: tốc độ sóng quasi-static (bài toán Christoffel trên Q), chuẩn hóa theo sqrt(E0/ρs).
+- `analysis/scripts/backfill_elastic_props_npz.py`: backfill Q + 13 tính chất cho `outputs/phase3_a4/{train,val,test}_props.npz` (73.164 mẫu, 0 lỗi FE).
+- `notebooks/09_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
+- 14 test mới (679 → 693).
+
+#### Changed
+- `real_physics.solve_nu_with_grad()` giờ là lát cắt ν của `solve_elastic_with_grad()` (1 nguồn công thức đạo hàm; giá trị và gradient không đổi, có test regression).
+
+### 2026-09-25 - plan v3 (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/heaviside.py`: Heaviside projection, force_periodic và resize nearest (khớp PIL tuyệt đối) bản torch khả vi + `project_for_fe()` dùng chung cho refine và loss train.
+- `tandem_lbfgs(projection_betas=, periodic=)`: refine latent nhận thức nhị phân hóa (β continuation, L-BFGS khởi động lại mỗi mức β).
+- `benchmark_physics_guided_refinement.py`: `--targets/--target-v21/--n-samples/--force-periodic/--projection-betas/--n-boot`, chỉ số guarded, CI paired; `bootstrap_ci.bootstrap_paired_mae_reduction()`.
+- `train.py --rp-projection-beta-max/--rp-periodic`: real-physics loss trên ảnh đã chiếu Heaviside.
+- `model.cvae_kwargs_from_checkpoint()`: nguồn suy luận kiến trúc duy nhất cho mọi loader.
+- 33 test mới (646 → 679).
+
+#### Fixed
+- `adversarial_dataset.load_cvae()` (và `verify_fe`) bỏ qua `use_kan`/`enforce_symmetry` của checkpoint - checkpoint KAN cũ bị ép đối xứng lúc đánh giá, checkpoint Linear crash (`docs/LIMITATIONS.md` mục 28).
+
+#### Changed
+- `docs/plan.md` viết lại thành v3 - nguồn kế hoạch + trạng thái duy nhất; Bài báo #1 định vị lại quanh physics-guided refinement. `PROJECT_PLAN.md`, `task_progress.md`, bản nháp paper #1 thêm banner trỏ về plan v3.
+
 > Ghi chú: khối lượng công việc dưới đây (Phase 3-5 đầy đủ) đã hoàn thành và có mặt trong `main`/`FixLoss` từ lâu, nhưng chưa từng được ghi vào CHANGELOG - mục này bù lại khoảng trống đó. Chưa gắn số phiên bản mới vì đó là quyết định phát hành, không tự ý bump.
 
 ### Added

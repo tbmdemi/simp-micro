@@ -665,6 +665,53 @@ class TestElasticConstants:
             compute_elastic_constants(Q_singular)
 
 
+class TestWaveSpeeds:
+    """Tests cho compute_wave_speeds() (simp/objectives/auxetic.py) - tốc
+    độ sóng quasi-static từ bài toán Christoffel trên Q."""
+
+    def test_solid_isotropic_matches_closed_form(self):
+        """Ô đặc đẳng hướng plane-stress: Q11 = E/(1-nu^2), Q33 = G =
+        E/(2(1+nu)), Q13 = 0 -> c_qL = sqrt(1/(1-nu^2)), c_qT =
+        sqrt(1/(2(1+nu))) (chuẩn hóa theo sqrt(E0/rho_s)), 2 trục bằng
+        nhau."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        E0, nu = 199.0, 0.3
+        Q = E0 / (1 - nu**2) * np.array([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, (1 - nu) / 2],
+        ])
+        c = compute_wave_speeds(Q, rel_density=1.0, E0=E0)
+        assert c['c_qL_x'] == pytest.approx(np.sqrt(1 / (1 - nu**2)))
+        assert c['c_qT_x'] == pytest.approx(np.sqrt(1 / (2 * (1 + nu))))
+        assert c['c_qL_y'] == pytest.approx(c['c_qL_x'])
+        assert c['c_qT_y'] == pytest.approx(c['c_qT_x'])
+
+    def test_lower_density_same_stiffness_is_faster(self):
+        """Cùng Q, rel_density giảm 4 lần -> tốc độ tăng đúng 2 lần
+        (c ~ 1/sqrt(rho)) - bắt lỗi đặt sai rel_density ở tử/mẫu."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        Q = np.array([[50.0, 5.0, 2.0], [5.0, 30.0, -1.0], [2.0, -1.0, 10.0]])
+        c1 = compute_wave_speeds(Q, rel_density=0.8, E0=199.0)
+        c2 = compute_wave_speeds(Q, rel_density=0.2, E0=199.0)
+        for k in c1:
+            assert c2[k] == pytest.approx(2.0 * c1[k])
+
+    def test_axis_swap_swaps_speeds(self):
+        """Hoán đổi vai trò trục x<->y trong Q (Q11<->Q22, Q13<->Q23) phải
+        hoán đổi tốc độ theo x và y - kiểm tra đúng chỉ số Christoffel."""
+        from simp.objectives.auxetic import compute_wave_speeds
+
+        Q = np.array([[80.0, 5.0, 3.0], [5.0, 20.0, -2.0], [3.0, -2.0, 10.0]])
+        P = np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
+        c = compute_wave_speeds(Q, 0.5, 199.0)
+        c_sw = compute_wave_speeds(P @ Q @ P.T, 0.5, 199.0)
+        assert c_sw['c_qL_x'] == pytest.approx(c['c_qL_y'])
+        assert c_sw['c_qT_x'] == pytest.approx(c['c_qT_y'])
+
+
 class TestReconstructBentSurface:
     """Tests cho reconstruct_3d_bent_surface() (simp/io/visualizer.py) -
     hình minh họa hình học, không phải mô phỏng FE (xem docstring hàm)."""

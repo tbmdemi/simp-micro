@@ -94,6 +94,104 @@ def _get_mesh(nelx: int, nely: int, E0: float, Emin: float, nu: float):
     return material, edofMat, iK, jK, pbc
 
 
+# Các đại lượng solve_elastic_with_grad() trả về - thứ tự cố định để caller
+# (vd refinement đa tính chất) có thể xếp thành tensor ổn định.
+ELASTIC_KEYS = ("v12", "v21", "E_x", "E_y", "G_xy", "B_eff")
+
+
+def solve_elastic_with_grad(
+    xPhys: np.ndarray,
+    penal: float,
+    E0: float = 199.0,
+    Emin: float = 1e-9,
+    nu: float = 0.3,
+    rho0: float = 1.0,
+):
+    """1 lần FE-solve + homogenization THẬT trên xPhys (nely, nelx) trong
+    [0,1], trả về MỌI hằng số đàn hồi suy từ Q cùng đạo hàm giải tích theo
+    pixel - không cần giải FE thêm cho bất kỳ đại lượng nào.
+
+    Mọi đại lượng là hàm của ma trận mềm S = Q^-1, nên chỉ cần
+    dS/dx = -S @ dQ/dx @ S rồi quy tắc chuỗi:
+        nu12 = -S01/S00, nu21 = -S01/S11           (quy tắc thương)
+        E_x = 1/S00, E_y = 1/S11, G_xy = 1/S22     (d(1/s) = -ds/s^2)
+        B_eff = 1/(S00 + S11 + 2*S01)              (mô-đun khối 2D, đáp ứng
+                                                    với ứng suất thủy tĩnh)
+    B_eff viết dạng compliance này tương đương đại số với công thức
+    Ex*Ey/[Ex(1-nu21)+Ey(1-nu12)] trong compute_elastic_constants() (thay
+    nu21/Ey = -S01, nu12/Ex = -S01) nhưng đạo hàm gọn hơn.
+
+    Args:
+        xPhys: (nely, nelx) mật độ trong [0,1].
+        penal: Số mũ phạt SIMP.
+        E0: Modul Young vật liệu nền.
+        Emin: Modul Young pha rỗng.
+        nu: Hệ số Poisson vật liệu nền (nu0).
+        rho0: Hệ số mật độ nền (xem compute_homogenized_tensor).
+
+    Returns:
+        (values, grads): values là dict {key: float} với key trong
+        ELASTIC_KEYS (mô-đun cùng đơn vị E0, KHÔNG chuẩn hóa - caller chia E0
+        nếu cần), grads là dict {key: np.ndarray (nely, nelx)}.
+
+    Không raise: FE-solve/nghịch đảo Q thất bại (density gần suy biến) ->
+    mọi value = 0.0 và gradient = 0 cho mẫu đó, cùng lý do như
+    solve_nu_with_grad() (không crash cả batch vì 1 mẫu rác).
+    """
+    nely, nelx = xPhys.shape
+    material, edofMat, iK, jK, pbc = _get_mesh(nelx, nely, E0, Emin, nu)
+
+    try:
+        U, U0 = solve_fe(
+            xPhys, material.KE, iK, jK, pbc, penal, E0, Emin, rho0=rho0
+        )
+        Q, dQ, _ = compute_homogenized_tensor(
+            U0 + U, U0, xPhys, material.KE, edofMat, penal, E0, Emin,
+            rho0=rho0,
+        )
+
+        S = np.linalg.inv(Q)
+        # dS/dx_pixel = -S @ dQ[:,:,i,j] @ S, vector hóa trên toàn lưới.
+        dS = -np.einsum('ik,klpq,lm->impq', S, dQ, S)
+
+        s_bulk = S[0, 0] + S[1, 1] + 2.0 * S[0, 1]
+        ds_bulk = dS[0, 0] + dS[1, 1] + 2.0 * dS[0, 1]
+        values = {
+            "v12": -S[0, 1] / S[0, 0],
+            "v21": -S[0, 1] / S[1, 1],
+            "E_x": 1.0 / S[0, 0],
+            "E_y": 1.0 / S[1, 1],
+            "G_xy": 1.0 / S[2, 2],
+            "B_eff": 1.0 / s_bulk,
+        }
+        grads = {
+            "v12": -(dS[0, 1] * S[0, 0] - S[0, 1] * dS[0, 0]) / S[0, 0] ** 2,
+            "v21": -(dS[0, 1] * S[1, 1] - S[0, 1] * dS[1, 1]) / S[1, 1] ** 2,
+            "E_x": -dS[0, 0] / S[0, 0] ** 2,
+            "E_y": -dS[1, 1] / S[1, 1] ** 2,
+            "G_xy": -dS[2, 2] / S[2, 2] ** 2,
+            "B_eff": -ds_bulk / s_bulk ** 2,
+        }
+
+        if not (all(np.isfinite(v) for v in values.values())
+                and all(np.all(np.isfinite(g)) for g in grads.values())):
+            raise FloatingPointError(
+                "hằng số đàn hồi/gradient không hữu hạn (Q gần suy biến)"
+            )
+
+        return {k: float(v) for k, v in values.items()}, grads
+    except Exception as e:
+        logging.getLogger(__name__).warning(
+            "solve_elastic_with_grad thất bại (%s) - trả value=0, "
+            "gradient=0 cho mẫu này thay vì crash cả batch.", e
+        )
+        zeros = np.zeros((nely, nelx))
+        return (
+            {k: 0.0 for k in ELASTIC_KEYS},
+            {k: zeros.copy() for k in ELASTIC_KEYS},
+        )
+
+
 def solve_nu_with_grad(
     xPhys: np.ndarray,
     penal: float,
@@ -105,6 +203,10 @@ def solve_nu_with_grad(
     """1 lần FE-solve + homogenization THẬT trên xPhys (nely, nelx) trong
     [0,1], trả về (v12, v21, d_v12/dx, d_v21/dx) - giá trị VÀ đạo hàm giải
     tích chính xác trong CÙNG 1 lần giải (không cần giải thêm cho backward).
+
+    Là lát cắt ν của solve_elastic_with_grad() (1 nguồn công thức duy nhất
+    cho đạo hàm qua S = Q^-1); chi phí tính thêm E/G/B chỉ là vài phép toán
+    trên lưới pixel, không đáng kể so với FE-solve.
 
     Returns:
         v12, v21 : float.
@@ -118,38 +220,10 @@ def solve_nu_with_grad(
     dc bằng penalty lớn; ở đây trả gradient 0 vì đây là loss có target cụ
     thể, không phải tối ưu tự do - đóng góp 0 vào backward an toàn hơn
     đóng góp giá trị rác)."""
-    nely, nelx = xPhys.shape
-    material, edofMat, iK, jK, pbc = _get_mesh(nelx, nely, E0, Emin, nu)
-
-    try:
-        U, U0 = solve_fe(xPhys, material.KE, iK, jK, pbc, penal, E0, Emin, rho0=rho0)
-        U_total = U0 + U
-        Q, dQ, _ = compute_homogenized_tensor(
-            U_total, U0, xPhys, material.KE, edofMat, penal, E0, Emin, rho0=rho0
-        )
-
-        S = np.linalg.inv(Q)
-        v12 = -S[0, 1] / S[0, 0]
-        v21 = -S[0, 1] / S[1, 1]
-
-        # dS/dx_pixel = -S @ dQ[:,:,i,j] @ S, vector hóa trên toàn lưới pixel.
-        dS = -np.einsum('ik,klpq,lm->impq', S, dQ, S)
-
-        d_v12 = -(dS[0, 1] * S[0, 0] - S[0, 1] * dS[0, 0]) / (S[0, 0] ** 2)
-        d_v21 = -(dS[0, 1] * S[1, 1] - S[0, 1] * dS[1, 1]) / (S[1, 1] ** 2)
-
-        if not (np.isfinite(v12) and np.isfinite(v21)
-                and np.all(np.isfinite(d_v12)) and np.all(np.isfinite(d_v21))):
-            raise FloatingPointError("v12/v21/gradient không hữu hạn (Q gần suy biến)")
-
-        return float(v12), float(v21), d_v12, d_v21
-    except Exception as e:
-        logging.getLogger(__name__).warning(
-            "solve_nu_with_grad thất bại (%s) - trả v12=v21=0, gradient=0 cho mẫu này "
-            "thay vì crash cả batch.", e
-        )
-        zeros = np.zeros((nely, nelx))
-        return 0.0, 0.0, zeros, zeros
+    values, grads = solve_elastic_with_grad(
+        xPhys, penal, E0=E0, Emin=Emin, nu=nu, rho0=rho0
+    )
+    return values["v12"], values["v21"], grads["v12"], grads["v21"]
 
 
 def _solve_worker(args):

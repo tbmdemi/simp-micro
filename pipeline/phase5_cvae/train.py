@@ -202,6 +202,27 @@ def apply_condition_dropout(
     return condition
 
 
+def rp_projection_beta(beta_max, epoch: int, n_epochs: int):
+    """β Heaviside cho real-physics loss tại `epoch` (continuation hình học
+    1 -> beta_max qua toàn bộ run: β = beta_max ** ((epoch-1)/(n_epochs-1))).
+
+    Tăng dần thay vì dùng β lớn ngay: β lớn làm tanh bão hòa, gradient gần
+    0 ở mọi pixel xa ngưỡng - decoder chưa gần nhị phân thì không học được.
+
+    Args:
+        beta_max: β cuối run; None = tắt projection (hành vi cũ).
+        epoch: epoch hiện tại, đánh số từ 1.
+        n_epochs: tổng số epoch của run.
+
+    Returns:
+        float β, hoặc None nếu beta_max là None.
+    """
+    if beta_max is None:
+        return None
+    frac = (epoch - 1) / max(n_epochs - 1, 1)
+    return float(beta_max) ** min(max(frac, 0.0), 1.0)
+
+
 def run_epoch(
     model,
     loader,
@@ -226,6 +247,8 @@ def run_epoch(
     lambda_volfrac=0.0,
     optional_dropout_p=0.5,
     include_nu0=False,
+    rp_projection_beta=None,
+    rp_periodic=False,
 ):
     model.train(mode=train)
     totals = {
@@ -334,6 +357,15 @@ def run_epoch(
                     subsample=real_physics_subsample,
                     n_workers=real_physics_workers,
                     nu0_col=nu0_col,
+                    # Chỉ truyền khi bật: giữ nguyên chữ ký gọi mặc định cũ.
+                    **(
+                        {
+                            "projection_beta": rp_projection_beta,
+                            "periodic": rp_periodic,
+                        }
+                        if rp_projection_beta is not None
+                        else {}
+                    ),
                 )
                 losses["total"] = (
                     losses["total"]
@@ -367,7 +399,9 @@ def run_epoch(
                 # WIRE's coordinate MLP and the KAN encoder can amplify the
                 # KL-warmup gradient early in training; clipping prevents one
                 # batch from pushing decoder activations into NaN before BCE.
-                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), max_norm=1.0
+                )
                 optimizer.step()
 
             if rp_loss is not None:
@@ -606,6 +640,22 @@ def main():
         "xem real_physics._get_pool). 0 = tuần tự. THẬN TRỌNG khi "
         "DataLoader num_workers>0 đã đa luồng - xem cảnh báo fork() trong "
         "real_physics.py.",
+    )
+    parser.add_argument(
+        "--rp-projection-beta-max",
+        type=float,
+        default=None,
+        help="Bật real-physics loss trên ảnh đã qua force_periodic(tùy "
+        "--rp-periodic) -> Heaviside -> resize nearest khớp verify "
+        "(heaviside.project_for_fe), β tăng hình học 1 -> giá trị này qua "
+        "các epoch. Mặc định None = FE trên ảnh liên tục (hành vi cũ). "
+        "Xem plan.md v3 P1.1e/P1.3 (chống khai thác vật liệu xám).",
+    )
+    parser.add_argument(
+        "--rp-periodic",
+        action="store_true",
+        help="Áp force_periodic khả vi trước Heaviside trong real-physics "
+        "loss (chỉ có tác dụng khi --rp-projection-beta-max được đặt).",
     )
     parser.add_argument(
         "--weighted-sampling",
@@ -869,6 +919,10 @@ def main():
             lambda_volfrac=args.lambda_volfrac,
             optional_dropout_p=args.optional_dropout_p,
             include_nu0=args.include_nu0,
+            rp_projection_beta=rp_projection_beta(
+                args.rp_projection_beta_max, epoch, args.epochs
+            ),
+            rp_periodic=args.rp_periodic,
         )
         val_stats = run_epoch(
             model,
@@ -958,6 +1012,7 @@ def main():
                         "wire_hidden_dim": args.wire_hidden_dim,
                         "wire_omega0": args.wire_omega0,
                         "wire_s0": args.wire_s0,
+                        "rp_projection_beta_max": args.rp_projection_beta_max,
                     },
                     ckpt_path,
                 )
@@ -992,6 +1047,7 @@ def main():
                         "wire_hidden_dim": args.wire_hidden_dim,
                         "wire_omega0": args.wire_omega0,
                         "wire_s0": args.wire_s0,
+                        "rp_projection_beta_max": args.rp_projection_beta_max,
                     },
                     ckpt_path,
                 )
