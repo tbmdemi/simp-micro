@@ -76,7 +76,10 @@ from dataset import (  # noqa: E402
     build_condition_vector,
     condition_flags_from_dim,
 )
-from manufacturability import force_periodic  # noqa: E402
+from manufacturability import (  # noqa: E402
+    check_manufacturability,
+    force_periodic,
+)
 from tandem_lbfgs import tandem_inverse_design_lbfgs  # noqa: E402
 from verify_fe import (  # noqa: E402
     FE_PARAMS,
@@ -116,6 +119,23 @@ def _verify_v12_v21(
     except Exception:
         return None
     return float(v12), float(v21)
+
+
+def _binary_design(image_2d: np.ndarray, apply_force_periodic: bool = False):
+    """Ảnh nhị phân 64×64 đúng như verify thấy trước khi resize (tùy chọn
+    force_periodic → ngưỡng 0,5) - cùng ảnh best_of_n_eval.py dùng để chấm
+    manufacturability, nên tỉ lệ chế tạo được so sánh được với số cũ.
+
+    Args:
+        image_2d: ảnh mật độ (H, W) trong [0,1].
+        apply_force_periodic: ép biên tuần hoàn trước khi ngưỡng.
+
+    Returns:
+        np.ndarray uint8 (H, W) 0/1.
+    """
+    if apply_force_periodic:
+        image_2d = force_periodic(image_2d)
+    return (image_2d > 0.5).astype(np.uint8)
 
 
 def _r2(preds, targets) -> float:
@@ -291,6 +311,7 @@ def run_benchmark(
     apply_force_periodic: bool = False,
     n_boot: int = 10000,
     projection_betas: list = None,
+    save_images: bool = False,
 ) -> dict:
     """Chạy benchmark baseline-vs-refined.
 
@@ -323,6 +344,9 @@ def run_benchmark(
             giá trị = refine nhận thức nhị phân hóa, xem
             tandem_lbfgs.tandem_inverse_design_lbfgs(projection_betas=...);
             force_periodic trong objective bật theo apply_force_periodic.
+        save_images: lưu ảnh nhị phân 64×64 của thiết kế baseline và refined
+            vào per_condition (cho hình + đo chế tạo lại, P1.6c). Cờ
+            manufacturable của cả 2 luôn được ghi (rẻ, không cần FE).
 
     Returns:
         dict {"summary": {...}, "per_condition": [...], "config": {...}}.
@@ -407,11 +431,27 @@ def run_benchmark(
             projection_betas=projection_betas,
             periodic=apply_force_periodic,
         )
+        refined_img = result["image"].squeeze().cpu().numpy()
         refined_pred = _verify_v12_v21(
-            result["image"].squeeze().cpu().numpy(),
-            FE_PARAMS,
-            apply_force_periodic,
+            refined_img, FE_PARAMS, apply_force_periodic
         )
+        # Chế tạo được đo trên đúng ảnh nhị phân của 2 thiết kế được so
+        # sánh - refine có thể đổi tô-pô (đứt nét mảnh) dù ν khớp hơn.
+        baseline_bin = _binary_design(
+            images[best_i].squeeze().cpu().numpy(), apply_force_periodic
+        )
+        refined_bin = _binary_design(refined_img, apply_force_periodic)
+        manuf = {
+            "baseline_manufacturable": check_manufacturability(baseline_bin)[
+                "passes_all"
+            ],
+            "refined_manufacturable": check_manufacturability(refined_bin)[
+                "passes_all"
+            ],
+        }
+        if save_images:
+            manuf["baseline_image"] = baseline_bin.tolist()
+            manuf["refined_image"] = refined_bin.tolist()
 
         per_condition.append(
             {
@@ -442,11 +482,17 @@ def run_benchmark(
                 "n_fe_calls_baseline": n_samples,
                 "n_fe_calls_refine": len(result["history"]) + 2,
                 "refinement_loss_history": result["history"],
+                **manuf,
             }
         )
 
+    summary = _summarize(per_condition, n_boot)
+    for key in ("baseline", "refined"):
+        summary[f"frac_manufacturable_{key}"] = float(
+            np.mean([c[f"{key}_manufacturable"] for c in per_condition])
+        )
     return {
-        "summary": _summarize(per_condition, n_boot),
+        "summary": summary,
         "per_condition": per_condition,
         "config": {
             "cvae_ckpt_path": cvae_ckpt_path,
@@ -498,6 +544,11 @@ def main():
     )
     parser.add_argument("--n-samples", type=int, default=1)
     parser.add_argument("--force-periodic", action="store_true")
+    parser.add_argument(
+        "--save-images",
+        action="store_true",
+        help="Lưu ảnh nhị phân baseline/refined vào JSON (P1.6c).",
+    )
     parser.add_argument("--n-boot", type=int, default=10000)
     parser.add_argument(
         "--projection-betas",
@@ -530,6 +581,7 @@ def main():
         apply_force_periodic=args.force_periodic,
         n_boot=args.n_boot,
         projection_betas=args.projection_betas,
+        save_images=args.save_images,
     )
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w") as f:

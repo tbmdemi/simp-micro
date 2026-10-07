@@ -870,6 +870,39 @@ R²(FE) đo trên 8 condition validation dùng trong lúc train cải thiện đ
 
 **Chưa làm:** nối `solve_elastic_with_grad` vào refinement (target đa tính chất), solver dẫn nhiệt κ.
 
+### 2026-10-06 - P1.6: baseline SIMP, xác nhận IN100-B, hội tụ lưới, retrieval verified, OOD đổi dấu
+
+`pipeline/phase5_cvae/benchmark_simp_baseline.py` (mới, 7 test): ½‖ν−ν*‖² bằng MMA, thể tích ≤0,55, Q11/Q22 ≥ δ, Heaviside β 1→64, verify nhị phân hóa + FE độc lập giống cVAE, đa khởi tạo 4 seed. Ghép cặp 100 target IN100 với `p1_1e_*`. **ν12:** cVAE best-of-30+refine guarded (107 FE) MAE 0,0047 vs SIMP best-of-4 hội tụ (897 FE) 0,0071 (−34% [13; 50]). **Cặp (ν12,ν21): hòa** (CI chứa 0) - cVAE yếu ν21 (R² 0,838 vs 0,997). **Chế tạo được: SIMP 77-84% vs cVAE ~25%.** Phát hiện phụ: SIMP β=64 cũng có khoảng lệch xám↔nhị phân (2e-7 → 3,6e-2 trung vị/seed) - xác nhận luận điểm objective phải là thiết kế được verify áp dụng chung, không riêng mô hình sinh. Chi tiết + hệ quả cho bài: `docs/plan.md` mục P1.6a.
+
+**Đính chính trong ngày (phát hiện khi vẽ `fig_stiffness`):** "hòa" ở cặp (ν12,ν21) do **1 condition #46** (target (−0,036; −1,25), ν21 thấp nhất IN100): cVAE sinh ô đứt (1 cột rỗng, E_x/E0≈2e-11). Bỏ #46: cVAE R²(ν21) 0,997, sai số cặp tốt hơn SIMP `full` 29% [9; 46]. Đề xuất báo cáo: đủ 100 + coi E<1e-3·E0 là thất bại + độ nhạy 99.
+
+**IN100-B (seed 456, 4/100 trùng IN100) - refine tái lập trên tập mới:** single-shot MAE(ν12) −87,8% [82,3; 92,3] (R² 0,831→0,990); best-of-30 −65,8% [55,7; 74,7] (guarded R² 0,9955).
+
+**Hội tụ lưới (`docs/paper1/scripts/mesh_convergence.py`, 30 thiết kế test):** cùng hình học, ν 50² vs 200² lệch trung vị 0,015 (3,8%), max 0,042, có hệ thống; 100² vs 200² còn 0,005. Lớn hơn ~3× MAE claim (0,0047). Thiết kế cuối verify trên 200² (`final_design_eval.py`): cVAE R²(ν12) 0,992 vs SIMP 0,985 - xếp hạng giữ.
+
+**Retrieval verified (`retrieval_in100.py`) + lệch nhãn↔verify:** retrieval best-of-30 R²(ν12) 0,977 (không force_periodic) - thấp hơn cVAE best-of-30 0,986 → `LIMITATIONS.md` #18 "R²=1,000" là đo trên nhãn, đã đính chính. Phân tách lệch nhãn dataset↔verify (150 mẫu): khứ hồi 64→50 0,019 · +penal 3 0,024 · +nhị phân 0,032 · +force_periodic 0,055. **`force_periodic` có thể sai khái niệm** (lưới phần tử + PBC: cột 0 và 49 kề nhau, ảnh nào cũng lát được) - chờ quyết định (`LIMITATIONS.md` #34).
+
+**OOD đổi dấu với checkpoint production (P1.6b, 28 mục tiêu ν>0):** refine giảm MAE 59-76%, cVAE+refine guarded MAE(ν12) 0,038/0,104/0,089 (đối xứng / ν21=0,1 / ν21=0,3) nhưng **SIMP từ đầu tốt hơn rõ** (0,005-0,040) → lợi thế OOD chỉ claim được so với retrieval.
+
+**Chế tạo được sau refine (P1.6c):** 30% → 24% (**đính chính 2026-10-07:** không vững - 5 lần chạy −6 đến +9 điểm %, gộp 61 thêm / 44 mất, p=0,12). **Chi phí dataset (P1.6z):** ≈2,7-3,0M FE-solve (65-72 CPU-giờ), hòa vốn với SIMP sau ~3 500 target.
+
+Code/test mới: `benchmark_simp_baseline.py` (+7 test), harness `--save-images` + cờ manufacturable (+1 test), `docs/paper1/scripts/{p1_6a_compare,mesh_convergence,final_design_eval,retrieval_in100,refine_examples,deformation_examples}.py`, 5 hình mới trong `make_figures.py`. 701/701 test pass. Chi tiết + số đầy đủ: `docs/plan.md` mục P1.6.
+
+
+### 2026-10-07 - P1.7 lai cVAE → SIMP (KHÔNG ĐẠT), tái lập P1.6a trên IN100-B, ablation C5 `force_periodic`
+
+**P1.7** (`pipeline/phase5_cvae/benchmark_hybrid.py`, 5 test; `run_simp_target` thêm `x0`/`betas`): SIMP khởi tạo từ thiết kế cVAE guarded, β {8,16,32,64} ×15 eval, guarded. Tiêu chí ghi trước 2026-10-06: trượt 2/4 - sai số cặp vs SIMP `full` +7% CI [−96; 62] (cận dưới < −10%, do #46 ô đứt), chế tạo 0,33 (< 0,70); FE 166 và suy biến 1% đạt → Khung A, không chạy xác nhận.
+
+**IN100-B** (SIMP `full` mới, 889 FE/target): ν12 cVAE vs SIMP +16% [−21; 43] trên đủ 100 - không tái lập có ý nghĩa vì 2 ô cVAE đứt (#1, #57); bỏ 2 ô: +31% [6; 50].
+
+**C5** (cùng z, chỉ khác `--force-periodic`, `docs/paper1/scripts/c5_force_periodic.py`): độ chính xác không đổi; kiểm tra cạnh khớp 1,00 → 0,30 khi bỏ fp; liên thông + nét tối thiểu 0,24 → 0,32. Đề xuất bỏ fp. Chi tiết: `docs/plan.md` mục P1.7; `LIMITATIONS.md` #32, #34, #36.
+
+**Chẩn đoán + P1.8:** mọi ô cVAE đứt là mục tiêu dị hướng cực đoan r = max(ν21/ν12, ν12/ν21) ≥ 10, cả 30/30 ứng viên đều đứt (giới hạn phủ dữ liệu; C6 lọc lúc chọn → đóng). Xác nhận ghi trước trên IN100-C (seed 789, SIMP `full` 893 FE/target), tầng r < 10: sai số cặp cVAE thấp hơn SIMP 26,8% [7,9; 42,4] (đạt), ν12 +18,7% [−9,6; 39,7] (không đạt) → claim "ngang SIMP hội tụ với ~8× ít FE", không claim ν12 hơn. `docs/paper1/scripts/p1_8_anisotropy_strata.py`; `LIMITATIONS.md` #37.
+
+**P1.9 + 2 đính chính:** (1) "refine làm giảm chế tạo được 30%→24%" KHÔNG vững - 5 lần chạy −6 đến +9 điểm %, gộp 61 thêm / 44 mất (p=0,12). (2) R² best-of-30 0,995 (n=300, Bảng 2 bài) là chọn thuần độ chính xác (tái lập 0,9953); pipeline composite 0,6/0,3/0,1 cho 0,983 (không fp 0,988). Single-shot không fp: MAE −92,5%, R² 0,9985. Nháp các phần mới EN+VI (Khung A): `docs/paper1/drafts/p1_10_sections_{en,vi}.tex`. `LIMITATIONS.md` #35 (đính chính), #38.
+
+**P1.9 hoàn tất (C5 = bỏ fp, 14:43):** chạy lại 11 lần (`p1_9_r1..r8`, Pareto) → `p1_9_nofp_summary.json`. Thay đổi đáng kể so với có fp: OOD −2,0 sai số trung vị 12,5% → 1,2% (2 cụm, 4/10 lần 17-31%); so SIMP tầng r<10 ν12 +37-39% có ý nghĩa trên cả 3 tập (có fp: IN100-C không đạt); chế tạo guarded 0,24 → 0,32; Spearman Pareto 0,693 → 0,718. Không đổi: SIMP thắng OOD đổi dấu và chế tạo; refine liên tục sau best-of-30 vẫn làm tệ hơn. P1.8 giữ kết quả đăng ký trước (có fp, 1/2).
+
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*

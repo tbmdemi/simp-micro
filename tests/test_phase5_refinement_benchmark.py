@@ -241,6 +241,27 @@ class TestRunBenchmark:
         assert seen["projection_betas"] == [1, 16] and seen["periodic"]
         assert out["config"]["projection_betas"] == [1, 16]
 
+    def test_manufacturability_and_saved_images(
+        self, bench, monkeypatch, tmp_path
+    ):
+        """P1.6c: cờ chế tạo được luôn ghi cho baseline/refined; ảnh nhị
+        phân chỉ lưu khi save_images (JSON gọn ở chế độ mặc định)."""
+        calls = {}
+        ckpt = _install_stubs(bench, monkeypatch, tmp_path, calls)
+        out = bench.run_benchmark(
+            ckpt, targets=[-0.5], steps=3, n_boot=50, save_images=True
+        )
+        row = out["per_condition"][0]
+        # Refined giả = ảnh đặc 0,9 → 1 mảnh liên thông, tuần hoàn.
+        assert row["refined_manufacturable"] is True
+        assert np.asarray(row["refined_image"]).shape == (4, 4)
+        assert np.asarray(row["refined_image"]).min() == 1
+        assert out["summary"]["frac_manufacturable_refined"] == 1.0
+
+        plain = bench.run_benchmark(ckpt, targets=[-0.5], steps=3, n_boot=50)
+        assert "refined_image" not in plain["per_condition"][0]
+        assert "baseline_manufacturable" in plain["per_condition"][0]
+
     def test_rejects_zero_samples(self, bench, monkeypatch, tmp_path):
         calls = {}
         ckpt = _install_stubs(bench, monkeypatch, tmp_path, calls)

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-10-07 - P1.7-P1.9: lai cVAE → SIMP, xác nhận phân tầng, bỏ `force_periodic` (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/benchmark_hybrid.py`: thí nghiệm lai cVAE → SIMP với 4 tiêu chí đăng ký trước (P1.7, KHÔNG ĐẠT).
+- `benchmark_simp_baseline.run_simp_target(x0=, betas=)`: khởi tạo SIMP từ thiết kế tùy ý, β continuation tùy chỉnh (mặc định giữ hành vi cũ).
+- `docs/paper1/scripts/`: `c5_force_periodic.py` (ablation C5), `p1_8_anisotropy_strata.py` (phân tầng dị hướng, P1.8), `c5_pareto_nofp.py` (Spearman Pareto không fp), `p1_9_nofp_summary.py` (tổng hợp mọi số không fp).
+- Nháp bản thảo Khung A: `docs/paper1/drafts/p1_10_sections_{en,vi}.tex`.
+- 5 test mới (701 → 706).
+
+#### Changed
+- Quyết định tác giả C1-C5 (`docs/plan.md` mục 4): Khung A, tên bài mới, nộp SMO, không ν0, **bỏ `force_periodic`** + bỏ kiểm tra cạnh khỏi định nghĩa chế tạo được. Mọi số của bài chạy lại không fp (`p1_9_*`).
+
+#### Fixed (tài liệu)
+- `LIMITATIONS.md` #35: "refine giảm chế tạo được 30%→24%" không vững (5 lần chạy, p=0,12). Thêm #36 (lai không đạt), #37 (lỗi tập trung ở dị hướng r ≥ 10), #38 (R² 0,995 của Bảng 2 là chọn thuần độ chính xác; composite 0,983).
+- Phạm vi claim (`LIMITATIONS.md`, `README.md`): bỏ claim "cVAE chính xác hơn SIMP về ν₁₂" → "ngang SIMP hội tụ với ~8× ít FE".
+
+### 2026-10-06 - P1.6: baseline SIMP + kiểm tra bổ sung Bài #1 (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/benchmark_simp_baseline.py`: baseline SIMP chạy từ đầu (inverse homogenization ½‖ν−ν*‖², MMA, Heaviside β 1→64, đa khởi tạo, verify giống cVAE).
+- `benchmark_physics_guided_refinement.py --save-images`; cờ manufacturable baseline/refined + `frac_manufacturable_*` trong summary.
+- `docs/paper1/scripts/`: `p1_6a_compare.py`, `mesh_convergence.py`, `final_design_eval.py`, `retrieval_in100.py`, `refine_examples.py`, `deformation_examples.py`.
+- `make_figures.py`: `fig_refine_examples`, `fig_designs`, `fig_tiling`, `fig_stiffness`, `fig_deformation`; `fig_ood` thêm panel mật độ dữ liệu train.
+- 8 test mới (693 → 701).
+
+#### Fixed (tài liệu)
+- `LIMITATIONS.md` #18: "retrieval R²=1,000" đo trên nhãn, không verify - đính chính (verify: 0,941-0,977). Thêm #32-35 (so SIMP, sai số rời rạc hóa lưới, `force_periodic`, refine giảm chế tạo được).
+
 ### 2026-09-30 - Tính chất vật lý suy từ Q (nhánh `substrate-material`)
 
 #### Added
