@@ -402,7 +402,7 @@ Code: `notebooks/07_geometric_feature_influence.ipynb` (mới), hàm dùng chung
 
 ### 2026-08-18 - Xác minh lại A3 (hội tụ FE theo ν0 vật liệu nền) - claim cũ không có bằng chứng, số liệu thật khác đáng kể về mặt định lượng
 
-Bối cảnh: chuẩn bị làm A4 (docs/PROJECT_PLAN.md Nhóm 1 - thêm ν0 làm input phụ cho CNN surrogate), phát hiện comment `SEED_NU_RANGE` trong `analysis/scripts/generate_production_batch.py` mô tả 1 batch A3 rất cụ thể (n=20/seed, "ranh giới hội tụ sắc tại ν0≈0.30" cho `reentrant_bowtie`, `corr(nu,clean)=0,76`) nhưng rà soát toàn repo (output dir, `EXPERIMENT_LOG.md`, git log/stash) **không tìm thấy bất kỳ dữ liệu/log nào chứng minh batch đó từng chạy thật** - vi phạm quy ước log-mọi-pilot của project.
+Bối cảnh: chuẩn bị làm A4 (docs/archive/PROJECT_PLAN.md Nhóm 1 - thêm ν0 làm input phụ cho CNN surrogate), phát hiện comment `SEED_NU_RANGE` trong `analysis/scripts/generate_production_batch.py` mô tả 1 batch A3 rất cụ thể (n=20/seed, "ranh giới hội tụ sắc tại ν0≈0.30" cho `reentrant_bowtie`, `corr(nu,clean)=0,76`) nhưng rà soát toàn repo (output dir, `EXPERIMENT_LOG.md`, git log/stash) **không tìm thấy bất kỳ dữ liệu/log nào chứng minh batch đó từng chạy thật** - vi phạm quy ước log-mọi-pilot của project.
 
 Viết lại `analysis/scripts/pilot_nu_convergence.py` (cùng pattern `pilot_normalized_objective.py`) - sweep ν0 đều trong `PARAM_SPACE['nu']=(0.2, 0.4)`, dùng đúng dải volfrac/void_size_frac và optimizer production thật (`SEED_PARAM_RANGES`/`SEED_OPTIMIZER`) cho 3 seed `hourglass`/`hexagonal`/`reentrant_bowtie`, n=50/seed (150 mẫu, 10 worker, 210s).
 
@@ -422,7 +422,7 @@ Manifest đầy đủ: `outputs/pilot_nu_convergence/manifest.csv` (gitignored, 
 
 ### 2026-08-18 (tiếp) - A4: thêm ν0 làm input phụ cho CNN surrogate, retrain, so R² với baseline - ĐẠT sàn, không thấy lợi ích accuracy rõ rệt
 
-Bối cảnh: A3 (mục trên) xác nhận không có vách cắt hội tụ cứng theo ν0, mở đường cho A4 (docs/PROJECT_PLAN.md Nhóm 1, bắt buộc trước A6) - dạy CNN surrogate quan hệ hình học+ν0→tính chất, vì khi ν0 biến thiên quan hệ này không còn là hàm 1-1 của ảnh mật độ.
+Bối cảnh: A3 (mục trên) xác nhận không có vách cắt hội tụ cứng theo ν0, mở đường cho A4 (docs/archive/PROJECT_PLAN.md Nhóm 1, bắt buộc trước A6) - dạy CNN surrogate quan hệ hình học+ν0→tính chất, vì khi ν0 biến thiên quan hệ này không còn là hàm 1-1 của ảnh mật độ.
 
 **Sinh dữ liệu:** `generate_production_batch.py --n-raw 3000 --vary-nu --run-dir outputs/phase3_a4_nu_raw` (dải đầy đủ ν0∈(0.2,0.4), không thu hẹp theo seed - xem quyết định A3) - 3000 mẫu, 2635 sạch (87,8%), 4122s (~69 phút, 10 worker).
 
@@ -448,7 +448,7 @@ Bối cảnh: A3 (mục trên) xác nhận không có vách cắt hội tụ c�
 
 ### 2026-08-18 (tiếp) - A5: `real_physics.py` nhận `nu`/`E0` per-sample - rủi ro cache trong plan KHÔNG xảy ra
 
-Bối cảnh: A4 (mục trên) đã cho surrogate Phase 4 nhận ν0 làm input; A5 (docs/PROJECT_PLAN.md Nhóm 1, chặn A6) là bước tiếp theo - `RealPhysicsNu.forward`/`solve_nu_with_grad` trong `pipeline/phase5_cvae/real_physics.py` trước đó chỉ nhận `nu`/`E0`/`Emin` là 3 scalar áp CHUNG cho cả batch, không cho phép mỗi sample có ν0 riêng khi training differentiable-physics.
+Bối cảnh: A4 (mục trên) đã cho surrogate Phase 4 nhận ν0 làm input; A5 (docs/archive/PROJECT_PLAN.md Nhóm 1, chặn A6) là bước tiếp theo - `RealPhysicsNu.forward`/`solve_nu_with_grad` trong `pipeline/phase5_cvae/real_physics.py` trước đó chỉ nhận `nu`/`E0`/`Emin` là 3 scalar áp CHUNG cho cả batch, không cho phép mỗi sample có ν0 riêng khi training differentiable-physics.
 
 **Rủi ro nêu trong plan:** `_get_mesh` cache theo key `(nelx,nely,E0,Emin,nu)` - lo ngại per-sample nu sẽ làm mỗi sample phải build mesh riêng, mất tác dụng tăng tốc cache.
 

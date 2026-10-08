@@ -463,7 +463,8 @@ class TestRunEpochExtendedCondition:
 
 
 class TestRunEpochIncludeNu0:
-    """run_epoch(include_nu0=True) - A6 (docs/PROJECT_PLAN.md Nhóm 1), cùng
+    """run_epoch(include_nu0=True) - A6 (docs/archive/PROJECT_PLAN.md Nhóm 1),
+    cùng
     tinh thần end-to-end với TestRunEpochExtendedCondition."""
 
     def test_include_nu0_only_updates_decoder_params(self, make_phase3_npz):

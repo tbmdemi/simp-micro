@@ -1,5 +1,6 @@
 """
-Lắp ráp dataset A4 (Giai đoạn A, docs/PROJECT_PLAN.md Nhóm 1): gộp pool sạch
+Lắp ráp dataset A4 (Giai đoạn A, docs/archive/PROJECT_PLAN.md Nhóm 1): gộp pool
+sạch
 CŨ (outputs/phase3/dataset_64.npz - chính là pool 13.624 mẫu đã dùng để build
 outputs/phase3/{train,val,test}.npz hiện hành, tức baseline R²=0,974/0,964
 "surrogate_v2.pt" - khớp CHÍNH XÁC split_report.json cũ, xem

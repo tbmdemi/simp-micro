@@ -40,7 +40,8 @@ SEED_WEIGHTS = {"hourglass": 0.70, "hexagonal": 0.15, "reentrant_bowtie": 0.15}
 VOLFRAC_RANGE = (0.3, 0.7)
 VOID_SIZE_FRAC_RANGE = (0.1, 0.4)
 
-# Giai đoạn A (vary vật liệu nền, docs/PROJECT_PLAN.md Nhóm 1 A1/A3): dải hẹp
+# Giai đoạn A (vary vật liệu nền, docs/archive/PROJECT_PLAN.md Nhóm 1 A1/A3):
+# dải hẹp
 # ν0=0.2-0.4 để kiểm tra hội tụ FE trước khi mở rộng, khớp
 # pipeline/params.py::PARAM_SPACE['nu']. Mặc định KHÔNG bật (--vary-nu) để
 # không đổi hành vi sinh dataset production hiện có (nu=0.3 cố định, đúng
@@ -203,7 +204,9 @@ def main():
                               "'gate'/'mma' ép TOÀN BỘ batch dùng 1 optimizer - CẨN THẬN: 'mma' "
                               "toàn cục phá hỏng reentrant_bowtie (đã đo: 90,0%->0,0%).")
     parser.add_argument("--vary-nu", action="store_true",
-                         help="Giai đoạn A (docs/PROJECT_PLAN.md Nhóm 1 A3): sample nu (hệ số "
+                         help="Giai đoạn A "
+                              "(docs/archive/PROJECT_PLAN.md Nhóm 1 A3): "
+                              "sample nu (hệ số "
                               f"Poisson vật liệu nền) đều trong NU_RANGE={NU_RANGE} thay vì cố "
                               "định 0.3. Mặc định TẮT để không đổi hành vi dataset production hiện có.")
     args = parser.parse_args()

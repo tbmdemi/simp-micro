@@ -3,7 +3,8 @@ Curse-of-dimensionality comparison: retrieval vs cVAE khi condition mo rong
 tu 2 chieu (v12,v21) len 4 chieu (v12,v21,nu0) len 8 chieu
 (v12,v21,volfrac,void_size_frac,nu0)
 ============================================================================
-Nhom 4.2 (docs/PROJECT_PLAN.md muc 3, 4): baseline_comparison.py da chi ra
+Nhom 4.2 (docs/archive/PROJECT_PLAN.md muc 3, 4): baseline_comparison.py da chi
+ra
 retrieval THANG cVAE trong-phan-phoi o condition 2D (R2=1.000 vs 0.973,
 LIMITATIONS.md muc 18) - vi dataset qua day (mean_condition_dist=0.002).
 Gia thuyet can kiem dinh: khi Giai doan A (A7, 2026-08-19) them nu0 lam

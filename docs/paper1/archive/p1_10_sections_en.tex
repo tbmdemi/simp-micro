@@ -1,0 +1,255 @@
+% ===========================================================================
+% P1.10 DRAFT - new/rewritten sections for main_en.tex (Khung A framing).
+% Written 2026-10-07. NOT yet merged into main_en.tex: pending author
+% decisions C2 (title), C4 (journal), C5 (force_periodic). Blocks marked
+% [C5] change wording if periodic-edge enforcement is dropped.
+% Every number is traceable to outputs/phase5/plan_v3/ (source in comments).
+% Uses the macros of main_en.tex (\nuot, \nuto, \RR).
+% ===========================================================================
+
+% ---------------------------------------------------------------------------
+% REPLACES the abstract (keeps the "optimize what is verified" core; removes
+% the multi-objective/OOD claims that P1.6a-b, P1.7 do not support).
+% ---------------------------------------------------------------------------
+\begin{abstract}
+Gradient-based design of metamaterial unit cells, whether by topology
+optimization or by searching the latent space of a generative model, is
+judged by finite-element (FE) analysis of a binarized design, yet it usually
+optimizes a continuous density field. We show that this mismatch is
+systematically exploited. Refining the latent code of a conditional
+variational autoencoder (cVAE) against exact homogenization sensitivities
+drives the objective to $\sim\!10^{-10}$ while the verified error stays six
+orders of magnitude larger, and density-based topology optimization with
+Heaviside continuation to $\beta=64$ shows the same gap (median $2\times10^{-7}$
+before versus $3.6\times10^{-2}$ after thresholding). Placing the verification
+operators inside the refinement objective raises the FE-verified $\RR$ of
+the Poisson ratio $\nuot$ of two-dimensional auxetic cells from 0.874 to 0.998
+for single samples (0.831 to 0.990 on a second, disjoint target set) and
+from 0.983--0.990 to 0.995--0.998 after best-of-30 selection on three sets.
+Against topology optimization from scratch with multi-start, the generative
+pipeline reaches the same accuracy with about eight times fewer FE solves
+and, on a pre-registered test set, a 27\% lower joint error for targets of
+moderate anisotropy. It fails for strongly anisotropic targets that are
+sparse in the training data, and topology optimization remains superior in
+manufacturability and for targets outside the training range.
+\end{abstract}
+
+% ---------------------------------------------------------------------------
+% NEW Results subsection (after "Verified accuracy requires optimizing the
+% verified design"; before multi-objective).
+% Sources: p1_6a_simp_baseline_in100.json, p1_7_simp_in100b_full.json,
+% p1_8_simp_in100c_full.json, p1_6c/p1_7_in100b/p1_8_in100c_bo30_images.json,
+% p1_8_anisotropy_strata.json, p1_7_hybrid_in100.json, p1_6x_*.json.
+% ---------------------------------------------------------------------------
+\subsection{Comparison with topology optimization from scratch}
+
+The relevant competitor of a generative pipeline is not a lookup table but
+topology optimization run directly for the target. We solved the classical
+inverse homogenization problem $\min\tfrac12\lVert\boldsymbol\nu-\boldsymbol\nu^{*}\rVert^2$
+for every target with the method of moving asymptotes, a volume bound and
+stiffness floors, Heaviside continuation to $\beta=64$, and four starting
+topologies taken from the training data (Methods). Each run was verified
+exactly like a generated design, and the best of the four was selected by
+its verified error. This baseline uses on average 893 FE solves per target,
+against 107 for best-of-30 sampling followed by guarded binarization-aware
+refinement.
+
+Topology optimization exhibits the same objective--verification gap as
+latent refinement. At the end of continuation the median error on the
+projected density field was $2\times10^{-7}$, whereas the median verified
+error after thresholding was $3.6\times10^{-2}$ per run, and for 57\% of the
+300 targets the starting topology with the lowest projected error was not
+the one with the lowest verified error. Selection by verified error is therefore
+necessary for both methods, which supports the central claim of this paper
+beyond generative models.
+
+Table~\ref{tab:simp} compares the two methods on three disjoint sets of 100
+held-out targets. On all three, the generative pipeline matches converged
+topology optimization in $\nuot$ ($\RR=0.994$--$0.998$ versus
+$0.996$--$0.998$) with roughly eightfold fewer FE solves. Over all targets
+its joint error $|\Delta\nuot|+|\Delta\nuto|$ is not consistently lower,
+because of a specific failure mode. Every disconnected cell produced by the
+cVAE (one target in the first set, two in the second) belongs to a target
+with an anisotropy ratio $r=\max(\nuto^{*}/\nuot^{*},\,\nuot^{*}/\nuto^{*})\ge10$,
+which corresponds to a stiffness ratio $E_2/E_1\ge10$ for an orthotropic
+cell. For these targets all 30 sampled candidates were disconnected, so the
+failure cannot be fixed by selection; only 2.8\% of the training samples
+have $r>10$. Having observed this on the first two sets, we pre-registered a
+stratified test on a third set before running it: for targets with
+$r<10$, the generative pipeline should have a lower joint error and a lower
+$\nuot$ error than topology optimization, with paired 95\% CIs excluding zero.
+The joint-error criterion was met (27\% lower, CI 8--42\%); the $\nuot$
+criterion was not (19\% lower, CI $-10$ to 40\%). This test used the
+pipeline with periodic-edge enforcement. After that step was removed for
+conceptual reasons (Methods), the same comparison favours the generative
+pipeline in both criteria on all three sets (Table~\ref{tab:simp}); because
+this version was not pre-registered, we report it as a sensitivity analysis
+and still claim parity in $\nuot$ and an advantage in joint error for
+moderate anisotropy, not superiority in $\nuot$. The differences in $\nuot$ between the two methods
+($\sim\!10^{-3}$) are in any case an order of magnitude smaller than the
+discretization error of the $50\times50$ FE model (next paragraph).
+
+\begin{table}[t]
+\centering
+\caption{Generative pipeline (best-of-30 + guarded binarization-aware
+refinement) versus topology optimization from scratch (best of four
+starts, converged) on three disjoint sets of 100 held-out targets. Both
+methods select candidates by verified joint error (not by the composite
+score of Table~\ref{tab:multi}). FE:
+solves per target. Manufacturable: single connected solid phase with
+minimum feature size of two pixels. Stratified rows: relative reduction of
+the error of the generative pipeline versus topology optimization for targets
+with anisotropy ratio $r<10$ (paired bootstrap 95\% CI; positive favours the
+generative pipeline). Final pipeline without periodic-edge enforcement; the
+pre-registered test on set C was run with it (see text; both versions in the
+Supplementary Information).}
+\label{tab:simp}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llccccc}
+\toprule
+Set & Method & $\RR(\nuot)$ & $\RR(\nuto)$ & Joint MAE & FE & Manuf.\\
+\midrule
+\multirow{2}{*}{A} & generative & 0.998 & 0.846 & 0.0139 & 107 & 0.32\\
+ & topology opt. & 0.997 & 0.997 & 0.0128 & 897 & 0.77\\
+\multirow{2}{*}{B} & generative & 0.995 & 0.745 & 0.0229 & 107 & 0.35\\
+ & topology opt. & 0.996 & 0.997 & 0.0139 & 889 & 0.74\\
+\multirow{2}{*}{C} & generative & 0.998 & 0.998 & 0.0082 & 107 & 0.32\\
+ & topology opt. & 0.998 & 0.996 & 0.0126 & 893 & 0.83\\
+\midrule
+\multicolumn{7}{l}{$r<10$: joint error \;A $+41\%$ [26, 54] \;B $+40\%$ [23, 53] \;C $+35\%$ [19, 48]}\\
+\multicolumn{7}{l}{$r<10$: $\nuot$ error \;A $+39\%$ [19, 54] \;B $+39\%$ [19, 54] \;C $+37\%$ [14, 54]}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Mesh sensitivity.}
+All accuracies above are relative to the $50\times50$ FE model used for
+data generation, refinement and verification. Re-solving the same binary
+geometries with each pixel subdivided into $4\times4$ elements changes
+$\nuot$ by a median of 0.015 (3.8\%) and at most 0.042 on 30 test designs,
+towards more negative values in 27 of them. On the final designs of the
+first set the ranking of the two methods is unchanged on the $200\times200$
+mesh ($\RR(\nuot)$ 0.992 versus 0.985).
+
+\paragraph{A hybrid does not inherit the strengths of both.}
+Because topology optimization was more robust and more manufacturable while
+the generative pipeline was cheaper, we pre-registered a hybrid in which the
+generated design initializes topology optimization (continuation
+$\beta=8\to64$, at most 61 additional FE solves). It met the cost and
+non-degeneracy criteria (166 FE solves per target; 1\% degenerate) but
+failed the joint-error non-inferiority criterion against converged
+topology optimization (CI lower bound $-96\%$, driven by the one
+disconnected target) and the manufacturability criterion (0.33 against a
+threshold of 0.70). Starting from a sharp projection preserves the topology,
+including the thin features, of the generated design.
+
+% ---------------------------------------------------------------------------
+% NEW Methods subsection.
+% ---------------------------------------------------------------------------
+\subsection{Topology optimization baseline}
+For each target we minimized
+$\tfrac12\lVert\boldsymbol\nu(\hat{\mathbf x})-\boldsymbol\nu^{*}\rVert_2^2$
+over element densities $\mathbf x$, with $\hat{\mathbf x}=H_\beta(\tilde{\mathbf x})$
+and $\tilde{\mathbf x}$ the density-filtered field (radius 1.5 elements),
+subject to $\overline{\hat{\mathbf x}}\le0.55$ and $Q_{11},Q_{22}\ge0.1\cdot0.55\,E_0$,
+using the method of moving asymptotes \citep{svanberg1987mma} with penalization
+$p=3$. Sensitivities follow from the same analytic expressions used for
+refinement and were checked against finite differences. Continuation runs
+$\beta\in\{1,2,4,8,16,32,64\}$ with at most 43 evaluations per level and a
+restart of the optimizer at each level. Starting topologies are the four
+most frequent seed families of the training data, rescaled to the volume
+bound. The final $\hat{\mathbf x}$ is thresholded at 0.5 and verified with an
+independent FE solve. Parameters are the medians of the training data.
+The hybrid uses the generated binary design as the starting point and
+$\beta\in\{8,16,32,64\}$ with at most 15 evaluations per level.
+
+% ---------------------------------------------------------------------------
+% ADDITION to "Statistics and pre-registration".
+% ---------------------------------------------------------------------------
+Two further experiments were specified in writing before they were run: the
+hybrid (four criteria: joint-error non-inferiority within 10\%, at least 70\%
+manufacturable, at most 299 FE solves per target, at most 1\% degenerate
+designs) and the stratified comparison on the third target set (both CIs
+excluding zero for $r<10$). The first two target sets were analysed before
+the stratification was conceived, and their stratified results are reported
+as post hoc.
+
+% ---------------------------------------------------------------------------
+% REPLACES the Limitations paragraph.
+% ---------------------------------------------------------------------------
+\paragraph{Limitations.}
+(i) Accuracy is measured against a $50\times50$ linear-elastic,
+small-strain FE model with a base-material Poisson ratio of 0.3; the
+discretization error of this model (median 0.015 in $\nuot$) exceeds the
+reported mean errors. Large strain and three-dimensional cells are not
+addressed, and no design was tested experimentally.
+(ii) The generative pipeline fails for strongly anisotropic targets
+($r\ge10$), which are sparse in the training data; topology optimization does
+not.
+(iii) Topology optimization from scratch produces manufacturable cells more than
+twice as often (0.74--0.83 versus 0.32--0.35). Refinement does not
+change this systematically: across five runs the manufacturable fraction
+moved by $-6$ to $+9$ percentage points (61 designs became manufacturable,
+44 ceased to be; sign test $p=0.12$).
+(iv) For non-auxetic targets outside the training range, topology
+optimization is markedly more accurate (MAE in $\nuot$ 0.005--0.040 versus
+0.06--0.09); the advantage of the generative model in that regime holds only
+against retrieval from the training library.
+(v) The cost advantage is amortized: generating the training data required
+about $2.7$--$3.0\times10^{6}$ FE solves, which pays off against converged
+topology optimization only after about 3\,500 targets.
+(vi) The aesthetic score is a heuristic that has not been validated against
+human judgement.
+
+% ---------------------------------------------------------------------------
+% REPLACES Discussion paragraphs "Accuracy", "Multiple objectives" and
+% "Out-of-distribution generalization" (Limitations: see block above).
+% [C5] marks wording that changes if periodic-edge enforcement is dropped.
+% ---------------------------------------------------------------------------
+\paragraph{Optimizing what is verified.}
+The central finding is that any gradient-based search over density fields,
+whether in the latent space of a generative model or over element densities
+in topology optimization, will exploit the difference between the field it
+differentiates and the binarized design that is finally analysed. The
+optimizer reaches objectives of $10^{-10}$ on fields that the verifier sees
+very differently (Fig.~\ref{fig:gap}), and the same happens in topology
+optimization with Heaviside continuation to $\beta=64$. The gap is invisible
+in the loss curve. Two remedies follow, and both are cheap: include the
+verification operators in the objective, and select among candidates by
+verified rather than optimized error. Neither ingredient is new in
+density-based topology optimization \citep{guest2004achieving,wang2011projection};
+what this work shows is that omitting them changes the conclusions of a
+comparison between methods, and that the generative and the classical route
+need them equally.
+
+\paragraph{What a generative model adds.}
+Measured against converged topology optimization rather than against a
+lookup table, the advantage of the generative pipeline is narrower than is
+commonly implied. It reaches the same verified accuracy with about eight
+times fewer FE solves per target, and a lower joint error for targets of
+moderate anisotropy, but the saving is amortized only after thousands of
+targets because the training data themselves were produced by topology
+optimization. The pipeline is therefore attractive when many targets must be
+served, for example in interactive design or in the inner loop of a
+multiscale optimization, and not when a single cell is needed. Its failures
+are predictable: strongly anisotropic targets that are sparse in the training
+data. Reporting such failures by stratum, rather than averaging them into a
+single score, made them visible in our study and should become standard.
+
+\paragraph{Manufacturability and out-of-distribution targets.}
+Topology optimization from scratch produced connected cells with adequate
+feature size more than twice as often as the generative pipeline, and
+latent refinement did not change that fraction systematically. Initializing topology
+optimization with the generated design did not recover this property,
+because a sharp initial projection preserves the generated topology. For
+non-auxetic targets outside the training range, the cVAE reaches the correct
+sign where retrieval from the library cannot, but topology optimization
+reaches the target magnitude far more accurately. Along magnitude, all
+generative variants stop at the edge of the training data. OOD claims for
+generative models should therefore name the direction in property space,
+check that the target is physically admissible, and compare against
+topology optimization rather than retrieval. [C5: if periodic-edge
+enforcement is dropped, add one sentence that element-based periodic
+boundary conditions make every pixel cell tile by translation, so no edge
+matching is required.]

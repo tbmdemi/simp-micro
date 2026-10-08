@@ -81,7 +81,8 @@ class TestPropertyAccuracyExtendedCondition:
     def test_8dim_condition_extended_plus_nu0_does_not_crash(
         self, tmp_path, make_phase3_npz, make_cvae_checkpoint,
     ):
-        """A6 (docs/PROJECT_PLAN.md Nhóm 1): condition_dim=8 (extended_condition
+        """A6 (docs/archive/PROJECT_PLAN.md Nhóm 1): condition_dim=8
+        (extended_condition
         + include_nu0) - cùng bug class với test 6-chiều ở trên, nhưng ở đây
         kiểm chứng đúng chỗ evaluate.py::main() dùng condition_flags_from_dim()
         để suy (extended, include_nu0) từ model.condition_dim (xem comment

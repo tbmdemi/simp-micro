@@ -327,7 +327,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
-- `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/PROJECT_PLAN.md` Nhóm 2.
+- `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/archive/PROJECT_PLAN.md` Nhóm 2.
 - Test tự động chưa phủ hết đường I/O nặng (screening loop, seeds, visualize và FE call thật trong `multi_batch/runner.py::evaluate_single`).
 - Kết quả xác thực composite score chỉ ủng hộ một phần: Spearman trung bình so với Pareto front = 0,693 (trung vị 0,714), chưa đạt ngưỡng trung bình 0,7 đặt trước.
 - Ở 8D in-distribution, retrieval không bị suy yếu đáng kể ngay cả với 500 mẫu tra cứu (R²=0,984); không dùng giả thuyết curse-of-dimensionality làm claim chính.
@@ -339,7 +339,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
 - [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) - tổng hợp mọi lệnh dòng lệnh (test suite, `simp`, `simp-analysis`, từng phase 1-5, sự cố thường gặp)
-- [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
+- [`docs/archive/PROJECT_PLAN.md`](docs/archive/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
 - [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
 - [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 38 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline

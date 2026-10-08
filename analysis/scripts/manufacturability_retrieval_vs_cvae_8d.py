@@ -1,7 +1,7 @@
 """
 Manufacturability/connectivity: retrieval vs cVAE o 8D
 ========================================================
-Bo sung cho Nhom 4.2 (docs/PROJECT_PLAN.md): curse_of_dimensionality_
+Bo sung cho Nhom 4.2 (docs/archive/PROJECT_PLAN.md): curse_of_dimensionality_
 comparison.py da do accuracy (R2) o 8D va thay retrieval (0.998) gan ngang
 cVAE da tune dung (0.997) - khong con khoang cach accuracy de lam luan diem
 trung tam. Cau hoi moi: retrieval co "hy sinh" chat luong cau truc (lien

@@ -72,7 +72,8 @@ def _make_phase3_npz(path, n_samples=12, resolution=64, seed=0,
 
     extra = {}
     if nu_range is not None:
-        # Giai đoạn A/A4 (docs/PROJECT_PLAN.md Nhóm 1): field 'nu' chỉ có
+        # Giai đoạn A/A4 (docs/archive/PROJECT_PLAN.md Nhóm 1): field 'nu' chỉ
+        # có
         # trong npz khi test cần AuxeticDataset(include_nu0=True) - opt-in,
         # không ảnh hưởng schema mặc định của mọi test khác.
         extra["nu"] = rng.uniform(nu_range[0], nu_range[1], size=n_samples).astype(np.float32)

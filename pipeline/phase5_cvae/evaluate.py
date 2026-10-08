@@ -168,7 +168,8 @@ def main():
     # (condition_dim=6) hay không - crash shape mismatch ở model.decoder()
     # khi đánh giá checkpoint extended-condition.
     #
-    # Bug tương tự tái phát khi thêm A6 (docs/PROJECT_PLAN.md): `== 6` bỏ
+    # Bug tương tự tái phát khi thêm A6 (docs/archive/PROJECT_PLAN.md): `== 6`
+    # bỏ
     # sót include_nu0 (condition_dim ∈ {4,8}) - dùng condition_flags_from_dim()
     # (nguồn suy luận DUY NHẤT, xem dataset.py) thay vì so sánh rời rạc lặp
     # lại ở từng file, để không lệch nữa lần thứ 3 nếu condition_dim mở rộng

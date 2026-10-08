@@ -46,10 +46,10 @@ Khung 3 vòng tròn: **A = thiết kế ngược auxetic (generative/geometry)**
 
 ### Liên kết với roadmap kỹ thuật
 
-Gap này khớp trực tiếp với roadmap kỹ thuật trong `docs/PROJECT_PLAN.md`. **Cập nhật 2026-08-15:** phần B (xếp hạng đa tiêu chí) đã merge vào `main` (PR #13, 2026-07-25) - việc còn thiếu thật sự chỉ còn ở phần C (vật liệu nền):
+Gap này khớp trực tiếp với roadmap kỹ thuật trong `docs/archive/PROJECT_PLAN.md`. **Cập nhật 2026-08-15:** phần B (xếp hạng đa tiêu chí) đã merge vào `main` (PR #13, 2026-07-25) - việc còn thiếu thật sự chỉ còn ở phần C (vật liệu nền):
 
-1. **Vary ν0/E0 trong `pipeline/params.py::PARAM_SPACE`** (hiện cố định 0.3/199.0 trong `simp/materials/isotropic.py::Material.__init__`) - lấp A∩C bằng generative model, đóng góp trực tiếp cho luận điểm "tính chất phụ thuộc vật liệu nền" của GS. Đây là Nhóm 1/Giai đoạn A trong `docs/PROJECT_PLAN.md`, effort lớn nhất, ưu tiên cao nhất.
-2. **Composite ranking accuracy/manuf/aesthetic** (`best_of_n_eval.py`) + presence-mask/condition-dropout (`dataset.py`, `train.py`) đã là code production trên `main` - lấp A∩B theo hướng generative conditioning thay Pareto-search hậu kỳ, chỉ còn cần validate độc lập (Nhóm 3 trong `docs/PROJECT_PLAN.md`).
+1. **Vary ν0/E0 trong `pipeline/params.py::PARAM_SPACE`** (hiện cố định 0.3/199.0 trong `simp/materials/isotropic.py::Material.__init__`) - lấp A∩C bằng generative model, đóng góp trực tiếp cho luận điểm "tính chất phụ thuộc vật liệu nền" của GS. Đây là Nhóm 1/Giai đoạn A trong `docs/archive/PROJECT_PLAN.md`, effort lớn nhất, ưu tiên cao nhất.
+2. **Composite ranking accuracy/manuf/aesthetic** (`best_of_n_eval.py`) + presence-mask/condition-dropout (`dataset.py`, `train.py`) đã là code production trên `main` - lấp A∩B theo hướng generative conditioning thay Pareto-search hậu kỳ, chỉ còn cần validate độc lập (Nhóm 3 trong `docs/archive/PROJECT_PLAN.md`).
 3. Kết hợp cả 2 việc trên (điều kiện hóa theo cả hình học lẫn vật liệu nền, xếp hạng đa tiêu chí) chính là bước lấp A∩B∩C - khoảng trống thật sự duy nhất trong 97 bài.
 
 ### Ghi chú về Nhóm 9 (nổ/va đập)

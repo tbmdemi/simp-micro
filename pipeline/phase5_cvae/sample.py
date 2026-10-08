@@ -117,7 +117,7 @@ def main():
         help="Target ν0 (hệ số Poisson vật liệu nền) - OPTIONAL, chỉ có "
         "tác dụng nếu checkpoint được train với --include-nu0 "
         "(condition_dim ∈ {4,8}). Bỏ trống = không chỉ định "
-        "(mask=0). Xem A6, docs/PROJECT_PLAN.md.",
+        "(mask=0). Xem A6, docs/archive/PROJECT_PLAN.md.",
     )
     parser.add_argument("--n", type=int, default=8, help="số mẫu sinh ra")
     parser.add_argument(

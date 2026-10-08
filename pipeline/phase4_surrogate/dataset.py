@@ -20,7 +20,8 @@ class AuxeticDataset(Dataset):
 
         include_nu0: doc them nu (he so Poisson vat lieu nen) tu npz, tra ve
         nhu 1 INPUT PHU (khong phai target) - xem Giai doan A, A4,
-        docs/PROJECT_PLAN.md Nhom 1. Can npz co field "nu" (build_npz.py da
+        docs/archive/PROJECT_PLAN.md Nhom 1. Can npz co field "nu"
+        (build_npz.py da
         them, fallback 0.3 cho manifest cu). Mac dinh False - __getitem__ tra
         ve dung 3 phan tu nhu truoc (image, seed_vec, targets)."""
         data = np.load(npz_path, allow_pickle=True)

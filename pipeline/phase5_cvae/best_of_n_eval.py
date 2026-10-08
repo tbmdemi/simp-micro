@@ -92,7 +92,8 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
 
     volfrac/void_size_frac/nu0: target OPTIONAL bổ sung (xem dataset.py
     extended_condition/include_nu0, train.py --extended-condition/
-    --include-nu0, A6 docs/PROJECT_PLAN.md) - volfrac/void_size_frac chỉ có
+    --include-nu0, A6 docs/archive/PROJECT_PLAN.md) - volfrac/void_size_frac
+    chỉ có
     tác dụng với checkpoint condition_dim ∈ {6,8}, nu0 chỉ có tác dụng với
     condition_dim ∈ {4,8} - VÀ custom_condition được dùng (giống sample.py).
     Bỏ trống = không chỉ định (mask=0). build_condition_vector() tự bỏ qua
@@ -113,7 +114,7 @@ def best_of_n(cvae_ckpt_path: str, n_conditions: int, n_samples: int,
     (lấy condition thật từ dataset). Mặc định None = PHASE3_DIR
     (outputs/phase3/, KHÔNG có field 'nu'). Checkpoint condition_dim ∈
     {4,8} (train với --include-nu0) CẦN trỏ data_dir tới dataset có field
-    này, vd outputs/phase3_a4/ (xem A4/A6, docs/PROJECT_PLAN.md).
+    này, vd outputs/phase3_a4/ (xem A4/A6, docs/archive/PROJECT_PLAN.md).
 
     return_all_scores: mặc định False (không đổi hành vi cũ). True -> mỗi
     per_condition[i] có thêm "all_scores": {"accuracy": [...], "manuf": [...],
@@ -407,7 +408,8 @@ def main():
                          help="Target ν0 (hệ số Poisson vật liệu nền) - OPTIONAL, chỉ có "
                               "tác dụng nếu checkpoint có condition_dim ∈ {4,8} (train với "
                               "--include-nu0) VÀ --v12/--v21 được dùng. Bỏ trống = không "
-                              "chỉ định (mask=0). Xem A6, docs/PROJECT_PLAN.md.")
+                              "chỉ định (mask=0). Xem A6, "
+                              "docs/archive/PROJECT_PLAN.md.")
     parser.add_argument("--data-dir", type=str, default=None,
                          help="Thư mục chứa test.npz khi KHÔNG dùng --v12/--v21 (lấy "
                               "condition thật từ dataset). Mặc định outputs/phase3/ (KHÔNG "

@@ -48,7 +48,8 @@ class SurrogateCNN(nn.Module):
         include_nu0: them nu (he so Poisson vat lieu nen) lam INPUT PHU, concat
         cung seed one-hot sau GAP - can thiet vi khi nu0 bien thien, quan he
         hinh hoc->tinh chat khong con la ham 1-1 cua anh mat do (Giai doan A,
-        A4, docs/PROJECT_PLAN.md Nhom 1). Mac dinh False - kien truc/forward()
+        A4, docs/archive/PROJECT_PLAN.md Nhom 1). Mac dinh False - kien
+        truc/forward()
         y het truoc day, tuong thich nguoc hoan toan voi checkpoint cu.
 
         use_kan: thay hai lop FC cua head bang EfficientKANLinear. Mac dinh

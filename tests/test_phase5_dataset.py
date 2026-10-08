@@ -87,7 +87,8 @@ class TestExtendedCondition:
 
 
 class TestIncludeNu0:
-    """A6 (docs/PROJECT_PLAN.md Nhóm 1): include_nu0 thêm 2 cột [nu0,nu0_mask]
+    """A6 (docs/archive/PROJECT_PLAN.md Nhóm 1): include_nu0 thêm 2 cột
+    [nu0,nu0_mask]
     VÀO CUỐI condition, độc lập với extended_condition (có thể bật riêng
     hoặc cùng lúc). condition_dim ∈ {2,4,6,8} tùy tổ hợp 2 cờ."""
 

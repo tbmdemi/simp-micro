@@ -168,3 +168,9 @@ environment.yaml
 # - audit 2026-08-20 found hourglass/hexagonal/reentrant_bowtie also tracked
 # and churning on every smoke test/demo run) ---
 outputs/simp_results_*/
+# --- Artifact trung gian trong outputs/ (tạo lại được, không phải bằng chứng kết quả) ---
+# Ảnh snapshot từng vòng lặp SIMP: chỉ để debug trực quan, ~1 ảnh/iteration/sample.
+outputs/**/iteration_*.png
+# Bản backup / log dở dang: giá trị lịch sử nằm ở EXPERIMENT_LOG.md, không ở file thô.
+outputs/**/*_backup.csv
+outputs/**/*_partial_log.txt

@@ -360,7 +360,8 @@ class TestRealPhysicsLoss:
 
 
 class TestRealPhysicsLossNu0Col:
-    """A6 (docs/PROJECT_PLAN.md Nhóm 1): nu0_col phải khiến real_physics_loss
+    """A6 (docs/archive/PROJECT_PLAN.md Nhóm 1): nu0_col phải khiến
+    real_physics_loss
     dùng ĐÚNG ν0 per-sample (khi mask=1) thay vì fe_params['nu'] cố định cho
     cả batch - kiểm tra bằng cách đặt target = giá trị THẬT tính sẵn qua
     solve_nu_with_grad với đúng ν0 của từng mẫu, rồi xác nhận loss ~0 (nếu

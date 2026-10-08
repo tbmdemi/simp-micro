@@ -54,7 +54,8 @@ class TestAuxeticDataset:
 
 
 class TestAuxeticDatasetNu0:
-    """include_nu0=True (Giai đoạn A/A4, docs/PROJECT_PLAN.md Nhóm 1) - nu là
+    """include_nu0=True (Giai đoạn A/A4, docs/archive/PROJECT_PLAN.md Nhóm 1) -
+    nu là
     INPUT PHỤ, không phải target, nên không được lẫn vào tensor targets."""
 
     def test_default_getitem_has_3_elements(self, make_phase3_npz):

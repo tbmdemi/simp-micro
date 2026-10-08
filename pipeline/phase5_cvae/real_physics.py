@@ -40,7 +40,8 @@ from simp.homogenization.compute import compute_homogenized_tensor
 # Cache TOPOLOGY mesh (edofMat, iK, jK, pbc) theo (nelx, nely) - phần này
 # thật sự tốn kém (build_dof_mesh/build_pbc) nhưng KHÔNG phụ thuộc vật liệu,
 # nên dùng chung cho MỌI (E0, Emin, nu), kể cả khi mỗi sample trong batch có
-# ν0 riêng (Giai đoạn A - vary vật liệu nền, xem docs/PROJECT_PLAN.md A5).
+# ν0 riêng (Giai đoạn A - vary vật liệu nền, xem docs/archive/PROJECT_PLAN.md
+# A5).
 #
 # Trước đây key cache gộp cả (E0, Emin, nu), tưởng nhầm rằng per-sample nu sẽ
 # làm mất tác dụng cache (rủi ro đã nêu trong PROJECT_PLAN.md mục 4 "A5").
@@ -288,7 +289,8 @@ class RealPhysicsNu(torch.autograd.Function):
 
     E0/nu chấp nhận CẢ scalar (dùng chung cho cả batch, tương thích ngược)
     LẪN mảng/list/tensor độ dài B (mỗi sample 1 giá trị riêng - phục vụ
-    Giai đoạn A, vary vật liệu nền theo ν0/E0, xem docs/PROJECT_PLAN.md A5).
+    Giai đoạn A, vary vật liệu nền theo ν0/E0, xem docs/archive/PROJECT_PLAN.md
+    A5).
     Emin/penal/rho0 vẫn dùng chung cho cả batch (không phải trục biến thiên
     của Giai đoạn A)."""
 
