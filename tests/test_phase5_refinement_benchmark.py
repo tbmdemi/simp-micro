@@ -57,8 +57,11 @@ def _install_stubs(bench, monkeypatch, tmp_path, calls):
         bench, "load_cvae", lambda path, device: _MeanDecoderModel()
     )
 
-    def fake_verify(image_2d, fe_params, apply_force_periodic=False):
+    def fake_verify(
+        image_2d, fe_params, apply_force_periodic=False, design_sigma=None
+    ):
         calls.setdefault("verify_fp", []).append(apply_force_periodic)
+        calls.setdefault("design_sigma", []).append(design_sigma)
         v = -float(np.mean(image_2d))
         return v, v
 
@@ -267,3 +270,53 @@ class TestRunBenchmark:
         ckpt = _install_stubs(bench, monkeypatch, tmp_path, calls)
         with pytest.raises(ValueError):
             bench.run_benchmark(ckpt, targets=[-0.5], n_samples=0)
+
+
+class TestFilteredDesign:
+    """N2-E1′: thiết kế = ảnh đã lọc trên lưới FE, guard theo loss robust."""
+
+    def test_binary_design_on_fe_grid(self, bench):
+        img = np.zeros((64, 64), dtype=np.float32)
+        img[16:48, 16:48] = 1.0
+        params = dict(bench.FE_PARAMS)
+        d = bench._binary_design(img, False, 1.0, params)
+        assert d.shape == (params["nely"], params["nelx"])
+        assert set(np.unique(d)) <= {0, 1}
+        # Không lọc → hành vi cũ: ảnh 64² ngưỡng 0,5.
+        assert bench._binary_design(img).shape == (64, 64)
+
+    def test_filter_removes_isolated_speck(self, bench):
+        """Đốm 1 px (lỗi E1) phải biến mất qua bộ lọc σ = 1 phần tử."""
+        img = np.zeros((64, 64), dtype=np.float32)
+        img[16:48, 16:48] = 1.0
+        img[5, 5] = 1.0
+        d = bench._binary_design(img, False, 1.0, dict(bench.FE_PARAMS))
+        assert d[:8, :8].sum() == 0
+
+    def test_robust_score_finite_and_zero_for_exact_target(
+        self, bench, monkeypatch
+    ):
+        monkeypatch.setattr(
+            bench, "evaluate_density_field", lambda d, p: (-0.3, -0.2, None)
+        )
+        img = np.full((64, 64), 0.9, dtype=np.float32)
+        s = bench._robust_score(img, (-0.3, -0.2), -0.3, -0.2, 1.0, [0.25])
+        assert s == pytest.approx(0.0)
+        s2 = bench._robust_score(img, (-0.5, -0.2), -0.3, -0.2, 1.0, [0.25])
+        assert s2 > 0
+
+    def test_design_sigma_reaches_verify(self, bench, monkeypatch, tmp_path):
+        calls = {}
+        ckpt = _install_stubs(bench, monkeypatch, tmp_path, calls)
+        out = bench.run_benchmark(
+            ckpt,
+            targets=[-0.5],
+            n_samples=2,
+            steps=3,
+            n_boot=50,
+            design_filter_sigma=1.0,
+        )
+        assert calls["design_sigma"] and all(
+            s == 1.0 for s in calls["design_sigma"]
+        )
+        assert out["config"]["design_filter_sigma"] == 1.0

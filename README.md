@@ -350,8 +350,9 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - `CHANGELOG.md` - lịch sử thay đổi theo phiên bản
 - Pilot damping/continuation có kiểm soát (N=400/config, Wilson CI) cho thấy `use_sqrt` (damping η=0.5) + `penal_init=2.0` gần gấp đôi yield `reentrant_bowtie` (46%→76-80%) - **kết quả tốt, đã kiểm chứng thống kê, nhưng CHƯA được áp dụng vào cấu hình production**; xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 - `outputs/{phase3,phase4,phase5}/` - báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `self_play/`, v.v.)
-- `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` - notebook phân tích Phase 1-5 và tổng kết end-to-end
-- `notebooks/09_cheap_physical_properties.ipynb` - tính chất suy từ Q (E/G/B, proxy ấn lõm, tốc độ sóng quasi-static) trên dataset A4: kiểm tra cận vật lý, đo tính chất nào mang thông tin mới, biên Pareto ν ↔ độ cứng riêng
+- `notebooks/01_doe_dataset_analysis.ipynb` - phân tích dataset DOE multi-batch (manifest Phase 3, 7.920 mẫu): chất lượng dữ liệu, so sánh seed, độ nhạy tham số, top-10 thiết kế
+- `notebooks/02_geometric_feature_influence.ipynb` - ảnh hưởng số cạnh/độ dày lên ν12 (kiểm định nhị phân)
+- `notebooks/03_cheap_physical_properties.ipynb` - tính chất suy từ Q (E/G/B, proxy ấn lõm, tốc độ sóng quasi-static) trên dataset A4: kiểm tra cận vật lý, đo tính chất nào mang thông tin mới, biên Pareto ν ↔ độ cứng riêng
 
 ---
 

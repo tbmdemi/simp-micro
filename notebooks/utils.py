@@ -1,8 +1,9 @@
 """
-Shared utility functions for Phase 1 data analysis notebooks.
+Shared utility functions for the analysis notebooks in notebooks/.
 
-Provides loading, cleaning, classification, and metric computation
-for the SIMP auxetic optimization pipeline results.
+Provides DOE-dataset sample loading/cleaning/plotting
+(01_doe_dataset_analysis) and geometric feature extraction
+(02_geometric_feature_influence).
 
 Usage:
     from utils import load_all_samples, plot_convergence
@@ -26,13 +27,8 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PHASE1_DIR = REPO_ROOT / "outputs" / "pipeline" / "phase1"
 PHASE3_DIR = REPO_ROOT / "outputs" / "phase3"
-PHASE4_DIR = REPO_ROOT / "outputs" / "phase4"
-PHASE5_DIR = REPO_ROOT / "outputs" / "phase5"
-SEEDS = [
-    "circle", "square", "hourglass", "four_circle", "hexagonal",
-    "nine_circle", "cross_rectangular", "grid_circular_voids",
-    "small_square_cross", "circle_half_quarter",
-]
+
+
 def resolve_repo_path(p: "str | Path") -> Path:
     """Resolve a sample_path/csv_path against REPO_ROOT, independent of cwd.
 
@@ -304,13 +300,6 @@ def load_all_samples(
 # ──────────────────────────────────────────────
 
 
-def classify_void(vf: float, threshold: float = VOID_THRESHOLD) -> str:
-    """Classify a sample as VOID or OK based on Volume_Fraction."""
-    if np.isnan(vf):
-        return "UNKNOWN"
-    return "VOID" if vf < threshold else "OK"
-
-
 def classify_auxetic_quality(nu12: float) -> str:
     """Classify auxetic performance into categories.
 
@@ -339,18 +328,6 @@ def classify_auxetic_quality(nu12: float) -> str:
 # ──────────────────────────────────────────────
 #  Metric Helpers
 # ──────────────────────────────────────────────
-
-
-def compute_coupling_ratio(
-    Q: np.ndarray, eps: float = 1e-12
-) -> float:
-    """Compute shear-normal coupling ratio |Q13|/sqrt(Q11*Q22).
-
-    High coupling (>1e-3) indicates significant rotation effect.
-    Requires Q tensor (3x3) in Voigt notation [11, 22, 12].
-    """
-    scale = np.sqrt(max(Q[0, 0] * Q[1, 1], eps))
-    return float(max(abs(Q[0, 2]), abs(Q[1, 2])) / scale)
 
 
 def safe_spearman(df: pd.DataFrame, col1: str, col2: str) -> Tuple[float, float]:
@@ -459,7 +436,7 @@ def plot_top10_grid(
 
 # ──────────────────────────────────────────────
 #  Geometric feature extraction (n_edges/thickness -> v12 influence,
-#  xem notebooks/07_geometric_feature_influence.ipynb)
+#  xem notebooks/02_geometric_feature_influence.ipynb)
 # ──────────────────────────────────────────────
 
 GEOM_BIN_THRESHOLD = 0.5

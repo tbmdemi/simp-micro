@@ -384,7 +384,7 @@ Manifest đầy đủ: `outputs/pilot_normalized_{hexagonal,hourglass,reentrant_
 
 Bối cảnh: yêu cầu "đánh giá ảnh hưởng các kết quả, ví dụ số lượng cạnh/độ dày tới hệ số Poisson's" khác với `analysis/sensitivity/` đã có (đo tham số SIMP ĐẦU VÀO như `volfrac`/`rmin` → objective) - đây là đo đặc trưng TOPOLOGY xuất hiện (emergent) trong ảnh kết quả → v12, chưa có trong pipeline.
 
-Viết `notebooks/07_geometric_feature_influence.ipynb` (mới, hàm dùng chung đặt trong `notebooks/utils.py` theo convention hiện có - không thêm dependency, chỉ numpy/scipy/networkx đã có sẵn trong `requirements.txt`, không cần `scikit-image`). Trích đặc trưng từ ảnh binarize (ngưỡng 0,5, đúng convention `manufacturability.py`): pad tuần hoàn (wrap) trước khi skeleton hóa để tránh endpoint giả tại biên ô đơn vị, Zhang-Suen thinning vector hóa bằng numpy (không loop pixel), rồi rút gọn skeleton pixel-graph thành graph topology thật (contract chuỗi pass-through) để đếm `n_edges` (số thanh), `n_junctions`, `n_endpoints`; độ dày thanh = 2×distance-transform tại pixel skeleton. Đã sanity-check bằng overlay skeleton lên vài mẫu (hourglass/hexagonal/reentrant_bowtie/circle) - skeleton bám đúng trục trung tuyến của vật liệu, junction/endpoint hợp lý về mặt trực quan.
+Viết `notebooks/02_geometric_feature_influence.ipynb` (mới, hàm dùng chung đặt trong `notebooks/utils.py` theo convention hiện có - không thêm dependency, chỉ numpy/scipy/networkx đã có sẵn trong `requirements.txt`, không cần `scikit-image`). Trích đặc trưng từ ảnh binarize (ngưỡng 0,5, đúng convention `manufacturability.py`): pad tuần hoàn (wrap) trước khi skeleton hóa để tránh endpoint giả tại biên ô đơn vị, Zhang-Suen thinning vector hóa bằng numpy (không loop pixel), rồi rút gọn skeleton pixel-graph thành graph topology thật (contract chuỗi pass-through) để đếm `n_edges` (số thanh), `n_junctions`, `n_endpoints`; độ dày thanh = 2×distance-transform tại pixel skeleton. Đã sanity-check bằng overlay skeleton lên vài mẫu (hourglass/hexagonal/reentrant_bowtie/circle) - skeleton bám đúng trục trung tuyến của vật liệu, junction/endpoint hợp lý về mặt trực quan.
 
 Chạy trên 6.001 mẫu lấy phân tầng theo `seed_class` (gộp `train+val+test_ext.npz`, phân tích mô tả post-hoc nên không có rủi ro leakage). Ba phép kiểm định: Pearson/Spearman, partial correlation kiểm soát `volfrac`, và kiểm định nhị phân Mann-Whitney U (chia nhóm cao/thấp theo median) - đúng yêu cầu gốc "câu nhị phân".
 
@@ -396,7 +396,7 @@ Chạy trên 6.001 mẫu lấy phân tầng theo `seed_class` (gộp `train+val+
 
 **Diễn giải:** số liệu gộp gây hiểu lầm vì mỗi họ seed chiếm vùng giá trị v12 và cấu trúc rất khác nhau (`hourglass` áp đảo 52% mẫu); kết luận đúng phải đọc theo từng họ, không đọc số gộp. Cơ chế vật lý hợp lý: trong các họ dạng "khung xoay/gấp khúc" (hourglass, circle-based), thêm thanh phụ (junction) thường tạo thêm điểm xoay/uốn góp phần tăng hiệu ứng auxetic, còn với `hexagonal` (cơ chế re-entrant hình học đã cố định bởi góc cell) topology phụ không ảnh hưởng nhiều - khớp với ghi nhận trước đó rằng `hexagonal` có hành vi yield khác biệt các seed khác ([[hexagonal_yield_oc_dual_multiplier]]).
 
-Code: `notebooks/07_geometric_feature_influence.ipynb` (mới), hàm dùng chung trong `notebooks/utils.py` (`extract_geometric_features`, `skeleton_topology`, `zhang_suen_thin`, `analyze_geometric_group`, `binary_split_test`, `partial_corr`, `load_geometric_analysis_sample`). Output: `outputs/phase3/reports/geometric_feature_influence_n6001.json`, `geometric_features_raw_n6001.csv`, hình `outputs/figures/geometric_feature_influence_n_edges_vs_v12_n6001.png`. Trên nhánh `main`, uncommitted.
+Code: `notebooks/02_geometric_feature_influence.ipynb` (mới), hàm dùng chung trong `notebooks/utils.py` (`extract_geometric_features`, `skeleton_topology`, `zhang_suen_thin`, `analyze_geometric_group`, `binary_split_test`, `partial_corr`, `load_geometric_analysis_sample`). Output: `outputs/phase3/reports/geometric_feature_influence_n6001.json`, `geometric_features_raw_n6001.csv`, hình `outputs/figures/geometric_feature_influence_n_edges_vs_v12_n6001.png`. Trên nhánh `main`, uncommitted.
 
 ---
 
@@ -862,7 +862,7 @@ R²(FE) đo trên 8 condition validation dùng trong lúc train cải thiện đ
 
 **Backfill:** `analysis/scripts/backfill_elastic_props_npz.py` chạy trên toàn bộ `outputs/phase3_a4/{train,val,test}.npz` (73.164 mẫu, penal và ν0 thật từng mẫu, ~25 phút/12 worker) và ghi ra `{split}_props.npz` (Q thô + 13 cột). Không có lỗi FE nào. Sanity |Δv12| median 0,0012, 1,9–2,7% mẫu lệch >0,1 do resize 64→50 (khớp backfill f1/f2 2026-08-05).
 
-**Phân tích** (`notebooks/09_cheap_physical_properties.ipynb`, val+test n=4778 sau QC; không dùng train vì augment ×6 làm rò rỉ CV):
+**Phân tích** (`notebooks/03_cheap_physical_properties.ipynb`, val+test n=4778 sau QC; không dùng train vì augment ×6 làm rò rỉ CV):
 - 0% vi phạm cận Voigt và Hashin–Shtrikman (xác nhận FE đúng). Median B_eff/B_HS = 0,17: auxetic kém hiệu quả về độ cứng khối.
 - R² (5-fold CV) dự đoán từ 5 điều kiện hiện có: E/B/M/c_qL đạt 0,92–0,97, gần như dư thừa nếu thêm làm condition. **G_xy 0,84, c_qT 0,80**: mang nhiều thông tin mới nhất, ứng viên ưu tiên cho condition/refinement.
 - Proxy ấn lõm M_y = E_y/(1−ν12ν21): khi cố định mật độ, tương quan với ν đổi dấu giữa các nhóm (+0,54…−0,32), nên KHÔNG có quy luật chung "auxetic cứng hơn". Riêng cụm ν21 < −1,2 có M_y/ρ ≈ 0,6 (gấp 2–3 lần), do 1−ν12ν21 → 0.
@@ -906,3 +906,13 @@ Code/test mới: `benchmark_simp_baseline.py` (+7 test), harness `--save-images`
 ---
 
 *Xem [`CHANGELOG.md`](CHANGELOG.md) cho lịch sử thay đổi theo phiên bản, và [`README.md`](README.md) cho trạng thái/cách hoạt động hiện tại của dự án.*
+
+### 2026-10-08 - P1.10 số 200² không fp; K1 refine nhận thức chế tạo (ĐẠT tiêu chí, nhưng đánh đổi độ chính xác)
+
+**200² không fp (`p1_10_final_design_eval_nofp.json`):** R²(ν12) cVAE 0,990 / SIMP full 0,985, MAE 0,014 / 0,016, E_x/E0 trung vị 0,078 / 0,070 - xếp hạng giữ nguyên như bản fp. Hình vẽ lại toàn bộ, PDF EN+VI build lại.
+
+**Phát hiện bản lề 1 nút:** 16-26% thiết kế cVAE cuối (SIMP 7-13%) có 2 pixel rắn chỉ chạm góc. `check_connectivity` 8 hướng tính là nối; lưới 200² dựng bằng kron giữ nguyên điểm chạm 1 nút nên hội tụ lưới không bắt được. Ví dụ OOD ν*=+0,5 trong `fig_deformation` là 2 khối nối qua góc (E_x/E0 1,6e-2, không suy biến theo tiêu chí E<1e-3).
+
+**K1 (tiêu chí ghi trước, `plan.md` mục K1):** objective refine thêm λ·(P_góc + P_mảnh) trên ảnh 64² sau Heaviside (`manuf_penalty.py`, `--corner-weight/--thin-weight`); định nghĩa chế tạo mới = liên thông 4 hướng + nét tối thiểu. λ chỉnh trên IN100-B (20 cond): 0/0,03/0,1/1 → chế tạo 0,45/0,65/0,80/0,85, chọn 0,1. Chạy IN100 + IN100-C (mỗi tập 15 phút): chế tạo 0,31 → 0,72 / 0,76, chạm góc 0,16 → 0,08 / 0,21 → 0,05, R²(ν12) 0,996 / 0,997, FE 112/target - đạt cả 5 tiêu chí. **Nhưng MAE ν12 tệ hơn 37-40% (CI không chứa 0)**, lợi thế sai số cặp so với SIMP ở tầng r<10 từ 41% [26; 54] còn 15% [−10; 34] (mất ý nghĩa). Pilot n=20 cho thấy độ chính xác tăng - không tái lập. Code mới: `manuf_penalty.py`, `check_connectivity(connectivity=4)`, `count_corner_contacts`, harness in tiến độ từng condition, `docs/paper1/scripts/k1_compare.py`; 716/716 test.
+
+**K1 - phương án A (tác giả chọn 2026-10-08):** pipeline chính giữ λ=0, K1 là điểm vận hành thứ hai. Đường đánh đổi trên IN100-B đủ 100 target (`k1/sweep_in100b_l*.json`): λ = 0/0,03/0,1/0,3/1 → chế tạo (4 hướng) 0,33/0,61/0,79/0,81/0,83, MAE ν12 0,0059/0,0067/0,0066/0,0068/0,0077 (chỉ λ=1 tăng có ý nghĩa, +30% [6; 64]); SIMP full cùng tập 0,68 / 0,0073. λ=0,1 ở điểm gãy. Hình `fig_k1_tradeoff` dùng MAE ν12 (sai số cặp trên tập B bị target suy biến chi phối, không đơn điệu). Bản thảo EN+VI: Methods (phạt + bản lề + tiêu chí), Results (đoạn K1 + Hình 8), bảng dùng phương pháp, Discussion, Limitations, Conclusions, Abstract, chú thích `fig_deformation`; định nghĩa chế tạo các số cũ giữ 8 hướng. PDF 20 trang mỗi bản, build sạch.

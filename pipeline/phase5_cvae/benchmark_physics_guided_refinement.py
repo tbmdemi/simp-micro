@@ -64,6 +64,7 @@ import argparse
 import json
 import os
 import sys
+import time
 
 import numpy as np
 import torch
@@ -77,9 +78,12 @@ from dataset import (  # noqa: E402
     condition_flags_from_dim,
 )
 from manufacturability import (  # noqa: E402
+    check_connectivity,
     check_manufacturability,
+    count_corner_contacts,
     force_periodic,
 )
+from realization import filtered_design  # noqa: E402
 from tandem_lbfgs import tandem_inverse_design_lbfgs  # noqa: E402
 from verify_fe import (  # noqa: E402
     FE_PARAMS,
@@ -95,7 +99,10 @@ PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")
 
 
 def _verify_v12_v21(
-    image_2d: np.ndarray, fe_params: dict, apply_force_periodic: bool = False
+    image_2d: np.ndarray,
+    fe_params: dict,
+    apply_force_periodic: bool = False,
+    design_sigma: float = None,
 ):
     """(Tùy chọn force_periodic) + binarize (threshold 0.5) + resize về lưới
     FE + giải FE thật.
@@ -105,14 +112,16 @@ def _verify_v12_v21(
         fe_params: dict FE params (xem verify_fe.FE_PARAMS).
         apply_force_periodic: True -> ép biên tuần hoàn trước khi binarize,
             đúng thứ tự best_of_n_eval.py (force_periodic trên ảnh liên tục).
+        design_sigma: N2-E1′ - đặt thì thiết kế = ảnh đã lọc
+            (``_binary_design``) thay cho ngưỡng + resize nearest.
 
     Returns:
         (v12, v21) hoặc None nếu FE-solve lỗi (Q suy biến/không hữu hạn -
         cùng hành vi "bỏ qua mẫu lỗi" như best_of_n_eval.py).
     """
-    if apply_force_periodic:
-        image_2d = force_periodic(image_2d)
-    img_bin = (image_2d > 0.5).astype(np.float32)
+    img_bin = _binary_design(
+        image_2d, apply_force_periodic, design_sigma, fe_params
+    ).astype(np.float32)
     img_fe = resize_to_fe_grid(img_bin, fe_params["nely"], fe_params["nelx"])
     try:
         v12, v21, _ = evaluate_density_field(img_fe, fe_params)
@@ -121,21 +130,83 @@ def _verify_v12_v21(
     return float(v12), float(v21)
 
 
-def _binary_design(image_2d: np.ndarray, apply_force_periodic: bool = False):
-    """Ảnh nhị phân 64×64 đúng như verify thấy trước khi resize (tùy chọn
-    force_periodic → ngưỡng 0,5) - cùng ảnh best_of_n_eval.py dùng để chấm
-    manufacturability, nên tỉ lệ chế tạo được so sánh được với số cũ.
+def _binary_design(
+    image_2d: np.ndarray,
+    apply_force_periodic: bool = False,
+    design_sigma: float = None,
+    fe_params: dict = FE_PARAMS,
+    eta: float = 0.5,
+):
+    """Ảnh nhị phân của thiết kế - đúng ảnh verify FE và kiểm chế tạo.
+
+    Mặc định: ảnh 64×64 (tùy chọn force_periodic → ngưỡng 0,5), cùng ảnh
+    best_of_n_eval.py dùng để chấm manufacturability. Với ``design_sigma``
+    (N2-E1′): ảnh trên lưới FE từ ``realization.filtered_design`` (lọc Gauss
+    → lấy mẫu → ngưỡng ``eta``), để FE, chế tạo và hình vẽ cùng 1 ảnh.
 
     Args:
         image_2d: ảnh mật độ (H, W) trong [0,1].
         apply_force_periodic: ép biên tuần hoàn trước khi ngưỡng.
+        design_sigma: độ mượt bộ lọc (phần tử FE); None = hành vi cũ.
+        fe_params: lưới FE đích khi dùng ``design_sigma``.
+        eta: ngưỡng (0,5 gốc; khác 0,5 = bản co/giãn cho guard robust).
 
     Returns:
-        np.ndarray uint8 (H, W) 0/1.
+        np.ndarray uint8 0/1 - (H, W) hoặc (nely, nelx).
     """
+    if design_sigma is not None:
+        t = torch.as_tensor(image_2d, dtype=torch.float32)[None, None]
+        d = filtered_design(
+            t, None, fe_params["nely"], fe_params["nelx"], design_sigma, eta
+        )
+        return d[0, 0].numpy().astype(np.uint8)
     if apply_force_periodic:
         image_2d = force_periodic(image_2d)
-    return (image_2d > 0.5).astype(np.uint8)
+    return (image_2d > eta).astype(np.uint8)
+
+
+def _robust_score(
+    image_2d: np.ndarray,
+    nominal_pred,
+    target_v12: float,
+    target_v21: float,
+    design_sigma: float,
+    etas: list,
+    fe_params: dict = FE_PARAMS,
+) -> float:
+    """Loss robust đo FE ở β = ∞, cùng dạng objective E1′ - dùng làm guard
+    (tối ưu gì thì chọn bằng nấy): 0,5·MSE(gốc) + 0,5·trung bình MSE(co/giãn).
+
+    Args:
+        image_2d: ảnh decoder (H, W).
+        nominal_pred: (v12, v21) của bản gốc đã tính (tránh giải lại).
+        target_v12, target_v21: mục tiêu.
+        design_sigma: độ mượt bộ lọc thiết kế.
+        etas: ngưỡng bản co/giãn.
+        fe_params: lưới FE.
+
+    Returns:
+        Giá trị loss; ``inf`` nếu có FE lỗi.
+    """
+
+    def mse(pred):
+        return 0.5 * (
+            (pred[0] - target_v12) ** 2 + (pred[1] - target_v21) ** 2
+        )
+
+    if nominal_pred is None:
+        return float("inf")
+    pert = []
+    for eta in etas:
+        d = _binary_design(image_2d, False, design_sigma, fe_params, eta)
+        try:
+            v12, v21, _ = evaluate_density_field(
+                d.astype(np.float32), fe_params
+            )
+        except Exception:
+            return float("inf")
+        pert.append(mse((v12, v21)))
+    return 0.5 * mse(nominal_pred) + 0.5 * float(np.mean(pert))
 
 
 def _r2(preds, targets) -> float:
@@ -312,6 +383,16 @@ def run_benchmark(
     n_boot: int = 10000,
     projection_betas: list = None,
     save_images: bool = False,
+    corner_weight: float = 0.0,
+    thin_weight: float = 0.0,
+    realization_shifts: list = None,
+    realization_sigma: float = 0.5,
+    fe_upsample: int = 1,
+    n_workers: int = 0,
+    fe_upsample_last_only: bool = False,
+    robust_etas: list = None,
+    robust_sigma: float = 1.0,
+    design_filter_sigma: float = None,
 ) -> dict:
     """Chạy benchmark baseline-vs-refined.
 
@@ -347,6 +428,17 @@ def run_benchmark(
         save_images: lưu ảnh nhị phân 64×64 của thiết kế baseline và refined
             vào per_condition (cho hình + đo chế tạo lại, P1.6c). Cờ
             manufacturable của cả 2 luôn được ghi (rẻ, không cần FE).
+        corner_weight, thin_weight: hệ số phạt chế tạo trong refine (K1,
+            xem tandem_lbfgs). 0 = hành vi cũ.
+        realization_shifts, realization_sigma, fe_upsample: objective N1 và
+            đối chứng lưới mịn, xem tandem_lbfgs. None/1 = hành vi cũ.
+        n_workers: số tiến trình FE song song trong refine (0 = tuần tự).
+        fe_upsample_last_only, robust_etas, robust_sigma: N2-E2 (lưới mịn chỉ
+            ở mức β cuối) và N2-E1 (robust formulation co/giãn), xem
+            tandem_lbfgs. Mặc định = hành vi cũ.
+        design_filter_sigma: N2-E1′ - thiết kế = ảnh đã lọc trên lưới FE
+            cho MỌI bước (chọn best-of-N, refine, verify, chế tạo, ảnh lưu);
+            nếu có thêm ``robust_etas`` thì guard theo loss robust.
 
     Returns:
         dict {"summary": {...}, "per_condition": [...], "config": {...}}.
@@ -386,7 +478,8 @@ def run_benchmark(
         conditions = [test_ds[i][1].numpy() for i in idxs]
 
     per_condition = []
-    for cond in conditions:
+    t_start = time.time()
+    for ci, cond in enumerate(conditions):
         cond_t = torch.tensor(cond, dtype=torch.float32, device=device)
         target_v12, target_v21 = float(cond[0]), float(cond[1])
 
@@ -401,6 +494,7 @@ def run_benchmark(
                 images[i].squeeze().cpu().numpy(),
                 FE_PARAMS,
                 apply_force_periodic,
+                design_sigma=design_filter_sigma,
             )
             for i in range(n_samples)
         ]
@@ -430,17 +524,60 @@ def run_benchmark(
             subsample=real_physics_subsample,
             projection_betas=projection_betas,
             periodic=apply_force_periodic,
+            corner_weight=corner_weight,
+            thin_weight=thin_weight,
+            realization_shifts=realization_shifts,
+            realization_sigma=realization_sigma,
+            fe_upsample=fe_upsample,
+            n_workers=n_workers,
+            fe_upsample_last_only=fe_upsample_last_only,
+            robust_etas=robust_etas,
+            robust_sigma=robust_sigma,
+            design_filter_sigma=design_filter_sigma,
         )
         refined_img = result["image"].squeeze().cpu().numpy()
         refined_pred = _verify_v12_v21(
-            refined_img, FE_PARAMS, apply_force_periodic
+            refined_img,
+            FE_PARAMS,
+            apply_force_periodic,
+            design_sigma=design_filter_sigma,
         )
         # Chế tạo được đo trên đúng ảnh nhị phân của 2 thiết kế được so
         # sánh - refine có thể đổi tô-pô (đứt nét mảnh) dù ν khớp hơn.
+        baseline_img = images[best_i].squeeze().cpu().numpy()
         baseline_bin = _binary_design(
-            images[best_i].squeeze().cpu().numpy(), apply_force_periodic
+            baseline_img, apply_force_periodic, design_filter_sigma
         )
-        refined_bin = _binary_design(refined_img, apply_force_periodic)
+        refined_bin = _binary_design(
+            refined_img, apply_force_periodic, design_filter_sigma
+        )
+        robust_guard = design_filter_sigma is not None and bool(robust_etas)
+        if robust_guard:
+            # E1′: guard theo chính loss robust (4 FE thêm: co/giãn × 2).
+            score_base = _robust_score(
+                baseline_img,
+                baseline_pred,
+                target_v12,
+                target_v21,
+                design_filter_sigma,
+                robust_etas,
+            )
+            score_ref = _robust_score(
+                refined_img,
+                refined_pred,
+                target_v12,
+                target_v21,
+                design_filter_sigma,
+                robust_etas,
+            )
+            accept = score_ref < score_base
+        else:
+            accept = (
+                refined_pred is not None
+                and baseline_pred is not None
+                and sum(_pair_err(refined_pred, target_v12, target_v21))
+                < sum(_pair_err(baseline_pred, target_v12, target_v21))
+            )
         manuf = {
             "baseline_manufacturable": check_manufacturability(baseline_bin)[
                 "passes_all"
@@ -449,6 +586,13 @@ def run_benchmark(
                 "passes_all"
             ],
         }
+        # Định nghĩa K1 (plan.md): liên thông 4 hướng + nét tối thiểu, và số
+        # điểm chạm góc tuần hoàn (bản lề 1 nút).
+        for key, img in (("baseline", baseline_bin), ("refined", refined_bin)):
+            manuf[f"{key}_manuf4"] = check_connectivity(img, connectivity=4)[
+                "manufacturable"
+            ]
+            manuf[f"{key}_corners"] = count_corner_contacts(img)
         if save_images:
             manuf["baseline_image"] = baseline_bin.tolist()
             manuf["refined_image"] = refined_bin.tolist()
@@ -470,27 +614,35 @@ def run_benchmark(
                     None if refined_pred is None else refined_pred[1]
                 ),
                 "baseline_sample_index": int(best_i),
-                "guarded_accept": bool(
-                    refined_pred is not None
-                    and baseline_pred is not None
-                    and sum(_pair_err(refined_pred, target_v12, target_v21))
-                    < sum(_pair_err(baseline_pred, target_v12, target_v21))
-                ),
+                "guarded_accept": bool(accept),
                 # Chi phí FE: N lần verify baseline; refine = mỗi closure
                 # L-BFGS 1 FE (forward+adjoint) + 1 FE dự đoán cuối trong
                 # tandem + 1 FE verify độc lập.
                 "n_fe_calls_baseline": n_samples,
-                "n_fe_calls_refine": len(result["history"]) + 2,
+                "n_fe_calls_refine": len(result["history"])
+                + 2
+                + (2 * len(robust_etas) if robust_guard else 0),
                 "refinement_loss_history": result["history"],
                 **manuf,
             }
         )
+        _print_progress(ci, len(conditions), per_condition[-1], t_start)
 
     summary = _summarize(per_condition, n_boot)
     for key in ("baseline", "refined"):
         summary[f"frac_manufacturable_{key}"] = float(
             np.mean([c[f"{key}_manufacturable"] for c in per_condition])
         )
+    # Thiết kế cuối guarded (cái được báo trong bài) theo định nghĩa K1.
+    final = [
+        "refined" if c["guarded_accept"] else "baseline" for c in per_condition
+    ]
+    summary["frac_manuf4_guarded"] = float(
+        np.mean([c[f"{k}_manuf4"] for c, k in zip(per_condition, final)])
+    )
+    summary["frac_corner_guarded"] = float(
+        np.mean([c[f"{k}_corners"] > 0 for c, k in zip(per_condition, final)])
+    )
     return {
         "summary": summary,
         "per_condition": per_condition,
@@ -509,8 +661,48 @@ def run_benchmark(
             "projection_betas": (
                 list(projection_betas) if projection_betas else None
             ),
+            "corner_weight": corner_weight,
+            "thin_weight": thin_weight,
+            "realization_shifts": realization_shifts,
+            "realization_sigma": realization_sigma,
+            "fe_upsample": fe_upsample,
+            "fe_upsample_last_only": fe_upsample_last_only,
+            "robust_etas": list(robust_etas) if robust_etas else None,
+            "robust_sigma": robust_sigma,
+            "design_filter_sigma": design_filter_sigma,
         },
     }
+
+
+def _print_progress(ci: int, n: int, c: dict, t_start: float) -> None:
+    """In 1 dòng tiến độ sau mỗi condition (flush ngay để theo dõi log).
+
+    Args:
+        ci: chỉ số condition vừa xong (0-based).
+        n: tổng số condition.
+        c: bản ghi per_condition của condition đó.
+        t_start: time.time() lúc bắt đầu vòng lặp (để ước ETA).
+    """
+
+    def err(key):
+        if c[f"{key}_v12"] is None:
+            return float("nan")
+        return abs(c[f"{key}_v12"] - c["target_v12"]) + abs(
+            c[f"{key}_v21"] - c["target_v21"]
+        )
+
+    el = time.time() - t_start
+    eta = el / (ci + 1) * (n - ci - 1)
+    fin = "refined" if c["guarded_accept"] else "baseline"
+    print(
+        f"[{ci + 1:3d}/{n}] target=({c['target_v12']:+.3f},"
+        f"{c['target_v21']:+.3f})  err_cặp {err('baseline'):.4f}->"
+        f"{err('refined'):.4f} {'nhận' if c['guarded_accept'] else 'giữ'}"
+        f"  chế_tạo4 {int(c['baseline_manuf4'])}->{int(c[f'{fin}_manuf4'])}"
+        f"  góc {c['baseline_corners']}->{c[f'{fin}_corners']}"
+        f"  | {el / 60:.1f} phút, ETA {eta / 60:.1f} phút",
+        flush=True,
+    )
 
 
 def main():
@@ -558,12 +750,64 @@ def main():
         help="β Heaviside tăng dần cho refine nhận thức nhị phân hóa.",
     )
     parser.add_argument(
+        "--corner-weight",
+        type=float,
+        default=0.0,
+        help="Hệ số phạt chạm góc pixel trong refine (K1).",
+    )
+    parser.add_argument(
+        "--thin-weight",
+        type=float,
+        default=0.0,
+        help="Hệ số phạt nét mảnh < 3 px trong refine (K1).",
+    )
+    parser.add_argument(
+        "--realization-shifts",
+        type=float,
+        nargs="+",
+        default=None,
+        help="N1: cặp dy dx (phần tử FE) nối tiếp, vd 0 0 0 0.5 0.5 0.",
+    )
+    parser.add_argument("--realization-sigma", type=float, default=0.5)
+    parser.add_argument(
+        "--fe-upsample",
+        type=int,
+        default=1,
+        help="Đối chứng N1: refine với FE trên lưới mịn hơn k lần.",
+    )
+    parser.add_argument("--n-workers", type=int, default=0)
+    parser.add_argument(
+        "--fe-upsample-last-only",
+        action="store_true",
+        help="N2-E2: chỉ dùng lưới mịn (--fe-upsample) ở mức β cuối.",
+    )
+    parser.add_argument(
+        "--robust-etas",
+        type=float,
+        nargs="+",
+        default=None,
+        help="N2-E1: ngưỡng chiếu bản giãn/co, vd 0.25 0.75.",
+    )
+    parser.add_argument("--robust-sigma", type=float, default=1.0)
+    parser.add_argument(
+        "--design-filter-sigma",
+        type=float,
+        default=None,
+        help="N2-E1′: thiết kế = ảnh lọc Gauss σ (phần tử FE) trên lưới FE.",
+    )
+    parser.add_argument(
         "--out",
         default=os.path.join(
             PHASE5_DIR, "physics_guided_refinement_benchmark.json"
         ),
     )
     args = parser.parse_args()
+
+    shifts = args.realization_shifts
+    if shifts is not None:
+        if len(shifts) % 2:
+            parser.error("--realization-shifts cần số giá trị chẵn (dy dx)")
+        shifts = [list(shifts[i : i + 2]) for i in range(0, len(shifts), 2)]
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     result = run_benchmark(
@@ -582,6 +826,16 @@ def main():
         n_boot=args.n_boot,
         projection_betas=args.projection_betas,
         save_images=args.save_images,
+        corner_weight=args.corner_weight,
+        thin_weight=args.thin_weight,
+        realization_shifts=shifts,
+        realization_sigma=args.realization_sigma,
+        fe_upsample=args.fe_upsample,
+        n_workers=args.n_workers,
+        fe_upsample_last_only=args.fe_upsample_last_only,
+        robust_etas=args.robust_etas,
+        robust_sigma=args.robust_sigma,
+        design_filter_sigma=args.design_filter_sigma,
     )
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w") as f:
@@ -623,6 +877,11 @@ def main():
         f"R2(v12)={s['r2_v12_guarded']:.4f}  giảm MAE(v12) "
         f"{g['rel_reduction']:.1%} [CI95 {g['rel_reduction_ci95_lo']:.1%}, "
         f"{g['rel_reduction_ci95_hi']:.1%}]"
+    )
+    print(
+        f"Chế tạo (K1: 4 hướng + nét tối thiểu, guarded): "
+        f"{s['frac_manuf4_guarded']:.2f}  có chạm góc: "
+        f"{s['frac_corner_guarded']:.2f}"
     )
     print(f"Đã lưu: {args.out}")
 

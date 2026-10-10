@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-10-10 - N1/N2: hiện thực hóa lệch lưới, robust formulation, thiết kế qua bộ lọc (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/realization.py`: `realize_shifted` (hiện thực hóa làm mượt + dịch lệch lưới, ngưỡng `eta` cho bản co/giãn) và `filtered_design` (thiết kế vật lý = Heaviside(lọc Gauss → lấy mẫu lưới FE)), khả vi.
+- `tandem_lbfgs` + `benchmark_physics_guided_refinement.py`: cờ mặc định tắt `--realization-shifts/--realization-sigma` (N1), `--fe-upsample [--fe-upsample-last-only]` (đối chứng lưới mịn, E2), `--robust-etas/--robust-sigma` (robust formulation, E1/E1′), `--design-filter-sigma` (thiết kế qua bộ lọc F: chọn best-of-N, refine, verify, chế tạo, ảnh lưu trên cùng ảnh; guard theo loss robust khi có `--robust-etas`), `--n-workers`.
+- Script đánh giá `outputs/phase5/plan_v3/n1/` (`eval_pilot.py`, `sigma_check.py`, `mesh_convergence.py`) và `n2/` (`eval_general.py` - bảng điểm e_verify / e_mesh / e_real / e_shift / e_ed / chế tạo, có cache; `island_cleanup.py`).
+- Test mới: `tests/test_phase5_realization.py`, thêm vào `test_tandem_lbfgs.py`, `test_phase5_refinement_benchmark.py` (706 → 732).
+- Tài liệu: `docs/de_xuat_cai_thien_ket_qua.md` (tra cứu + đề xuất), `docs/paper1/ghi_chu_viet_bao.md` (ghi chú viết báo), `docs/plan.md` mục N1, N2, N2-E1′, N2-E3-F, N2-C6, N2-S, N2-E3-S15.
+
+#### Kết quả chính (chi tiết `docs/plan.md`)
+- Refine giảm MAE ν12 68% trên lưới verify 50² nhưng chỉ 26% trên lưới mịn; ν của thiết kế pixel chỉ xác định tới ~0,02 tùy biểu diễn biên.
+- Thiết kế qua bộ lọc σ = 1 (F) ĐẠT xác nhận đặt trước n = 100 × 2 tập: sai số biên thực tế −43…−47% so với pipeline cũ, −53% so với SIMP, cùng chi phí.
+- Thước đo chế tạo cũ chủ yếu đếm đảo rời: xóa đảo (không đổi ν) cho A 0,84 / F 0,93 / SIMP 1,00.
+
+### 2026-10-08 - Dọn dẹp repo: `outputs/` theo dõi bởi git, docs lỗi thời, notebooks
+
+#### Changed
+- `notebooks/`: 10 notebook → 3. `01_doe_dataset_analysis.ipynb` gộp 01/02/03 cũ (34 ô gốc giữ nguyên văn); đặt lại tên cho đúng nguồn dữ liệu thật - 3 notebook cũ tên "Phase 1" nhưng luôn đọc manifest DOE Phase 3 (7.920 mẫu), không phải cây LHS Phase 1. `07_geometric_feature_influence` → `02_…`, `09_cheap_physical_properties` → `03_…` (nội dung không đổi).
+- `docs/PROJECT_PLAN.md`, `task_progress.md`, `auxforge_architecture_comparison-v2.md`, `paper1_{methods,results,discussion}_draft.md` → `docs/archive/` (đều tự ghi là đã bị thay thế; `docs/plan.md` v3 là nguồn kế hoạch duy nhất).
+- `.gitignore`: bỏ theo dõi ảnh snapshot `outputs/**/iteration_*.png`, `*_backup.csv`, `*_partial_log.txt` (artifact trung gian, tạo lại được; file trên đĩa giữ nguyên). Giữ nguyên `outputs/phase5/plan_v3/` (script Bài #1 đọc trực tiếp), `self_play/`, `multi_batch/` (bằng chứng cho `EXPERIMENT_LOG.md`).
+
+#### Removed
+- Notebook 04/05/06 (hiển thị chỉ số lỗi thời: surrogate R² 0,91 đời đầu, `property_accuracy` qua surrogate), 08 (thay bằng `docs/paper1/scripts/c5_pareto_nofp.py`), `gamma_sweep_analysis`; file trung gian `cleaned_dataset.parquet`, `cleaned_dataset_preview.csv`, `gamma_sweep_chart.png`, `next_sweep_config.json` (đề xuất `mu=0.2` trái mặc định hiện hành). Tất cả còn trong git history.
+- `notebooks/utils.py`: `classify_void`, `compute_coupling_ratio`, `PHASE4_DIR`, `PHASE5_DIR`, `SEEDS` (không còn nơi dùng; `SEEDS` thiếu `reentrant_bowtie`).
+
+#### Fixed
+- Notebook 01, tổng kết "tham số ảnh hưởng mạnh nhất lên ν12" xếp hạng cả metric đầu ra (`final_obj`, `n_iter`) → giờ chỉ xếp trong `param_cols` (kết quả: `rmin`, `move`, `void_size_frac`).
+
 ### 2026-10-07 - P1.7-P1.9: lai cVAE → SIMP, xác nhận phân tầng, bỏ `force_periodic` (nhánh `substrate-material`)
 
 #### Added
@@ -41,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `real_physics.solve_elastic_with_grad()`: v12/v21/E_x/E_y/G_xy/B_eff kèm gradient giải tích theo pixel, chỉ 1 lần FE-solve; hằng `ELASTIC_KEYS`.
 - `auxetic.compute_wave_speeds()`: tốc độ sóng quasi-static (bài toán Christoffel trên Q), chuẩn hóa theo sqrt(E0/ρs).
 - `analysis/scripts/backfill_elastic_props_npz.py`: backfill Q + 13 tính chất cho `outputs/phase3_a4/{train,val,test}_props.npz` (73.164 mẫu, 0 lỗi FE).
-- `notebooks/09_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
+- `notebooks/03_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
 - 14 test mới (679 → 693).
 
 #### Changed
