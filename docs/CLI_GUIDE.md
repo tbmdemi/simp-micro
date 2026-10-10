@@ -155,7 +155,7 @@ Kiến trúc KAN + WIRE (2026-08-23): mọi `fc` trong cVAE giờ là `Efficient
 source /home/tbm/miniconda3/etc/profile.d/conda.sh && conda activate simp
 python3 pipeline/phase5_cvae/train.py --decoder-type conv --fe-eval-every 10 --output-name cvae_base.pt
 
-# Decoder WIRE INR (Task 2 - chưa train; cần checkpoint wire riêng)
+# Decoder WIRE INR (Task 2 - ĐÃ ĐÓNG 2026-09-25, không đạt tiêu chí; giữ để tái lập)
 python3 pipeline/phase5_cvae/train.py --decoder-type wire --fe-eval-every 10 \
     --wire-hidden-dim 128 --wire-omega0 10.0 --wire-s0 10.0 --output-name cvae_wire.pt
 ```
@@ -223,6 +223,75 @@ MNO tự dùng fallback GRU; KINN giữ graph huấn luyện bằng PyTorch khi 
 JAX/AMG. Các lệnh trên là điểm bắt đầu experiment, không tự động chứng minh
 KPI production.
 
+### 8.3b. Physics-guided latent refinement (plan v3 P1.0/P1.1, 2026-09-25)
+
+Tối ưu z bằng gradient FE thật rồi verify bằng FE độc lập, kèm CI paired bootstrap. LUÔN dùng
+`--projection-betas` (refine trên ảnh liên tục khai thác vật liệu xám, xem `PIPELINE.md` 2026-09-25).
+
+```bash
+# single-shot, 100 condition test set
+python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
+    --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 \
+    --steps 32 --projection-betas 1 4 16 64 --out outputs/phase5/plan_v3/refine.json
+
+# best-of-30 + force_periodic rồi refine (đúng pipeline production)
+python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
+    --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 --n-samples 30 \
+    --force-periodic --steps 32 --projection-betas 1 4 16 64
+
+# target OOD dị hướng (ν12·ν21 < 1 - target đối xứng ν*≤-1 không tồn tại)
+python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
+    --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --targets -1.5 -2.0 --target-v21 -0.05 \
+    --n-samples 30 --force-periodic --steps 32 --projection-betas 1 4 16 64
+```
+
+Summary in ra cả chế độ **guarded** (chỉ nhận refine khi FE verify tốt hơn, không tốn thêm FE).
+`--save-images` (2026-10-06) lưu ảnh nhị phân 64² của thiết kế baseline/refined vào JSON (cho hình);
+cờ `baseline_manufacturable`/`refined_manufacturable` và `frac_manufacturable_*` luôn được ghi.
+
+### 8.3c. Baseline SIMP chạy từ đầu (plan v3 P1.6a, 2026-10-06)
+
+Inverse homogenization ½‖ν−ν*‖² bằng MMA (thể tích ≤0,55, Q11/Q22 ≥ δ, Heaviside β 1→64), đa
+khởi tạo 4 seed, verify nhị phân hóa + FE giống cVAE. Target đọc từ 1 JSON kết quả cVAE (cùng thứ
+tự → so sánh ghép cặp). Chỉ CPU; ~0,086 s/FE-solve, 100 target × 4 seed × 2 ngân sách ≈ 30 phút
+với 10 worker.
+
+```bash
+python3 pipeline/phase5_cvae/benchmark_simp_baseline.py --n-conditions 100 --workers 10 \
+    --save-images --out outputs/phase5/plan_v3/p1_6a_simp_baseline_in100.json
+# target OOD: trỏ --targets-json vào JSON của harness refine chạy với --targets
+python3 pipeline/phase5_cvae/benchmark_simp_baseline.py \
+    --targets-json outputs/phase5/plan_v3/p1_6b_signflip_sym.json --n-conditions 100 \
+    --out outputs/phase5/plan_v3/p1_6b_simp_sym.json
+```
+
+Script số liệu/hình cho bài báo (đọc JSON, ghi JSON/hình; chạy từ gốc repo): xem bảng trong
+`docs/paper1/README.md` (`p1_6a_compare.py`, `mesh_convergence.py`, `final_design_eval.py`,
+`retrieval_in100.py`, `refine_examples.py`, `deformation_examples.py`, `make_figures.py`,
+`c5_force_periodic.py`, `p1_8_anisotropy_strata.py`, `c5_pareto_nofp.py`, `p1_9_nofp_summary.py`).
+
+### 8.3d. Lai cVAE → SIMP (plan v3 P1.7, 2026-10-07 - KHÔNG ĐẠT tiêu chí, giữ để tái lập)
+
+Khởi tạo SIMP từ thiết kế cVAE cuối (cần JSON harness chạy với `--save-images`), β {8, 16, 32,
+64} × 15 eval, guarded; tự chấm 4 tiêu chí đăng ký trước so với SIMP `full`. CPU, ~4 phút/100 target.
+
+```bash
+python3 pipeline/phase5_cvae/benchmark_hybrid.py \
+    --cvae-json outputs/phase5/plan_v3/p1_6c_in100_bo30_images.json \
+    --simp-json outputs/phase5/plan_v3/p1_6a_simp_baseline_in100.json \
+    --workers 8 --out outputs/phase5/plan_v3/p1_7_hybrid_in100.json
+```
+
+**Pipeline của bài sau C5 (2026-10-07): KHÔNG dùng `--force-periodic`** cho harness refine, và
+`best_of_n_eval.py --no-force-periodic --periodicity-tol 1.0` (chế tạo được = liên thông + nét tối
+thiểu). Số R² best-of-N phụ thuộc quy tắc chọn: `--w-accuracy 1 --w-manuf 0 --w-aesthetic 0` (thuần
+độ chính xác) khác mặc định composite 0,6/0,3/0,1 (`LIMITATIONS.md` #38).
+
+Train mới: head mặc định của `CVAE` là KAN - thêm `--use-mlp-head` cho Linear (khuyến nghị,
+ablation 2026-09-25), luôn `--disable-symmetry` (dữ liệu 97,5% không đối xứng chéo). Tùy chọn
+`--rp-projection-beta-max B --rp-periodic`: real-physics loss trên ảnh đã chiếu Heaviside (β tăng
+hình học 1→B qua các epoch).
+
 ### 8.4. Self-play (active learning round-trip surrogate ↔ cVAE)
 
 ```bash
@@ -246,6 +315,7 @@ python3 pipeline/phase5_cvae/coverage_eval.py --help
 | `analysis/scripts/run_independent_fe_check.py` | Kiểm chứng FE độc lập bằng `scikit-fem` | `python3 analysis/scripts/run_independent_fe_check.py --help` |
 | `analysis/scripts/build_design_library.py` | Gom thư viện thiết kế đã sinh | `python3 analysis/scripts/build_design_library.py --help` |
 | `analysis/scripts/backfill_f1_f2_npz.py` | Backfill f1/f2 vào npz cũ (Nhóm 2) | `python3 analysis/scripts/backfill_f1_f2_npz.py --help` |
+| `analysis/scripts/backfill_elastic_props_npz.py` | Backfill Q + E/G/B, proxy ấn lõm, tốc độ sóng cho dataset A4 (~25 phút train, 12 worker) | `python3 analysis/scripts/backfill_elastic_props_npz.py --split test` |
 
 Mọi script trên đều có `--help` đầy đủ - bảng chỉ để biết script nào làm việc gì, không thay thế `--help`.
 

@@ -248,7 +248,7 @@ class TestOptionalConditionCli:
 
 
 class TestNu0ConditionCli:
-    """--nu0 (A6, docs/PROJECT_PLAN.md Nhóm 1) - chỉ có tác dụng với
+    """--nu0 (A6, docs/archive/PROJECT_PLAN.md Nhóm 1) - chỉ có tác dụng với
     checkpoint condition_dim ∈ {4,8} (train với --include-nu0)."""
 
     def test_nu0_only_checkpoint_builds_4dim_condition_with_value(

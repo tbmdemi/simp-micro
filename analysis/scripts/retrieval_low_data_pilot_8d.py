@@ -1,7 +1,7 @@
 """
 Fast pilot: retrieval accuracy o 8D khi thu nho tap tra cuu (Ndb)
 ====================================================================
-Nhom 4.2 (docs/PROJECT_PLAN.md) - cong hoi: retrieval chi manh vi co
+Nhom 4.2 (docs/archive/PROJECT_PLAN.md) - cong hoi: retrieval chi manh vi co
 57.216 mau tra cuu; khi Ndb nho (mo phong mien vat ly moi/khan hiem du
 lieu), R2(FE) cua retrieval o khong gian 8D se tut den dau? Day la ban
 RE (retrieval-only, khong train lai cVAE) de quyet dinh co dang dau tu

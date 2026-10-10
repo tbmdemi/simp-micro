@@ -29,18 +29,22 @@ import torch.nn.functional as F
 try:
     # Khi tandem_lbfgs.py được import theo đường dẫn dotted đầy đủ
     # (pipeline.phase5_cvae.tandem_lbfgs, vd tests/test_tandem_lbfgs.py).
-    from .heaviside import project_for_fe
+    from .heaviside import heaviside_projection_torch, project_for_fe
     from .losses import real_physics_loss
+    from .manuf_penalty import corner_contact_penalty, thin_feature_penalty
     from .real_physics import RealPhysicsNu
+    from .realization import filtered_design, realize_shifted
     from .verify_fe import FE_PARAMS as _DEFAULT_FE_PARAMS
 except ImportError:
     # Khi tandem_lbfgs.py được import bằng "from tandem_lbfgs import ..."
     # sau sys.path.insert(dirname(__file__)) - xem README "bare-import
     # landmine" note trong CLAUDE.md/memory (phase4/phase5 module trùng tên
     # sibling collide trong sys.modules nếu import lẫn lộn 2 kiểu).
-    from heaviside import project_for_fe
+    from heaviside import heaviside_projection_torch, project_for_fe
     from losses import real_physics_loss
+    from manuf_penalty import corner_contact_penalty, thin_feature_penalty
     from real_physics import RealPhysicsNu
+    from realization import filtered_design, realize_shifted
     from verify_fe import FE_PARAMS as _DEFAULT_FE_PARAMS
 
 _GUIDANCE_SOURCES = ("surrogate", "real_physics")
@@ -63,6 +67,15 @@ def tandem_inverse_design_lbfgs(
     n_workers: int = 0,
     projection_betas: Optional[Sequence[float]] = None,
     periodic: bool = False,
+    corner_weight: float = 0.0,
+    thin_weight: float = 0.0,
+    realization_shifts: Optional[Sequence[Sequence[float]]] = None,
+    realization_sigma: float = 0.5,
+    fe_upsample: int = 1,
+    fe_upsample_last_only: bool = False,
+    robust_etas: Optional[Sequence[float]] = None,
+    robust_sigma: float = 1.0,
+    design_filter_sigma: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Optimize a latent vector against a Poisson-ratio target.
 
@@ -108,6 +121,35 @@ def tandem_inverse_design_lbfgs(
         periodic: áp force_periodic khả vi trước projection - chỉ có tác
             dụng khi ``projection_betas`` được đặt; bật khi verify dùng
             ``--force-periodic``.
+        corner_weight: hệ số phạt chạm góc pixel (bản lề 1 nút), xem
+            ``manuf_penalty.corner_contact_penalty``. 0 = tắt (hành vi cũ).
+            Cần ``projection_betas`` (phạt tính trên ảnh sau Heaviside β).
+        thin_weight: hệ số phạt nét mảnh < 3 px, xem
+            ``manuf_penalty.thin_feature_penalty``. 0 = tắt.
+        realization_shifts: N1 (plan.md) - danh sách (dy, dx) theo phần tử
+            lưới FE. Có giá trị = loss là trung bình MSE trên chuỗi verify
+            VÀ K hiện thực hóa dịch lệch lưới (``realization.realize_shifted``)
+            để không thưởng thiết kế khai thác lỗi rời rạc hóa. None = tắt.
+            Cần ``projection_betas``.
+        realization_sigma: độ mượt của hiện thực hóa (đơn vị phần tử FE).
+        fe_upsample: đối chứng của N1 - giải FE trên lưới mịn hơn k lần
+            (lặp mỗi phần tử k×k, cùng hình học) thay vì lưới verify. 1 = tắt.
+            Cần ``projection_betas``.
+        fe_upsample_last_only: N2-E2 - chỉ giải FE lưới mịn ở mức β cuối
+            (mức quyết định hình học nhị phân), các mức trước giữ lưới verify
+            để rẻ. False = mọi mức (hành vi cũ của ``fe_upsample``).
+        robust_etas: N2-E1 robust formulation (Wang, Lazarov & Sigmund 2011)
+            - các ngưỡng chiếu cho bản giãn/co, vd ``(0.25, 0.75)``. Loss =
+            0,5·MSE(chuỗi verify) + 0,5·trung bình MSE(các bản co/giãn) (dạng
+            trọng số GLOnet: 0,5 gốc / 0,25 / 0,25). Bản gốc là chính chuỗi
+            verify để vẫn tối ưu đúng thứ được kiểm. None = tắt.
+        robust_sigma: độ mượt (phần tử FE) của trường dùng để co/giãn - quyết
+            định khoảng co/giãn σ·Φ⁻¹(eta), tức kích thước nét tối thiểu.
+        design_filter_sigma: N2-E1′ - thiết kế vật lý = Heaviside(lọc Gauss σ
+            (ảnh decoder) lấy mẫu lưới FE) (``realization.filtered_design``)
+            thay cho chuỗi resize nearest. Khi đặt, bản co/giãn của
+            ``robust_etas`` cũng sinh từ cùng trường đã lọc (``robust_sigma``
+            bị bỏ qua) - đúng robust formulation chuẩn. None = tắt.
 
     Returns:
         A dictionary containing ``z``, ``image``, ``prediction``, ``loss``
@@ -130,6 +172,37 @@ def tandem_inverse_design_lbfgs(
         )
     if guidance_source == "real_physics" and fe_params is None:
         fe_params = _DEFAULT_FE_PARAMS
+    if (realization_shifts or fe_upsample != 1 or robust_etas) and not (
+        guidance_source == "real_physics" and projection_betas
+    ):
+        raise ValueError(
+            "realization_shifts/fe_upsample/robust_etas cần guidance_source="
+            "'real_physics' và projection_betas"
+        )
+    if fe_upsample < 1:
+        raise ValueError("fe_upsample phải >= 1")
+    if design_filter_sigma is not None:
+        if not (guidance_source == "real_physics" and projection_betas):
+            raise ValueError(
+                "design_filter_sigma cần guidance_source='real_physics' và "
+                "projection_betas"
+            )
+        if periodic or realization_shifts:
+            # Hai biểu diễn thiết kế khác nhau - không trộn trong 1 loss.
+            raise ValueError(
+                "design_filter_sigma không dùng chung periodic/"
+                "realization_shifts"
+            )
+    use_manuf = corner_weight > 0 or thin_weight > 0
+    if use_manuf and not (
+        guidance_source == "real_physics" and projection_betas
+    ):
+        # Phạt chỉ có nghĩa trên ảnh đã chiếu gần nhị phân (K1) - trên ảnh
+        # xám, đa thức chạm góc/opening không khớp thứ verify đo.
+        raise ValueError(
+            "corner_weight/thin_weight cần guidance_source='real_physics' "
+            "và projection_betas"
+        )
 
     device = next(generator_model.parameters(), target_poisson).device
     target = target_poisson.reshape(1, 2).to(
@@ -175,6 +248,14 @@ def tandem_inverse_design_lbfgs(
         liên tục, real_physics_loss tự resize bilinear)."""
         if beta is None:
             return image
+        if design_filter_sigma is not None:
+            return filtered_design(
+                image,
+                beta,
+                fe_params["nely"],
+                fe_params["nelx"],
+                design_filter_sigma,
+            )
         # Đã ở đúng lưới FE -> bilinear cùng kích thước bên trong
         # real_physics_loss là identity.
         return project_for_fe(
@@ -184,13 +265,90 @@ def tandem_inverse_design_lbfgs(
     def objective(beta) -> torch.Tensor:
         image = generator_model.decoder(z, condition)
         if guidance_source == "real_physics":
-            return real_physics_loss(
-                density_for_fe(image, beta),
-                target,
-                fe_params,
-                subsample=subsample,
-                n_workers=n_workers,
+            density = density_for_fe(image, beta)
+            if beta is not None and realization_shifts:
+                # Gộp chuỗi verify + K hiện thực hóa thành 1 batch FE: MSE
+                # trung bình = kỳ vọng sai số trên các cách đặt lưới.
+                density = torch.cat(
+                    [
+                        density,
+                        realize_shifted(
+                            image,
+                            beta,
+                            fe_params["nely"],
+                            fe_params["nelx"],
+                            realization_shifts,
+                            realization_sigma,
+                        ),
+                    ]
+                )
+            fine = (
+                beta is not None
+                and fe_upsample > 1
+                and (not fe_upsample_last_only or beta == last_beta)
             )
+
+            def fe_loss(dens: torch.Tensor) -> torch.Tensor:
+                """MSE FE trên 1 batch mật độ, trên lưới mịn nếu ``fine``."""
+                p = fe_params
+                if fine:
+                    # Cùng hình học, lưới mịn hơn: lặp phần tử k×k.
+                    k = fe_upsample
+                    dens = dens.repeat_interleave(k, -2)
+                    dens = dens.repeat_interleave(k, -1)
+                    p = dict(
+                        fe_params,
+                        nely=fe_params["nely"] * k,
+                        nelx=fe_params["nelx"] * k,
+                    )
+                return real_physics_loss(
+                    dens,
+                    target.expand(dens.shape[0], -1),
+                    p,
+                    subsample=subsample,
+                    n_workers=n_workers,
+                )
+
+            loss = fe_loss(density)
+            if beta is not None and robust_etas:
+                if design_filter_sigma is not None:
+                    # E1′: co/giãn từ CÙNG trường đã lọc với bản gốc.
+                    pert = torch.cat(
+                        [
+                            filtered_design(
+                                image,
+                                beta,
+                                fe_params["nely"],
+                                fe_params["nelx"],
+                                design_filter_sigma,
+                                eta,
+                            )
+                            for eta in robust_etas
+                        ]
+                    )
+                else:
+                    pert = torch.cat(
+                        [
+                            realize_shifted(
+                                image,
+                                beta,
+                                fe_params["nely"],
+                                fe_params["nelx"],
+                                [(0.0, 0.0)],
+                                robust_sigma,
+                                eta,
+                            )
+                            for eta in robust_etas
+                        ]
+                    )
+                loss = 0.5 * loss + 0.5 * fe_loss(pert)
+            if use_manuf:
+                # Phạt trên ảnh 64² sau Heaviside cùng β - đúng lưới mà
+                # check_connectivity đo chế tạo (không phải lưới FE 50²).
+                x = heaviside_projection_torch(image, beta)
+                loss = loss + corner_weight * corner_contact_penalty(x)
+                loss = loss + thin_weight * thin_feature_penalty(x)
+            return loss
         prediction = surrogate_model(image, seed_vec)
         predicted_poisson = prediction[:, :2]
         return F.mse_loss(predicted_poisson, target)
@@ -204,6 +362,7 @@ def tandem_inverse_design_lbfgs(
         stages = [(b, n) for b, n in zip(betas, per) if n > 0]
     else:
         stages = [(None, steps)]
+    last_beta = stages[-1][0]
 
     for beta, n_steps in stages:
         optimizer = torch.optim.LBFGS(

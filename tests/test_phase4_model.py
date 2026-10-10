@@ -62,7 +62,8 @@ class TestSurrogateCNN:
 
 
 class TestSurrogateCNNNu0:
-    """include_nu0=True (Giai đoạn A/A4, docs/PROJECT_PLAN.md Nhóm 1) - nu0
+    """include_nu0=True (Giai đoạn A/A4, docs/archive/PROJECT_PLAN.md Nhóm 1) -
+    nu0
     concat như 1 input phụ sau GAP, cùng seed one-hot."""
 
     def test_default_forward_unaffected(self):

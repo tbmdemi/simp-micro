@@ -23,12 +23,19 @@ này có sản xuất/lắp ráp được thành lattice tuần hoàn hay không
   ngay tại mép ghép - vẫn hợp lệ về mặt homogenization (chỉ là nơi 1 thanh
   kết thúc) nhưng đáng gắn cờ để người thiết kế xem lại trước khi sản xuất.
 """
+
 import numpy as np
 from scipy import ndimage
 
 
-def check_connectivity(img_bin: np.ndarray, min_feature_px: int = 2):
+def check_connectivity(
+    img_bin: np.ndarray, min_feature_px: int = 2, connectivity: int = 8
+):
     """img_bin: mảng nhị phân (0/1 hoặc bool), 1 = vật liệu rắn.
+
+    connectivity: 8 (mặc định, hành vi cũ - mọi số đã báo trước 2026-10-08)
+      hoặc 4. Định nghĩa K1 (plan.md) dùng 4: 2 khối chỉ chạm góc là bản lề
+      1 nút trong FE Q4, không chế tạo được, nên không tính là nối.
 
     - n_components: số mảnh vật liệu rời rạc (không kể pha rỗng), dùng
       connectivity 8-nối (kể cả chéo) vì đó là điều kiện "chạm nhau" đúng
@@ -41,8 +48,14 @@ def check_connectivity(img_bin: np.ndarray, min_feature_px: int = 2):
       hoàn toàn (không còn pixel nào) nghĩa là nét đó mảnh hơn ngưỡng gia
       công min_feature_px - đánh dấu False.
     """
+    if connectivity not in (4, 8):
+        raise ValueError("connectivity phải là 4 hoặc 8")
     solid = np.asarray(img_bin) > 0.5
-    structure = np.ones((3, 3), dtype=int)  # 8-connectivity
+    structure = (
+        np.ones((3, 3), dtype=int)
+        if connectivity == 8
+        else ndimage.generate_binary_structure(2, 1)
+    )
     labels, n_components = ndimage.label(solid, structure=structure)
 
     is_connected = n_components <= 1
@@ -70,6 +83,25 @@ def check_connectivity(img_bin: np.ndarray, min_feature_px: int = 2):
     }
 
 
+def count_corner_contacts(img_bin: np.ndarray) -> int:
+    """Số cửa sổ 2×2 TUẦN HOÀN dạng chéo (2 pixel rắn chỉ chạm góc).
+
+    Bản nhị phân của manuf_penalty.corner_contact_penalty (K1). Tính cả
+    đường nối giữa các ô lát vì FE dùng biên tuần hoàn.
+
+    Args:
+        img_bin: ảnh nhị phân (H, W), 1 = rắn.
+
+    Returns:
+        Số điểm chạm góc (0 = không có bản lề 1 nút).
+    """
+    s = np.asarray(img_bin) > 0.5
+    b = np.roll(s, -1, axis=1)
+    c = np.roll(s, -1, axis=0)
+    e = np.roll(b, -1, axis=0)
+    return int(((s & e & ~b & ~c) | (b & c & ~s & ~e)).sum())
+
+
 def check_periodicity(img_bin: np.ndarray, tol: float = 0.1):
     """So sánh occupancy cột trái/phải và hàng trên/dưới - xem docstring
     đầu file. tol: tỉ lệ pixel-biên-không-khớp tối đa để vẫn coi là
@@ -90,8 +122,9 @@ def check_periodicity(img_bin: np.ndarray, tol: float = 0.1):
     }
 
 
-def check_manufacturability(img_bin: np.ndarray, min_feature_px: int = 2,
-                             periodicity_tol: float = 0.1):
+def check_manufacturability(
+    img_bin: np.ndarray, min_feature_px: int = 2, periodicity_tol: float = 0.1
+):
     """Gộp cả 2 kiểm tra - dùng trực tiếp trong best_of_n_eval.py."""
     conn = check_connectivity(img_bin, min_feature_px=min_feature_px)
     period = check_periodicity(img_bin, tol=periodicity_tol)

@@ -1,16 +1,17 @@
 # Kiến trúc hệ thống
 
 > Tài liệu kiến trúc: bản đồ module hiện tại, luồng dữ liệu qua 8 phase, và các điểm mở rộng mà
-> roadmap [`PROJECT_PLAN.md`](PROJECT_PLAN.md) sẽ chạm vào. Phần "kiến trúc đích" ở §4 viết **trước
-> khi Nhóm 1 (ν0 vật liệu nền) hoàn thành** - nhánh A1-A7 trong sơ đồ/bảng §3-4 giờ đã là code thật
-> trên `main` (xem [`PROJECT_PLAN.md` Nhóm 1](PROJECT_PLAN.md#nhóm-1---giai-đoạn-a-vary-vật-liệu-nền-l-effort-lớn-nhất-ưu-tiên-cao-nhất),
+> roadmap cũ [`PROJECT_PLAN.md`](archive/PROJECT_PLAN.md) (nay thay bằng [`plan.md`](plan.md) v3) sẽ chạm vào, cùng chi tiết layer-by-layer các mạng
+> neural đang dùng (§2). Phần "kiến trúc đích" ở §5 viết **trước khi Nhóm 1 (ν0 vật liệu nền) hoàn
+> thành** - nhánh A1-A7 trong sơ đồ/bảng §4-5 giờ đã là code thật trên `main` (xem
+> [`PROJECT_PLAN.md` Nhóm 1](archive/PROJECT_PLAN.md#nhóm-1---giai-đoạn-a-vary-vật-liệu-nền-l-effort-lớn-nhất-ưu-tiên-cao-nhất),
 > [`EXPERIMENT_LOG.md`](../EXPERIMENT_LOG.md) mục 2026-08-18/19), không còn "giả định"; chỉ nhánh F
 > (nhiệt/CTE, Nhóm 6) vẫn thật sự giả định/chưa code. File `END_TO_END_SCENARIO.md` được nhắc tới ở
-> §3-4 (bản nháp trước khi Nhóm 1 chạy thật) **không tồn tại** trong repo - dùng `PROJECT_PLAN.md` +
+> §4-5 (bản nháp trước khi Nhóm 1 chạy thật) **không tồn tại** trong repo - dùng `PROJECT_PLAN.md` +
 > `EXPERIMENT_LOG.md` làm nguồn thật thay thế. Không có sơ đồ nào ở đây thay thế
 > [`docs/PIPELINE.md`](PIPELINE.md) (lệnh chạy + số liệu thật từng phase) hay
 > [`docs/PHYSICS_AND_ML.md`](PHYSICS_AND_ML.md) (bản chất toán học) - tài liệu này chỉ tập trung vào
-> **cấu trúc module và phụ thuộc giữa chúng**.
+> **cấu trúc module, phụ thuộc giữa chúng, và kiến trúc mạng neural cụ thể**.
 
 ## 1. Bản đồ module hiện tại
 
@@ -25,7 +26,7 @@ simp/                           # Lõi vật lý - độc lập với pipeline/,
 ├── homogenization/
 │   └── compute.py              #   compute_homogenized_tensor - Q (3x3), dQ (3x3xnelyxnelx)
 ├── objectives/
-│   └── auxetic.py              #   hàm mục tiêu SIMP (auxetic, v12/v21) + compute_elastic_constants (Ex,Ey,Gxy,B_eff)
+│   └── auxetic.py              #   hàm mục tiêu SIMP (auxetic, v12/v21) + compute_elastic_constants (Ex,Ey,Gxy,B_eff) + compute_wave_speeds
 ├── seeds/                      #   hình dạng khởi tạo (hexagonal, hourglass, reentrant_bowtie)
 └── io/                         #   đọc/ghi kết quả + reconstruct_3d_bent_surface (minh họa định tính, KHÔNG phải FE)
 
@@ -40,7 +41,7 @@ pipeline/                       # Orchestration 8-phase, PHỤ THUỘC simp/ (kh
 │   ├── dataset.py, model.py, train.py, evaluate.py, export_for_phase5.py
 ├── phase5_cvae/                 #   Conditional VAE + differentiable-physics fine-tune
 │   ├── dataset.py, model.py, train.py       #   KAN regression head (fc = EfficientKANLinear), decoder_type="conv"|"wire" (WIRE INR, Task 2), condition_dim, extended_condition, condition-dropout
-│   ├── real_physics.py                       #   RealPhysicsNu (torch.autograd.Function, FE thật)
+│   ├── real_physics.py                       #   RealPhysicsNu (torch.autograd.Function, FE thật) + solve_elastic_with_grad (E/G/B + gradient)
 │   ├── losses.py                             #   recon + beta*kl + gamma*prop_loss (+volfrac_consistency)
 │   ├── best_of_n_eval.py                     #   composite_score (0.6/0.3/0.1), oracle FE selection
 │   └── sample.py                             #   inference, force_periodic() mặc định bật, --resolution (chỉ wire)
@@ -54,7 +55,78 @@ analysis/scripts/                # Script sinh dữ liệu ĐỘC LẬP với pi
 được ở cả Phase 1-3 (NumPy) lẫn Phase 5 (`real_physics.py` gọi `simp/core/solver.py` trực tiếp bên
 trong `torch.autograd.Function`, không qua surrogate).
 
-## 2. Luồng dữ liệu qua 8 phase
+## 2. Kiến trúc chi tiết các mạng neural (layer-by-layer)
+
+Tham số đo thật bằng `sum(p.numel() for p in model.parameters())` trên chính code hiện hành (không phải ước lượng lý thuyết).
+
+### 2.1 `SurrogateCNN` (Phase 4) — [`pipeline/phase4_surrogate/model.py`](../pipeline/phase4_surrogate/model.py)
+
+Dự đoán (ν₁₂, ν₂₁, volfrac[, f1, f2]) trực tiếp từ ảnh mật độ 64×64 - oracle nhanh, đóng băng khi dùng làm loss cho Phase 5.
+
+```
+(B,1,64,64)
+ → 4× ConvBlock: Conv2d(3×3,pad=1) → BatchNorm2d → ReLU → MaxPool2d(2)
+     kênh 1→32→64→128→256, không gian 64→32→16→8→4
+ → AdaptiveAvgPool2d(1) (GAP, KHÔNG Flatten toàn bộ feature map)
+ → flatten → (B,256) → concat [seed_onehot(11)[, nu0(1)]]
+ → FC head: Linear(256+11[+1], 128) → ReLU → Dropout(0.2) → Linear(128, n_outputs)
+```
+
+`use_kan=True` thay 2 lớp FC cuối bằng `EfficientKANLinear` (§2.4), giữ nguyên phần conv+GAP. Tham số (`n_seeds=11, n_outputs=3`): **423.491** (head Linear) vs **699.840** (head KAN, +65%). GAP thay vì Flatten 4096 chiều (kế hoạch gốc) là quyết định đã chốt - ít tham số hơn, không giảm R² đo được.
+
+### 2.2 `CVAE` — Encoder + Decoder conv (Phase 5, mặc định) — [`pipeline/phase5_cvae/model.py`](../pipeline/phase5_cvae/model.py)
+
+**Encoder** (cấu trúc conv giống `SurrogateCNN` nhưng **giữ nguyên feature map không gian**, không GAP - decoder cần đủ thông tin không gian để tái tạo):
+```
+(B,1,64,64) → 4× EncoderBlock (1→32→64→128→256, mỗi block /2 không gian: 64→4)
+ → flatten → (B,4096) → concat condition (2 chiều: v12,v21)
+ → 2× EfficientKANLinear(4098, 32) song song → (mu, logvar)   [latent_dim=32]
+```
+
+**Decoder (`decoder_type="conv"`):**
+```
+[z(32), condition(2)] → concat(34) → EfficientKANLinear(34, 4096) → reshape (B,256,4,4)
+ → 4× DecoderBlock: ConvTranspose2d(4×4,stride2,pad1) [→BatchNorm→ReLU, trừ lớp cuối]
+     kênh đảo ngược 256→128→64→32→1, không gian 4→8→16→32→64
+ → Sigmoid → (B,1,64,64)∈[0,1]
+ → enforce_symmetry: image = 0.5·(image + image.transpose(-1,-2))
+```
+
+Reparameterization chuẩn VAE: `z = mu + eps·exp(0.5·logvar)` lúc train; `z=mu` (deterministic) lúc validation. Tham số (condition_dim=2, latent_dim=32): **1.483.809** (Linear head) → **4.691.937** (KAN head, +3,16×) - phần lớn phình ra ở `fc_mu`/`fc_logvar`/`decoder.fc` vì `in_features` lớn (4096+), mỗi kết nối KAN có thêm 8 hệ số spline thay vì 1 trọng số Linear.
+
+### 2.3 `WireContinuousDecoder` (decoder thay thế, `decoder_type="wire"`, Task 2 - đã thất bại benchmark chính thức, xem [`task_progress.md`](archive/task_progress.md) Task 2)
+
+Thay ConvTranspose2d bằng implicit neural representation (INR) truy vấn tọa độ liên tục:
+```
+input: coords(x,y)∈[-1,1]²(2) ⊕ z(32) ⊕ condition(2) = 36 chiều
+ → ComplexGaborActivation(36→128)  [layer1]
+ → ComplexGaborActivation(128→128) [layer2]
+ → Linear(128→1) → Sigmoid → ρ∈[0,1] tại đúng tọa độ truy vấn
+```
+`ComplexGaborActivation` = dạng thực của Gabor wavelet phức (Saragadam et al., WIRE, ICCV 2023):
+```
+act(x) = cos(ω₀·(Wx+b)) · exp(-s₀²·(Wx+b)²)
+```
+`cos` cho dao động tần số cao, `exp(-s₀²p²)` là envelope Gaussian định xứ (mỗi neuron chỉ "sáng" ở 1 vùng nhỏ input → biên sắc, ít cấu trúc rác cô lập). Khởi tạo weight `U(±√(6/in)/s₀)` để `s₀·p` giữ thang O(1) (đã verify `act.std≈0,37`, không suy biến gradient).
+
+`forward(z, condition, resolution=...)` tự sinh lưới raster `resolution×resolution` rồi gọi `forward_coords()` - cơ chế **resolution-agnostic**: 1 checkpoint suy luận được ở 64²/128²/256²/512² không cần train lại, vì mạng học hàm liên tục `ρ=f(x,y;z,c)` thay vì 1 lưới pixel cố định. `wire_hidden_dim=128`: CVAE tổng (encoder KAN + WIRE decoder) **2.770.625** tham số.
+
+### 2.4 `EfficientKANLinear` - lớp KAN dùng chung ở §2.1/2.2 — [`efficient_kan/__init__.py`](../efficient_kan/__init__.py) (vendor local, không có trên PyPI)
+
+Mỗi kết nối có 2 nhánh cộng lại thay vì 1 trọng số vô hướng như `nn.Linear`:
+```
+y = base_activation(x)·base_weight^T  +  B(x)·spline_weight^T
+```
+- `base_weight`: (out,in) - nhánh tuyến tính cơ sở, `base_activation=SiLU`.
+- `B(x)`: giá trị B-spline bậc 3 (đệ quy Cox-de Boor) trên lưới cố định phủ `[-1,1]` với `grid_size=5` khoảng (mở rộng thêm `spline_order=3` điểm mỗi bên để đệ quy không cần xử lý biên riêng).
+- `spline_weight`: (out,in,grid_size+spline_order=8) - hệ số spline **learnable** - đây là phần "Kolmogorov-Arnold" thật sự (hàm kích hoạt học được trên từng cạnh, thay vì trọng số cố định + activation cố định kiểu MLP).
+- `grid` là buffer không train; `rebuild_kan_grid()` cho phép đổi `in_features` khi resume checkpoint với `condition_dim` khác mà không mất `base_weight`/`spline_weight` đã học ở phần input chung.
+
+### 2.5 `RealPhysicsNu` - không phải mạng neural, nhưng là nguồn gradient huấn luyện KAN/WIRE — [`pipeline/phase5_cvae/real_physics.py`](../pipeline/phase5_cvae/real_physics.py)
+
+`torch.autograd.Function` bọc trực tiếp FE solver thật (`simp/core/solver.py` + `simp/homogenization/compute.py`), không phải mạng học xấp xỉ. Forward giải FE thật (~50-100ms/mẫu, lưới 50×50); backward tận dụng `dQ_ij/dx_e` (đạo hàm giải tích có sẵn nhờ tính tự-adjoint của bài toán năng lượng) nên gần như miễn phí - chỉ vài phép nhân ma trận 3×3, không giải FE lại. Đã kiểm chứng bằng finite-difference, sai số <1e-4. Đây là "chìa khóa" nâng R² của KAN từ 0,19 (chỉ BCE/MSE ảnh) lên 0,64/0,8889 khi dùng làm loss phụ - xem `EXPERIMENT_LOG.md` mục 2026-08-23.
+
+## 3. Luồng dữ liệu qua 8 phase
 
 ```mermaid
 flowchart LR
@@ -74,7 +146,7 @@ hơn nhưng chính xác - FE thật + đạo hàm giải tích ngay trong backwa
 exploitation chính là chuyển từ (a) sang (b) làm nguồn loss chính, giữ (a) chỉ để lọc sơ bộ nhanh
 (`--k-fe-verify`).
 
-## 3. Điểm mở rộng cho roadmap hiện tại
+## 4. Điểm mở rộng cho roadmap hiện tại
 
 | File | Vai trò hiện tại | Điểm chạm khi mở rộng (Nhóm nào) |
 |---|---|---|
@@ -91,7 +163,7 @@ exploitation chính là chuyển từ (a) sang (b) làm nguồn loss chính, gi�
 | `simp/core/pbc.py` | PBC real-valued cho 3 load case biến dạng | F2 (PBC cho bài toán nhiệt); D3 nếu mở lại Nhóm 5 (PBC phức Bloch-Floquet - viết mới phần lớn) |
 | `simp/objectives/auxetic.py` | mục tiêu auxetic đơn | F3 - mở rộng hoặc tách `thermal.py` cho CTE cực trị |
 
-## 4. Kiến trúc đích (giả định, sau khi chạy hết Nhóm 1+2+6 theo kịch bản)
+## 5. Kiến trúc đích (giả định, sau khi chạy hết Nhóm 1+2+6 theo kịch bản)
 
 ```mermaid
 flowchart TB
@@ -137,7 +209,7 @@ thiết kế gốc không còn đúng, cần đánh giá lại chi phí trước
 vẫn khả thi ở quy mô hiện tại - **đã đo thật ở A5** (`EXPERIMENT_LOG.md` 2026-08-18): dựng lại
 `Material` mỗi lần ~97µs/lần, ~0,1-0,2% chi phí FE-solve, rủi ro không xảy ra trong thực tế.
 
-## 5. Quy ước đặt tên & versioning
+## 6. Quy ước đặt tên & versioning
 
 - **Không ghi đè checkpoint** - mỗi thay đổi ý nghĩa (dataset mới, condition mới, loss mới) tạo tên
   file mới (`_v2`, `_clean`, `_extended`, `_material`, `_thermal`...), giữ bản cũ làm tham chiếu
@@ -151,9 +223,10 @@ vẫn khả thi ở quy mô hiện tại - **đã đo thật ở A5** (`EXPERIME
   đi vào 1 dict riêng (`NU_ACTIVE_PARAMETERS`) thay vì gộp thẳng vào dict mặc định, để không âm
   thầm đổi hành vi tái tạo dataset production cũ.
 
-## 6. Tài liệu liên quan
+## 7. Tài liệu liên quan
 
-- [`docs/PROJECT_PLAN.md`](PROJECT_PLAN.md) - roadmap, effort, ETA, ưu tiên
+- [`docs/plan.md`](plan.md) - kế hoạch + trạng thái hiện hành (nguồn duy nhất, v3)
+- [`docs/archive/`](archive/) - roadmap cũ `PROJECT_PLAN.md`, log `task_progress.md`, bản nháp paper1 `.md` (lịch sử)
 - [`docs/PIPELINE.md`](PIPELINE.md) - lệnh chạy + số liệu THẬT từng phase hiện có
 - [`docs/PHYSICS_AND_ML.md`](PHYSICS_AND_ML.md) - bản chất toán học/vật lý + vai trò ML
 - [`docs/LIMITATIONS.md`](LIMITATIONS.md) - giới hạn đã biết, phạm vi claim khoa học

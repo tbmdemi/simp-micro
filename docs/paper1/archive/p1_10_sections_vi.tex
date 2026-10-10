@@ -1,0 +1,219 @@
+% ===========================================================================
+% P1.10 NHÁP - các phần mới/viết lại cho main_vi.tex (khung A). Bản dịch của
+% p1_10_sections_en.tex, CÙNG số liệu (nguồn: outputs/phase5/plan_v3/).
+% Viết 2026-10-07, CHƯA gộp vào main_vi.tex: chờ quyết định C2 (tên bài),
+% C4 (tạp chí), C5 (force_periodic). Dùng macro của main_vi.tex.
+% ===========================================================================
+
+% --- THAY tóm tắt -----------------------------------------------------------
+\begin{abstract}
+Thiết kế ô cơ sở vật liệu meta dựa trên gradient, dù bằng tối ưu tô-pô hay
+bằng tìm kiếm trong không gian ẩn của mô hình sinh, được đánh giá bằng phân
+tích phần tử hữu hạn (FE) trên thiết kế đã nhị phân hóa, nhưng thường lại tối
+ưu một trường mật độ liên tục. Chúng tôi chỉ ra rằng sự lệch này bị khai thác
+một cách có hệ thống. Tinh chỉnh mã ẩn của một bộ mã hóa tự động biến phân có
+điều kiện (cVAE) theo độ nhạy đồng nhất hóa chính xác đưa hàm mục tiêu về
+$\sim\!10^{-10}$ trong khi sai số kiểm chứng vẫn lớn hơn sáu bậc, và tối ưu
+tô-pô dựa trên mật độ với Heaviside continuation tới $\beta=64$ cũng có cùng
+khoảng lệch (trung vị $2\times10^{-7}$ trước so với $3{,}6\times10^{-2}$ sau
+khi lấy ngưỡng). Đưa các toán tử kiểm chứng vào hàm mục tiêu tinh chỉnh nâng
+$\RR$ kiểm chứng FE của hệ số Poisson $\nuot$ cho ô auxetic hai chiều từ 0,874
+lên 0,998 với mẫu đơn lẻ (0,831 lên 0,990 trên tập mục tiêu thứ hai, không
+giao nhau) và từ 0,983--0,990 lên 0,995--0,998 sau chọn best-of-30 trên ba
+tập. So với tối ưu tô-pô chạy từ đầu với nhiều điểm khởi tạo, quy trình sinh
+đạt cùng độ chính xác với số lần giải FE ít hơn khoảng tám lần, và trên một
+tập kiểm định đăng ký trước, sai số kết hợp thấp hơn 27\% đối với mục tiêu
+dị hướng vừa phải. Phương pháp thất bại với mục tiêu dị hướng mạnh vốn thưa
+trong dữ liệu huấn luyện, và tối ưu tô-pô vẫn vượt trội về khả năng chế tạo
+cũng như với mục tiêu ngoài dải huấn luyện.
+\end{abstract}
+
+% --- Results MỚI ------------------------------------------------------------
+\subsection{So sánh với tối ưu tô-pô chạy từ đầu}
+
+Đối thủ đúng nghĩa của một quy trình sinh không phải là tra bảng mà là tối
+ưu tô-pô chạy trực tiếp cho mục tiêu. Với mỗi mục tiêu, chúng tôi giải bài
+toán đồng nhất hóa ngược kinh điển
+$\min\tfrac12\lVert\boldsymbol\nu-\boldsymbol\nu^{*}\rVert^2$ bằng phương pháp
+tiệm cận di động (MMA), có cận thể tích và sàn độ cứng, Heaviside continuation
+tới $\beta=64$ và bốn tô-pô khởi tạo lấy từ dữ liệu huấn luyện (Phương pháp).
+Mỗi lần chạy được kiểm chứng y hệt một thiết kế sinh ra, và lời giải tốt nhất
+trong bốn được chọn theo sai số kiểm chứng. Baseline này dùng trung bình 893
+lần giải FE cho mỗi mục tiêu, so với 107 của best-of-30 kèm tinh chỉnh nhận
+biết nhị phân hóa có bảo vệ.
+
+Tối ưu tô-pô có cùng khoảng lệch mục tiêu--kiểm chứng như tinh chỉnh không
+gian ẩn. Cuối continuation, sai số trung vị trên trường mật độ đã chiếu là
+$2\times10^{-7}$, còn sai số kiểm chứng trung vị sau khi lấy ngưỡng là
+$3{,}6\times10^{-2}$ mỗi lần chạy, và ở 57\% trong 300 mục tiêu, tô-pô khởi
+tạo có sai số trên trường chiếu thấp nhất không phải là tô-pô có sai số kiểm
+chứng thấp nhất. Do đó việc chọn theo sai số kiểm chứng là cần thiết cho cả
+hai phương pháp, củng cố luận điểm trung tâm của bài vượt ra ngoài mô hình
+sinh.
+
+Bảng~\ref{tab:simp} so sánh hai phương pháp trên ba tập 100 mục tiêu giữ lại,
+không giao nhau. Trên cả ba tập, quy trình sinh ngang bằng tối ưu tô-pô hội
+tụ về $\nuot$ ($\RR=0{,}994$--$0{,}998$ so với $0{,}996$--$0{,}998$) với số lần
+giải FE ít hơn khoảng tám lần. Trên toàn bộ mục tiêu, sai số kết hợp
+$|\Delta\nuot|+|\Delta\nuto|$ không thấp hơn một cách nhất quán, do một kiểu
+thất bại cụ thể. Mọi ô bị đứt mà cVAE sinh ra (một mục tiêu ở tập thứ nhất,
+hai ở tập thứ hai) đều thuộc mục tiêu có tỉ số dị hướng
+$r=\max(\nuto^{*}/\nuot^{*},\,\nuot^{*}/\nuto^{*})\ge10$, tương ứng tỉ số độ
+cứng $E_2/E_1\ge10$ với ô trực hướng. Với các mục tiêu này cả 30 ứng viên
+đều bị đứt, nên không thể sửa bằng cách chọn; chỉ 2,8\% mẫu huấn luyện có
+$r>10$. Sau khi quan sát điều này ở hai tập đầu, chúng tôi đăng ký trước một
+kiểm định phân tầng trên tập thứ ba trước khi chạy: với mục tiêu $r<10$, quy
+trình sinh phải có sai số kết hợp và sai số $\nuot$ thấp hơn tối ưu tô-pô, với
+CI 95\% ghép cặp không chứa 0. Tiêu chí sai số kết hợp đạt (thấp hơn 27\%, CI
+8--42\%); tiêu chí $\nuot$ không đạt (thấp hơn 19\%, CI $-10$ đến 40\%). Kiểm định
+này dùng quy trình có ép biên tuần hoàn. Sau khi bỏ bước này vì lý do khái
+niệm (Phương pháp), cùng phép so sánh nghiêng về quy trình sinh ở cả hai tiêu
+chí trên cả ba tập (Bảng~\ref{tab:simp}); vì phiên bản này không được đăng ký
+trước, chúng tôi báo nó như phân tích độ nhạy và vẫn chỉ khẳng định ngang
+bằng về $\nuot$ và lợi thế về sai số kết hợp ở dị hướng vừa phải, không khẳng
+định vượt trội về $\nuot$. Chênh lệch
+$\nuot$ giữa hai phương pháp ($\sim\!10^{-3}$) dù sao cũng nhỏ hơn một bậc so
+với sai số rời rạc hóa của mô hình FE $50\times50$ (đoạn tiếp theo).
+
+\begin{table}[t]
+\centering
+\caption{Quy trình sinh (best-of-30 + tinh chỉnh nhận biết nhị phân hóa có
+bảo vệ) so với tối ưu tô-pô chạy từ đầu (tốt nhất trong bốn điểm khởi tạo,
+hội tụ) trên ba tập 100 mục tiêu không giao nhau. Cả hai phương pháp chọn
+ứng viên theo sai số kết hợp kiểm chứng (không theo điểm tổng hợp ở
+Bảng~\ref{tab:multi}). FE: số lần giải mỗi mục
+tiêu. Chế tạo được: một pha rắn liên thông, nét tối thiểu hai pixel. Hai dòng
+phân tầng: mức giảm tương đối sai số của quy trình sinh so với tối ưu tô-pô
+cho mục tiêu $r<10$ (bootstrap ghép cặp, CI 95\%; dương nghiêng về quy trình
+sinh). Quy trình cuối không ép biên tuần hoàn; kiểm định đăng ký trước trên
+tập C chạy với bước này (xem văn bản; cả hai phiên bản trong Thông tin bổ
+sung).}
+\label{tab:simp}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{llccccc}
+\toprule
+Tập & Phương pháp & $\RR(\nuot)$ & $\RR(\nuto)$ & MAE kết hợp & FE & Chế tạo\\
+\midrule
+\multirow{2}{*}{A} & sinh & 0,998 & 0,846 & 0,0139 & 107 & 0,32\\
+ & tối ưu tô-pô & 0,997 & 0,997 & 0,0128 & 897 & 0,77\\
+\multirow{2}{*}{B} & sinh & 0,995 & 0,745 & 0,0229 & 107 & 0,35\\
+ & tối ưu tô-pô & 0,996 & 0,997 & 0,0139 & 889 & 0,74\\
+\multirow{2}{*}{C} & sinh & 0,998 & 0,998 & 0,0082 & 107 & 0,32\\
+ & tối ưu tô-pô & 0,998 & 0,996 & 0,0126 & 893 & 0,83\\
+\midrule
+\multicolumn{7}{l}{$r<10$: sai số kết hợp \;A $+41\%$ [26; 54] \;B $+40\%$ [23; 53] \;C $+35\%$ [19; 48]}\\
+\multicolumn{7}{l}{$r<10$: sai số $\nuot$ \;A $+39\%$ [19; 54] \;B $+39\%$ [19; 54] \;C $+37\%$ [14; 54]}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Độ nhạy theo lưới.}
+Mọi độ chính xác ở trên là so với mô hình FE $50\times50$ dùng cho sinh dữ
+liệu, tinh chỉnh và kiểm chứng. Giải lại cùng hình học nhị phân với mỗi pixel
+chia thành $4\times4$ phần tử làm $\nuot$ thay đổi trung vị 0,015 (3,8\%), tối
+đa 0,042 trên 30 thiết kế test, theo hướng âm hơn ở 27 thiết kế. Trên các
+thiết kế cuối của tập thứ nhất, thứ hạng hai phương pháp không đổi trên lưới
+$200\times200$ ($\RR(\nuot)$ 0,992 so với 0,985).
+
+\paragraph{Phương án lai không thừa hưởng điểm mạnh của cả hai.}
+Vì tối ưu tô-pô bền vững hơn và dễ chế tạo hơn còn quy trình sinh rẻ hơn,
+chúng tôi đăng ký trước một phương án lai trong đó thiết kế sinh ra làm điểm
+khởi tạo cho tối ưu tô-pô (continuation $\beta=8\to64$, tối đa thêm 61 lần
+giải FE). Phương án này đạt tiêu chí chi phí và không suy biến (166 lần giải
+FE mỗi mục tiêu; 1\% suy biến) nhưng không đạt tiêu chí không-kém-hơn về sai
+số kết hợp so với tối ưu tô-pô hội tụ (cận dưới CI $-96\%$, do mục tiêu duy
+nhất bị đứt) và tiêu chí khả năng chế tạo (0,33 so với ngưỡng 0,70). Bắt đầu
+với phép chiếu sắc giữ nguyên tô-pô, kể cả các nét mảnh, của thiết kế sinh ra.
+
+% --- Phương pháp MỚI -------------------------------------------------------
+\subsection{Baseline tối ưu tô-pô}
+Với mỗi mục tiêu, chúng tôi cực tiểu
+$\tfrac12\lVert\boldsymbol\nu(\hat{\mathbf x})-\boldsymbol\nu^{*}\rVert_2^2$
+theo mật độ phần tử $\mathbf x$, với $\hat{\mathbf x}=H_\beta(\tilde{\mathbf x})$
+và $\tilde{\mathbf x}$ là trường đã lọc mật độ (bán kính 1,5 phần tử), chịu
+ràng buộc $\overline{\hat{\mathbf x}}\le0{,}55$ và
+$Q_{11},Q_{22}\ge0{,}1\cdot0{,}55\,E_0$, bằng MMA \citep{svanberg1987mma} với
+hệ số phạt $p=3$. Độ nhạy dùng cùng biểu thức giải tích như tinh chỉnh và đã
+được kiểm tra bằng sai phân hữu hạn. Continuation chạy
+$\beta\in\{1,2,4,8,16,32,64\}$, tối đa 43 lần đánh giá mỗi mức và khởi động
+lại bộ tối ưu ở mỗi mức. Tô-pô khởi tạo là bốn họ seed phổ biến nhất trong dữ
+liệu huấn luyện, co về cận thể tích. $\hat{\mathbf x}$ cuối được lấy ngưỡng 0,5
+và kiểm chứng bằng một lần giải FE độc lập. Tham số là trung vị của dữ liệu
+huấn luyện. Phương án lai dùng thiết kế nhị phân sinh ra làm điểm khởi tạo và
+$\beta\in\{8,16,32,64\}$, tối đa 15 lần đánh giá mỗi mức.
+
+% --- BỔ SUNG "Thống kê và đăng ký trước" ------------------------------------
+Hai thí nghiệm nữa được ghi tiêu chí bằng văn bản trước khi chạy: phương án
+lai (bốn tiêu chí: sai số kết hợp không kém hơn quá 10\%, ít nhất 70\% chế tạo
+được, tối đa 299 lần giải FE mỗi mục tiêu, tối đa 1\% thiết kế suy biến) và so
+sánh phân tầng trên tập mục tiêu thứ ba (cả hai CI không chứa 0 với $r<10$).
+Hai tập mục tiêu đầu đã được phân tích trước khi nghĩ ra cách phân tầng, nên
+kết quả phân tầng của chúng được báo cáo là hậu kiểm.
+
+% --- THAY đoạn Giới hạn ----------------------------------------------------
+\paragraph{Giới hạn.}
+(i) Độ chính xác được đo so với mô hình FE $50\times50$ đàn hồi tuyến tính,
+biến dạng nhỏ, với hệ số Poisson vật liệu nền 0,3; sai số rời rạc hóa của mô
+hình này (trung vị 0,015 với $\nuot$) lớn hơn sai số trung bình được báo cáo.
+Biến dạng lớn và ô ba chiều chưa được xét, và chưa thiết kế nào được thử
+nghiệm thực tế.
+(ii) Quy trình sinh thất bại với mục tiêu dị hướng mạnh ($r\ge10$), vốn thưa
+trong dữ liệu huấn luyện; tối ưu tô-pô thì không.
+(iii) Tối ưu tô-pô chạy từ đầu tạo ô chế tạo được gấp hơn hai lần
+(0,74--0,83 so với 0,32--0,35). Tinh chỉnh không làm thay đổi điều này một
+cách có hệ thống: qua năm lần chạy, tỉ lệ chế tạo được dịch chuyển từ $-6$
+đến $+9$ điểm phần trăm (61 thiết kế trở nên chế tạo được, 44 thiết kế mất
+tính chất này; kiểm định dấu $p=0{,}12$).
+(iv) Với mục tiêu không auxetic ngoài dải huấn luyện, tối ưu tô-pô chính xác
+hơn rõ rệt (MAE $\nuot$ 0,005--0,040 so với 0,06--0,09); lợi thế của mô hình
+sinh ở vùng này chỉ đúng khi so với tra cứu thư viện huấn luyện.
+(v) Lợi thế chi phí là lợi thế khấu hao: sinh dữ liệu huấn luyện cần khoảng
+$2{,}7$--$3{,}0\times10^{6}$ lần giải FE, chỉ hòa vốn so với tối ưu tô-pô hội
+tụ sau khoảng 3\,500 mục tiêu.
+(vi) Điểm thẩm mỹ là một heuristic chưa được kiểm chứng với đánh giá của con
+người.
+
+% --- THAY các đoạn Discussion "Độ chính xác", "Đa mục tiêu", "Ngoài phân
+% phối" (Giới hạn: xem khối trên). [C5] = chỗ đổi nếu bỏ ép biên tuần hoàn.
+\paragraph{Tối ưu đúng thứ được kiểm chứng.}
+Phát hiện trung tâm là mọi tìm kiếm dựa trên gradient trên trường mật độ, dù
+trong không gian ẩn của mô hình sinh hay trên mật độ phần tử trong tối ưu
+tô-pô, đều sẽ khai thác sự khác biệt giữa trường được lấy đạo hàm và thiết kế
+nhị phân được phân tích sau cùng. Bộ tối ưu đạt hàm mục tiêu $10^{-10}$ trên
+những trường mà bộ kiểm chứng nhìn thấy rất khác (Hình~\ref{fig:gap}), và điều
+tương tự xảy ra trong tối ưu tô-pô với Heaviside continuation tới $\beta=64$.
+Khoảng lệch này không hiện ra trên đường cong hàm mất mát. Có hai cách khắc
+phục và cả hai đều rẻ: đưa các toán tử kiểm chứng vào hàm mục tiêu, và chọn
+giữa các ứng viên theo sai số kiểm chứng thay vì sai số tối ưu. Cả hai thành
+phần đều không mới trong tối ưu tô-pô dựa trên mật độ
+\citep{guest2004achieving,wang2011projection}; điều công trình này chỉ ra là bỏ
+qua chúng sẽ làm thay đổi kết luận khi so sánh các phương pháp, và con đường
+mô hình sinh lẫn con đường kinh điển đều cần chúng như nhau.
+
+\paragraph{Mô hình sinh đóng góp thêm điều gì.}
+Khi đo so với tối ưu tô-pô hội tụ thay vì so với tra bảng, lợi thế của quy
+trình sinh hẹp hơn so với điều thường được ngầm hiểu. Nó đạt cùng độ chính
+xác kiểm chứng với số lần giải FE ít hơn khoảng tám lần mỗi mục tiêu, và sai
+số kết hợp thấp hơn với mục tiêu dị hướng vừa phải, nhưng phần tiết kiệm chỉ
+được khấu hao sau hàng nghìn mục tiêu vì chính dữ liệu huấn luyện được tạo
+bằng tối ưu tô-pô. Vì vậy quy trình này hấp dẫn khi phải phục vụ nhiều mục
+tiêu, chẳng hạn trong thiết kế tương tác hay trong vòng lặp trong của tối ưu
+đa tỉ lệ, chứ không phải khi chỉ cần một ô. Các thất bại của nó dự đoán được:
+mục tiêu dị hướng mạnh vốn thưa trong dữ liệu huấn luyện. Báo cáo các thất
+bại này theo tầng, thay vì gộp vào một điểm trung bình, đã làm chúng lộ ra
+trong nghiên cứu này và nên trở thành thông lệ.
+
+\paragraph{Khả năng chế tạo và mục tiêu ngoài phân phối.}
+Tối ưu tô-pô chạy từ đầu tạo ra ô liên thông với kích thước nét đủ lớn gấp
+hơn hai lần so với quy trình sinh, và tinh chỉnh không gian ẩn không
+làm thay đổi tỉ lệ này một cách có hệ thống. Khởi tạo tối ưu tô-pô bằng thiết kế sinh ra không khôi phục
+được tính chất đó, vì phép chiếu sắc ban đầu giữ nguyên tô-pô được sinh. Với
+mục tiêu không auxetic ngoài dải huấn luyện, cVAE đạt đúng dấu ở nơi tra cứu
+thư viện không thể, nhưng tối ưu tô-pô đạt biên độ mục tiêu chính xác hơn
+nhiều. Theo trục biên độ, mọi biến thể sinh đều dừng ở biên của dữ liệu huấn
+luyện. Vì vậy, các khẳng định OOD cho mô hình sinh nên nêu rõ hướng trong
+không gian tính chất, kiểm tra mục tiêu có khả thi về vật lý không, và so với
+tối ưu tô-pô thay vì tra cứu. [C5: nếu bỏ ép biên tuần hoàn, thêm một câu rằng
+điều kiện biên tuần hoàn dựa trên phần tử khiến mọi ô pixel đều lát được bằng
+tịnh tiến, nên không cần khớp cạnh.]

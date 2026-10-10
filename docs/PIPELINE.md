@@ -59,6 +59,8 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 
 **2026-08-05 - Backfill f1=E₁₁/E₀, f2=E₂₂/E₀ (Pha B), Phase 4 surrogate 5-chiều:** `analysis/scripts/backfill_f1_f2_npz.py` chạy FE trực tiếp trên ảnh đã lưu trong `{train,val,test}.npz` (không join qua manifest.csv - lý do và caveat nhiễu resize xem [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-08-05). Surrogate mở rộng (`train.py --include-f1f2`) đạt R²(test): f1=0,933, f2=0,961 - cùng bậc v12/v21. Checkpoint: `outputs/phase4/surrogate_f1f2.pt`. **Chưa làm:** nối f1/f2 làm condition cho cVAE Phase 5.
 
+**2026-09-30 - Tính chất suy từ Q cho dataset A4:** `analysis/scripts/backfill_elastic_props_npz.py` FE lại toàn bộ `outputs/phase3_a4/{train,val,test}.npz` (penal và ν0 thật từng mẫu, cùng phương pháp resize 64→50 như backfill f1/f2) và ghi `{split}_props.npz`: Q thô (n,3,3) cùng E_x, E_y, G_xy, B_eff, M_x = Q11/E0 (= f1), M_y = Q22/E0 (= f2), tốc độ sóng quasi-static c_qL/c_qT theo x, y, `rel_density` và v12/v21 tính lại (sanity). Mọi mô-đun đã chia E0. Ghép với npz gốc theo chỉ số hàng. Kết quả phân tích: [`notebooks/03_cheap_physical_properties.ipynb`](../notebooks/03_cheap_physical_properties.ipynb) và [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-09-30. Tóm tắt: E/B/M dự đoán được 92–97% từ 5 điều kiện hiện có; **G_xy** (R² 0,84) mang nhiều thông tin mới nhất.
+
 **2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
 
 **2026-07-25 - Rebuild v2 (mở rộng quy mô):** sinh thêm raw sample bằng `analysis/scripts/generate_production_batch.py` (song song, độc lập với `pipeline/phase2_multi_batch/`), gộp với pool sạch cũ qua `analysis/scripts/assemble_phase3_v2.py`. Quá trình phát hiện + sửa 2 bug trong chính script sinh dữ liệu mới (range tham số quá rộng cho seed nhạy cảm; `beta=0,8` thay vì mặc định production `1,0`) - chi tiết đầy đủ (mục "2026-07-25"): [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md). **Kết quả: train=57.216 (đạt mục tiêu 40-50k), val=2.044, test=2.044.** Đã thay thế `outputs/phase3/{train,val,test,dataset_64}.npz` (bộ cũ backup nguyên vẹn tại `outputs/phase3_backup/`).
@@ -157,7 +159,49 @@ MLP đã chạy đủ 150 epoch; checkpoint tốt nhất theo FE-R² là epoch 2
 volfrac loss, kết quả này là ablation định hướng, chưa phải so sánh hoàn toàn
 đồng nhất về thời điểm mã nguồn.
 
-**2026-09-23 - WIRE (Task 2): root-cause tìm ra, thử sửa, vẫn THẤT BẠI - cập nhật con số `16,67%`/`-10,29` ở trên (đó vẫn là kết quả TỐT NHẤT từng đo cho WIRE, mọi lần thử sau đều tệ hơn).** Root-cause thật: `cvae_wire_v2.pt` train với `--lambda-real-physics 0.0` (chưa từng dùng real-physics loss) + `WireContinuousDecoder` thiếu `enforce_symmetry` mà `Decoder` (conv) có sẵn - đã sửa cả hai. Retrain 2 round (~75 epoch hiệu dụng, `--wire-hidden-dim 128 --lambda-real-physics 1.0→2.0`): R²(FE) đo trên 8-condition validation dùng lúc train cải thiện đều (tới -10,10, tốt nhất từng đo), nhưng benchmark CHÍNH THỨC 24-condition (`best_of_n_eval.py`) cho `cvae_wire_realphysics_v3_round2.pt` **tệ hơn baseline gốc trên mọi trục**: hit-rate single-shot/best-of-N = 0%/0% (gốc 4,17%/16,67%), R²(FE)=-13,87 (gốc -10,29), frac_manufacturable=2,78% (gốc 4,17%). Bằng chứng cụ thể của overfitting lên validation subset nhỏ dùng để chọn checkpoint. **Task 2 (WIRE) coi như đóng ở trạng thái thất bại** - chi tiết đầy đủ [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-09-23, [task_progress.md](task_progress.md) Task 2.
+**2026-09-23 - WIRE (Task 2): root-cause tìm ra, thử sửa, vẫn THẤT BẠI - cập nhật con số `16,67%`/`-10,29` ở trên (đó vẫn là kết quả TỐT NHẤT từng đo cho WIRE, mọi lần thử sau đều tệ hơn).** Root-cause thật: `cvae_wire_v2.pt` train với `--lambda-real-physics 0.0` (chưa từng dùng real-physics loss) + `WireContinuousDecoder` thiếu `enforce_symmetry` mà `Decoder` (conv) có sẵn - đã sửa cả hai. Retrain 2 round (~75 epoch hiệu dụng, `--wire-hidden-dim 128 --lambda-real-physics 1.0→2.0`): R²(FE) đo trên 8-condition validation dùng lúc train cải thiện đều (tới -10,10, tốt nhất từng đo), nhưng benchmark CHÍNH THỨC 24-condition (`best_of_n_eval.py`) cho `cvae_wire_realphysics_v3_round2.pt` **tệ hơn baseline gốc trên mọi trục**: hit-rate single-shot/best-of-N = 0%/0% (gốc 4,17%/16,67%), R²(FE)=-13,87 (gốc -10,29), frac_manufacturable=2,78% (gốc 4,17%). Bằng chứng cụ thể của overfitting lên validation subset nhỏ dùng để chọn checkpoint. **Task 2 (WIRE) coi như đóng ở trạng thái thất bại** - chi tiết đầy đủ [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-09-23, [task_progress.md](archive/task_progress.md) Task 2.
+
+**2026-09-25 - plan v3 (`docs/plan.md`): refinement nhận thức nhị phân hóa, ablation KAN, đóng WIRE:**
+
+- **Bug loader (đã sửa):** `adversarial_dataset.load_cvae()` bỏ qua `use_kan`/`enforce_symmetry` →
+  mọi đánh giá qua loader này từ 2026-09-11 trên checkpoint cũ bị sai (KAN cũ bị ép đối xứng,
+  Linear crash). Nay mọi loader dùng chung `model.cvae_kwargs_from_checkpoint()`. Số benchmark
+  refinement 2026-09-23 ở trên (R² −16 → −7,6) là sai; đúng là 0,058 → 0,92. `LIMITATIONS.md` mục 28.
+- **Refinement nhận thức nhị phân hóa:** tối ưu z trên ảnh liên tục khai thác vật liệu xám (loss
+  liên tục ~1e-10 nhưng sai số sau nhị phân hóa lớn). Objective mới
+  (`tandem_lbfgs(projection_betas=, periodic=)`, `pipeline/phase5_cvae/heaviside.py`):
+  force_periodic → Heaviside (β tăng dần) → resize nearest khớp PIL tuyệt đối. Trên
+  `cvae_v2_finetuned.pt`, `IN100`: single-shot R²(v12) 0,874→**0,998** (MAE −91,8%), sau best-of-30
+  0,986→0,997 (MAE −62,6%). Ngoài dải train (v12 < −1,95) vẫn bão hòa - không claim ngoại suy.
+  Target đối xứng ν12=ν21≤−1 bất khả thi vật lý (cần ν12·ν21<1) - OOD phải dị hướng.
+- **Ablation KAN vs Linear** (cùng recipe 2 giai đoạn production, `--disable-symmetry`, 2 seed):
+  KAN không thắng; ở best-of-30 Linear tốt hơn có ý nghĩa trên cả 2 seed. Production giữ Linear.
+- **WIRE đóng:** lần thử cuối (Heaviside trong loss train `--rp-projection-beta-max 64
+  --rp-periodic`) đạt hit-rate single-shot 12,5%, R²(FE) −7,19 - không đạt tiêu chí dừng đặt trước.
+
+**2026-10-07 - P1.7-P1.9 (`docs/plan.md`): lai, xác nhận phân tầng, bỏ `force_periodic`:**
+- **P1.7** lai cVAE → SIMP (`benchmark_hybrid.py`) không đạt 2/4 tiêu chí đăng ký trước (sai số cặp
+  CI dưới −96% do 1 ô đứt; chế tạo 0,33 < 0,70) → bài viết theo Khung A.
+- **P1.8** (đăng ký trước, IN100-C seed 789): với mục tiêu dị hướng r < 10, sai số cặp cVAE thấp hơn
+  SIMP hội tụ 27% [8; 42] (đạt), ν₁₂ +19% [−10; 40] (không đạt). Mọi ô cVAE đứt là r ≥ 10.
+- **P1.9 / C5:** bỏ `force_periodic`; chạy lại mọi số → `p1_9_nofp_summary.json`. Không fp: best-of-30
+  + refine R²(ν₁₂) 0,998, chế tạo 0,32, OOD −2,0 trung vị 1,2% (2 cụm), so SIMP r<10 ν₁₂ +37-39% ở cả
+  3 tập (phân tích độ nhạy, P1.8 giữ kết quả có fp). R² 0,995 (n=300) là chọn thuần độ chính xác;
+  composite cho 0,983 (có fp) / 0,988 (không fp).
+
+**2026-10-06 - P1.6 (`docs/plan.md`): baseline SIMP + kiểm tra bổ sung trước khi nộp Bài #1:**
+
+- **SIMP chạy từ đầu** (`benchmark_simp_baseline.py`, inverse homogenization MMA + Heaviside,
+  4 seed) [**sửa 2026-10-07:** không tái lập có ý nghĩa ở IN100-B/IN100-C - claim cuối là "ngang SIMP", xem mục 2026-10-07 phía trên]: trên IN100 cVAE + refine guarded (107 FE) tốt hơn SIMP hội tụ (897 FE) về ν₁₂ 34%
+  [13; 50]; cặp (ν₁₂, ν₂₁) hòa (1 mục tiêu cVAE sinh ô đứt; bỏ đi thì cVAE +29% [9; 46]); SIMP
+  thắng chế tạo được (77-84% vs ~25%) và OOD đổi dấu. SIMP β=64 cũng có khoảng lệch xám↔nhị phân.
+- **IN100-B** (seed 456): refine tái lập (−87,8% single-shot, −65,8% best-of-30).
+- **Lưới**: ν 50² vs 200² lệch trung vị 0,015; thiết kế cuối trên 200²: cVAE R²(ν₁₂) 0,992, SIMP 0,985.
+- **Retrieval verified**: 0,94-0,98 (không phải 1,000); nhãn dataset lệch ν verify 0,019-0,055;
+  `force_periodic` có thể sai khái niệm (LIMITATIONS #34, chờ quyết định).
+- Refine giảm chế tạo được 30% → 24% (**đính chính 2026-10-07:** không vững - 5 lần chạy −6 đến +9 điểm %, gộp 61 thêm / 44 mất, p=0,12). Chi phí dataset ≈2,7-3,0M FE-solve.
+- **Lưu ý huấn luyện:** chỉ 2,5% ảnh train đối xứng qua đường chéo - decoder `enforce_symmetry=True`
+  (mặc định mới của `CVAE`) buộc v12=v21, nên train mới dùng `--disable-symmetry`.
 
 **2026-08-24 - các module roadmap bổ sung:**
 
@@ -212,7 +256,7 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_e
 
 > Đã merge vào nhánh `substrate-material` (chưa merge `main` tại thời điểm viết mục này). `--include-nu0` **độc lập** với `--extended-condition` (mục 5.1) - có thể bật riêng hoặc cùng lúc, `condition_dim` composable ∈ `{2,4,6,8}`.
 
-Roadmap Giai đoạn A (`docs/PROJECT_PLAN.md` Nhóm 1) mở rộng bài toán từ "1 vật liệu nền cố định (`nu=0,3`)" sang "vật liệu nền là 1 trục thiết kế" - cho phép cVAE sinh hình học tối ưu cho **đúng** vật liệu nền mục tiêu thay vì luôn giả định thép/nhựa mặc định.
+Roadmap Giai đoạn A (`docs/archive/PROJECT_PLAN.md` Nhóm 1) mở rộng bài toán từ "1 vật liệu nền cố định (`nu=0,3`)" sang "vật liệu nền là 1 trục thiết kế" - cho phép cVAE sinh hình học tối ưu cho **đúng** vật liệu nền mục tiêu thay vì luôn giả định thép/nhựa mặc định.
 
 - **`CVAEDataset(include_nu0=...)`** thêm 2 cột `[nu0, nu0_mask]` vào cuối condition vector (cùng cơ chế presence-mask + condition-dropout kiểu classifier-free-guidance đã dùng cho volfrac/void_size_frac ở mục 5.1) - đòi hỏi dataset có field `nu` (`--data-dir outputs/phase3_a4`, `outputs/phase3/` mặc định KHÔNG có field này vì sinh trước Giai đoạn A).
 - **Điều kiện bắt buộc trước đó (`real_physics.py`, A5):** differentiable-physics fine-tune (mục 5, bước "Fine-tune... differentiable-physics") trước đây chỉ nhận `nu`/`E0` là scalar dùng chung cho cả batch. A5 tách cache mesh topology (`(nelx,nely)`, phần đắt) khỏi việc dựng `Material(E0,Emin,nu)` (rẻ, ~97µs/lần, ~0,1-0,2% chi phí FE-solve) - cho phép mỗi mẫu trong batch có `nu`/`E0` riêng mà không mất tác dụng tăng tốc cache. `losses.py::real_physics_loss` nhận `nu0_col` để trích đúng ν0 per-sample từ condition (mask=1) thay vì `fe_params['nu']=0,3` cố định cho mọi mẫu.

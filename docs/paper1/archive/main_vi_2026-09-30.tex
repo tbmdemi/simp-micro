@@ -1,0 +1,710 @@
+% Bài báo #1 - bản thảo tiếng Việt (cùng nội dung, số liệu và trích dẫn với main_en.tex).
+% Biên dịch: tectonic main_vi.tex   (XeTeX + BibTeX, xem README.md)
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{fontspec}
+\setmainfont{texgyretermes}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]
+\usepackage[english,vietnamese]{babel}
+\setlength{\emergencystretch}{2em}
+\usepackage{amsmath,amssymb}
+\usepackage{icomma} % dấu phẩy thập phân trong công thức: 0,874
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\newcommand{\nuot}{\nu_{12}}
+\newcommand{\nuto}{\nu_{21}}
+\newcommand{\RR}{R^2}
+% babel đặt lại caption khi vào document -> ghi đè qua \captionsvietnamese.
+\addto\captionsvietnamese{%
+  \renewcommand{\refname}{Tài liệu tham khảo}%
+  \renewcommand{\figurename}{Hình}%
+  \renewcommand{\tablename}{Bảng}%
+  \renewcommand{\abstractname}{Tóm tắt}}
+
+\title{Thiết kế ngược vật liệu meta auxetic bằng mô hình sinh sâu: cân bằng
+yêu cầu đa mục tiêu và khả năng tổng quát hóa ngoài phân phối}
+\author{Trịnh Bình Minh\thanks{[Đơn vị công tác và thông tin tác giả liên hệ - sẽ bổ sung.]}}
+\date{Bản thảo, 30/09/2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Các mô hình sinh sâu có thể đề xuất ô cơ sở vật liệu meta cho một tính chất
+hiệu dụng mục tiêu chỉ trong vài mili giây. Tuy nhiên, một thiết kế dùng được
+phải đồng thời đạt ba yêu cầu. Nó phải khớp mục tiêu sau khi nhị phân hóa và
+kiểm chứng bằng phần tử hữu hạn (FE). Nó phải chế tạo được. Và lý tưởng là
+mô hình phải tạo được thiết kế cho cả những mục tiêu nằm ngoài dữ liệu huấn
+luyện. Chúng tôi nghiên cứu ba yêu cầu này cho ô cơ sở auxetic hai chiều
+được sinh bởi một bộ mã hóa tự động biến phân có điều kiện (cVAE), tinh
+chỉnh bằng đồng nhất hóa khả vi. Về độ chính xác, chúng tôi chỉ ra rằng tinh
+chỉnh không gian ẩn lúc suy luận phải tối ưu chính thiết kế được kiểm chứng.
+Tinh chỉnh trên đầu ra liên tục của bộ giải mã đưa hàm mục tiêu về
+$\sim\!10^{-10}$, trong khi sai số kiểm chứng vẫn lớn hơn sáu bậc. Ngược lại,
+khi đưa các phép biến đổi của khâu kiểm chứng vào hàm mục tiêu, $\RR$ kiểm
+chứng FE của $\nuot$ trên 100 mục tiêu kiểm tra tăng từ 0,874 lên 0,998 (một
+mẫu) và từ 0,986 lên 0,997 (tốt nhất trong 30 mẫu). Về chọn lọc đa mục
+tiêu, điểm tổng hợp có trọng số giữa độ chính xác, khả năng chế tạo và thẩm
+mỹ tương quan ở mức vừa phải với một phép xếp hạng Pareto độc lập (trung vị
+Spearman 0,71). Với mục tiêu ngoài phân phối, cVAE sinh được thiết kế có
+dấu hệ số Poisson đúng nhưng chưa từng xuất hiện trong dữ liệu, điều mà truy
+xuất láng giềng gần nhất không làm được. Tuy vậy, mô hình không ngoại suy
+được biên độ ra ngoài dải huấn luyện.
+\end{abstract}
+
+\noindent\textbf{Từ khóa:} Vật liệu meta auxetic; Mô hình sinh sâu; Vật lý
+khả vi; Thiết kế ngược; Tối ưu hóa tô-pô; Đồng nhất hóa
+
+% ---------------------------------------------------------------------------
+\section{Mở đầu}
+
+Vật liệu meta auxetic co lại theo phương ngang khi bị nén một trục. Hệ số
+Poisson âm của chúng bắt nguồn từ vi kiến trúc chứ không từ thành phần hóa
+học của vật liệu cấu thành
+\citep{lakes1987foam,evans2000auxetic,bertoldi2017flexible}. Đồng nhất hóa
+ngược bằng tối ưu hóa tô-pô là con đường kinh điển để đi từ một tensor hiệu
+dụng cho trước đến ô cơ sở
+\citep{sigmund1994materials,larsen1997design,bendsoe2003topology}, nhưng mỗi
+mục tiêu mới đòi hỏi một bài toán tối ưu lặp với hàng trăm lần giải FE.
+Thiết kế ngược dựa trên dữ liệu phân bổ chi phí này ra trước: bộ mã hóa tự
+động biến phân, mạng đối sinh và mô hình khuếch tán, khi đã huấn luyện trên
+thư viện mô phỏng, trả về kiến trúc ứng viên gần như tức thì
+\citep{wang2020deep,mao2020gan,kumar2020spinodoid,bastek2022inverting,kollmann2020deep,zheng2021controllable,pahlavani2024deep,bastek2023diffusion}.
+
+Khi dùng thực tế, một mô hình sinh như vậy phải đáp ứng ba yêu cầu, nhưng
+chúng hiếm khi được xem xét cùng nhau.
+\emph{(i) Độ chính xác đã kiểm chứng.} Thứ được chế tạo là phiên bản đã nhị
+phân hóa và lấy mẫu lại của trường mật độ sinh ra, nên độ chính xác phải
+được đánh giá bằng phân tích FE trên chính thiết kế đó, không phải bằng mô
+hình thay thế (surrogate) học được. Surrogate của ánh xạ thuận đã được biết
+là có thể bị bộ tối ưu và mô hình sinh khai thác \citep{trabucco2021coms}.
+Một mẫu đơn lẻ cũng hiếm khi đạt dung sai chặt, nên các quy trình phải sinh
+nhiều ứng viên rồi chọn bằng FE \citep{pahlavani2024deep}.
+\emph{(ii) Đa mục tiêu.} Một thiết kế khớp mục tiêu nhưng có đảo vật liệu
+rời rạc, thanh mảnh dưới độ phân giải chế tạo, hoặc biên không ghép lát được
+thì không dùng được. Do đó độ chính xác phải được cân bằng với khả năng chế
+tạo, và ở mức ưu tiên thấp hơn, với tính đều đặn hình học.
+\emph{(iii) Mục tiêu ngoài phân phối (OOD).} Lý do chính để dùng mô hình sinh
+thay vì tra cứu trong thư viện huấn luyện là nó có thể tạo thiết kế cho
+những mục tiêu mà thư viện không chứa. Việc nó có làm được hay không, và
+theo hướng nào trong không gian tính chất, là câu hỏi thực nghiệm.
+
+Bài báo này giải quyết ba yêu cầu trên bằng một quy trình và một giao thức
+đánh giá duy nhất. Trong đó mọi con số đều được kiểm chứng FE trên thiết kế
+đã nhị phân hóa, và mọi phép so sánh đều kèm khoảng tin cậy ghép cặp. Các
+đóng góp của chúng tôi gồm:
+\begin{enumerate}
+\item \textbf{Tinh chỉnh không gian ẩn nhận biết nhị phân hóa.} Chúng tôi
+tinh chỉnh vector ẩn của một cVAE cố định bằng gradient giải tích chính xác
+của bộ giải đồng nhất hóa tuần hoàn. Chúng tôi chỉ ra rằng tinh chỉnh chỉ
+đáng tin khi hàm mục tiêu được tính trên thiết kế được kiểm chứng, tức sau
+khi ép biên tuần hoàn, chiếu Heaviside với tham số tăng dần
+\citep{guest2004achieving,wang2011projection} và lấy mẫu lại láng giềng gần
+nhất. Chúng tôi cũng đưa ra bằng chứng trực tiếp về hiện tượng khai thác
+vật liệu xám xảy ra nếu không làm vậy.
+\item \textbf{Chọn lọc đa mục tiêu có kiểm tra độc lập.} Chúng tôi xếp hạng
+ứng viên bằng điểm tổng hợp có trọng số giữa độ chính xác, khả năng chế tạo
+và thẩm mỹ, rồi kiểm tra điểm này với một phép xếp hạng Pareto độc lập thay
+vì mặc định nó hợp lý.
+\item \textbf{Đặc trưng hóa OOD có cơ sở vật lý.} Chúng tôi chỉ ra rằng các
+mục tiêu đối xứng $\nuot=\nuto\le-1$ không chấp nhận được với ô cơ sở trực
+hướng, khiến các bộ đánh giá ``cực trị'' ngây thơ trở nên vô hiệu. Sau đó
+chúng tôi tách khả năng tổng quát hóa theo \emph{dấu} của hệ số Poisson, nơi
+cVAE thành công còn truy xuất thất bại, khỏi khả năng tổng quát hóa theo
+\emph{biên độ}, nơi mọi phương pháp đều bão hòa ở biên dữ liệu huấn luyện.
+\item \textbf{Kết quả âm tính có kiểm soát.} Cả đầu hồi quy
+Kolmogorov--Arnold (KAN) lẫn bộ giải mã biểu diễn ẩn wavelet (WIRE) đều
+không cải thiện so với baseline tích chập khi đo bằng chỉ số kiểm chứng FE.
+\end{enumerate}
+
+% ---------------------------------------------------------------------------
+\section{Kết quả}
+
+\subsection{Khung phương pháp và giao thức đánh giá}
+
+Hình~\ref{fig:framework} trình bày quy trình. cVAE ánh xạ cặp mục tiêu
+$(\nuot^{*},\nuto^{*})$ cùng vector ẩn $z\sim\mathcal N(0,I)$ thành ảnh mật
+độ $64\times64$. cVAE được huấn luyện hai giai đoạn; giai đoạn hai dùng loss
+tính bằng đồng nhất hóa FE trên các mẫu tiên nghiệm (mục Phương pháp). Với
+mỗi mục tiêu, $N$ vector ẩn được giải mã và hậu xử lý. Hậu xử lý gồm ép biên
+tuần hoàn, lấy ngưỡng 0,5 và lấy mẫu lại láng giềng gần nhất về lưới FE
+$50\times50$. Mỗi ứng viên sau đó được đồng nhất hóa FE và chấm điểm khả
+năng chế tạo cùng thẩm mỹ. Ứng viên tốt nhất theo điểm tổng hợp có thể được
+tinh chỉnh tiếp trong không gian ẩn. Thiết kế đã tinh chỉnh chỉ được giữ nếu
+sai số kiểm chứng của nó thấp hơn (tinh chỉnh ``có kiểm soát'').
+
+Mọi số liệu độ chính xác đều được kiểm chứng FE trên thiết kế đã nhị phân
+hóa. Bộ đánh giá trong phân phối (IN100) gồm 100 điều kiện của tập kiểm tra,
+rút với seed cố định. Các phép so sánh kèm khoảng tin cậy (KTC) 95\%
+bootstrap ghép cặp theo điều kiện \citep{efron1993bootstrap}. Tiêu chí thành
+công được ghi lại trước mỗi thí nghiệm (mục Phương pháp).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=3mm and 4mm,
+  box/.style={draw, rounded corners=2pt, align=center, font=\small,
+              minimum height=10mm, inner sep=3pt, fill=#1},
+  box/.default=white,
+  arr/.style={-{Stealth[length=2mm]}, thick}]
+\node[box=gray!10] (t) {mục tiêu\\$(\nu_{12}^{*},\nu_{21}^{*})$\\$z_{1..N}\!\sim\!\mathcal N(0,I)$};
+\node[box=orange!15, right=of t] (g) {bộ giải mã\\cVAE (tinh chỉnh\\vật lý)};
+\node[box=blue!8, right=of g] (v) {ép biên tuần hoàn\\ngưỡng 0,5\\lấy mẫu $50^2$};
+\node[box=green!12, right=of v] (fe) {đồng nhất\\hóa FE\\$\nu_{12},\nu_{21}$};
+\node[box=yellow!15, right=of fe] (s) {điểm tổng hợp\\0,6 chính xác\\0,3 chế tạo\\0,1 thẩm mỹ};
+\node[box=blue!15, right=of s] (r) {tinh chỉnh\\ẩn có\\kiểm soát};
+\draw[arr] (t) -- (g);
+\draw[arr] (g) -- (v);
+\draw[arr] (v) -- (fe);
+\draw[arr] (fe) -- (s);
+\draw[arr] (s) -- (r);
+\draw[arr, dashed] (r.north) -- ++(0,5mm) -| node[pos=0.25, above, font=\scriptsize]{kiểm chứng lại thiết kế đã tinh chỉnh} (fe.north);
+\end{tikzpicture}
+\caption{Quy trình thiết kế ngược. Mọi ứng viên đều được kiểm chứng bằng
+đồng nhất hóa FE sau đúng các bước hậu xử lý mà một thiết kế đem chế tạo sẽ
+trải qua. Bước chọn kết hợp độ chính xác đã kiểm chứng với khả năng chế tạo
+(liên thông, kích thước chi tiết tối thiểu, tuần hoàn) và điểm thẩm mỹ trọng
+số thấp. Chi tiết bước tinh chỉnh ở Hình~\ref{fig:pipeline}.}
+\label{fig:framework}
+\end{figure}
+
+\subsection{Độ chính xác đã kiểm chứng đòi hỏi tối ưu chính thiết kế được kiểm chứng}
+
+\paragraph{Tinh chỉnh liên tục khai thác vật liệu xám.}
+Tinh chỉnh đầu ra liên tục của bộ giải mã (30 bước L-BFGS
+\citep{liu1989lbfgs}, gradient qua bộ giải mã và qua độ nhạy chính xác của
+đồng nhất hóa) có ích cho mẫu đơn lẻ của mô hình sản xuất. Trên IN100,
+$\RR(\nuot)$ tăng từ 0,874 lên 0,976 và sai số tuyệt đối trung bình (MAE)
+của $\nuot$ giảm 57,7\% (KTC 95\%: 49,4--64,6\%; Bảng~\ref{tab:main},
+Hình~\ref{fig:parity}b). Tuy nhiên, cùng phép tinh chỉnh đó lại \emph{làm
+xấu đi} ứng viên tốt nhất trong 30 mẫu. MAE($\nuot$) tăng từ 0,0152 lên
+0,0246, tức thay đổi $-62{,}5\%$ (KTC $-98{,}3$ đến $-33{,}9\%$), và $\RR$
+giảm từ 0,986 xuống 0,968. Diễn biến hàm mục tiêu giải thích nguyên nhân
+(Hình~\ref{fig:gap}). Khi kết thúc tinh chỉnh liên tục, trung vị hàm mục
+tiêu là $2{,}5\times10^{-10}$, nhưng trung vị bình phương sai số kiểm chứng
+của thiết kế đã nhị phân hóa là $4{,}4\times10^{-4}$. Bộ tối ưu khớp mục
+tiêu trên một trường có mật độ trung gian không còn tồn tại sau khi lấy
+ngưỡng. Đây chính là dạng thất bại của việc khai thác surrogate, nhưng xuất
+hiện ngay bên trong một mô hình vật lý chính xác.
+
+\paragraph{Tinh chỉnh nhận biết nhị phân hóa.}
+Khi đặt các phiên bản khả vi của phép biến đổi kiểm chứng vào trong hàm mục
+tiêu (Hình~\ref{fig:pipeline}; 32 bước trên $\beta\in\{1;4;16;64\}$), khoảng
+cách giữa hàm mục tiêu và kết quả kiểm chứng giảm ba bậc
+(Hình~\ref{fig:gap}). Mọi tiêu chí trong phân phối đặt trước đều đạt
+(Bảng~\ref{tab:main}).
+\begin{itemize}
+\item \textbf{Mẫu đơn lẻ.} $\RR(\nuot)$ tăng từ 0,874 lên 0,998 và
+MAE($\nuot$) giảm 91,8\% (KTC 89,0--93,9\%). Sai số tương đối trung bình của
+$\nuot$ giảm từ 14,4\% xuống 2,6\%, và $\RR(\nuto)$ tăng từ 0,477 lên 0,883.
+\item \textbf{Sau khi chọn tốt nhất trong 30 mẫu.} MAE($\nuot$) giảm 62,6\%
+(KTC 50,7--72,1\%) và $\RR(\nuot)$ tăng từ 0,986 lên 0,997. Tinh chỉnh có
+kiểm soát chấp nhận 92\% số lần tinh chỉnh và giảm MAE($\nuot$) 69,1\% (KTC
+61,6--75,4\%), không tốn thêm lần giải FE nào.
+\end{itemize}
+Sau bước chọn tốt nhất trong 30 mẫu, MAE($\nuto$) giảm từ 0,0327 xuống
+0,0128, trong khi $\RR(\nuto)$ giảm từ 0,802 xuống 0,712. Như vậy một số điều
+kiện có sai lệch $\nuto$ lớn hơn, và quy tắc kiểm soát dựa trên tổng sai số
+không phải lúc nào cũng loại được chúng. Tinh chỉnh tốn trung bình 77 lần
+giải FE mỗi điều kiện. Với 50--100\,ms mỗi lần giải kèm độ nhạy trên lưới
+$50\times50$, chi phí này tương đương vài giây cho mỗi thiết kế.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=4mm and 5mm,
+  box/.style={draw, rounded corners=2pt, align=center, font=\small,
+              minimum height=9mm, inner sep=3pt, fill=#1},
+  box/.default=white,
+  arr/.style={-{Stealth[length=2mm]}, thick},
+  grad/.style={-{Stealth[length=2mm]}, thick, dashed, blue!60!black}]
+\node[box=gray!10] (z) {vector ẩn $z$\\(khởi tạo)};
+\node[box=gray!10, below=of z] (c) {mục tiêu\\$(\nu_{12}^{*},\nu_{21}^{*})$};
+\node[box=orange!15, right=8mm of z, yshift=-6.5mm] (dec) {bộ giải mã\\cVAE (cố định)};
+\node[box=blue!8, right=of dec] (per) {ép biên\\tuần hoàn};
+\node[box=blue!8, right=of per] (hv) {Heaviside\\$H_\beta(\rho)$};
+\node[box=blue!8, right=of hv] (rs) {gần nhất\\$64^2\!\to\!50^2$};
+\node[box=green!12, right=of rs] (fe) {đồng nhất hóa FE\\$\mathbf{Q}\to\nu_{12},\nu_{21}$};
+\node[box=gray!10, below=9mm of hv] (loss) {$\mathcal{L}=\tfrac12\lVert\boldsymbol{\nu}-\boldsymbol{\nu}^{*}\rVert^2$};
+\draw[arr] (z) -| ([xshift=-3mm]dec.west) -- (dec.west);
+\draw[arr] (c) -| ([xshift=-3mm]dec.west);
+\draw[arr] (dec) -- (per);
+\draw[arr] (per) -- (hv);
+\draw[arr] (hv) -- (rs);
+\draw[arr] (rs) -- (fe);
+\draw[arr] (fe.south) |- (loss.east);
+\draw[grad] (loss.west) -- ([xshift=-6mm]loss.west -| z.west)
+  node[pos=0.45, below, font=\scriptsize]{$\partial\mathcal{L}/\partial z$ chính xác, L-BFGS; $\beta\in\{1;4;16;64\}$}
+  |- (z.west);
+\node[draw=blue!50, dashed, rounded corners, fit=(per)(hv)(rs), inner sep=2pt,
+      label={[font=\scriptsize]above:cùng các phép biến đổi như khâu kiểm chứng}] {};
+\end{tikzpicture}
+\caption{Tinh chỉnh không gian ẩn nhận biết nhị phân hóa. Đầu ra của bộ giải
+mã cố định đi qua các phiên bản khả vi của những phép biến đổi dùng khi kiểm
+chứng rồi mới vào đồng nhất hóa FE, nên đại lượng được tối ưu chính là đại
+lượng được kiểm chứng. Biến thể liên tục bỏ khối nét đứt và dùng nội suy
+song tuyến tính. Khâu kiểm chứng thay $H_\beta$ bằng ngưỡng cứng 0,5.}
+\label{fig:pipeline}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{Độ chính xác kiểm chứng FE trên IN100 (100 mục tiêu kiểm tra, cVAE
+sản xuất). $\Delta$MAE là mức giảm tương đối MAE($\nuot$) so với thiết kế
+chưa tinh chỉnh cùng chế độ, kèm KTC 95\% bootstrap ghép cặp (10\,000 lần lấy
+mẫu lại). Giá trị âm nghĩa là tinh chỉnh làm kết quả xấu đi. Số lần gọi FE
+tính trên mỗi điều kiện, gồm cả bước chọn.}
+\label{tab:main}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llccccr}
+\toprule
+Chế độ & Tinh chỉnh & $\RR(\nuot)$ & MAE($\nuot$) & $\RR(\nuto)$ & $\Delta$MAE [KTC 95\%] & Lần gọi FE\\
+\midrule
+\multirow{3}{*}{Mẫu đơn lẻ}
+ & không                  & 0,874 & 0,0517 & 0,477 & -- & 1\\
+ & liên tục               & 0,976 & 0,0219 & 0,643 & $+57{,}7\%$ [49,4; 64,6] & 51\\
+ & nhận biết nhị phân hóa & \textbf{0,998} & \textbf{0,0043} & \textbf{0,883} & $\mathbf{+91{,}8\%}$ [89,0; 93,9] & 78\\
+\midrule
+\multirow{4}{*}{Tốt nhất / 30}
+ & không                  & 0,986 & 0,0152 & 0,802 & -- & 30\\
+ & liên tục               & 0,968 & 0,0246 & 0,637 & $-62{,}5\%$ [$-98{,}3$; $-33{,}9$] & 79\\
+ & nhận biết nhị phân hóa & 0,997 & 0,0057 & 0,712 & $+62{,}6\%$ [50,7; 72,1] & 107\\
+ & \quad có kiểm soát     & \textbf{0,998} & \textbf{0,0047} & -- & $\mathbf{+69{,}1\%}$ [61,6; 75,4] & 107\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/fig_parity_vi.pdf}
+\caption{$\nuot$ kiểm chứng FE so với mục tiêu trên IN100 ($n=100$, mẫu đơn
+lẻ của cVAE sản xuất): (a) chưa tinh chỉnh; (b) sau tinh chỉnh liên tục;
+(c) sau tinh chỉnh nhận biết nhị phân hóa. Ở cả ba ô, mỗi điều kiện xuất
+phát từ cùng một vector ẩn. Nét đứt: đường đồng nhất.}
+\label{fig:parity}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.55\linewidth]{figures/fig_gap_vi.pdf}
+\caption{Khoảng cách giữa hàm mục tiêu và kết quả kiểm chứng. Mỗi điểm là
+một điều kiện của IN100. Trục ngang là giá trị cuối của hàm mục tiêu tinh
+chỉnh; trục dọc là bình phương sai số hệ số Poisson của thiết kế đã nhị phân
+hóa, đo bằng một lần giải FE độc lập. Tinh chỉnh liên tục (hình tròn) đạt
+hàm mục tiêu gần $10^{-10}$ trong khi sai số kiểm chứng vẫn ở mức
+$10^{-4}$--$10^{-2}$. Tinh chỉnh nhận biết nhị phân hóa (hình vuông) kéo các
+điểm về gần đường đồng nhất. Giá trị dưới $10^{-14}$ được cắt để hiển thị.}
+\label{fig:gap}
+\end{figure}
+
+\subsection{Yêu cầu đa mục tiêu: khả năng chế tạo và xếp hạng tổng hợp}
+
+Thiết kế chính xác chưa chắc đã chế tạo được. Mỗi ứng viên được kiểm tra
+(a) tính liên thông, không có thanh mảnh hơn hai pixel, và (b) tính tuần
+hoàn, tức các cạnh đối diện phải khớp để ô cơ sở ghép lát được bằng phép
+tịnh tiến (mục Phương pháp). Với một cVAE trước đây chưa ép biên tuần hoàn,
+chỉ 0--3,5\% mẫu sinh ra qua được cả hai kiểm tra. Tỉ lệ này đồng đều trên
+toàn không gian tính chất, nên vấn đề nằm ở hành vi của bộ giải mã chứ không
+phải ở độ phủ dữ liệu. Ép tuần hoàn bằng cách lấy trung bình các cạnh đối
+diện trước khi nhị phân hóa là một phép toán không cần huấn luyện. Nó đã
+nâng tỉ lệ qua kiểm tra lên hơn một bậc, và được áp dụng trong mọi lần kiểm
+chứng ở bài báo này. Với phép ép này, 24,7\% mẫu của mô hình sản xuất qua
+được mọi kiểm tra (300 mục tiêu kiểm tra, $N=30$; Bảng~\ref{tab:multi}).
+Trong phân phối, phép ép tuần hoàn vì vậy không buộc phải đánh đổi với độ
+chính xác.
+
+Trong số các ứng viên của một mục tiêu, bước chọn cực đại hóa điểm tổng hợp
+$0{,}6\,s_{\mathrm{acc}}+0{,}3\,s_{\mathrm{man}}+0{,}1\,s_{\mathrm{aes}}$.
+Các trọng số mã hóa thứ tự ưu tiên chính xác $>$ chế tạo $>$ thẩm mỹ; đây
+là lựa chọn thiết kế, không phải đại lượng học được. Để kiểm tra phép vô
+hướng hóa này có tôn trọng cấu trúc đa mục tiêu hay không, chúng tôi tính
+tương quan Spearman giữa điểm tổng hợp và tầng sắp xếp không trội
+(non-dominated sorting) trên ba mục tiêu gốc. Phép tính được làm cho 24 mục
+tiêu, mỗi mục tiêu 30 ứng viên (Hình~\ref{fig:spearman}). Cả 24 hệ số tương
+quan đều dương (khoảng 0,43--0,89). Trung vị là 0,714, nhưng trung bình
+0,693 thấp hơn một chút so với ngưỡng 0,7 đặt trước. Như vậy điểm tổng hợp
+phù hợp ở mức vừa phải, chưa phải mạnh, với cấu trúc Pareto. Việc ứng viên
+được chọn luôn nằm trên mặt Pareto thứ nhất là hệ quả toán học tất yếu với
+trọng số dương, nên không được tính là bằng chứng.
+
+\begin{table}[t]
+\centering
+\caption{Các chỉ báo đa mục tiêu. Khối trên: quy trình sản xuất có ép tuần
+hoàn và chọn tốt nhất trong 30 mẫu, trên 300 mục tiêu kiểm tra. Tỉ lệ chế
+tạo được: tỉ lệ mẫu sinh ra qua cả ba kiểm tra liên thông, kích thước tối
+thiểu và tuần hoàn. Tỉ lệ trúng: tỉ lệ mục tiêu có mẫu đầu tiên là auxetic
+($\nuot<0$). Khối dưới: mức phù hợp giữa điểm tổng hợp và tầng Pareto (24 mục
+tiêu $\times$ 30 ứng viên).}
+\label{tab:multi}
+\small
+\begin{tabular}{lccc}
+\toprule
+Mô hình & $\RR(\nuot)$, tốt nhất/30 & Tỉ lệ trúng mẫu đơn & Tỉ lệ chế tạo được\\
+\midrule
+cVAE sản xuất (bộ dữ liệu v2) & 0,995 & 0,997 & 0,247\\
+cVAE trước đó (bộ dữ liệu v1) & 0,998 & 0,983 & 0,280\\
+\midrule
+\multicolumn{4}{p{0.85\linewidth}}{Điểm tổng hợp so với tầng Pareto: Spearman trung bình 0,693, trung vị 0,714, khoảng 0,43--0,89; 24/24 mục tiêu dương.}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/fig_spearman_vi.pdf}
+\caption{Phân bố trên 24 mục tiêu của tương quan Spearman giữa điểm tổng hợp
+và tầng Pareto của 30 ứng viên (các mục tiêu: $|\Delta\nuot|$ kiểm chứng,
+điểm chế tạo, điểm thẩm mỹ). Đường chấm: ngưỡng đặt trước cho giá trị trung
+bình.}
+\label{fig:spearman}
+\end{figure}
+
+\subsection{Tổng quát hóa ngoài phân phối}
+
+\paragraph{Mục tiêu chấp nhận được.}
+Trước khi thử ngoại suy, chúng tôi xác định mục tiêu nào thực sự tồn tại.
+Với vật liệu trực hướng hai chiều, điều kiện xác định dương của ma trận độ
+mềm đòi hỏi $\nuot\nuto<1$ \citep{lempriere1968poisson}. Do đó mục tiêu đối
+xứng $\nuot^{*}=\nuto^{*}\le-1$ là không khả thi. Trong dữ liệu huấn luyện,
+giá trị âm nhất $\nuot=-1{,}95$ đi kèm $\nuto=-0{,}04$, và tích $\nuot\nuto$
+lớn nhất là 0,43. Điều này quan trọng cho việc đánh giá. Một thí nghiệm
+``auxetic cực trị'' trước đây trong dự án đã dùng các mục tiêu như
+$(-2{,}1;\,-2{,}1)$ và $(-2{,}2;\,-1{,}6)$, và cả sáu mục tiêu đều vi phạm
+giới hạn này. Thất bại ở đó vì vậy không nói lên điều gì về khả năng ngoại
+suy, và chúng tôi loại nó khỏi bài này. Các mục tiêu biên độ ngoài dải dưới
+đây là dị hướng, với $\nuto^{*}=-0{,}05$.
+
+\paragraph{Theo dấu: cVAE tổng quát hóa được, truy xuất thì không.}
+Mọi mẫu huấn luyện đều auxetic ($-1{,}95\le\nuot\le-0{,}002$). Với sáu mục
+tiêu không auxetic $0{,}1\le\nuot^{*}\le0{,}8$, truy xuất láng giềng gần nhất
+từ thư viện 57\,216 mẫu tất yếu trả về mẫu gần 0 nhất ($\nuot=-0{,}002$), sai
+dấu ở mọi mục tiêu. cVAE (tốt nhất trong 10 mẫu) cho $\nuot$ dương ở cả sáu
+mục tiêu (Bảng~\ref{tab:signflip}, Hình~\ref{fig:signflip}), với MAE 0,19 so
+với 0,40 của truy xuất. Tuy nhiên, biên độ đạt được bão hòa quanh 0,3: với
+$\nuot^{*}=0{,}8$, cVAE chỉ đạt 0,30. Như vậy cVAE ngoại suy được
+\emph{hướng} của tính chất nhưng không đạt đủ biên độ. Thí nghiệm này dùng
+một checkpoint trước đó (bộ dữ liệu v1) và sáu mục tiêu, nên chỉ nên xem là
+bằng chứng định tính.
+
+\begin{table}[t]
+\centering
+\caption{Mục tiêu OOD đổi dấu (dữ liệu huấn luyện chỉ có $\nuot<0$). $\nuot$
+kiểm chứng FE của truy xuất láng giềng gần nhất và của cVAE (mẫu đầu tiên và
+tốt nhất trong 10). Cột cuối: tỉ lệ chế tạo được trong 10 mẫu cVAE.}
+\label{tab:signflip}
+\small
+\begin{tabular}{cccccc}
+\toprule
+$(\nuot^{*};\nuto^{*})$ & Truy xuất & cVAE, mẫu đầu & cVAE, tốt nhất/10 & Chế tạo\\
+\midrule
+(0,1; 0,1) & $-0{,}002$ & 0,082 & 0,104 & 0,6\\
+(0,3; 0,3) & $-0{,}002$ & 0,183 & 0,204 & 0,6\\
+(0,5; 0,5) & $-0{,}002$ & 0,191 & 0,280 & 0,8\\
+(0,8; 0,8) & $-0{,}002$ & 0,241 & 0,301 & 0,6\\
+(0,2; 0,5) & $-0{,}002$ & 0,225 & 0,194 & 0,9\\
+(0,5; 0,2) & $-0{,}002$ & 0,109 & 0,177 & 0,6\\
+\midrule
+MAE($\nuot$) & 0,402 & 0,237 & \textbf{0,191} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/fig_signflip_vi.pdf}
+\caption{Tổng quát hóa theo dấu với các mục tiêu đối xứng không auxetic.
+Truy xuất bị giới hạn bởi thư viện huấn luyện ($\nuot\le-0{,}002$). cVAE đạt
+đúng dấu nhưng bão hòa về biên độ. Nét đứt: đường đồng nhất.}
+\label{fig:signflip}
+\end{figure}
+
+\paragraph{Theo biên độ: mọi phương pháp bão hòa ở biên huấn luyện.}
+Chúng tôi quét $\nuot^{*}\in\{-1{,}0;$ $-1{,}5;$ $-1{,}75;$ $-2{,}0;$
+$-2{,}25;$ $-2{,}5\}$ ($\nuto^{*}=-0{,}05$), với 10 lần rút vector ẩn độc lập
+mỗi mục tiêu, chọn tốt nhất trong 30 mẫu và ép tuần hoàn (Bảng~\ref{tab:ood},
+Hình~\ref{fig:ood}). Trong dải huấn luyện, tinh chỉnh nhận biết nhị phân hóa
+đưa trung vị sai số tương đối của $\nuot$ về 0,2--0,4\%. Vượt quá biên dưới
+$-1{,}95$ của dữ liệu huấn luyện, mọi biến thể đều bão hòa. $\nuot$ kiểm
+chứng âm nhất trong toàn bộ 30 thiết kế tại $\nuot^{*}=-2{,}5$ là $-1{,}99$.
+Khi đó tinh chỉnh không kiểm soát còn kém hơn không tinh chỉnh (32,4\% so với
+22,5\% tại $-2{,}5$). Biến thể có kiểm soát đạt ngưỡng 8\% đặt trước tại
+$-2{,}0$ (4,9\%), nhưng chỉ vì mục tiêu này nằm cách biên 0,05. Từ $-2{,}25$
+trở đi, nó chỉ ngang bằng bước chọn tốt nhất trong 30 mẫu. Tinh chỉnh là tìm
+kiếm cục bộ trong không gian ẩn của bộ giải mã, nên không thể tạo ra biên độ
+mà bộ giải mã chưa từng học để biểu diễn.
+
+\begin{table}[t]
+\centering
+\caption{Quét biên độ dị hướng ($\nuto^{*}=-0{,}05$; tốt nhất trong 30 mẫu có
+ép tuần hoàn; 10 lần lặp mỗi mục tiêu). Giá trị: trung vị sai số tương đối
+của $\nuot$ kiểm chứng FE. Dải huấn luyện của $\nuot$ kết thúc tại $-1{,}95$.}
+\label{tab:ood}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+$\nuot^{*}$ & $-1{,}0$ & $-1{,}5$ & $-1{,}75$ & $-2{,}0$ & $-2{,}25$ & $-2{,}5$\\
+\midrule
+Tốt nhất/30, không tinh chỉnh         & 0,5\% & 0,9\% & 4,1\% & 11,0\% & 16,1\% & 22,5\%\\
++ tinh chỉnh liên tục                 & 1,4\% & 1,3\% & 3,2\% & 36,5\% & 38,9\% & 43,9\%\\
++ tinh chỉnh nhận biết nhị phân hóa   & 0,4\% & 0,2\% & 0,3\% & 12,5\% & 22,3\% & 32,4\%\\
++ nhận biết nhị phân hóa, có kiểm soát & 0,2\% & 0,2\% & 0,3\% & \textbf{4,9\%} & 14,8\% & 21,9\%\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\linewidth]{figures/fig_ood_vi.pdf}
+\caption{Trung vị sai số tương đối của $\nuot$ kiểm chứng FE theo mục tiêu
+($\nuto^{*}=-0{,}05$). Thanh sai số: khoảng tứ phân vị trên 10 lần rút vector
+ẩn mỗi mục tiêu; các điểm được dịch ngang để dễ đọc. Vùng tô: ngoài dải huấn
+luyện. Đường chấm: ngưỡng 8\% đặt trước tại $\nuot^{*}=-2{,}0$.}
+\label{fig:ood}
+\end{figure}
+
+\subsection{Thí nghiệm loại bỏ về kiến trúc}
+
+\paragraph{Đầu KAN so với đầu tuyến tính.}
+Chúng tôi thay ba lớp tuyến tính của cVAE (trung bình ẩn, log-phương sai và
+nút cổ chai của bộ giải mã) bằng các lớp Kolmogorov--Arnold
+\citep{liu2024kan}. Cả hai loại đầu được huấn luyện với cùng công thức, siêu
+tham số và seed (123 và 7). KAN chỉ được coi là thắng nếu KTC ghép cặp không
+chứa 0 ở cả hai seed. Kết quả là KAN không thắng ở chế độ nào
+(Bảng~\ref{tab:kan}). Ở chế độ sản xuất (tốt nhất trong 30 mẫu, không tinh
+chỉnh), đầu tuyến tính tốt hơn có ý nghĩa ở cả hai seed. Khi có tinh chỉnh,
+cả hai đều đạt $\RR(\nuot)=0{,}997$--$0{,}999$. Đầu KAN có số tham số gấp 3,2
+lần (4,79\,triệu so với 1,49\,triệu) và thời gian mỗi epoch gấp khoảng 1,6
+lần, nên chúng tôi giữ đầu tuyến tính.
+
+\begin{table}[t]
+\centering
+\caption{Thí nghiệm loại bỏ KAN so với tuyến tính trên IN100 (hai seed).
+$\Delta$MAE: mức giảm tương đối MAE($\nuot$) của KAN so với tuyến tính (dương
+là KAN tốt hơn), KTC 95\% bootstrap ghép cặp. Chữ đậm: KTC không chứa 0.}
+\label{tab:kan}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{$\RR(\nuot)$ Tuyến tính / KAN} & \multicolumn{2}{c}{$\Delta$MAE KAN so với tuyến tính}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Chế độ & seed 123 & seed 7 & seed 123 & seed 7\\
+\midrule
+Mẫu đơn lẻ                 & 0,852 / 0,904 & 0,815 / 0,911 & $+13{,}3\%$ [$-0{,}2$; 24,4] & $\mathbf{+18{,}2\%}$ [3,8; 30,4]\\
+Mẫu đơn lẻ + tinh chỉnh    & 0,994 / 0,997 & 0,998 / 0,999 & $+33{,}2\%$ [$-15{,}1$; 60,5] & $\mathbf{+33{,}9\%}$ [11,7; 52,3]\\
+Tốt nhất/30                & 0,977 / 0,974 & 0,982 / 0,980 & $\mathbf{-25{,}2\%}$ [$-56{,}2$; $-1{,}0$] & $\mathbf{-19{,}9\%}$ [$-42{,}1$; $-1{,}7$]\\
+Tốt nhất/30 + tinh chỉnh   & 0,998 / 0,997 & 0,998 / 0,999 & $+11{,}3\%$ [$-38{,}7$; 43,6] & $\mathbf{+44{,}1\%}$ [24,9; 59,7]\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Bộ giải mã biểu diễn ẩn wavelet.}
+Một bộ giải mã WIRE không phụ thuộc độ phân giải \citep{saragadam2023wire}
+được thử lần cuối. Lần thử này kết hợp phép chiếu Heaviside trong loss vật
+lý, không ép đối xứng và công thức hai giai đoạn. Tiêu chí đặt trước là tỉ
+lệ trúng mẫu đơn tối thiểu 30\% và $\RR$ FE dương trên 24 mục tiêu kiểm tra.
+Kết quả đạt tỉ lệ trúng 12,5\% và $\RR$ FE bằng $-7{,}19$ sau bước chọn tốt
+nhất trong 30 mẫu, trong khi bộ giải mã tích chập đạt tỉ lệ trúng khoảng
+99,7\%. Chỉ 4,6\% mẫu của nó chế tạo được. Vì vậy hướng này được dừng lại.
+
+% ---------------------------------------------------------------------------
+\section{Thảo luận}
+
+\paragraph{Độ chính xác.}
+Phát hiện phương pháp luận trung tâm là: khi tinh chỉnh một thiết kế được
+sinh ra dựa trên vật lý, hàm mục tiêu phải được tính trên đúng đối tượng sẽ
+được kiểm chứng. Lấy đạo hàm qua bộ giải chính xác loại bỏ được sai số
+surrogate, nhưng không loại bỏ được sự lệch giữa đầu ra liên tục của bộ giải
+mã và ô cơ sở đã nhị phân hóa. Hình~\ref{fig:gap} cho thấy sự lệch này cho
+phép bộ tối ưu đạt hàm mục tiêu $10^{-10}$ trên một trường mà bộ kiểm chứng
+nhìn thấy rất khác. Vấn đề không lộ ra trên đường cong loss, và chỉ bộc lộ
+khi tinh chỉnh một baseline mạnh. Các thành phần của cách khắc phục là tiêu
+chuẩn trong tối ưu hóa tô-pô dựa trên mật độ
+\citep{guest2004achieving,wang2011projection}. Điểm mới là áp dụng chúng lên
+đầu ra của một mô hình sinh cố định trong quá trình tìm kiếm không gian ẩn,
+cùng với đúng phép lấy mẫu lại và hậu xử lý tuần hoàn dùng khi kiểm chứng.
+Nguyên tắc này hẳn cũng mở rộng được cho bất kỳ bước hậu xử lý nào nằm trong
+khâu kiểm chứng.
+
+\paragraph{Đa mục tiêu.}
+Quy trình xử lý ba mục tiêu ở các giai đoạn khác nhau. Tính tuần hoàn được
+đảm bảo bằng cấu trúc, tính liên thông và kích thước chi tiết đi vào qua
+điểm tổng hợp, còn độ chính xác được cải thiện sau cùng bằng tinh chỉnh vẫn
+giữ biên tuần hoàn. Cách sắp xếp này mang tính thực dụng, và bằng chứng của
+chúng tôi cho nó mới là một phần. Điểm tổng hợp chỉ phù hợp vừa phải với xếp
+hạng Pareto. Một nguyên nhân có thể là việc chuẩn hóa theo thứ hạng của số
+hạng độ chính xác trong từng tập ứng viên, nhưng chúng tôi chưa kiểm chứng
+điều này. Chúng tôi cũng chưa đo tinh chỉnh có làm thay đổi tính liên thông
+hay kích thước chi tiết hay không. Người thiết kế cần đảm bảo chắc chắn khả
+năng chế tạo vẫn có thể giới hạn bước chọn vào các ứng viên qua mọi kiểm
+tra. Trong các thí nghiệm trước, cách này cần tập ứng viên lớn
+($N\approx1500$) và làm giảm độ chính xác.
+
+\paragraph{Tổng quát hóa ngoài phân phối.}
+Kết quả của chúng tôi gợi ý một phát biểu chính xác hơn cho nhận định phổ
+biến rằng mô hình sinh ``tổng quát hóa được''. Theo dấu của hệ số Poisson,
+cVAE tạo ra thiết kế trong vùng có mật độ dữ liệu huấn luyện bằng 0, điều mà
+phương pháp tra cứu không thể làm được về mặt cấu trúc. Theo biên độ, mô
+hình sinh, bước tinh chỉnh và bước chọn tốt nhất trong $N$ mẫu đều dừng ở
+biên dữ liệu huấn luyện. Vì vậy các tuyên bố về OOD nên nêu rõ hướng trong
+không gian tính chất, và nên kiểm tra trước rằng mục tiêu là chấp nhận được
+về vật lý. Ngoại suy biên độ nhiều khả năng cần dữ liệu huấn luyện mới gần
+biên, ví dụ từ tối ưu hóa tô-pô khởi tạo bằng các thiết kế được sinh ra,
+hơn là lấy mẫu tốt hơn từ mô hình hiện tại.
+
+\paragraph{Giới hạn.}
+(i) Mọi phân tích dùng đồng nhất hóa đàn hồi tuyến tính, biến dạng nhỏ, cho
+ô cơ sở hai chiều trên lưới $50\times50$ với hệ số Poisson vật liệu nền 0,3.
+Biến dạng lớn và kiến trúc ba chiều chưa được xét.
+(ii) Thiết kế được kiểm chứng bằng số, kể cả với một bản cài đặt FE độc lập,
+nhưng chưa được kiểm chứng thực nghiệm.
+(iii) Thí nghiệm đổi dấu dùng sáu mục tiêu và một checkpoint trước đó; phép
+quét biên độ dùng 10 lần lặp mỗi mục tiêu.
+(iv) Điểm thẩm mỹ là một heuristic đơn giản (đối xứng gương và độ trơn biên),
+chưa được đối chiếu với đánh giá của con người.
+(v) Trong phân phối, truy xuất láng giềng gần nhất rất cạnh tranh về độ
+chính xác, nên lợi thế của mô hình sinh thể hiện ở đây chỉ giới hạn ở việc
+đổi dấu ngoài phân phối.
+(vi) Tinh chỉnh tốn thêm khoảng 77 lần giải FE mỗi mục tiêu. Chi phí này rẻ
+ở 2D nhưng sẽ đòi hỏi bộ giải adjoint hiệu quả ở 3D.
+
+% ---------------------------------------------------------------------------
+\section{Phương pháp}
+
+\subsection{Sinh dữ liệu}
+Ô cơ sở được sinh bằng tối ưu hóa tô-pô SIMP
+\citep{bendsoe1989optimal,sigmund2001code,andreassen2011efficient} với bộ lọc
+mật độ \citep{bourdin2001filters}, điều kiện biên tuần hoàn và đồng nhất hóa
+dựa trên năng lượng
+\citep{guedes1990preprocessing,andreassen2014homogenization,xia2015design}.
+Các hàm mục tiêu auxetic được cực tiểu hóa từ bốn tô-pô khởi tạo, dùng tiêu
+chuẩn tối ưu (OC) hoặc phương pháp tiệm cận di động \citep{svanberg1987mma}
+tùy tô-pô. Các tham số quy trình (tỉ lệ thể tích, hệ số phạt, bán kính lọc,
+giới hạn bước, kích thước lỗ rỗng, góc xoay mạng) được sàng lọc bằng lấy mẫu
+siêu lập phương Latin \citep{mckay1979lhs}. Sau đó chúng được tinh chỉnh
+trong một quy trình thiết kế thí nghiệm thích nghi nhiều lô, dùng dãy Sobol'
+\citep{sobol1967distribution} và siêu lập phương Latin tối ưu. Các mẫu hội
+tụ dao động, tô-pô suy biến hoặc nhãn ngoài dải vật lý bị loại bỏ. Trường
+mật độ $50\times50$ được lọc hộp về ảnh $64\times64$ và gán nhãn
+$(\nuot,\nuto)$ đồng nhất hóa. Bộ dữ liệu sản xuất gồm 13\,624 ô cơ sở phân
+biệt, chia 70/15/15 theo họ tô-pô khởi tạo (2\,044 mẫu kiểm tra). Ảnh huấn
+luyện được tăng cường sáu lần bằng phép xoay và đối xứng; phép xoay
+$90^{\circ}$ hoán đổi $\nuot\leftrightarrow\nuto$. Kết quả là 57\,216 mẫu
+huấn luyện.
+
+\subsection{Đồng nhất hóa và độ nhạy chính xác}
+Trường mật độ $\rho\in[0,1]^{50\times50}$ được rời rạc hóa bằng phần tử tứ
+giác song tuyến tính với nội suy SIMP cải tiến
+$E(\rho)=E_{\min}+\rho^{p}(E_0-E_{\min})$, trong đó $E_{\min}=10^{-9}E_0$,
+$p=3$ và $\nu_0=0{,}3$. Tensor độ cứng đồng nhất hóa $\mathbf{Q}$ nhận được
+từ ba trường hợp tải tuần hoàn thông qua năng lượng tương hỗ phần tử
+\citep{xia2015design}. Hệ số Poisson lấy từ $\mathbf{S}=\mathbf{Q}^{-1}$:
+$\nuot=-S_{12}/S_{11}$ và $\nuto=-S_{12}/S_{22}$. Công thức này vẫn đúng với ô
+cơ sở bị xoay, dị hướng hoàn toàn. Nhờ công thức năng lượng tự liên hợp, độ
+nhạy $\partial\mathbf{Q}/\partial\rho_e$ có sẵn mà không cần giải thêm. Độ
+nhạy được lan truyền giải tích qua
+$\partial\mathbf{S}=-\mathbf{S}\,(\partial\mathbf{Q})\,\mathbf{S}$ và quy tắc
+đạo hàm thương, trong một hàm autograd tùy biến của PyTorch
+\citep{paszke2019pytorch}. Gradient của hàm này khớp sai phân hữu hạn với sai
+số tương đối dưới $10^{-4}$. Bộ giải khớp với một bản cài đặt độc lập bằng
+scikit-fem \citep{gustafsson2020skfem} tới $10^{-9}$ trên 24 thiết kế.
+
+\subsection{cVAE}
+cVAE \citep{kingma2014vae,sohn2015cvae} được điều kiện hóa theo
+$c=(\nuot,\nuto)$ và có không gian ẩn 32 chiều. Bộ mã hóa gồm bốn khối tích
+chập--chuẩn hóa batch--ReLU--pooling (32 đến 256 kênh), giữ lại bản đồ không
+gian $4\times4$, tiếp theo là các lớp tuyến tính cho trung bình và
+log-phương sai. Bộ giải mã đối xứng với bộ mã hóa, dùng tích chập chuyển vị
+và đầu ra sigmoid. Giai đoạn 1 huấn luyện với loss tái tạo entropy chéo nhị
+phân, số hạng KL có khởi động tuyến tính \citep{bowman2016generating}, và số
+hạng nhất quán tính chất từ một surrogate tích chập cố định (trọng số
+$\gamma=20$; surrogate đạt $\RR$ kiểm tra 0,974 cho $\nuot$ và 0,964 cho
+$\nuto$). Giai đoạn 2 tiếp tục từ giai đoạn 1 và thêm bình phương sai số
+giữa $c$ và hệ số Poisson đồng nhất hóa FE của các mẫu \emph{tiên nghiệm}
+$z\sim\mathcal N(0,I)$ đã giải mã (trọng số 20; 8 mẫu mỗi hai epoch). Đây
+chính là chế độ dùng khi suy luận, và huấn luyện loss này từ đầu thì thất
+bại. Tối ưu dùng Adam \citep{kingma2015adam}. Checkpoint được chọn theo $\RR$
+kiểm chứng FE trên các điều kiện kiểm định chứ không theo loss kiểm định, vì
+khởi động KL làm loss kiểm định không đáng tin.
+
+\subsection{Kiểm chứng, khả năng chế tạo và điểm tổng hợp}
+Một ảnh giải mã được kiểm chứng qua bốn bước: (1) ép biên tuần hoàn, thay các
+cột rồi các hàng biên đối diện bằng trung bình của chúng; (2) lấy ngưỡng
+0,5; (3) lấy mẫu lại láng giềng gần nhất về $50\times50$ bằng bảng chỉ số của
+thư viện ảnh dùng khi xây dựng bộ dữ liệu; và (4) đồng nhất hóa FE. Khả năng
+chế tạo kết hợp ba kiểm tra trên ảnh nhị phân: pha rắn liên thông duy nhất,
+kích thước chi tiết tối thiểu hai pixel (phép co hình thái), và tính tuần
+hoàn (tối đa 10\% pixel lệch giữa các cạnh đối diện). Điểm có bậc
+$s_{\mathrm{man}}$ là trung bình của ba chỉ báo. Điểm thẩm mỹ
+$s_{\mathrm{aes}}$ lấy trung bình giữa độ đối xứng gương theo hai trục và
+nghịch đảo tỉ lệ chu vi/diện tích đã chuẩn hóa, tính với biên tuần hoàn. Điểm
+chính xác $s_{\mathrm{acc}}$ là $|\Delta\nuot|$ chuẩn hóa min--max trong tập
+ứng viên, đổi dấu để giá trị cao hơn là tốt hơn. Phép kiểm tra Pareto áp
+dụng sắp xếp không trội lặp trên ba mục tiêu gốc, rồi tính tương quan giữa
+tầng thu được và điểm tổng hợp cho từng mục tiêu.
+
+\subsection{Tinh chỉnh không gian ẩn}
+Cho $\boldsymbol\nu^{*}$ và vector ẩn xuất phát $z_0$ (mẫu đơn lẻ hoặc ứng
+viên tốt nhất trong $N$ mẫu), chúng tôi cực tiểu hóa
+\begin{equation}
+\mathcal L_\beta(z)=\tfrac12\bigl\lVert
+\boldsymbol\nu\bigl(\mathcal R\circ H_\beta\circ\mathcal P\circ D(z,c)\bigr)
+-\boldsymbol\nu^{*}\bigr\rVert_2^2 ,
+\end{equation}
+trong đó $D$ là bộ giải mã cố định, $\mathcal P$ là phép ép biên tuần hoàn
+(tuyến tính), và $\mathcal R$ là phép lấy mẫu lại láng giềng gần nhất được
+cài đặt như một phép gather khả vi với cùng bảng chỉ số. Cuối cùng,
+\begin{equation}
+H_\beta(\rho)=\frac{\tanh(\beta\eta)+\tanh\bigl(\beta(\rho-\eta)\bigr)}
+{\tanh(\beta\eta)+\tanh\bigl(\beta(1-\eta)\bigr)},\qquad \eta=0{,}5,
+\end{equation}
+là phép chiếu Heaviside làm trơn \citep{wang2011projection}. 32 bước L-BFGS
+(bước 0,5, tìm kiếm đường strong-Wolfe) được chia đều cho
+$\beta\in\{1;4;16;64\}$. L-BFGS được khởi động lại ở mỗi mức, vì thông tin độ
+cong từ phép chiếu mềm hơn không còn đúng cho mức mới. Baseline liên tục áp
+loss lên $D(z,c)$ với nội suy song tuyến tính trong 30 bước. Tinh chỉnh có
+kiểm soát chỉ giữ thiết kế đã tinh chỉnh nếu $|\Delta\nuot|+|\Delta\nuto|$
+kiểm chứng của nó nhỏ hơn thiết kế xuất phát.
+
+\subsection{Giao thức ngoài phân phối và baseline truy xuất}
+Phương pháp truy xuất trả về mẫu huấn luyện có khoảng cách Euclid nhỏ nhất
+tới mục tiêu trong không gian $(\nuot,\nuto)$. Thí nghiệm đổi dấu dùng sáu
+mục tiêu không auxetic, 10 mẫu cVAE mỗi mục tiêu và chọn bằng FE. Phép quét
+biên độ dùng sáu mục tiêu dị hướng với $\nuto^{*}=-0{,}05$ và 10 lần lặp độc
+lập của bước chọn tốt nhất trong 30 mẫu cho mỗi mục tiêu. Tính chấp nhận
+được của mục tiêu được kiểm tra theo điều kiện $\nuot\nuto<1$
+\citep{lempriere1968poisson}.
+
+\subsection{Thống kê và đăng ký trước tiêu chí}
+IN100 gồm 100 điều kiện kiểm tra rút với seed 123. Mức giảm MAE tương đối và
+KTC 95\% được tính bằng bootstrap phân vị ghép cặp theo điều kiện, với
+10\,000 lần lấy mẫu lại \citep{efron1993bootstrap}. Một cải thiện chỉ được
+khẳng định khi KTC không chứa 0. Các tiêu chí được ghi lại trước mỗi thí
+nghiệm, gồm: giảm MAE ít nhất 20\% với mẫu đơn lẻ; MAE không tăng có ý nghĩa
+sau bước chọn tốt nhất trong 30 mẫu; trung vị sai số tương đối tối đa 8\%
+tại $\nuot^{*}=-2{,}0$; tương quan Spearman trung bình tối thiểu 0,7 cho điểm
+tổng hợp; với KAN, KTC không chứa 0 ở cả hai seed; với WIRE, tỉ lệ trúng tối
+thiểu 30\% và $\RR$ FE $>0$. L-BFGS trên GPU không tất định từng bit, và các
+lần chạy lặp lệch nhau khoảng 0,006 về $\RR$.
+
+\section*{Dữ liệu và mã nguồn}
+Mã nguồn, checkpoint đã huấn luyện và toàn bộ kết quả theo từng điều kiện
+dùng cho các bảng và hình sẽ được công bố tại [đường dẫn kho mã - sẽ bổ
+sung].
+
+\section*{Lời cảm ơn và xung đột lợi ích}
+[Sẽ bổ sung.]
+
+\bibliographystyle{unsrtnat}
+\bibliography{refs}
+
+\end{document}

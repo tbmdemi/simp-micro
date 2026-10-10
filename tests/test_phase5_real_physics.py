@@ -248,7 +248,8 @@ class TestRealPhysicsNuAutogradFunction:
 
 
 class TestPerSampleMaterial:
-    """A5 (docs/PROJECT_PLAN.md Nhóm 1): E0/nu giờ chấp nhận mảng per-sample
+    """A5 (docs/archive/PROJECT_PLAN.md Nhóm 1): E0/nu giờ chấp nhận mảng
+    per-sample
     thay vì chỉ scalar áp cho cả batch - kiểm tra giá trị/gradient khớp đúng
     với việc gọi solve_nu_with_grad() riêng lẻ từng sample với nu/E0 khác
     nhau, và mesh TOPOLOGY vẫn dùng chung (không cache lại theo vật liệu)."""

@@ -7,13 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-10-10 - N1/N2: hiện thực hóa lệch lưới, robust formulation, thiết kế qua bộ lọc (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/realization.py`: `realize_shifted` (hiện thực hóa làm mượt + dịch lệch lưới, ngưỡng `eta` cho bản co/giãn) và `filtered_design` (thiết kế vật lý = Heaviside(lọc Gauss → lấy mẫu lưới FE)), khả vi.
+- `tandem_lbfgs` + `benchmark_physics_guided_refinement.py`: cờ mặc định tắt `--realization-shifts/--realization-sigma` (N1), `--fe-upsample [--fe-upsample-last-only]` (đối chứng lưới mịn, E2), `--robust-etas/--robust-sigma` (robust formulation, E1/E1′), `--design-filter-sigma` (thiết kế qua bộ lọc F: chọn best-of-N, refine, verify, chế tạo, ảnh lưu trên cùng ảnh; guard theo loss robust khi có `--robust-etas`), `--n-workers`.
+- Script đánh giá `outputs/phase5/plan_v3/n1/` (`eval_pilot.py`, `sigma_check.py`, `mesh_convergence.py`) và `n2/` (`eval_general.py` - bảng điểm e_verify / e_mesh / e_real / e_shift / e_ed / chế tạo, có cache; `island_cleanup.py`).
+- Test mới: `tests/test_phase5_realization.py`, thêm vào `test_tandem_lbfgs.py`, `test_phase5_refinement_benchmark.py` (706 → 732).
+- Tài liệu: `docs/de_xuat_cai_thien_ket_qua.md` (tra cứu + đề xuất), `docs/paper1/ghi_chu_viet_bao.md` (ghi chú viết báo), `docs/plan.md` mục N1, N2, N2-E1′, N2-E3-F, N2-C6, N2-S, N2-E3-S15.
+
+#### Kết quả chính (chi tiết `docs/plan.md`)
+- Refine giảm MAE ν12 68% trên lưới verify 50² nhưng chỉ 26% trên lưới mịn; ν của thiết kế pixel chỉ xác định tới ~0,02 tùy biểu diễn biên.
+- Thiết kế qua bộ lọc σ = 1 (F) ĐẠT xác nhận đặt trước n = 100 × 2 tập: sai số biên thực tế −43…−47% so với pipeline cũ, −53% so với SIMP, cùng chi phí.
+- Thước đo chế tạo cũ chủ yếu đếm đảo rời: xóa đảo (không đổi ν) cho A 0,84 / F 0,93 / SIMP 1,00.
+
+### 2026-10-08 - Dọn dẹp repo: `outputs/` theo dõi bởi git, docs lỗi thời, notebooks
+
+#### Changed
+- `notebooks/`: 10 notebook → 3. `01_doe_dataset_analysis.ipynb` gộp 01/02/03 cũ (34 ô gốc giữ nguyên văn); đặt lại tên cho đúng nguồn dữ liệu thật - 3 notebook cũ tên "Phase 1" nhưng luôn đọc manifest DOE Phase 3 (7.920 mẫu), không phải cây LHS Phase 1. `07_geometric_feature_influence` → `02_…`, `09_cheap_physical_properties` → `03_…` (nội dung không đổi).
+- `docs/PROJECT_PLAN.md`, `task_progress.md`, `auxforge_architecture_comparison-v2.md`, `paper1_{methods,results,discussion}_draft.md` → `docs/archive/` (đều tự ghi là đã bị thay thế; `docs/plan.md` v3 là nguồn kế hoạch duy nhất).
+- `.gitignore`: bỏ theo dõi ảnh snapshot `outputs/**/iteration_*.png`, `*_backup.csv`, `*_partial_log.txt` (artifact trung gian, tạo lại được; file trên đĩa giữ nguyên). Giữ nguyên `outputs/phase5/plan_v3/` (script Bài #1 đọc trực tiếp), `self_play/`, `multi_batch/` (bằng chứng cho `EXPERIMENT_LOG.md`).
+
+#### Removed
+- Notebook 04/05/06 (hiển thị chỉ số lỗi thời: surrogate R² 0,91 đời đầu, `property_accuracy` qua surrogate), 08 (thay bằng `docs/paper1/scripts/c5_pareto_nofp.py`), `gamma_sweep_analysis`; file trung gian `cleaned_dataset.parquet`, `cleaned_dataset_preview.csv`, `gamma_sweep_chart.png`, `next_sweep_config.json` (đề xuất `mu=0.2` trái mặc định hiện hành). Tất cả còn trong git history.
+- `notebooks/utils.py`: `classify_void`, `compute_coupling_ratio`, `PHASE4_DIR`, `PHASE5_DIR`, `SEEDS` (không còn nơi dùng; `SEEDS` thiếu `reentrant_bowtie`).
+
+#### Fixed
+- Notebook 01, tổng kết "tham số ảnh hưởng mạnh nhất lên ν12" xếp hạng cả metric đầu ra (`final_obj`, `n_iter`) → giờ chỉ xếp trong `param_cols` (kết quả: `rmin`, `move`, `void_size_frac`).
+
+### 2026-10-07 - P1.7-P1.9: lai cVAE → SIMP, xác nhận phân tầng, bỏ `force_periodic` (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/benchmark_hybrid.py`: thí nghiệm lai cVAE → SIMP với 4 tiêu chí đăng ký trước (P1.7, KHÔNG ĐẠT).
+- `benchmark_simp_baseline.run_simp_target(x0=, betas=)`: khởi tạo SIMP từ thiết kế tùy ý, β continuation tùy chỉnh (mặc định giữ hành vi cũ).
+- `docs/paper1/scripts/`: `c5_force_periodic.py` (ablation C5), `p1_8_anisotropy_strata.py` (phân tầng dị hướng, P1.8), `c5_pareto_nofp.py` (Spearman Pareto không fp), `p1_9_nofp_summary.py` (tổng hợp mọi số không fp).
+- Nháp bản thảo Khung A: `docs/paper1/drafts/p1_10_sections_{en,vi}.tex`.
+- 5 test mới (701 → 706).
+
+#### Changed
+- Quyết định tác giả C1-C5 (`docs/plan.md` mục 4): Khung A, tên bài mới, nộp SMO, không ν0, **bỏ `force_periodic`** + bỏ kiểm tra cạnh khỏi định nghĩa chế tạo được. Mọi số của bài chạy lại không fp (`p1_9_*`).
+
+#### Fixed (tài liệu)
+- `LIMITATIONS.md` #35: "refine giảm chế tạo được 30%→24%" không vững (5 lần chạy, p=0,12). Thêm #36 (lai không đạt), #37 (lỗi tập trung ở dị hướng r ≥ 10), #38 (R² 0,995 của Bảng 2 là chọn thuần độ chính xác; composite 0,983).
+- Phạm vi claim (`LIMITATIONS.md`, `README.md`): bỏ claim "cVAE chính xác hơn SIMP về ν₁₂" → "ngang SIMP hội tụ với ~8× ít FE".
+
+### 2026-10-06 - P1.6: baseline SIMP + kiểm tra bổ sung Bài #1 (nhánh `substrate-material`)
+
+#### Added
+- `pipeline/phase5_cvae/benchmark_simp_baseline.py`: baseline SIMP chạy từ đầu (inverse homogenization ½‖ν−ν*‖², MMA, Heaviside β 1→64, đa khởi tạo, verify giống cVAE).
+- `benchmark_physics_guided_refinement.py --save-images`; cờ manufacturable baseline/refined + `frac_manufacturable_*` trong summary.
+- `docs/paper1/scripts/`: `p1_6a_compare.py`, `mesh_convergence.py`, `final_design_eval.py`, `retrieval_in100.py`, `refine_examples.py`, `deformation_examples.py`.
+- `make_figures.py`: `fig_refine_examples`, `fig_designs`, `fig_tiling`, `fig_stiffness`, `fig_deformation`; `fig_ood` thêm panel mật độ dữ liệu train.
+- 8 test mới (693 → 701).
+
+#### Fixed (tài liệu)
+- `LIMITATIONS.md` #18: "retrieval R²=1,000" đo trên nhãn, không verify - đính chính (verify: 0,941-0,977). Thêm #32-35 (so SIMP, sai số rời rạc hóa lưới, `force_periodic`, refine giảm chế tạo được).
+
 ### 2026-09-30 - Tính chất vật lý suy từ Q (nhánh `substrate-material`)
 
 #### Added
 - `real_physics.solve_elastic_with_grad()`: v12/v21/E_x/E_y/G_xy/B_eff kèm gradient giải tích theo pixel, chỉ 1 lần FE-solve; hằng `ELASTIC_KEYS`.
 - `auxetic.compute_wave_speeds()`: tốc độ sóng quasi-static (bài toán Christoffel trên Q), chuẩn hóa theo sqrt(E0/ρs).
 - `analysis/scripts/backfill_elastic_props_npz.py`: backfill Q + 13 tính chất cho `outputs/phase3_a4/{train,val,test}_props.npz` (73.164 mẫu, 0 lỗi FE).
-- `notebooks/09_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
+- `notebooks/03_cheap_physical_properties.ipynb`: kiểm tra cận Voigt/Hashin–Shtrikman, đo thông tin mới so với 5 điều kiện, proxy ấn lõm, biên Pareto ν12 ↔ E_x/ρ.
 - 14 test mới (679 → 693).
 
 #### Changed
@@ -195,7 +251,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 2026-08-23 - KAN regression head + WIRE INR decoder (Task 1/2, nhánh `substrate-material`)
 
-> Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [docs/task_progress.md](docs/task_progress.md).
+> Chi tiết đầy đủ + số liệu: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-08-23, [docs/archive/task_progress.md](docs/archive/task_progress.md).
 
 #### Added
 - `pipeline/phase5_cvae/model.py`: `WireContinuousDecoder` + `ComplexGaborActivation` (Gabor Wavelet phức) - WIRE INR decoder sinh mật độ ρ ∈ [0,1] tại tọa độ liên tục (x,y) ∈ [-1,1]², resolution-agnostic. `CVAE` thêm flag `decoder_type="conv"|"wire"` (mặc định `conv`, tương thích ngược) và `generate(resolution=...)` (128²/256²/512²) giữ API đầu ra `(B,1,H,W)`.
@@ -205,7 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Changed
 - **KAN-hóa bộ hồi quy cVAE (Task 1):** `Decoder.fc` chuyển từ `nn.Linear` sang `EfficientKANLinear` (khớp `Encoder.fc_mu`/`fc_logvar` đã KAN) - mọi `fc` của cVAE giờ là KAN. `resize_condition_dim_weights()` đã xử lý KAN (`base_weight`/`spline_weight`/grid).
-- Training KAN chạy 5 lần: base val_loss R²(surrogate)=0,19; **fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật)=0,8889** - vượt baseline Linear đo lại (0,29/0,35) gần 2×. DoN R² ≥ 0,990 chưa đạt (xem docs/task_progress.md).
+- Training KAN chạy 5 lần: base val_loss R²(surrogate)=0,19; **fine-tune real-physics 2 vòng → `cvae_kan_realphysics_v2.pt` R²=0,64 (v12 0,82, v21 0,45), R²(FE thật)=0,8889** - vượt baseline Linear đo lại (0,29/0,35) gần 2×. DoN R² ≥ 0,990 chưa đạt (xem docs/archive/task_progress.md).
 
 #### Fixed
 - Phát hiện `outputs/phase5/evaluation_report.json` (2026-07-29, R²=0,85) **không tái lập** với code hiện tại (cùng checkpoint đo lại = 0,35 với surrogate v2, −1,81 với v1) - chưa tìm ra gốc rễ, khả năng report cũ sinh bằng code path khác; mọi so sánh R² cũ cần đo lại cùng code hiện tại (xem EXPERIMENT_LOG.md 2026-08-23).

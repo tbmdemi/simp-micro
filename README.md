@@ -71,9 +71,24 @@ FE thật) và một phần trên bug loader `load_cvae` (ép đối xứng lúc
 mục 28) - **không còn dùng làm kết luận**. Ablation lại có kiểm soát bằng FE thật: KAN không thắng
 Linear. Xem [docs/plan.md](docs/plan.md) mục P1.2.
 
+**Cập nhật 2026-10-06 (plan v3 P1.6):** so với **SIMP chạy từ đầu** (inverse homogenization, cùng
+đường verify), cVAE + refine **ngang** SIMP hội tụ về độ chính xác với ít FE hơn ~8×; trên đủ
+100 mục tiêu cặp (ν₁₂, ν₂₁) hòa (cVAE sinh ô đứt ở mục tiêu dị hướng cực đoan r ≥ 10); SIMP thắng về khả năng chế tạo
+(77% vs ~25%) và OOD đổi dấu. Refine tái lập trên tập mới IN100-B. Độ chính xác báo cáo là so với
+mô hình FE 50×50 (sai số rời rạc hóa so với 200² ~0,015). Retrieval verified chỉ đạt R² 0,94-0,98
+(con số 1,000 cũ đo trên nhãn). Xem [docs/plan.md](docs/plan.md) mục P1.6 và `docs/LIMITATIONS.md` #32-35.
+
+**Cập nhật 2026-10-07 (plan v3 P1.7-P1.9, tác giả chốt C1-C5):** lai cVAE → SIMP **không đạt** tiêu
+chí đăng ký trước (chế tạo 0,33 < 0,70); kiểm định phân tầng đăng ký trước trên tập mới IN100-C:
+với r < 10 sai số cặp cVAE thấp hơn SIMP 27% [8; 42] (đạt), ν₁₂ không đạt → **không claim ν₁₂ hơn
+SIMP**. Bỏ `force_periodic` (C5) và chạy lại mọi số (P1.9): độ chính xác giữ nguyên/tốt hơn, chế tạo
+0,24 → 0,32, OOD −2,0 sai số trung vị 12,5% → 1,2% (4/10 lần vẫn sai 17-31%); SIMP vẫn thắng chế tạo
+và OOD đổi dấu. Bài #1: Khung A, tên "Optimizing What Is Verified…", nộp SMO. Xem `docs/plan.md`
+mục 4 và `docs/LIMITATIONS.md` #36-38.
+
 > Chi tiết từng phase con: xem [docs/PIPELINE.md](docs/PIPELINE.md), [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) và [docs/ARCHITECT.md](docs/ARCHITECT.md).
 > 
-> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative hiện rõ nhất ở sign-flip OOD (ν₁₂ dương 6/6 mục tiêu, MAE 0,19 so với 0,40 của retrieval); không ngoại suy được biên độ ra ngoài dải train. Refine nhận thức nhị phân hóa nâng R²(FE) trong phân phối lên ~0,998 (LIMITATIONS #29). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative so với retrieval rõ nhất ở sign-flip OOD (ν₁₂ dương 6/6 mục tiêu, MAE 0,19 so với 0,40), nhưng ở OOD SIMP chạy từ đầu vẫn tốt hơn cVAE (LIMITATIONS #32); không ngoại suy được biên độ ra ngoài dải train. Refine nhận thức nhị phân hóa nâng R²(FE) trong phân phối lên ~0,998 (LIMITATIONS #29). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
@@ -312,7 +327,7 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
 - Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
-- `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/PROJECT_PLAN.md` Nhóm 2.
+- `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/archive/PROJECT_PLAN.md` Nhóm 2.
 - Test tự động chưa phủ hết đường I/O nặng (screening loop, seeds, visualize và FE call thật trong `multi_batch/runner.py::evaluate_single`).
 - Kết quả xác thực composite score chỉ ủng hộ một phần: Spearman trung bình so với Pareto front = 0,693 (trung vị 0,714), chưa đạt ngưỡng trung bình 0,7 đặt trước.
 - Ở 8D in-distribution, retrieval không bị suy yếu đáng kể ngay cả với 500 mẫu tra cứu (R²=0,984); không dùng giả thuyết curse-of-dimensionality làm claim chính.
@@ -324,9 +339,9 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 ## Tài liệu
 - [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
 - [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) - tổng hợp mọi lệnh dòng lệnh (test suite, `simp`, `simp-analysis`, từng phase 1-5, sự cố thường gặp)
-- [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
+- [`docs/archive/PROJECT_PLAN.md`](docs/archive/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
 - [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 30 mục giới hạn đã biết (song ngữ)
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 38 mục giới hạn đã biết (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án
 - `outputs/figures/` - năm figure đã dựng cho bài báo (kiến trúc, data hygiene, OOD, Pareto và uốn tấm)
@@ -335,8 +350,9 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 - `CHANGELOG.md` - lịch sử thay đổi theo phiên bản
 - Pilot damping/continuation có kiểm soát (N=400/config, Wilson CI) cho thấy `use_sqrt` (damping η=0.5) + `penal_init=2.0` gần gấp đôi yield `reentrant_bowtie` (46%→76-80%) - **kết quả tốt, đã kiểm chứng thống kê, nhưng CHƯA được áp dụng vào cấu hình production**; xem [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md).
 - `outputs/{phase3,phase4,phase5}/` - báo cáo/kết quả từng phase (`evaluation_report.json`, `fe_verification_report.json`, `self_play/`, v.v.)
-- `notebooks/01-06_*.ipynb`, `gamma_sweep_analysis.ipynb` - notebook phân tích Phase 1-5 và tổng kết end-to-end
-- `notebooks/09_cheap_physical_properties.ipynb` - tính chất suy từ Q (E/G/B, proxy ấn lõm, tốc độ sóng quasi-static) trên dataset A4: kiểm tra cận vật lý, đo tính chất nào mang thông tin mới, biên Pareto ν ↔ độ cứng riêng
+- `notebooks/01_doe_dataset_analysis.ipynb` - phân tích dataset DOE multi-batch (manifest Phase 3, 7.920 mẫu): chất lượng dữ liệu, so sánh seed, độ nhạy tham số, top-10 thiết kế
+- `notebooks/02_geometric_feature_influence.ipynb` - ảnh hưởng số cạnh/độ dày lên ν12 (kiểm định nhị phân)
+- `notebooks/03_cheap_physical_properties.ipynb` - tính chất suy từ Q (E/G/B, proxy ấn lõm, tốc độ sóng quasi-static) trên dataset A4: kiểm tra cận vật lý, đo tính chất nào mang thông tin mới, biên Pareto ν ↔ độ cứng riêng
 
 ---
 

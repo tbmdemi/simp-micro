@@ -13,7 +13,8 @@ PARAM_SPACE: Dict[str, Tuple[float, float]] = {
     'rmin':          (1.0, 2.5),     # thu hẹp, tránh rmin cao
     'move':          (0.05, 0.25),   # tinh chỉnh nhẹ
     'void_size_frac': (0.25, 0.55),  # mở rộng lên cao hơn
-    # Giai đoạn A (vary vật liệu nền, docs/PROJECT_PLAN.md Nhóm 1 A1/A3):
+    # Giai đoạn A (vary vật liệu nền, docs/archive/PROJECT_PLAN.md Nhóm 1
+    # A1/A3):
     # dải hẹp 0.2-0.4 để kiểm tra hội tụ FE trước khi mở rộng - nu=0.5 làm
     # (1-nu**2)=0 trong ma trận D (Material._compute_element_stiffness),
     # nu gần -1 cũng phân kỳ, nên KHÔNG mở dải sát biên vật lý (-1, 0.5)

@@ -21,7 +21,7 @@ Output: outputs/phase3/dataset_{RESOLUTION}.npz với các mảng:
     batch           (N,) int32
     nu              (N,) float32  hệ số Poisson vật liệu nền (fallback 0.3
                     nếu manifest không có cột này - Giai đoạn A/A4,
-                    docs/PROJECT_PLAN.md Nhóm 1)
+                    docs/archive/PROJECT_PLAN.md Nhóm 1)
 """
 import os
 import argparse
@@ -82,7 +82,8 @@ def main():
     batch = manifest["batch"].to_numpy(dtype=np.int32)
     converged = manifest["converged"].to_numpy(dtype=bool)
 
-    # nu (he so Poisson vat lieu nen, Giai doan A/A4, docs/PROJECT_PLAN.md
+    # nu (he so Poisson vat lieu nen, Giai doan A/A4,
+    # docs/archive/PROJECT_PLAN.md
     # Nhom 1): manifest CU khong co cot nay - toan bo du lieu do sinh voi
     # nu=0.3 co dinh (xem generate_production_batch.py truoc --vary-nu), nen
     # fallback 0.3 la SU THAT lich su, khong phai gia dinh tuy tien.

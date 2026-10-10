@@ -10,7 +10,7 @@ Mỗi mẫu: image (1,RES,RES) [0,1], condition (2,)=[v12,v21] (mặc định), 
 rộng theo 2 cờ ĐỘC LẬP cộng dồn (xem `CVAEDataset.__init__`):
   - `extended_condition=True`: +4 chiều [volfrac,volfrac_mask,
     void_size_frac,void_size_frac_mask]
-  - `include_nu0=True` (Giai đoạn A, docs/PROJECT_PLAN.md A6): +2 chiều
+  - `include_nu0=True` (Giai đoạn A, docs/archive/PROJECT_PLAN.md A6): +2 chiều
     [nu0,nu0_mask] - LUÔN ở 2 cột CUỐI CÙNG của condition, sau nhóm
     extended_condition nếu cả 2 cùng bật.
 Tổ hợp 2 cờ cho condition_dim ∈ {2,4,6,8}. seed_vec (n_seeds,) one-hot,
@@ -40,7 +40,7 @@ class CVAEDataset(Dataset):
                  include_nu0: bool = False):
         """include_nu0: đọc thêm ν0 (hệ số Poisson vật liệu nền) từ field
         "nu" trong npz, thêm 2 cột [nu0, nu0_mask] vào CUỐI condition vector
-        (Giai đoạn A, docs/PROJECT_PLAN.md A6 - tái dùng đúng pattern
+        (Giai đoạn A, docs/archive/PROJECT_PLAN.md A6 - tái dùng đúng pattern
         extended_condition/dropout). Độc lập với `extended_condition` (có
         thể bật riêng hoặc cùng lúc - xem module docstring cho thứ tự cột).
 
@@ -73,7 +73,8 @@ class CVAEDataset(Dataset):
                     f"include_nu0=True nhưng '{npz_path}' không có field 'nu'. "
                     "Cần dataset build sau A4 (pipeline/phase3_dataset/build_npz.py "
                     "đã thêm field này) - vd outputs/phase3_a4/*.npz, KHÔNG phải "
-                    "outputs/phase3/*.npz cũ (xem docs/PROJECT_PLAN.md A6)."
+                    "outputs/phase3/*.npz cũ "
+                    "(xem docs/archive/PROJECT_PLAN.md A6)."
                 )
             self.nu0 = data["nu"].astype(np.float32)
 

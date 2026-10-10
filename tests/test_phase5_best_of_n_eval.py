@@ -292,7 +292,8 @@ class TestBestOfNEdgeCases:
 
 
 class TestBestOfNConditionDimFlags:
-    """A6 (docs/PROJECT_PLAN.md Nhóm 1): trước fix, đường sweep test.npz
+    """A6 (docs/archive/PROJECT_PLAN.md Nhóm 1): trước fix, đường sweep
+    test.npz
     (custom_condition=None) suy extended_condition=(condition_dim==6) - BỎ
     SÓT include_nu0 khi condition_dim ∈ {4,8}, tạo CVAEDataset condition_dim
     lệch với model -> crash concat trong Encoder/Decoder. condition_flags_

@@ -46,7 +46,8 @@ ACTIVE_PARAMETERS: Dict[str, Dict[str, List[float]]] = {
     "void_size_frac": {"range": [0.1, 0.4]},
 }
 
-# Giai đoạn A (vary vật liệu nền, docs/PROJECT_PLAN.md Nhóm 1 A1/A3): dải hẹp
+# Giai đoạn A (vary vật liệu nền, docs/archive/PROJECT_PLAN.md Nhóm 1 A1/A3):
+# dải hẹp
 # ν0=0.2-0.4 để kiểm tra hội tụ FE trước khi mở rộng, khớp
 # pipeline/params.py::PARAM_SPACE['nu']. Không gộp thẳng vào ACTIVE_PARAMETERS
 # ở trên vì đó là default cho MỌI lần chạy main.py hiện có (kể cả tái tạo

@@ -89,7 +89,7 @@ def verify_round(cvae_ckpt_path: str, n_conditions: int, n_per_condition: int,
     (outputs/phase3/, KHÔNG có field 'nu'). Checkpoint condition_dim ∈
     {4,6,8} (train với --include-nu0/--extended-condition) CẦN trỏ data_dir
     tới dataset có field này, vd outputs/phase3_a4/ (xem A6,
-    docs/PROJECT_PLAN.md, LIMITATIONS.md mục 22).
+    docs/archive/PROJECT_PLAN.md, LIMITATIONS.md mục 22).
 
     condition_dim được đọc TRỰC TIẾP từ checkpoint (không giả định 2 như
     trước) - trước bản vá này, verify_round() luôn dựng CVAEDataset với

@@ -303,7 +303,8 @@ def real_physics_loss(
         num_workers>0 (tiến trình chính đã đa luồng, fork() có nguy cơ
         deadlock - xem cảnh báo trong real_physics.py).
     nu0_col: cột giá trị ν0 trong `condition` (cột mask = nu0_col+1) - xem
-        dataset.py CVAEDataset.nu0_col (Giai đoạn A, docs/PROJECT_PLAN.md
+        dataset.py CVAEDataset.nu0_col (Giai đoạn A,
+        docs/archive/PROJECT_PLAN.md
         A6). Khi đặt, FE-solve dùng ĐÚNG ν0 per-sample (mask=1) thay vì
         fe_params['nu'] cố định cho MỌI mẫu - tận dụng RealPhysicsNu per-
         sample nu đã có từ A5 (real_physics.py). Mẫu có mask=0 (nu0 bị

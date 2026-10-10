@@ -133,7 +133,8 @@ def main():
                               "này). Mặc định TẮT - hành vi cũ 3 target.")
     parser.add_argument("--include-nu0", action="store_true",
                          help="Them nu (he so Poisson vat lieu nen) lam INPUT PHU "
-                              "cho model (Giai doan A, A4, docs/PROJECT_PLAN.md "
+                              "cho model (Giai doan A, A4, "
+                              "docs/archive/PROJECT_PLAN.md "
                               "Nhom 1) - can npz co field 'nu' (build_npz.py da "
                               "them, fallback 0.3 cho manifest cu). Mac dinh TAT.")
     parser.add_argument("--use-kan", action="store_true",

@@ -191,7 +191,8 @@ def apply_condition_dropout(
 
     optional_pairs: danh sách (value_col, mask_col) cần dropout - CALLER
     (run_epoch) tính theo cờ extended_condition/include_nu0 đang bật (xem
-    docs/PROJECT_PLAN.md A6, cột nu0 nằm SAU cột volfrac/void_size_frac nếu
+    docs/archive/PROJECT_PLAN.md A6, cột nu0 nằm SAU cột volfrac/void_size_frac
+    nếu
     cả 2 cùng bật - xem dataset.py CVAEDataset.nu0_col)."""
     condition = condition.clone()
     bsz = condition.size(0)
@@ -719,7 +720,7 @@ def main():
     parser.add_argument(
         "--include-nu0",
         action="store_true",
-        help="Giai đoạn A (docs/PROJECT_PLAN.md A6): thêm ν0 (hệ số "
+        help="Giai đoạn A (docs/archive/PROJECT_PLAN.md A6): thêm ν0 (hệ số "
         "Poisson vật liệu nền) làm condition OPTIONAL, +2 chiều "
         "[nu0,nu0_mask] - độc lập với --extended-condition, có "
         "thể bật riêng hoặc cùng lúc (xem dataset.py "
