@@ -808,11 +808,15 @@ class TestNudgeDisconnectedIslands:
 class TestRunner:
     """Smoke tests for runner.py - run_simp with tiny mesh."""
 
-    def test_run_simp_tiny(self):
+    def test_run_simp_tiny(self, tmp_path):
         """Run SIMP on a tiny 4x4 mesh for 3 iterations. Should not crash."""
         from simp.runner import run_simp
 
         params = {
+            # output_dir tường minh: mặc định là outputs/simp_results_<seed>
+            # mà run_simp() rmtree trước khi ghi - test không được đụng
+            # vào thư mục kết quả thật của người dùng.
+            'output_dir': str(tmp_path / 'run'),
             'nelx': 4,
             'nely': 4,
             'volfrac': 0.4,
@@ -848,11 +852,12 @@ class TestRunner:
         assert 'history' in result
 
     @pytest.mark.parametrize("objective", ['auxetic'])
-    def test_run_simp_objectives(self, objective):
+    def test_run_simp_objectives(self, objective, tmp_path):
         """Run SIMP with each objective type on tiny mesh."""
         from simp.runner import run_simp
 
         params = {
+            'output_dir': str(tmp_path / 'run'),
             'nelx': 3,
             'nely': 3,
             'volfrac': 0.5,
@@ -869,11 +874,12 @@ class TestRunner:
         assert result['n_iters'] <= 2
         assert result['Q'].shape == (3, 3)
 
-    def test_run_simp_nan_guard(self):
+    def test_run_simp_nan_guard(self, tmp_path):
         """Verify NaN guard works - extreme params that could cause NaN should not crash return dict."""
         from simp.runner import run_simp
 
         params = {
+            'output_dir': str(tmp_path / 'run'),
             'nelx': 3,
             'nely': 3,
             'volfrac': 0.1,
@@ -913,7 +919,9 @@ class TestRunner:
         ('hourglass', 0.55),         # volfrac - hành vi đúng sẵn có
         ('circle', 0.3),             # void_size_frac - 9/11 seed còn lại
     ])
-    def test_seed_dispatch_third_arg(self, monkeypatch, seed_name, expected_arg):
+    def test_seed_dispatch_third_arg(
+        self, monkeypatch, tmp_path, seed_name, expected_arg
+    ):
         """Bug đã sửa 2026-08-15: dispatch chỉ đặc cách 'hourglass' truyền
         volfrac làm tham số thứ 3 của seed_fn - reentrant_bowtie_seed() cũng
         nhận volfrac (kiểm tra chữ ký hàm thật: `def reentrant_bowtie_seed(
@@ -936,6 +944,7 @@ class TestRunner:
             'nelx': 3, 'nely': 3, 'volfrac': 0.55, 'void_size_frac': 0.3,
             'penal': 3.0, 'rmin': 1.5, 'ft': 2, 'max_iter': 1,
             'seed': seed_name, 'objective': 'auxetic', 'rotation_deg': 0.0,
+            'output_dir': str(tmp_path / 'run'),
         }
         run_simp(params)
 
@@ -950,7 +959,7 @@ class TestRunSimpErrorRecovery:
     zero-init nên compute_nu12/21() (nghịch đảo ma trận) crash LinAlgError."""
 
     @staticmethod
-    def _base_params(**overrides):
+    def _base_params(tmp_path, **overrides):
         params = {
             'nelx': 3, 'nely': 3, 'volfrac': 0.4, 'penal': 3.0, 'rmin': 1.5,
             'ft': 2, 'E0': 199.0, 'Emin': 1e-9, 'nu': 0.3, 'move': 0.1,
@@ -958,6 +967,7 @@ class TestRunSimpErrorRecovery:
             'window_size': 5, 'seed': 'circle', 'objective': 'auxetic',
             'void_size_frac': 0.4, 'rotation_deg': 0.0, 'beta': 0.8,
             'beta_second': 100.0, 'save_every': 999, 'scale_factor': 1,
+            'output_dir': str(tmp_path / 'run'),
         }
         params.update(overrides)
         return params
@@ -970,7 +980,7 @@ class TestRunSimpErrorRecovery:
         if hasattr(run_simp, '_err_count'):
             del run_simp._err_count
 
-    def test_stops_after_5_consecutive_failures(self, monkeypatch):
+    def test_stops_after_5_consecutive_failures(self, monkeypatch, tmp_path):
         """FE-solve lỗi ở MỌI vòng lặp - pipeline phải dừng sau đúng 5 lần
         lỗi liên tiếp (không chạy tới max_iter=20)."""
         import simp.runner as runner_mod
@@ -979,14 +989,16 @@ class TestRunSimpErrorRecovery:
             raise RuntimeError("mocked FE-solve failure")
 
         monkeypatch.setattr(runner_mod, "solve_fe", always_fail)
-        result = runner_mod.run_simp(self._base_params(max_iter=20))
+        result = runner_mod.run_simp(self._base_params(tmp_path, max_iter=20))
 
         assert result['n_iters'] == 5, (
             "Phải dừng đúng sau 5 lỗi liên tiếp, không chạy hết max_iter "
             f"(n_iters={result['n_iters']}) - _err_count reset sai chỗ."
         )
 
-    def test_first_iteration_failure_does_not_crash(self, monkeypatch):
+    def test_first_iteration_failure_does_not_crash(
+        self, monkeypatch, tmp_path
+    ):
         """Lỗi ngay từ vòng lặp đầu tiên (Q vẫn zero-init) không được crash
         LinAlgError khi tính v12/v21 - phải trả về NaN cho vòng lặp đó."""
         import simp.runner as runner_mod
@@ -1002,14 +1014,16 @@ class TestRunSimpErrorRecovery:
 
         monkeypatch.setattr(runner_mod, "solve_fe", fail_once_then_succeed)
         # Should not raise LinAlgError.
-        result = runner_mod.run_simp(self._base_params(max_iter=3))
+        result = runner_mod.run_simp(self._base_params(tmp_path, max_iter=3))
 
         assert np.isnan(result['history']['v12'][1]), (
             "v12 của vòng lặp lỗi đầu tiên phải là NaN (Q chưa từng hợp lệ), "
             "không phải kết quả của compute_nu12() trên ma trận suy biến."
         )
 
-    def test_intermittent_failures_do_not_accumulate_across_successes(self, monkeypatch):
+    def test_intermittent_failures_do_not_accumulate_across_successes(
+        self, monkeypatch, tmp_path
+    ):
         """Lỗi - thành công - lỗi - thành công... (không liên tiếp) không
         được cộng dồn _err_count và dừng sớm - counter phải reset mỗi lần
         thành công xen giữa."""
@@ -1025,7 +1039,7 @@ class TestRunSimpErrorRecovery:
             return real_solve_fe(*args, **kwargs)
 
         monkeypatch.setattr(runner_mod, "solve_fe", fail_every_other_call)
-        result = runner_mod.run_simp(self._base_params(max_iter=10))
+        result = runner_mod.run_simp(self._base_params(tmp_path, max_iter=10))
 
         # Không lỗi nào liên tiếp quá 1 lần -> phải chạy hết 10 vòng lặp,
         # KHÔNG dừng sớm vì "5 lỗi liên tiếp" (chỉ là 5 lỗi RỜI RẠC).
