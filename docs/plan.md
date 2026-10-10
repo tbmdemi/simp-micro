@@ -500,18 +500,24 @@ Phân tầng theo r của **mục tiêu** (biết trước khi giải, không d�
 | P1.7 | Thí nghiệm lai cVAE → SIMP (tiêu chí đặt trước, mục P1.7) | P1.6a-c | ❌ KHÔNG ĐẠT 2026-10-07 (trượt tiêu chí 1 do #46 và tiêu chí 2: chế tạo 0,33) → Khung A; xem mục P1.7 | – |
 | P1.8 | Xác nhận phân tầng dị hướng trên IN100-C (seed 789, tiêu chí ghi trước) | P1.7 | 🟡 ĐẠT 1/2 2026-10-07: sai số cặp r<10 +26,8% [7,9; 42,4] ✅, ν12 +18,7% [−9,6; 39,7] ❌ → claim "ngang SIMP với 8× ít FE", không claim ν12 hơn; xem mục P1.7 | – |
 | P1.6d-f | GS review, công bố mã, thực nghiệm (dài hạn) | P1.6a-c | ⬜ Chưa làm | xem mục P1.6 |
-| S1 | Tính chất rẻ suy từ Q (ngoài đường găng Bài #1, xem mục 5.1) | – | ✅ XONG 2026-09-30: backfill A4 + notebook 09; 693/693 test | – |
+| S1 | Tính chất rẻ suy từ Q (ngoài đường găng Bài #1, xem mục 5.1) | – | ✅ XONG 2026-09-30: backfill A4 + notebook 03 (`03_cheap_physical_properties`); 693/693 test | – |
+| K1 | Refine nhận thức chế tạo (phạt góc + nét mảnh) | P1.10 | ✅ 2026-10-08 ĐẠT tiêu chí nhưng mất độ chính xác → phương án A (λ=0 chính, K1 điểm vận hành 2). **2026-10-10:** phần lớn lợi ích chế tạo của K1 đạt được miễn phí bằng xóa đảo (N2-C6) | – |
+| N1 | Hiện thực hóa lệch lưới: chẩn đoán + objective | – | ✅ 2026-10-10: refine khớp lưới 50² (−68% → −26% trên lưới mịn); objective N1 = bền hình học, không đa năng; ν pixel chỉ xác định tới ~0,02 | – |
+| N2 | Cải thiện kết quả trên thước đo đáng tin (E1, E2, E1′, F, σ, xóa đảo) | N1 | ✅ 2026-10-10: **F (thiết kế qua bộ lọc σ=1) ĐẠT xác nhận n=100×2** (biên thực tế −43…−47% vs cũ, −53% vs SIMP, cùng chi phí); E1/E1′/E2 trượt; σ=1,5 đạt luật nhưng lợi ích nhỏ sau xóa đảo | – |
+| N3 | Dự định tiếp theo (mục N3 bên dưới) | N2 + quyết định tác giả | ⬜ Chờ tác giả chốt N3-D1…D3 | xem N3 |
 
 **Đường găng (cập nhật 2026-10-07):** ~~P1.0 → P1.6c, P1.7, P1.8~~ (xong) → **chốt C1-C5 (tác giả)** →
 P1.9 đo lại số chế tạo không fp (nếu C5 = bỏ) → P1.10 viết lại bản thảo EN+VI → P1.6d GS review →
 P1.6e công bố mã → P1.11 chuẩn bị nộp → nộp.
 **Tổng ETA còn lại:** ~3-3,5 ngày làm việc sau khi tác giả chốt C1-C5 (không tính thời gian chờ GS).
+**Cập nhật 2026-10-10:** trước P1.6d chèn thêm N3 (chốt pipeline F + xóa đảo, chạy lại số của bài, sửa
+bản thảo) - xem mục N3. Bài hiện chưa sẵn sàng gửi GS cho tới khi N3-D1 được chốt và số liệu được chạy lại.
 
 | # | Việc còn lại | Ai | Phụ thuộc | ETA |
 |---|---|---|---|---|
 | D | Chốt C1, C1b, C2, C3, C4, C5 (bên dưới) | Tác giả | – | ✅ CHỐT 2026-10-07 |
 | P1.9 | Chạy lại mọi số của bài không fp (C5) | Claude | C5 | ✅ XONG 2026-10-07 14:43 - xem mục "Kết quả P1.9" ngay dưới bảng | – |
-| P1.10 | Viết lại bản thảo EN + VI theo Khung A: bảng SIMP (P1.6a/IN100-B/IN100-C), cột lưới 200², phân tầng dị hướng, P1.7 kết quả âm, retrieval verified, ν21 đầy đủ, 6 hình mới, sửa mục 10-18 review 2026-10-05; tên bài mới | Claude | D, P1.9 | 🟡 2026-10-08: viết lại xong `main_en.tex` + `main_vi.tex` (cấu trúc SMO, số không fp, mục review 10-18; bản cũ ở `docs/paper1/archive/`). **Phát hiện mới:** SIMP trả về ô rỗng (ν=ν0=0,3) ở 3/28 mục tiêu đổi dấu - áp tiêu chí suy biến E<1e-3·E0 cho cả 2 phương pháp (`p1_10_degenerate_check.json`), SIMP vẫn thắng OOD. **Còn (cần cắm sạc, ~30 phút máy):** chạy `final_design_eval.py` không fp → cập nhật số 200² + `fig_stiffness`; `make_figures.py` (đã trỏ file không fp, chưa chạy); `tectonic` 2 bản; kiểm hình bằng mắt; DOI TOuNN |
+| P1.10 | Viết lại bản thảo EN + VI theo Khung A: bảng SIMP (P1.6a/IN100-B/IN100-C), cột lưới 200², phân tầng dị hướng, P1.7 kết quả âm, retrieval verified, ν21 đầy đủ, 6 hình mới, sửa mục 10-18 review 2026-10-05; tên bài mới | Claude | D, P1.9 | ✅ 2026-10-08: viết lại xong `main_en.tex` + `main_vi.tex` (cấu trúc SMO, số không fp, mục review 10-18; bản cũ ở `docs/paper1/archive/`). **Phát hiện mới:** SIMP trả về ô rỗng (ν=ν0=0,3) ở 3/28 mục tiêu đổi dấu - áp tiêu chí suy biến E<1e-3·E0 cho cả 2 phương pháp (`p1_10_degenerate_check.json`), SIMP vẫn thắng OOD. **B xong 19:35:** 200² không fp (`p1_10_final_design_eval_nofp.json`): R²(ν12) cVAE 0,990 / SIMP full 0,985, MAE 0,014 / 0,016, E_x/E0 trung vị 0,078 / 0,070 → xếp hạng giữ nguyên; 20 hình vẽ lại + kiểm bằng mắt; 2 PDF build sạch; DOI TOuNN. **Phát hiện → K1:** 21% thiết kế cVAE (SIMP 7-13%) có điểm chạm góc pixel (bản lề 1 nút); `manufacturability.py` dùng liên thông 8 hướng nên tính là liên thông, lưới 200² (kron) cũng không phát hiện được; chuyển sang 4 hướng: chế tạo được cVAE 0,41→0,39, SIMP 0,77-0,84→0,72-0,81 (xếp hạng giữ). Ví dụ OOD ν*=+0,5 trong `fig_deformation` là 2 khối nối qua góc |
 | P1.6d | Gửi GS Nguyễn Đình Đức: đồng tác giả, tạp chí, góc composite/FGM | Tác giả | P1.10 | – |
 | P1.6e | Công bố mã + dữ liệu: dọn repo, README tái lập, gói Zenodo (tác giả tạo DOI) | Claude chuẩn bị, tác giả đăng | P1.10 | ~0,5 ngày |
 | P1.11 | Chuẩn bị nộp: định dạng tạp chí, cover letter, CRediT, khai báo dùng AI, data availability | Cả hai | P1.6d, P1.6e | ~0,5 ngày |
@@ -559,6 +565,328 @@ P1.6e công bố mã → P1.11 chuẩn bị nộp → nộp.
 
 ---
 
+### K1 Refine nhận thức chế tạo (tiêu chí ghi 2026-10-08, TRƯỚC khi viết code/chạy)
+
+**Vì sao:** SIMP thắng xa về chế tạo được (0,72-0,84 vs cVAE 0,31). 16-26% thiết kế cVAE cuối có
+điểm chạm góc pixel (bản lề 1 nút) - `check_connectivity` 8 hướng tính là liên thông, lưới 200²
+(kron) không phát hiện. Đúng luận điểm bài: refine phải tối ưu cả thứ được kiểm (chế tạo), không
+chỉ ν.
+
+**Định nghĩa chế tạo được (K1, đổi so với bài):** liên thông **4 hướng** + nét tối thiểu
+(`min_feature_px=2`, như cũ), đo trên ảnh nhị phân 64² của thiết kế cuối guarded. Mốc (không fp,
+best-of-30): IN100 0,31 · IN100-B 0,33 · IN100-C 0,31 (8 hướng: 0,32/0,35/0,32).
+
+**Phương pháp:** objective refine = MSE(ν) FE + λ_c·P_góc + λ_t·P_mảnh, tính trên ảnh 64² sau
+Heaviside β (cùng chuỗi β 1→64). P_góc = trung bình cửa sổ 2×2 tuần hoàn dạng chéo; P_mảnh =
+trung bình(x̃ − opening(x̃)) với phần tử chữ thập (khớp erosion của `check_connectivity`). Đảo rời
+không khả vi → nếu cần, thêm luật chọn: guarded nhận refine khi sai số cặp không tệ hơn baseline
+quá ngưỡng τ VÀ chế tạo được (ghi τ trước khi chạy IN100).
+
+**Quy trình chống rò rỉ:** chỉnh λ (và τ nếu dùng) CHỈ trên IN100-B (seed 456, 20 condition đầu);
+chốt cấu hình rồi chạy 1 lần trên IN100 (seed 123) = kết quả chính, IN100-C (seed 789) = xác nhận.
+
+**Tiêu chí (IN100, best-of-30, thiết kế cuối guarded):**
+
+| # | Tiêu chí | Ngưỡng |
+|---|---|---|
+| 1 | Chế tạo được (4 hướng + nét tối thiểu) | ≥ 0,60 |
+| 2 | R²(ν12) FE | ≥ 0,99 (sàn; hiện 0,998) |
+| 3 | R²(ν21) FE | ≥ 0,80 (hiện 0,845; không để ν21 sụp) |
+| 4 | Tỉ lệ thiết kế có chạm góc | ≤ 0,13 (mức SIMP full) |
+| 5 | Chi phí FE/target | ≤ 1,1 × hiện tại (~107) |
+
+ĐẠT = cả 5 trên IN100 và tiêu chí 1-2 tái lập trên IN100-C. Đạt 1 nhưng trượt 2 → báo là đánh
+đổi, không thay pipeline chính. Trượt 1 → báo kết quả âm, ghi mức đạt được.
+
+**Pilot chỉnh λ (IN100-B seed 456, 20 condition, best-of-30, λ_c = λ_t = λ;
+`outputs/phase5/plan_v3/k1/pilot_B20_l*.json`):**
+
+| λ | Chế tạo (4 hướng) | Có chạm góc | R²(ν12) | R²(ν21) | Sai số cặp TB | FE/target |
+|---|---|---|---|---|---|---|
+| chưa refine | 0,45 | 0,30 | – | – | – | – |
+| 0 | 0,45 | 0,10 | 0,9969 | 0,987 | 0,0102 | 109 |
+| 0,03 | 0,65 | 0,10 | 0,9976 | 0,997 | 0,0074 | 110 |
+| **0,1** | **0,80** | **0,00** | **0,9991** | 0,996 | **0,0064** | 110 |
+| 1 | 0,85 | 0,10 | 0,9906 | 0,975 | 0,0181 | 114 |
+
+**CHỐT 2026-10-08 (trước khi chạy IN100/IN100-C):** λ_c = λ_t = 0,1; không dùng luật chọn τ
+(guarded giữ như cũ). Không chỉnh gì thêm sau khi thấy kết quả IN100.
+
+**Kết quả K1 (2026-10-08 20:25; `k1/k1_{in100,in100c}_bo30_l0.1.json`, so ghép cặp bằng
+`docs/paper1/scripts/k1_compare.py` → `k1/k1_comparison.json`): ✅ ĐẠT cả 5 tiêu chí trên IN100
+và IN100-C.**
+
+| | IN100 λ=0 → 0,1 | IN100-C λ=0 → 0,1 |
+|---|---|---|
+| Chế tạo được (4 hướng) | 0,31 → **0,72** (Δ +0,41 [0,31; 0,51]) | 0,31 → **0,76** (Δ +0,45 [0,34; 0,56]) |
+| Có chạm góc | 0,16 → 0,08 | 0,21 → 0,05 |
+| R²(ν12) / R²(ν21) | 0,998 / 0,846 → 0,996 / 0,875 | 0,998 / 0,998 → 0,997 / 0,998 |
+| MAE ν12 | 0,0046 → 0,0064 (**tệ hơn 37% [5; 78]**) | 0,0043 → 0,0060 (tệ hơn 40% [0; 98]) |
+| FE/target | 107 → 112 | 107 → 111 |
+
+**Đánh đổi thật (pilot n=20 báo độ chính xác TĂNG - không tái lập trên n=100):** chế tạo được
+nay ngang SIMP full (0,72 trên 50²), nhưng lợi thế độ chính xác so với SIMP ở tầng r < 10 mất ý
+nghĩa: sai số cặp cVAE vs SIMP giảm 41% [26; 54] → 15% [−10; 34] (IN100), 35% [19; 48] → 14%
+[−7; 32] (IN100-C).
+
+**Quyết định (tác giả, 2026-10-08): phương án A** - pipeline chính giữ λ=0; K1 (λ=0,1) báo là
+điểm vận hành thứ hai, kèm đường đánh đổi λ ∈ {0; 0,03; 0,1; 0,3; 1} trên IN100-B đủ 100 target
+(`k1/sweep_in100b_l*.json`, hình `fig_k1_tradeoff`). Định nghĩa chế tạo trong bài giữ 8 hướng cho
+các số cũ; mục K1 báo cả 4 lẫn 8 hướng (bài đã có lập luận 8 hướng + kiểm bản lề ở Methods).
+
+### N1 Hàm mục tiêu nhất quán hiện thực hóa (thăm dò, tiêu chí ghi 2026-10-10 TRƯỚC khi chạy)
+
+**Ý tưởng:** tensor đồng nhất hóa của ô tuần hoàn bất biến khi dịch ô. Nếu dịch thiết kế lệch lưới
+một phần pixel (rồi rời rạc hóa lại) làm ν thay đổi nhiều, thiết kế đang khai thác lỗi rời rạc hóa
+(bản lề 1 nút, nét 1 px) - cùng họ "khai thác bộ kiểm chứng" như vật liệu xám ở P1.1e, nhưng ở tầng
+lưới. Tài liệu (Poulsen 2002, Yoon 2004) coi bản lề là artifact rời rạc hóa và xử lý bằng lọc; chưa
+thấy dùng bất biến dịch của tensor đồng nhất hóa làm thước đo/hàm mục tiêu.
+
+**Hiện thực hóa** R(n, s): ảnh nhị phân → làm mượt tuần hoàn Gauss σ = 0,5 px (lưới gốc) → lấy mẫu
+song tuyến tuần hoàn tại tâm phần tử lưới n×n dịch s → ngưỡng 0,5 → FE. Độ nhạy dịch
+S = độ lệch chuẩn ν12 qua 8 phép dịch s ∈ {0; 0,5}² ∪ {0,25; 0,75}² (đơn vị pixel lưới 50).
+Tham chiếu mịn ν_fine = R(200, 0).
+
+**Bước 1 - chẩn đoán (không tối ưu), IN100, thiết kế cuối cVAE λ=0 / K1 λ=0,1 / SIMP full:**
+- H1: trung vị S của cVAE λ=0 > SIMP.
+- H2: Spearman(S, |ν12_verify − ν12_fine|) ≥ 0,3 (gộp 3 phương pháp).
+- H3: trung vị S của thiết kế không chế tạo được (4 hướng) > chế tạo được.
+H2 trượt → dừng, không làm bước 2 (S không đo được thứ ta muốn).
+
+**Bước 2 - pilot tối ưu (chỉ khi H2 đạt), IN100-B 20 condition đầu (như pilot K1):** objective =
+trung bình MSE(ν(R(50, s_k)), target) qua K = 4 phép dịch, khả vi, β {1,4,16,64}. So λ=0 và K1
+λ=0,1 bằng **thước đo độc lập** ν_fine (200²) + chế tạo 4 hướng. Pilot đạt nếu: MAE(ν12_fine) không
+tệ hơn λ=0 VÀ chế tạo được ≥ K1 pilot (0,80) hoặc MAE_fine tốt hơn K1. n=20 chỉ là pilot (bài học
+K1: pilot không tái lập) - đạt thì mới đăng ký chạy IN100/IN100-C.
+
+**Kết quả bước 1 (2026-10-10, 300 thiết kế IN100, σ theo đơn vị vật lý, thiết kế = ảnh 50² được
+FE kiểm):** H2 ✅ Spearman(S, khe) = 0,52 (trong từng phương pháp 0,49-0,55). H1 ❌ (SIMP nhạy dịch
+hơn cVAE: S trung vị 0,038 vs 0,031). H3 ❌ (S không khác giữa chế tạo được / không). Phụ: refine
+giảm MAE ν12 68% trên lưới verify nhưng chỉ 26% trên lưới mịn (64² gốc trên lưới 128²: 0,0202 →
+0,0149) → phần lớn lợi ích refine là khớp lưới 50²; SIMP cũng vậy (0,0071 → 0,0187).
+
+**Kết quả bước 2 pilot (IN100-B 20 condition, `outputs/phase5/plan_v3/n1/`, refined chưa guard,
+MAE ν12; e_mesh = cùng hình 50² trên lưới 200² kron; e_real = R(200, 0) σ=0,5):**
+
+| Nhánh | e_verify | e_mesh | e_real | e_real σ=1,0 | Chế tạo 4 hướng |
+|---|---|---|---|---|---|
+| A λ=0 | 0,0053 | 0,0136 | 0,0173 | 0,090 | 0,45 |
+| D K1 λ=0,1 | 0,0034 | 0,0144 | 0,0174 | 0,080 | 0,80 |
+| N1 (verify + 4 dịch, 50²) | 0,0074 | 0,0158 | **0,0101** [Δ CI −0,013; −0,002] | **0,058** | 0,25 |
+| C (FE 100²) | 0,0093 | **0,0076** [Δ CI −0,010; −0,002] | 0,0224 | 0,096 | 0,35 |
+| N1+C (4 dịch, 100²) | 0,0096 | **0,0080** | 0,0197 | 0,069 | 0,30 |
+
+- Tiêu chí pilot (đặt trước, ν_fine = R(200,0)): N1 ĐẠT (e_real không tệ hơn A và tốt hơn K1). Nhưng
+  chế tạo giảm 0,45 → 0,25 và e_mesh không cải thiện.
+- Mỗi objective cải thiện đúng loại hiện thực hóa nó tối ưu; không nhánh nào trội mọi thước đo. N1
+  tổng quát hóa sang σ lớn hơn σ tối ưu (σ=0,75/1,0: −37%/−36%, CI không chứa 0) → không phải chỉ
+  khớp thước đo; ở σ=0,25 hơi tệ hơn A (CI sát 0).
+- **Hội tụ lưới 6 thiết kế (`mesh_convergence.json`):** biên bậc thang (kron) hội tụ đều 50→400²,
+  lệch verify ~0,022 cùng chiều ở cả 6; biên bo nhẹ σ=0,25 ở 400² về sát giá trị 50² (±0,002), chưa
+  hội tụ (cần 800², vượt RAM). → ν "thật" của thiết kế pixel chỉ xác định tới ~0,02 tùy biểu diễn
+  biên, ~4× MAE bài báo. Khe "50² vs 200² = 0,015" (LIMITATIONS) là của biên bậc thang, không phải
+  do bản lề (khe như nhau khi không có chạm góc, p=0,13).
+- Chưa làm: đối chứng robust formulation co/giãn (η 0,3/0,7, Wang-Lazarov-Sigmund 2011) - đối thủ
+  gần nhất, bắt buộc trước khi claim tính mới; xác nhận n=100.
+
+### N2 Cải thiện kết quả trên thước đo đáng tin (tiêu chí ghi 2026-10-10 TRƯỚC khi chạy)
+
+Tra cứu + lý do: `docs/de_xuat_cai_thien_ket_qua.md`. Bảng điểm chung (mọi nhánh, chấm offline bằng
+`outputs/phase5/plan_v3/n1/eval_pilot.py` + `sigma_check.py`): e_mesh = MAE ν12 trên lưới 200² (kron)
+của thiết kế 50²; e_real(σ) = MAE ν12 trên hiện thực hóa làm mượt 200², σ ∈ {0,5; 1,0}; chế tạo 4
+hướng + nét tối thiểu; chi phí = thời gian thật + số FE. e_verify (50²) chỉ báo kèm. Thiết kế được
+chấm = thiết kế cuối **guarded** (luật pipeline); bản refined chưa guard báo kèm. So với nhánh A (λ=0,
+`n1/pilot_B20_A_l0.json`), cùng IN100-B 20 condition đầu, best-of-30, β {1,4,16,64}, 32 bước.
+
+- **E1 robust formulation:** loss = 0,5·MSE(chuỗi verify) + 0,25·MSE(giãn) + 0,25·MSE(co); bản
+  co/giãn = làm mượt σ = 1,0 phần tử → Heaviside η ∈ {0,25; 0,75} (co/giãn ≈ 0,67 phần tử).
+  ĐẠT nếu: chế tạo ≥ 0,60 VÀ e_real(σ=1,0) tốt hơn A có ý nghĩa (CI hiệu số < 0) VÀ e_mesh không tệ
+  hơn có ý nghĩa (CI hiệu số chứa 0 hoặc < 0).
+- **E2 đa độ phân giải:** như A, nhưng mức β = 64 cuối giải FE ở lưới 100² (`--fe-upsample 2
+  --fe-upsample-last-only`). ĐẠT nếu: e_mesh tốt hơn A có ý nghĩa VÀ giữ ≥ 70% mức cải thiện e_mesh
+  của nhánh C (100² mọi mức) VÀ thời gian ≤ 1,4× A.
+- Đạt ≥ 1 → E3 (ghép, chốt cấu hình trên IN100-B, xác nhận IN100 + IN100-C n = 100, tiêu chí ghi
+  trước khi chạy E3). n = 20 chỉ là pilot.
+
+**Kết quả pilot N2 (2026-10-10; `outputs/phase5/plan_v3/n2/`, chấm `n2/score_pilot.log`; guarded, MAE ν12):**
+
+| Nhánh | e_verify | e_mesh | e_real σ=0,5 | e_real σ=1,0 | Chế tạo | Nhận refine |
+|---|---|---|---|---|---|---|
+| A λ=0 | 0,0053 | 0,0143 | 0,0165 | 0,090 | 0,45 | 95% |
+| E1 robust | 0,0081 | 0,0136 | 0,0163 | **0,071** [Δ CI −0,038; −0,001] | 0,45 | 55% |
+| E1 robust (refined, chưa guard) | 0,0098 | 0,0120 | 0,0163 | **0,033** (−63%) | 0,30 | – |
+| E2 mức cuối 100² | 0,0104 | **0,0093** [Δ CI −0,008; −0,002] | 0,0226 (tệ hơn, CI > 0) | 0,094 | 0,50 | 80% |
+
+- **E1: KHÔNG ĐẠT** (chế tạo 0,45 < 0,60; e_real σ=1,0 ✅; e_mesh ✅ không tệ hơn). Nguyên nhân (phân
+  tích ảnh refined): 14/20 có nét mảnh, trung bình 4,2 mảnh rời (A: 2,0) → refine sinh **đốm vật liệu
+  nhỏ** "miễn phí": bản gốc tính qua resize nearest 64→50 (bỏ 14 hàng/cột) nên đốm ở hàng bị bỏ
+  không ảnh hưởng FE, còn bản co/giãn làm mượt nên đốm nhỏ biến mất. Đồng thời luật guarded chấm bằng
+  lưới 50² loại 45% refine bền vững → guard đang dùng đúng thước đo dễ bị khai thác.
+- **E2: ĐẠT 2/3, tiêu chí chi phí chưa đo công bằng** (chạy song song với E1). e_mesh −35% (giữ 81%
+  mức cải thiện của C). Nhưng e_real σ=0,5 tệ hơn 37% (CI > 0): tối ưu trên lưới mịn của biên bậc thang
+  làm thiết kế dựa vào góc sắc pixel, mất khi biên bị bo.
+- **Quy luật (lần thứ 3):** độ chính xác trên lưới mịn của biên bậc thang và độ bền với biên thực tế
+  đánh đổi nhau. Biên bậc thang là hình học không ai chế tạo → **độ bền (e_real) gần thực tế hơn
+  e_mesh**; đề xuất đổi thước đo chính sang e_real (tác giả quyết).
+- Không chạy E3 tự động (E1 trượt, E2 trái chiều E1): trình tác giả phương án E1′ (mục N2 trong
+  `docs/de_xuat_cai_thien_ket_qua.md` + báo cáo chat 2026-10-10).
+
+### N2-E1′ Robust formulation chuẩn qua thiết kế đã lọc (tiêu chí ghi 2026-10-10 TRƯỚC khi chạy)
+
+Tác giả chốt 2026-10-10: **thước đo chính = e_real** (độ bền biên thực tế, σ = 0,5 và 1,0, lưới
+200²); e_mesh chỉ báo kèm. Đây là vòng lặp thứ 2 sau khi thấy kết quả E1 → kết quả pilot chỉ là
+thăm dò, bắt buộc xác nhận n = 100 trên tập mới trước khi claim.
+
+- **Thiết kế vật lý** x_phys = Heaviside_η(lấy mẫu song tuyến 50²(làm mượt Gauss tuần hoàn σ = 1,0
+  phần tử(ảnh decoder))). FE verify, chọn best-of-30, kiểm chế tạo và ảnh lưu đều trên CÙNG x_phys
+  (η = 0,5, β = ∞ khi verify).
+- **Nhánh F (ablation, không tiêu chí):** chỉ đổi biểu diễn thiết kế, loss = MSE(ν; x_phys gốc),
+  guard theo sai số cặp trên x_phys.
+- **Nhánh E1′ (chính):** loss = 0,5·MSE(gốc η = 0,5) + 0,25·MSE(giãn η = 0,25) + 0,25·MSE(co η = 0,75),
+  cả 3 từ cùng trường đã lọc; guard nhận refine khi loss robust (đo FE ở β = ∞) của refined < của
+  baseline.
+- **ĐẠT nếu (so với A guarded, IN100-B 20 condition):** e_real(σ=1,0) tốt hơn có ý nghĩa (CI hiệu số
+  < 0) VÀ e_real(σ=0,5) không tệ hơn có ý nghĩa VÀ chế tạo ≥ 0,60 đo trên ảnh thiết kế 50² (4 hướng +
+  nét tối thiểu; A đo lại trên ảnh FE 50² của nó để so cùng lưới).
+
+**Kết quả pilot N2-E1′ (2026-10-10; `n2/score_e1p_pilot.log`; guarded, MAE ν12, Δ so với A):**
+
+| Nhánh | e_verify | e_mesh | e_real σ=0,5 | e_real σ=1,0 | sai số cặp (σ=0,5) | Chế tạo 50² | Thời gian |
+|---|---|---|---|---|---|---|---|
+| A | 0,0053 | 0,0143 | 0,0165 | 0,090 | 0,031 | 0,50 | ~200 s |
+| **F lọc σ=1** | 0,0050 (Δ CI chứa 0) | 0,0147 (Δ CI chứa 0) | **0,0078** (−52% [−0,014; −0,004]) | **0,034** (−62%) | **0,015** (−52%) | **0,80** | 200 s |
+| E1′ lọc + robust | 0,0228 | 0,0235 | 0,0253 (+53%, CI > 0) | 0,042 (−54%) | 0,052 | 0,80 | 359 s (chạy song song) |
+
+- **E1′: KHÔNG ĐẠT** (e_real σ=0,5 tệ hơn). Co/giãn ±0,67 phần tử quá mạnh: phải khớp ν đồng thời 3
+  hình học khác nhau nên bản gốc bị kéo lệch.
+- **F (ablation, KHÔNG có tiêu chí đặt trước): trội A ở mọi mục** - không tệ hơn ở e_verify/e_mesh,
+  tốt hơn có ý nghĩa ở e_real (cả 2 σ), sai số cặp, chế tạo (0,50 → 0,80 = K1) với cùng chi phí. Vì
+  là kết quả khám phá → xác nhận E3-F bên dưới.
+
+### N2-E3-F Xác nhận thiết kế qua bộ lọc (tiêu chí ghi 2026-10-10 TRƯỚC khi chạy)
+
+- **Cấu hình chốt (không đổi sau khi thấy kết quả):** như pilot F - `--design-filter-sigma 1.0`,
+  loss = MSE(ν; x_phys gốc), guard sai số cặp trên x_phys, best-of-30, β {1,4,16,64}, 32 bước, không fp.
+- **Tập:** IN100 (seed 123) = kết quả chính; IN100-C (seed 789) = tái lập. So với A đã có
+  (`p1_7_c5_in100_bo30_nofp.json`, `p1_9_r6_in100c_bo30_nofp.json`, cùng cấu hình trừ bộ lọc) và
+  SIMP full (`p1_6a_simp_baseline_in100.json`, `p1_8_simp_in100c_full.json`).
+- **ĐẠT nếu trên IN100 (guarded, n = 100):** (1) e_real σ=0,5 tốt hơn A có ý nghĩa (CI hiệu số < 0);
+  (2) e_real σ=1,0 tốt hơn A có ý nghĩa; (3) chế tạo (ảnh 50²) ≥ 0,60; (4) e_verify và e_mesh không
+  tệ hơn A có ý nghĩa; (5) số FE/target ≤ 1,1× A. **Tái lập trên IN100-C:** (1) và (3).
+- **Thước đo độ bền độc lập (kiểm tính vòng lặp vì bộ lọc thiết kế cùng họ Gauss với e_real; báo, không
+  làm tiêu chí):** e_shift = trung bình |Δν12| qua 8 phép dịch lệch lưới ở 50²; e_ed = trung bình
+  |Δν12| của bản co/giãn (η = 0,35/0,65 trên trường σ = 0,5, lưới 200²).
+- **So với SIMP (giả thuyết phụ, báo kèm):** F không tệ hơn SIMP về e_real σ=0,5 và chế tạo.
+
+**Kết quả E3-F (2026-10-10 14:42; `outputs/phase5/plan_v3/n2/final_e3f.log`, `e3f_scores_*.json`;
+guarded, n = 100, MAE ν12, Δ ghép cặp + CI bootstrap 95%) - ✅ ĐẠT CẢ 5 TIÊU CHÍ, TÁI LẬP TRÊN IN100-C:**
+
+| IN100 / IN100-C | e_verify 50² | e_mesh 200² | **e_real σ=0,5** | e_real σ=1,0 | sai số cặp σ=0,5 | e_shift | e_ed | Chế tạo 50² |
+|---|---|---|---|---|---|---|---|---|
+| A (λ=0) | 0,0046 / 0,0043 | 0,0141 / 0,0148 | 0,0164 / 0,0163 | 0,086 / 0,087 | 0,038 / 0,031 | 0,038 / 0,038 | 0,046 / 0,045 | 0,39 / 0,37 |
+| **F (lọc σ=1)** | 0,0061 / 0,0062 | 0,0127 / 0,0126 | **0,0087 / 0,0093** | **0,035 / 0,036** | **0,026 / 0,020** | **0,017 / 0,018** | 0,052 / 0,050 | **0,78 / 0,81** |
+| SIMP full | 0,0071 / 0,0064 | 0,0162 / 0,0174 | 0,0187 / 0,0198 | 0,103 / 0,111 | 0,035 / 0,038 | 0,046 / 0,047 | 0,050 / 0,051 | 0,72 / 0,80 |
+
+- F − A (IN100): e_real σ=0,5 −47% [−0,0100; −0,0049] ✅; σ=1,0 −59% ✅; chế tạo 0,78 ≥ 0,60 ✅;
+  e_verify +32% [−0,0004; +0,0039] và e_mesh −10% [−0,0038; +0,0014] không tệ hơn có ý nghĩa ✅; FE/target
+  107,0 vs 106,7 (1,00×) ✅. IN100-C: e_real σ=0,5 −43% [−0,0098; −0,0040] ✅, chế tạo 0,81 ✅.
+- **F − SIMP:** e_real σ=0,5 −53% (cả 2 tập, CI < 0), σ=1,0 −66% / −68%, e_mesh −21% / −28% (CI < 0),
+  e_verify ngang (CI chứa 0), chế tạo ngang (0,78 vs 0,72; 0,81 vs 0,80; CI chứa 0), sai số cặp −27%
+  (IN100, CI chứa 0) / −48% (IN100-C, CI < 0). Chi phí ~107 vs ~900 FE/target.
+- **Giới hạn trung thực:** (a) e_ed (co/giãn đều η 0,35/0,65) F tệ hơn A 11-12% (CI > 0), ngang SIMP → F
+  không bền hơn với over/under-etch đều; (b) e_real và e_shift dùng làm mượt Gauss cùng họ bộ lọc của F →
+  một phần vòng lặp; trên thước đo KHÔNG làm mượt (e_verify, e_mesh) F không tệ hơn A và tốt hơn SIMP ở
+  e_mesh; (c) r ≥ 10: 1 mục tiêu/tập, F vẫn ra ô suy biến ở IN100 #46 như A (SIMP làm được) → E4.
+- **Đề xuất (tác giả quyết):** F thay λ=0 làm pipeline chính của Bài #1 - đổi claim thành "cVAE + refine
+  khớp/hơn SIMP về độ chính xác trên biên thực tế và ngang SIMP về chế tạo, với ~8× ít FE".
+
+### N2-C6 Hậu xử lý xóa đảo rời (2026-10-10, thăm dò, `n2/island_cleanup.py`, `.log`)
+Xóa mọi vật liệu rắn không nối với khung chính (liên thông 4 hướng **tuần hoàn**, lát 3×3). Đảo rời không
+chịu lực → **ν không đổi** (|Δν12| verify tối đa 0,00000 trên 29/200 thiết kế F có đảo, trung vị 7 px).
+Chế tạo được (ảnh 50², áp cùng phép cho mọi phương pháp):
+
+| | IN100 trước → sau | IN100-C trước → sau |
+|---|---|---|
+| A (λ=0) | 0,39 → 0,84 | 0,37 → 0,85 |
+| F (σ=1) | 0,78 → 0,92 | 0,81 → 0,94 |
+| SIMP | 0,72 → 1,00 | 0,80 → 1,00 |
+
+Sau xóa đảo: F − A +0,08 [0,00; +0,17] / +0,09 [+0,02; +0,17]; F − SIMP −0,08 [−0,14; −0,03] / −0,06
+[−0,11; −0,02]; A − SIMP −0,16 / −0,15. → **Thước đo chế tạo cũ chủ yếu đếm đảo rời** (vô nghĩa vật lý,
+xóa miễn phí). Hệ quả: (1) K1 từng trả giá độ chính xác để đẩy 0,31 → 0,72, trong khi xóa đảo cho A 0,84
+không mất gì; (2) claim "F ngang SIMP về chế tạo" phải sửa: sau xóa đảo SIMP vẫn nhỉnh hơn (1,00 vs
+0,92-0,94); (3) đề xuất đưa xóa đảo vào định nghĩa thiết kế cuối cho MỌI phương pháp.
+
+### N2-S Ablation độ mượt σ của bộ lọc thiết kế (2026-10-10, phân tích độ nhạy, KHÔNG có tiêu chí)
+σ ∈ {0,5; 0,75; 1,5} trên IN100-B 20 condition (pilot set), so với F σ = 1 và A. Cấu hình chính giữ
+σ = 1 (đã chốt + xác nhận E3-F); kết quả chỉ để báo độ nhạy trong bài, không dùng để chọn lại σ.
+
+**Kết quả (`n2/run_sigma.log`, guarded, MAE ν12):**
+
+| σ | e_verify | e_mesh | e_real σ=0,5 | e_real σ=1,0 | e_ed | Chế tạo 50² |
+|---|---|---|---|---|---|---|
+| A | 0,0053 | 0,0143 | 0,0165 | 0,090 | 0,048 | 0,50 |
+| 0,5 | 0,0064 | 0,0137 | 0,0150 | 0,073 | 0,052 | 0,50 |
+| 0,75 | 0,0038 | 0,0121 | 0,0130 | 0,056 | 0,052 | 0,65 |
+| 1,0 | 0,0050 | 0,0147 | 0,0078 | 0,034 | 0,056 | 0,80 |
+| 1,5 | 0,0043 | 0,0105 (Δ vs A CI < 0) | 0,0061 | 0,027 | 0,061 | 1,00 |
+
+Đơn điệu theo σ ở độ bền, lưới mịn và chế tạo; e_ed (co/giãn đều) tệ dần. Sửa lại câu "không dùng để
+chọn lại σ": vì σ = 1,5 tốt hơn cả trên thước đo không làm mượt (e_mesh), mở xác nhận riêng N2-E3-S15
+(chỉnh trên IN100-B, xác nhận trên IN100 / IN100-C - cùng quy trình K1), tiêu chí ghi dưới đây TRƯỚC khi chạy.
+
+### N2-E3-S15 Xác nhận σ = 1,5 (tiêu chí ghi 2026-10-10 TRƯỚC khi chạy)
+Cấu hình = F nhưng `--design-filter-sigma 1.5`; so với F σ = 1,0 (`e3f_in100*_filter.json`). Đổi pipeline
+sang σ = 1,5 nếu trên IN100 (guarded, n = 100): (a) e_real σ=0,5 không tệ hơn σ = 1,0 có ý nghĩa;
+(b) e_verify và e_mesh không tệ hơn σ = 1,0 có ý nghĩa; (c) ít nhất 1 trong {e_real σ=0,5, e_mesh, chế
+tạo} tốt hơn σ = 1,0 có ý nghĩa; và IN100-C cùng chiều (a)-(c) (không cần ý nghĩa ở (c)). Báo e_ed và so
+SIMP; e_ed dự kiến tệ hơn - nếu tệ hơn SIMP có ý nghĩa thì ghi là giới hạn.
+
+
+**Kết quả N2-E3-S15 (2026-10-10 15:32; `n2/run_e3s15.log`, `e3s15_scores_*.json`; guarded n = 100):**
+
+| IN100 / IN100-C | e_verify | e_mesh | e_real σ=0,5 | e_real σ=1,0 | e_ed | Chế tạo thô | Chế tạo sau xóa đảo |
+|---|---|---|---|---|---|---|---|
+| F σ=1,0 | 0,0061 / 0,0062 | 0,0127 / 0,0126 | 0,0087 / 0,0093 | 0,035 / 0,036 | 0,052 / 0,050 | 0,78 / 0,81 | 0,92 / 0,94 |
+| F σ=1,5 | 0,0055 / 0,0088 | 0,0135 / 0,0128 | 0,0079 / 0,0113 | 0,033 / 0,039 | 0,055 / 0,055 | 0,95 / 0,95 | 0,96 / 0,99 |
+| SIMP | 0,0071 / 0,0064 | 0,0162 / 0,0174 | 0,0187 / 0,0198 | 0,103 / 0,111 | 0,050 / 0,051 | 0,72 / 0,80 | 1,00 / 1,00 |
+
+- Luật đặt trước (chế tạo thô): ✅ ĐẠT - IN100 (a) e_real σ=0,5 −10% (CI chứa 0), (b) e_verify/e_mesh
+  không tệ hơn, (c) chế tạo +0,17 [+0,08; +0,26]; IN100-C không tệ hơn có ý nghĩa (e_real σ=0,5 +22%, CI
+  chứa 0), chế tạo +0,14.
+- Nhưng **sau xóa đảo** (phát hiện N2-C6 có SAU khi ghi luật): σ=1,5 − σ=1,0 chế tạo chỉ +0,04 [−0,03;
+  +0,11] / +0,05 [0,00; +0,10]; σ=1,5 − SIMP −0,04 [−0,08; −0,01] / −0,01 [−0,03; 0,00]. e_ed σ=1,5 tệ hơn
+  σ=1,0 8-9% và tệ hơn SIMP 9-11% (CI > 0) → giới hạn.
+- **Khuyến nghị (tác giả quyết):** giữ σ = 1,0 + xóa đảo làm cấu hình chính (đã xác nhận, đơn giản hơn);
+  báo σ = 1,5 là phân tích độ nhạy (chế tạo gần SIMP hơn, độ chính xác tương đương, kém hơn khi co/giãn
+  đều). σ = 1,5 cũng hợp lệ theo luật nếu tác giả ưu tiên chế tạo.
+
+### N3 Dự định tiếp theo (lập 2026-10-10, sau N1/N2)
+
+**Quyết định tác giả cần chốt trước (chặn các việc phía dưới):**
+
+| # | Quyết định | Khuyến nghị | Lý do ngắn |
+|---|---|---|---|
+| N3-D1 | Lấy F (thiết kế qua bộ lọc σ=1) + xóa đảo làm pipeline chính Bài #1? | Có | Xác nhận n=100×2, trội pipeline cũ ở biên thực tế, chế tạo; cùng chi phí |
+| N3-D2 | σ = 1,0 hay 1,5? | 1,0 | σ=1,5 đạt luật đặt trước nhưng sau xóa đảo chỉ +0,04 chế tạo, co/giãn đều tệ hơn 8-9% |
+| N3-D3 | Chạy E4 (r ≥ 10)? | Có, sau N3-1…N3-3 | Điểm thua SIMP còn lại; cần tập ANISO30 để đo có lực thống kê |
+
+**Việc kỹ thuật (theo thứ tự đề xuất):**
+
+| # | Việc | Phụ thuộc | Ai | ETA |
+|---|---|---|---|---|
+| N3-1 | Đưa xóa đảo (liên thông 4 hướng tuần hoàn, giữ khung chính) vào code định nghĩa thiết kế cuối + kiểm chế tạo (`manufacturability.py`), áp cho MỌI phương pháp; test | D1 | Claude | ~1 giờ |
+| N3-2 | Chạy lại mọi số của bài với pipeline mới (giống P1.9): IN100 / B / C best-of-30, single-shot, bảng SIMP, phân tầng r, OOD biên độ + đổi dấu (F có đổi kết luận OOD không?), n=300 composite, lưới 200²; kèm bảng điểm N2 (e_real, e_mesh, e_shift, e_ed, chế tạo sau xóa đảo) | D1, N3-1 | Claude | ~1 ngày máy |
+| N3-3 | Sửa bản thảo EN + VI: Methods (bộ lọc thiết kế, xóa đảo, thước đo biên thực tế), Results (bảng mới), Discussion (bỏ "SIMP thắng chế tạo", khe lưới 50² ↔ hiện thực hóa, ν chỉ xác định tới ~0,02), bảng "which method when", Abstract; trích dẫn mới (`ghi_chu_viet_bao.md` mục A); vẽ lại hình | N3-2 | Claude | ~1 ngày |
+| N3-4 | Cập nhật `docs/LIMITATIONS.md`: khe 0,015 là biên bậc thang (không phải bản lề); thước đo chế tạo cũ đếm đảo rời; giới hạn co/giãn đều của F; vòng lặp họ làm mượt | N3-2 | Claude | ~1 giờ |
+| N3-5 | E4: tập ANISO30 (30 mục tiêu r ∈ [5; 40]) + baseline A/F/SIMP; thử ràng buộc độ cứng tối thiểu; nếu cần sinh dữ liệu SIMP nhắm r ∈ [5; 30] + fine-tune (tiêu chí ghi trước) | D3 | Claude | ~0,5-1 ngày |
+| N3-6 | Cải thiện độ bền co/giãn đều của F: robust nhẹ (η 0,4/0,6 thay vì 0,25/0,75) trên thiết kế đã lọc - pilot IN100-B rồi xác nhận | D1 | Claude | ~2 giờ |
+| N3-7 | Kiểm chứng "ν thật" độc lập để chốt mơ hồ ~0,02: FE biên trơn (body-fitted / scikit-fem trên lưới tam giác từ đường đồng mức) hoặc 800² trên máy nhiều RAM; một phần của P1.6f | – | Claude + tác giả (máy) | ~0,5 ngày |
+| N3-8 | Chuyển các script phân tích N1/N2 (`outputs/phase5/plan_v3/n1/`, `n2/`) thành notebook theo quy ước `notebooks/` | – | Claude | ~2 giờ |
+| N3-9 | (Tùy chọn) E5 định tuyến OOD → SIMP khởi tạo từ cVAE; E6 SSP thay tanh-Heaviside (cần nội suy laminate cho pixel biên) | N3-2 | Claude | mỗi việc ~0,5 ngày |
+
+Sau N3-1…N3-4 mới quay lại đường găng P1.6d (gửi GS) → P1.6e → P1.11.
+
 ## 5. Bài báo #2 — đóng băng tới khi Bài #1 có bản thảo
 
 Code khung đã có (`pipeline/mno/`, `pipeline/kinn/`, `pipeline/ickans/`) — giữ nguyên, không đầu
@@ -575,7 +903,7 @@ Trước khi mở lại: trình GS chọn **1** trong 3 hướng (không làm so
 ### 5.1 Ứng viên hướng đa tính chất (S1, 2026-09-30)
 
 Đã làm tầng "rẻ": các tính chất là hàm đại số của Q, không cần solver mới (chi tiết:
-`EXPERIMENT_LOG.md` mục 2026-09-30, `notebooks/09_cheap_physical_properties.ipynb`).
+`EXPERIMENT_LOG.md` mục 2026-09-30, `notebooks/03_cheap_physical_properties.ipynb`).
 - **E_x, E_y, B_eff, M_x/M_y (= f1/f2), tốc độ sóng dọc:** 92–97% dự đoán được từ 5 điều kiện
   hiện có, nên thêm làm condition gần như dư thừa.
 - **G_xy (R² 0,84):** mang nhiều thông tin mới nhất. Gradient đã có sẵn trong

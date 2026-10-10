@@ -7,10 +7,8 @@ for Generative Inverse Design of Auxetic Metamaterials* - tác giả Trịnh Bì
 > **[2026-10-08] P1.10:** `main_en.tex` / `main_vi.tex` đã viết lại toàn bộ theo Khung A (C1), cấu
 > trúc SMO (Intro → Methods → Results → Discussion → Conclusions → Appendix fp → Statements), mọi số
 > trên pipeline không `force_periodic` (C5). Bản 30/09 và các nháp P1.10 ở `archive/`.
-> **Chưa làm (cần cắm sạc):** (1) vẽ lại hình - `make_figures.py` đã trỏ sang file không fp nhưng
-> chưa chạy, `fig_signflip` viết lại chưa chạy thử; (2) chạy lại `final_design_eval.py` trên thiết
-> kế không fp (số 200² và `fig_stiffness` vẫn là bản có fp, đã ghi chú trong bài); (3) biên dịch
-> PDF bằng tectonic (PDF hiện tại là bản 30/09, đã cũ).
+> **Xong 2026-10-08 19:35:** hình vẽ lại toàn bộ (không fp), số 200² từ
+> `p1_10_final_design_eval_nofp.json`, PDF EN + VI biên dịch lại bằng tectonic.
 
 Bản thảo viết theo `docs/plan.md` v3, mục P1.5. Cấu trúc theo kiểu npj Computational
 Materials: Abstract → Introduction → Results → Discussion → Methods, trích dẫn đánh số.
@@ -64,7 +62,7 @@ Mọi file trong `outputs/phase5/plan_v3/`. Script trong `scripts/`, chạy từ
 | Trường biến dạng kéo đơn trục | `p1_6c_deformation_examples.{npz,json}` | `scripts/deformation_examples.py` |
 | Xác nhận trên tập mới IN100-B (seed 456) | `p1_6x_in100b_e_{a,b}_*.json` | harness `--seed 456` |
 | Hội tụ lưới 50²/100²/200² | `p1_6x_mesh_convergence.json` | `scripts/mesh_convergence.py` |
-| Thiết kế cuối trên lưới 200² + E_x/E₀ | `p1_6x_final_design_eval.json` | `scripts/final_design_eval.py` |
+| Thiết kế cuối trên lưới 200² + E_x/E₀ | `p1_10_final_design_eval_nofp.json` (bản có fp: `p1_6x_…`) | `scripts/final_design_eval.py` |
 | Retrieval verified (có/không force_periodic) | `p1_6x_retrieval_in100{,_nofp}.json` | `scripts/retrieval_in100.py` |
 | Lai cVAE → SIMP (P1.7, tiêu chí ghi trước, KHÔNG ĐẠT) | `p1_7_hybrid_in100.json` | `pipeline/phase5_cvae/benchmark_hybrid.py` |
 | SIMP từ đầu + cVAE có ảnh trên IN100-B (seed 456) | `p1_7_simp_in100b_full.json`, `p1_7_in100b_bo30_images.json` | `benchmark_simp_baseline.py --budgets full`, harness `--seed 456 --save-images` |

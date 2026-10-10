@@ -60,6 +60,10 @@ LABELS = {
         "sp_x": "Spearman: composite score vs. Pareto rank",
         "sp_y": "Targets",
         "sp_thr": "pre-specified mean criterion 0.7",
+        "k1_x": r"MAE of verified $\nu_{12}$",
+        "k1_y": "Manufacturable fraction (4-connectivity)",
+        "k1_gen": "Generative + guarded refinement",
+        "k1_simp": "Topology optimization from scratch",
     },
     "vi": {
         "target": r"$\nu_{12}^{*}$ mục tiêu",
@@ -86,6 +90,10 @@ LABELS = {
         "sp_x": "Spearman: điểm tổng hợp và tầng Pareto",
         "sp_y": "Số mục tiêu",
         "sp_thr": "ngưỡng trung bình đặt trước 0,7",
+        "k1_x": r"MAE của $\nu_{12}$ kiểm chứng",
+        "k1_y": "Tỉ lệ chế tạo được (liên thông 4 hướng)",
+        "k1_gen": "Sinh + tinh chỉnh có kiểm soát",
+        "k1_simp": "Tối ưu tô-pô từ đầu",
     },
 }
 
@@ -669,13 +677,14 @@ def fig_tiling(lang: str) -> None:
 def fig_stiffness(lang: str) -> None:
     """ν12 theo E_x/E0 của thiết kế cuối (lưới FE mịn 200², cùng hình học)
     - kiểm tra thiết kế auxetic có phải cơ cấu gần như không có độ cứng.
-    Nguồn: p1_6x_final_design_eval.json (final_design_eval.py).
+    Nguồn: p1_10_final_design_eval_nofp.json (final_design_eval.py chạy
+    trên thiết kế cVAE không force_periodic, C5; SIMP giữ nguyên).
 
     Args:
         lang: "en" hoặc "vi".
     """
     lb = DLB[lang]
-    with open(os.path.join(RES, "p1_6x_final_design_eval.json")) as f:
+    with open(os.path.join(RES, "p1_10_final_design_eval_nofp.json")) as f:
         rows = json.load(f)["rows"]
     fig, ax = plt.subplots(figsize=(3.4, 2.7))
     for method, col, mk, name in (
@@ -712,7 +721,9 @@ def fig_stiffness(lang: str) -> None:
     ax.set_xscale("log")
     ax.set_xlabel(lb["ex"])
     ax.set_ylabel(lb["nu"])
-    ax.legend(loc="lower right", fontsize=7)
+    # Góc dưới phải trùng cụm điểm E_x ~ 0,07 -> đặt legend ở vùng trống
+    # giữa ô suy biến và cụm thiết kế hợp lệ.
+    ax.legend(loc="lower center", fontsize=7)
     if lang == "vi":
         ax.yaxis.set_major_formatter(
             plt.FuncFormatter(lambda v, _: f"{v:g}".replace(".", ","))
@@ -803,6 +814,93 @@ def fig_deformation(lang: str, strain_vis: float = 0.12) -> None:
     plt.close(fig)
 
 
+# λ của đường đánh đổi K1 (plan.md mục K1) trên tập B; λ=0 là pipeline chính.
+K1_SWEEP = (
+    (0.0, "p1_9_r5_in100b_bo30_nofp.json"),
+    (0.03, "k1/sweep_in100b_l0.03.json"),
+    (0.1, "k1/sweep_in100b_l0.1.json"),
+    (0.3, "k1/sweep_in100b_l0.3.json"),
+    (1.0, "k1/sweep_in100b_l1.json"),
+)
+
+
+def _manuf4(img) -> bool:
+    """Chế tạo được theo định nghĩa K1 (liên thông 4 hướng + nét tối thiểu).
+
+    Import trễ để make_figures không phụ thuộc pipeline khi vẽ hình khác.
+    """
+    import sys
+
+    sys.path.insert(0, os.path.join(ROOT, "pipeline", "phase5_cvae"))
+    from manufacturability import check_connectivity
+
+    return check_connectivity(np.asarray(img), connectivity=4)[
+        "manufacturable"
+    ]
+
+
+def fig_k1_tradeoff(lang: str) -> None:
+    """Đánh đổi chính xác ↔ chế tạo theo hệ số phạt λ (K1) trên tập B, so
+    với SIMP từ đầu (best-of-4, full) cùng tập. Mỗi điểm = thiết kế cuối
+    guarded của 100 target; trục x MAE ν12, trục y tỉ lệ chế tạo được.
+    Không dùng sai số cặp: trên tập B nó bị vài target suy biến (ô đứt, ν21
+    vô nghĩa) chi phối nên không đơn điệu theo λ, che mất đánh đổi.
+    Nguồn: K1_SWEEP + p1_7_simp_in100b_full.json.
+
+    Args:
+        lang: "en" hoặc "vi".
+    """
+    lb = LABELS[lang]
+    pts = []
+    for lam, name in K1_SWEEP:
+        pc = load(name)
+        err, man = [], []
+        for c in pc:
+            k = "refined" if c["guarded_accept"] else "baseline"
+            err.append(abs(c[f"{k}_v12"] - c["target_v12"]))
+            man.append(_manuf4(c[f"{k}_image"]))
+        pts.append((lam, np.mean(err), np.mean(man)))
+    sp = load("p1_7_simp_in100b_full.json")
+    s_err = np.mean(
+        [abs(s["full"]["best"]["v12"] - s["target_v12"]) for s in sp]
+    )
+    s_man = np.mean([_manuf4(s["full"]["best"]["image"]) for s in sp])
+
+    fig, ax = plt.subplots(figsize=(3.4, 2.8))
+    x = [p[1] for p in pts]
+    y = [p[2] for p in pts]
+    ax.plot(x, y, "-", color=C_AWARE, lw=1.0, alpha=0.6)
+    ax.scatter(x, y, color=C_AWARE, s=24, zorder=3, label=lb["k1_gen"])
+    for lam, ex, my in pts:
+        # Nhãn trực tiếp λ cạnh từng điểm (thay cho legend riêng từng λ).
+        txt = f"λ = {lam:g}"
+        if lang == "vi":
+            txt = txt.replace(".", ",")
+        ax.annotate(
+            txt,
+            (ex, my),
+            xytext=(5, -9),
+            textcoords="offset points",
+            fontsize=6.5,
+        )
+    ax.scatter(
+        [s_err],
+        [s_man],
+        color=C_GUARD,
+        marker="D",
+        s=24,
+        zorder=3,
+        label=lb["k1_simp"],
+    )
+    ax.set_xlabel(lb["k1_x"])
+    ax.set_ylabel(lb["k1_y"])
+    ax.set_ylim(0, 1)
+    ax.legend(loc="lower right", fontsize=6.5)
+    _vi_decimal(ax, lang)
+    fig.savefig(os.path.join(OUT, f"fig_k1_tradeoff_{lang}.pdf"))
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     style()
     os.makedirs(OUT, exist_ok=True)
@@ -817,4 +915,5 @@ if __name__ == "__main__":
         fig_tiling(lang)
         fig_stiffness(lang)
         fig_deformation(lang)
+        fig_k1_tradeoff(lang)
     print("Wrote figures to", OUT)

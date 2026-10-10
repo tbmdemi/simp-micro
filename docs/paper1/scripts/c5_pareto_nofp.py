@@ -1,6 +1,7 @@
 """C5 (bỏ `force_periodic`): chạy lại phép đối chiếu composite score ↔ tầng
-Pareto của `notebooks/08_composite_score_pareto_validation.ipynb` trên
-pipeline không fp.
+Pareto của notebook 08 cũ (`08_composite_score_pareto_validation.ipynb`,
+đã xóa 2026-10-08, còn trong git history) trên pipeline không fp. Script
+này là bản hiện hành của phép đối chiếu đó.
 
 Giữ nguyên mọi thứ khác của notebook 08 (24 target seed 123, N=30, trọng số
 0,6/0,3/0,1, xếp tầng Pareto kiểu NSGA-II trên 3 điểm số thô, Spearman giữa

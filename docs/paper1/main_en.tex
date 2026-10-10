@@ -36,28 +36,33 @@ Generative Inverse Design of Auxetic Metamaterials}
 
 % Abstract: SMO limit 250 words.
 \begin{abstract}
-Gradient-based design of metamaterial unit cells, whether by topology
-optimization or by searching the latent space of a generative model, is
-judged by finite-element (FE) analysis of a binarized design, yet it usually
-optimizes a continuous density field. We show that this mismatch is
-systematically exploited. Refining the latent code of a conditional
-variational autoencoder (cVAE) against exact homogenization sensitivities
-drives the objective to $\sim\!10^{-10}$ while the verified error stays six
-orders of magnitude larger, and density-based topology optimization with
-Heaviside continuation to $\beta=64$ shows the same gap. Placing the
-verification operators inside the refinement objective raises the
-FE-verified $\RR$ of the Poisson ratio $\nuot$ of two-dimensional auxetic
-cells from 0.874 to 0.999 for single samples (0.831 to 0.989 on a second,
-disjoint target set) and lowers the error after best-of-30 selection by
-59--68\% on three disjoint sets. Against topology optimization from scratch
-with four starting topologies, the generative pipeline reaches the same
-accuracy with about eight times fewer FE solves and, for targets of moderate
-anisotropy, a 35--41\% lower joint error of $(\nuot,\nuto)$. It fails for
-strongly anisotropic targets that are sparse in the training data, and
-topology optimization remains superior in manufacturability and for targets
-outside the training range. Both methods occasionally return degenerate
-cells that an unguarded verifier accepts, which makes degeneracy checks a
-necessary part of verification.
+Inverse design of auxetic metamaterials asks for a unit cell whose verified
+effective properties match a prescribed pair of Poisson ratios
+$(\nuot,\nuto)$. Topology optimization solves each target separately with
+hundreds of finite-element (FE) solves; generative models return candidates
+almost instantly but rarely meet tight tolerances once the binarized design
+is analysed. We study a pipeline that samples a conditional variational
+autoencoder (cVAE) and refines its latent code with exact homogenization
+sensitivities, and show why naive refinement fails: it drives the objective
+to $\sim\!10^{-10}$ on grey density fields while the FE-verified error stays
+six orders of magnitude larger. Optimizing what is verified, by placing
+Heaviside projection and the exact resampling inside the objective and
+selecting by verified error, raises the verified $\RR$ of $\nuot$ of
+two-dimensional cells from 0.874 to 0.999 for single samples (0.831 to 0.989
+on a second target set) and lowers the error after best-of-30 selection by
+59--68\% on three disjoint sets. Against topology optimization from scratch,
+verified by the same chain, the pipeline reaches the same accuracy with about
+eight times fewer FE solves and, in a pre-specified test on targets of
+moderate anisotropy, a 27\% lower joint error of $(\nuot,\nuto)$ (95\% CI
+8--42\%). Adding corner-contact and thin-feature penalties to the same
+objective raises the manufacturable fraction from 0.31 to 0.72--0.76, close
+to topology optimization, at the cost of this joint-error advantage.
+Topology optimization remains the better choice for strongly anisotropic
+targets and outside the training range, and we state when each method
+should be used. Topology optimization with
+Heaviside continuation shows the same objective--verification gap, and both
+methods occasionally return degenerate cells, so verification must include a
+degeneracy check.
 \end{abstract}
 
 \noindent\textbf{Keywords:} Auxetic metamaterials; Inverse homogenization;
@@ -70,20 +75,25 @@ Verification
 Auxetic metamaterials contract laterally under uniaxial compression. Their
 negative Poisson's ratio originates in the microarchitecture rather than the
 chemistry of the constituent material
-\citep{lakes1987foam,evans2000auxetic,bertoldi2017flexible}. Inverse
-homogenization by topology optimization is the classical route from a
-prescribed effective tensor to a unit cell
-\citep{sigmund1994materials,larsen1997design,bendsoe2003topology}, but every
-new target requires an iterative optimization with hundreds of FE solves.
-Data-driven inverse design amortizes this cost: variational autoencoders,
-generative adversarial networks and diffusion models trained on simulated
-libraries return candidate architectures almost instantly
+\citep{lakes1987foam,evans2000auxetic,bertoldi2017flexible}. Designing them
+is an inverse problem: given a target pair of Poisson ratios
+$(\nuot^{*},\nuto^{*})$, find a unit cell whose effective properties,
+verified by finite-element (FE) analysis of the manufacturable design, match
+it. Inverse homogenization by topology optimization is the classical
+solution \citep{sigmund1994materials,larsen1997design,bendsoe2003topology},
+but every new target requires an iterative optimization with hundreds of FE
+solves. Data-driven inverse design amortizes this cost: variational
+autoencoders, generative adversarial networks and diffusion models trained on
+simulated libraries return candidate architectures almost instantly
 \citep{wang2020deep,mao2020gan,kumar2020spinodoid,bastek2022inverting,kollmann2020deep,zheng2021controllable,pahlavani2024deep,bastek2023diffusion}.
 Neural networks also enter topology optimization directly, as
 reparameterizations of the density field
 \citep{hoyer2019neural,chandrasekhar2021tounn}; a critical review of these
 approaches found that many reported gains disappear when they are compared
-with well-tuned classical optimization \citep{woldseth2022use}.
+with well-tuned classical optimization \citep{woldseth2022use}. Whether a
+generative model is a practical solver for auxetic inverse design therefore
+depends on two questions: can it reach the verified accuracy of topology
+optimization, and for which targets?
 
 What is manufactured is a binarized, resampled version of a density field,
 so accuracy must be judged by FE analysis of that design rather than by a
@@ -96,29 +106,36 @@ design with gradients of an exact solver. We show that this step fails in an
 instructive way: the optimizer exploits intermediate densities that do not
 survive binarization, exactly as it would exploit an inaccurate surrogate.
 The same happens in topology optimization with Heaviside continuation.
+Closing this gap is what turns the generative pipeline into an accurate
+inverse-design solver.
 
 This paper makes the following contributions.
 \begin{enumerate}
-\item \textbf{The objective--verification gap.} We give direct evidence that
+\item \textbf{A verified inverse-design pipeline for auxetic cells.}
+Best-of-30 sampling from a cVAE followed by guarded latent refinement returns
+cells whose FE-verified $\nuot$ reaches $\RR=0.995$--$0.998$ on three
+disjoint sets of 100 held-out targets, with about 107 FE solves per target.
+\item \textbf{Optimizing what is verified.} We give direct evidence that
 gradient-based search over density fields, in the latent space of a
 generative model as well as over element densities in topology
 optimization, reaches near-zero objectives on fields whose verified error is
-orders of magnitude larger.
-\item \textbf{Binarization-aware latent refinement.} Placing differentiable
-counterparts of the verification operators (Heaviside projection with
-continuation \citep{guest2004achieving,wang2011projection} and the exact
-resampling) inside the objective, and selecting by verified error, closes
-most of the gap. The improvement is replicated on two further disjoint
-target sets.
+orders of magnitude larger. Placing differentiable counterparts of the
+verification operators (Heaviside projection with continuation
+\citep{guest2004achieving,wang2011projection} and the exact resampling)
+inside the objective, and selecting by verified error, closes most of the
+gap. The improvement is replicated on two further disjoint target sets.
 \item \textbf{A like-for-like comparison with topology optimization from
-scratch.} On three sets of 100 targets, both methods are verified by the
-same chain and compared with paired confidence intervals, stratified by
-target anisotropy, including a pre-specified confirmation on a fresh set and
-a pre-specified hybrid that failed.
-\item \textbf{Honest scope.} We report where the generative pipeline loses:
-strongly anisotropic targets, manufacturability, and targets with an unseen
-sign of the Poisson ratio, where it beats retrieval from the training
-library but not topology optimization. Controlled ablations of a
+scratch.} Both methods are verified by the same chain and compared with
+paired confidence intervals, stratified by target anisotropy, including a
+pre-specified confirmation on a fresh set and a pre-specified hybrid that
+failed.
+\item \textbf{When to use which method.} We report where the generative
+pipeline loses: strongly anisotropic targets, manufacturability unless it is
+penalized during refinement (which then costs accuracy), and targets
+with an unseen sign of the Poisson ratio, where it beats retrieval from the
+training library but not topology optimization. Together with the cost of
+the training data, these results give a practical rule for choosing between
+the two methods (Table~\ref{tab:choice}). Controlled ablations of a
 Kolmogorov--Arnold network (KAN) head and an implicit wavelet (WIRE) decoder
 are negative.
 \end{enumerate}
@@ -218,7 +235,11 @@ Because 8-connectivity admits corner-only contacts (one-node hinges), we
 checked their prevalence in the training data: 17\% of the images contain one,
 but the share is 28\% among cells with small $|\nuot|$ and 3\% among
 cells with large $|\nuot|$, so the extreme Poisson ratios in our data do not originate from
-hinges.
+hinges. Among final designs, 16--26\% of the generated cells and 7--13\% of
+those from topology optimization contain such a contact; subdividing pixels
+for the mesh-convergence check keeps a corner contact a single node, so that
+check does not detect them. We therefore also report manufacturability with
+4-connectivity, under which corner-only contacts do not connect.
 
 Among the candidates for a target, the pipeline selects either by verified
 joint error $|\Delta\nuot|+|\Delta\nuto|$ (Sections~\ref{sec:acc}--\ref{sec:simp})
@@ -254,6 +275,20 @@ each level because curvature information from a softer projection does not
 carry over. The continuous baseline applies the loss to $D(z,c)$ with
 bilinear resampling for 30 steps. Guarded refinement keeps the refined
 design only if its verified joint error is smaller than that of the start.
+
+\emph{Manufacturability-aware refinement} (Section~\ref{sec:multi}) adds
+$\lambda\,[P_{\mathrm{c}}(x)+P_{\mathrm{t}}(x)]$ to $\mathcal L_\beta$,
+evaluated on the projected image $x=H_\beta\circ D(z,c)$ at the
+$64\times64$ resolution on which manufacturability is checked.
+$P_{\mathrm{c}}$ is the mean over all periodic $2\times2$ windows of
+$x_{11}x_{22}(1-x_{12})(1-x_{21})+x_{12}x_{21}(1-x_{11})(1-x_{22})$, which
+counts corner-only contacts on a binary image; $P_{\mathrm{t}}$ is the mean
+of $x-\mathrm{open}(x)$, where the morphological opening uses the
+cross-shaped element of the feature-size check, so it is non-zero exactly on
+struts thinner than three pixels (and, weakly, on convex corners).
+Disconnected islands are not differentiable and are left to the verifier.
+The weight $\lambda$ was tuned on 20 targets of set B and fixed before
+sets A and C were run.
 
 \subsection{Topology optimization baseline and hybrid}
 \label{sec:to}
@@ -305,7 +340,11 @@ joint-error non-inferiority within 10\% against converged topology
 optimization, at least 70\% manufacturable, at most 299 FE solves per
 target and at most 1\% degenerate designs; and for the stratified comparison
 on set C, CIs excluding zero in favour of the generative pipeline for both
-the joint and the $\nuot$ error at anisotropy ratio $r<10$. Sets A and B
+the joint and the $\nuot$ error at anisotropy ratio $r<10$; and for
+manufacturability-aware refinement, on set A, at least 60\% manufacturable
+(4-connectivity), $\RR(\nuot)\ge0.99$, $\RR(\nuto)\ge0.80$, at most 13\%
+of designs with corner-only contacts and at most 10\% more FE solves, with
+the first two replicated on set C. Sets A and B
 were analysed before the stratification was conceived, so their stratified
 results are post hoc. The refinement method was developed after
 continuous refinement had failed on set A; sets B and C serve as its
@@ -597,11 +636,9 @@ median of 0.015 (3.8\%) and at most 0.042, towards more negative values in
 27 of them. The differences in $\nuot$ between the two methods
 ($\sim\!10^{-3}$) are therefore an order of magnitude smaller than the
 discretization error of the model. On the $200\times200$ mesh the ranking of
-the two methods on set A is unchanged ($\RR(\nuot)$ 0.992 versus 0.985).
-% TODO(P1.10): the 200^2 numbers and fig_stiffness were computed for the
-% variant with periodic-edge enforcement (p1_6x_final_design_eval.json).
-% Re-run: final_design_eval.py --cvae-json p1_7_c5_in100_bo30_nofp.json
-% --out p1_10_final_design_eval_nofp.json (stopped 2026-10-08, battery).
+the two methods on set A is unchanged ($\RR(\nuot)$ 0.990 versus 0.985,
+MAE 0.014 versus 0.016).
+% Source: p1_10_final_design_eval_nofp.json (final_design_eval.py, 2026-10-08).
 The auxetic designs of both methods are not near-mechanisms: the median
 in-plane modulus is $E_1\approx0.07$--$0.08\,E_0$ for both
 (Fig.~\ref{fig:stiffness}).
@@ -610,8 +647,7 @@ in-plane modulus is $E_1\approx0.07$--$0.08\,E_0$ for both
 \centering
 \includegraphics[width=0.6\linewidth]{figures/fig_stiffness_en.pdf}
 \caption{Verified $\nuot$ versus $E_1/E_0$ of the final designs on set A,
-both on the $200\times200$ mesh. Values computed for the pipeline variant
-with periodic-edge enforcement.}
+both on the $200\times200$ mesh.}
 \label{fig:stiffness}
 \end{figure}
 
@@ -660,6 +696,46 @@ four runs (single samples and best-of-30 on set A, best-of-30 on sets B and
 C), the manufacturable fraction rose by 4--7 percentage points, with 55
 designs becoming manufacturable and 33 ceasing to be (sign test $p=0.025$;
 two of the runs share set A).
+
+\paragraph{Manufacturability-aware refinement.}
+Following the principle of optimizing what is verified, we added the
+corner-contact and thin-feature penalties of Section~\ref{sec:verify} to the
+refinement objective ($\lambda=0.1$) and pre-specified the criteria listed in
+Section~\ref{sec:stats}. All were met. With 4-connectivity, the
+manufacturable fraction of the final designs rose from 0.31 to 0.72 on set A
+(paired difference $+0.41$, CI 0.31--0.51) and from 0.31 to 0.76 on set C
+($+0.45$, CI 0.34--0.56), against 0.72 and 0.80 for topology optimization
+(8-connectivity: 0.72 and 0.77 against 0.77 and 0.83). Designs with
+corner-only contacts fell from 16\% to 8\% (set A) and from 21\% to 5\%
+(set C); FE solves per target rose from 107 to 112, and $\RR(\nuot)$
+remained 0.996--0.997. The gain is not free. The MAE in $\nuot$ increased by
+37\% (CI 5--78\%) on set A and by 40\% (CI 0--98\%) on set C, and the
+joint-error advantage over topology optimization for targets with $r<10$
+shrank from 41\% to 15\% (CI $-10$ to 34\%) on set A and from 35\% to 14\%
+(CI $-7$ to 32\%) on set C, i.e.\ it is no longer significant. A tuning run on
+20 targets had suggested that the penalties also improve accuracy; this did
+not replicate on 100. The weight $\lambda$ therefore selects an operating
+point rather than a better method (Fig.~\ref{fig:k1}): $\lambda=0$ for the
+accuracy advantage reported above, $\lambda=0.1$ for manufacturability close
+to that of topology optimization at statistically indistinguishable joint
+error and about eight times fewer FE solves. On all 100 targets of set B, the
+manufacturable fraction rises steeply up to $\lambda=0.1$ (0.33, 0.61, 0.79
+for $\lambda=0$, 0.03, 0.1) and saturates beyond (0.81 and 0.83 for 0.3 and
+1), while the MAE in $\nuot$ grows from 0.0059 to 0.0066--0.0068 for
+$0.03\le\lambda\le0.3$ (increase 11--16\%, CIs including zero on this set)
+and to 0.0077 at $\lambda=1$ (30\%, CI 6--64\%); $\lambda=0.1$ sits at the
+knee.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/fig_k1_tradeoff_en.pdf}
+\caption{Accuracy--manufacturability trade-off of manufacturability-aware
+refinement on set B (100 targets, best-of-30, guarded), for penalty weights
+$\lambda$ from 0 (refinement of Section~\ref{sec:acc}) to 1, and topology
+optimization from scratch on the same targets. Manufacturable:
+4-connectivity and minimum feature size.}
+\label{fig:k1}
+\end{figure}
 
 To trade accuracy against manufacturability during selection, the composite
 score of Section~\ref{sec:verify} can replace the verified error. On 300 test
@@ -728,7 +804,9 @@ element mesh make every pixel cell tile by translation.}
 displacements magnified) of a generated auxetic cell (target
 $(\nuot^{*},\nuto^{*})=(-0.75,-0.38)$, verified $\nuot=-0.744$) and of a
 generated cell for $\nuot^{*}=\nuto^{*}=0.5$ (verified 0.547). Dashed: the
-undeformed $2\times2$ cells.}
+undeformed $2\times2$ cells. The two solid regions of the second cell touch
+only at pixel corners (one-node hinges); it is not manufacturable under
+4-connectivity although $E_1/E_0=0.016$ exceeds the degeneracy threshold.}
 \label{fig:deformation}
 \end{figure}
 
@@ -894,47 +972,92 @@ direction.
 % ---------------------------------------------------------------------------
 \section{Discussion}
 
-\paragraph{Optimizing what is verified.}
-The central finding is that any gradient-based search over density fields,
-whether in the latent space of a generative model or over element densities
-in topology optimization, will exploit the difference between the field it
-differentiates and the binarized design that is finally analysed. The
-optimizer reaches objectives of $10^{-10}$ on fields that the verifier sees
-very differently (Fig.~\ref{fig:gap}), and the same happens in topology
-optimization with Heaviside continuation to $\beta=64$. The gap is invisible
-in the loss curve. Three remedies follow, and all are cheap: include the
-verification operators in the objective, select among candidates by verified
-rather than optimized error, and treat degenerate cells as failures in the
-verifier itself. Neither of the first two ingredients is new in
-density-based topology optimization \citep{guest2004achieving,wang2011projection};
-what this work shows is that omitting them changes the conclusions of a
-comparison between methods, and that the generative and the classical route
-need them equally. The third is easy to overlook: an empty cell has the
-Poisson ratio of its base material, and in our sign-flip test such cells
-were the best answers that topology optimization returned for three targets.
-
-\paragraph{What a generative model adds.}
+\paragraph{The generative pipeline as an inverse-design solver.}
 Measured against converged topology optimization rather than against a
 lookup table, the advantage of the generative pipeline is narrower than is
 commonly implied, in line with the critical review of
-\citet{woldseth2022use}. It reaches the same verified accuracy with about
-eight times fewer FE solves per target, and a lower joint error for targets
-of moderate anisotropy, but the saving is amortized only after thousands of
-targets because the training data themselves were produced by topology
-optimization. Without refinement, retrieval from the same library is about
-as accurate. The pipeline is therefore attractive when many targets must be
-served, for example in interactive design or in the inner loop of a
-multiscale optimization, and not when a single cell is needed. Its failures
-are predictable: strongly anisotropic targets that are sparse in the
-training data. Reporting such failures by stratum, rather than averaging
-them into a single score, made them visible in our study.
+\citet{woldseth2022use}, but it is real. It reaches the same verified
+accuracy with about eight times fewer FE solves per target, and a lower
+joint error for targets of moderate anisotropy, but the saving is amortized
+only after thousands of targets because the training data themselves were
+produced by topology optimization. Without refinement, retrieval from the
+same library is about as accurate. The pipeline is therefore attractive when
+many targets must be served, for example in interactive design or in the
+inner loop of a multiscale optimization, and not when a single cell is
+needed. Its failures are predictable: strongly anisotropic targets that are
+sparse in the training data. Reporting such failures by stratum, rather than
+averaging them into a single score, made them visible in our study.
+
+\paragraph{Choosing a method.}
+Table~\ref{tab:choice} condenses the comparison into a rule for the designer.
+Each row is supported by a result in Section~\ref{sec:simp} or later; none
+rests on a single run.
+
+\begin{table}[t]
+\centering
+\caption{Which method to use for auxetic inverse design, based on the
+FE-verified comparisons in this paper. ``Generative'': cVAE best-of-30 with
+guarded binarization-aware refinement. ``TO'': topology optimization from
+scratch, best of four starts.}
+\label{tab:choice}
+\small
+\begin{tabular}{p{0.34\linewidth}p{0.14\linewidth}p{0.42\linewidth}}
+\toprule
+Design situation & Use & Evidence\\
+\midrule
+Many targets (thousands) inside the training range, anisotropy $r<10$
+  & Generative & Same $\nuot$ accuracy with $\sim$8$\times$ fewer FE solves;
+  joint error 27\% lower (pre-specified, CI 8--42\%)\\
+Few targets, or a single cell
+  & TO & Cost of the training data is amortized only after
+  $\sim$3\,500 targets\\
+Strong anisotropy, $r\ge10$
+  & TO & Generative pipeline much worse on 4 of 5 such targets
+  (disconnected cells)\\
+Manufacturability is a hard requirement
+  & TO, or generative with $\lambda>0$ & Manufacturable 0.77--0.83 versus
+  0.32--0.35 at $\lambda=0$, 0.72--0.77 at $\lambda=0.1$ (joint-error
+  advantage lost)\\
+Unseen sign of $\nu$, or magnitude beyond the data
+  & TO & Generative beats retrieval only; magnitude saturates where data
+  end\\
+Any method
+  & -- & Optimize and select on the verified, binarized design; reject
+  degenerate cells ($\min E_i<10^{-3}E_0$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Optimizing what is verified.}
+The accuracy of the pipeline rests on one finding: any gradient-based search
+over density fields, whether in the latent space of a generative model or
+over element densities in topology optimization, will exploit the difference
+between the field it differentiates and the binarized design that is finally
+analysed. The optimizer reaches objectives of $10^{-10}$ on fields that the
+verifier sees very differently (Fig.~\ref{fig:gap}), and the same happens in
+topology optimization with Heaviside continuation to $\beta=64$. The gap is
+invisible in the loss curve. Three remedies follow, and all are cheap:
+include the verification operators in the objective, select among
+candidates by verified rather than optimized error, and treat degenerate
+cells as failures in the verifier itself. Neither of the first two
+ingredients is new in density-based topology optimization
+\citep{guest2004achieving,wang2011projection}; what this work shows is that
+omitting them changes the conclusions of a comparison between methods, and
+that the generative and the classical route need them equally. The third is
+easy to overlook: an empty cell has the Poisson ratio of its base material,
+and in our sign-flip test such cells were the best answers that topology
+optimization returned for three targets.
 
 \paragraph{Manufacturability and out-of-distribution targets.}
 Topology optimization from scratch produced connected cells with adequate
-feature size more than twice as often as the generative pipeline. Latent
-refinement slightly increased that fraction, and initializing topology
-optimization with the generated design did not recover it, because a sharp
-initial projection preserves the generated topology. For non-auxetic targets
+feature size more than twice as often as the generative pipeline when only
+the Poisson ratios were optimized. Initializing topology optimization with
+the generated design did not recover that fraction, because a sharp initial
+projection preserves the generated topology; penalizing the verified
+manufacturability defects during latent refinement did, at the price of the
+accuracy advantage. Accuracy and manufacturability compete for the same few
+latent degrees of freedom, and the weight between them is a design decision
+that the verifier, not the loss curve, has to inform. For non-auxetic targets
 the cVAE reaches the correct sign where retrieval from the library cannot,
 but topology optimization reaches the target far more accurately. Along
 magnitude, refinement pushes into regions with only a handful of training
@@ -953,8 +1076,11 @@ tested experimentally.
 (ii) The generative pipeline fails for strongly anisotropic targets
 ($r\ge10$), which are sparse in the training data; topology optimization does
 not.
-(iii) Topology optimization produces manufacturable cells more than twice as
-often (0.74--0.83 versus 0.32--0.35).
+(iii) Without the manufacturability penalty, topology optimization produces
+manufacturable cells more than twice as often (0.74--0.83 versus 0.32--0.35);
+with it, the generative pipeline comes close (0.72--0.77) but loses its
+joint-error advantage. Manufacturability is checked geometrically, not by a
+printing process model.
 (iv) For targets with an unseen sign, topology optimization is markedly more
 accurate; the advantage of the generative model in that regime holds only
 against retrieval.
@@ -966,17 +1092,20 @@ replication on sets B and C and the pre-specified test on set C mitigate,
 but do not remove, this dependence.
 
 \section{Conclusions}
-Refining generated metamaterial cells with exact physics is only reliable if
-the objective is evaluated on the design that will be verified: binarized,
-resampled and checked for degeneracy. With this change, a cVAE with
-latent refinement matches converged topology optimization in $\nuot$ with
-about eight times fewer FE solves and achieves a lower joint error for
-moderately anisotropic targets, replicated on three disjoint target sets.
-Topology optimization from scratch remains the better choice for strongly
-anisotropic targets, for manufacturability and for targets outside the
-training data. The same principle applies to topology optimization itself:
-the verified design, not the projected field, is what has to be optimized
-and compared.
+For inverse design of two-dimensional auxetic cells, a cVAE with best-of-30
+sampling and latent refinement matches converged topology optimization in
+verified $\nuot$ with about eight times fewer FE solves and achieves a lower
+joint error for moderately anisotropic targets, replicated on three disjoint
+target sets. The ingredient that makes this possible is to evaluate the
+refinement objective on the design that will be verified: binarized,
+resampled and checked for degeneracy. The generative pipeline is the method
+of choice when many in-range targets of moderate anisotropy must be served;
+topology optimization from scratch remains the better choice for strongly
+anisotropic targets, for targets outside the training data and when only a
+few cells are needed. Manufacturability can be bought back by penalizing it
+in the same refinement, at the cost of the accuracy advantage. The same principle applies to
+topology optimization itself: the verified design, not the projected field,
+is what has to be optimized and compared.
 
 \appendix
 \section{Periodic-edge enforcement}

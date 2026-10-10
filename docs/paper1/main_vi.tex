@@ -42,26 +42,30 @@ nhị phân hóa cho thiết kế ngược vật liệu meta auxetic bằng mô 
 \maketitle
 
 \begin{abstract}
-Thiết kế ô cơ sở vật liệu meta bằng phương pháp gradient, dù là tối ưu
-tô-pô hay tìm kiếm trong không gian ẩn của một mô hình sinh, đều được đánh
-giá bằng phân tích phần tử hữu hạn (FE) trên thiết kế đã nhị phân hóa, nhưng
-thường lại tối ưu một trường mật độ liên tục. Chúng tôi chỉ ra rằng sự lệch
-này bị khai thác một cách có hệ thống. Tinh chỉnh mã ẩn của một bộ mã hóa
-tự động biến phân có điều kiện (cVAE) theo độ nhạy đồng nhất hóa chính xác
-đưa hàm mục tiêu về $\sim\!10^{-10}$, trong khi sai số kiểm chứng vẫn lớn hơn
-sáu bậc; tối ưu tô-pô theo mật độ với phép chiếu Heaviside tăng dần tới
-$\beta=64$ cũng có cùng khoảng lệch. Đưa các phép biến đổi của khâu kiểm
-chứng vào hàm mục tiêu nâng $\RR$ kiểm chứng FE của hệ số Poisson $\nuot$
-của ô auxetic hai chiều từ 0,874 lên 0,999 với mẫu đơn (0,831 lên 0,989
-trên một tập mục tiêu thứ hai, không giao nhau) và giảm sai số sau chọn
-tốt nhất trong 30 mẫu từ 59--68\% trên ba tập rời nhau. So với tối ưu tô-pô
-chạy từ đầu với bốn tô-pô khởi tạo, pipeline sinh đạt cùng độ chính xác với
-số lần giải FE ít hơn khoảng tám lần và, với mục tiêu dị hướng vừa phải, sai
-số cặp $(\nuot,\nuto)$ thấp hơn 35--41\%. Pipeline thất bại với mục tiêu dị
-hướng mạnh vốn thưa trong dữ liệu huấn luyện, và tối ưu tô-pô vẫn vượt trội
-về khả năng chế tạo và với mục tiêu ngoài dải huấn luyện. Cả hai phương pháp
-đôi khi trả về ô suy biến mà một bộ kiểm chứng không có cơ chế bảo vệ vẫn
-chấp nhận, nên kiểm tra suy biến phải là một phần của kiểm chứng.
+Thiết kế ngược vật liệu meta auxetic là bài toán tìm một ô cơ sở có tính chất
+hiệu dụng, sau kiểm chứng, khớp với một cặp hệ số Poisson $(\nuot,\nuto)$ cho
+trước. Tối ưu tô-pô giải riêng từng mục tiêu với hàng trăm lần giải phần tử
+hữu hạn (FE); mô hình sinh trả về ứng viên gần như tức thì nhưng hiếm khi đạt
+dung sai chặt khi thiết kế đã nhị phân hóa được phân tích. Chúng tôi nghiên
+cứu một pipeline lấy mẫu từ bộ mã hóa tự động biến phân có điều kiện (cVAE)
+rồi tinh chỉnh mã ẩn theo độ nhạy đồng nhất hóa chính xác, và chỉ ra vì sao
+tinh chỉnh ngây thơ thất bại: nó đưa hàm mục tiêu về $\sim\!10^{-10}$ trên
+các trường mật độ xám, trong khi sai số kiểm chứng FE vẫn lớn hơn sáu bậc.
+Tối ưu chính cái được kiểm chứng, bằng cách đưa phép chiếu Heaviside và phép
+lấy mẫu lại chính xác vào hàm mục tiêu và chọn theo sai số kiểm chứng, nâng
+$\RR$ kiểm chứng của $\nuot$ của ô hai chiều từ 0,874 lên 0,999 với mẫu đơn
+(0,831 lên 0,989 trên tập mục tiêu thứ hai) và giảm sai số sau chọn tốt nhất
+trong 30 mẫu 59--68\% trên ba tập rời nhau. So với tối ưu tô-pô chạy từ đầu,
+được kiểm chứng qua cùng một chuỗi, pipeline đạt cùng độ chính xác với số lần
+giải FE ít hơn khoảng tám lần và, trong một phép kiểm định đặt trước trên các
+mục tiêu dị hướng vừa phải, sai số cặp $(\nuot,\nuto)$ thấp hơn 27\% (KTC
+95\% 8--42\%). Thêm phạt tiếp xúc góc và nét mảnh vào cùng hàm mục tiêu nâng
+tỉ lệ chế tạo được từ 0,31 lên 0,72--0,76, gần mức của tối ưu tô-pô, nhưng
+phải trả bằng lợi thế sai số cặp nói trên. Tối ưu tô-pô vẫn là lựa chọn tốt
+hơn với mục tiêu dị hướng mạnh và ngoài dải huấn luyện; chúng tôi nêu rõ khi
+nào nên dùng phương pháp nào. Tối ưu tô-pô với phép chiếu Heaviside tăng dần cũng
+có cùng khoảng lệch giữa hàm mục tiêu và kiểm chứng, và cả hai phương pháp
+đôi khi trả về ô suy biến, nên kiểm chứng phải gồm cả bước kiểm tra suy biến.
 \end{abstract}
 
 \noindent\textbf{Từ khóa:} Vật liệu meta auxetic; Đồng nhất hóa ngược; Tối
@@ -72,9 +76,11 @@ chấp nhận, nên kiểm tra suy biến phải là một phần của kiểm c
 
 Vật liệu meta auxetic co ngang khi bị nén dọc trục. Hệ số Poisson âm của
 chúng bắt nguồn từ vi kiến trúc chứ không từ thành phần hóa học của vật liệu
-nền \citep{lakes1987foam,evans2000auxetic,bertoldi2017flexible}. Đồng nhất
-hóa ngược bằng tối ưu tô-pô là con đường kinh điển đi từ một ten-xơ hiệu dụng
-cho trước tới một ô cơ sở
+nền \citep{lakes1987foam,evans2000auxetic,bertoldi2017flexible}. Thiết kế
+chúng là một bài toán ngược: cho một cặp hệ số Poisson mục tiêu
+$(\nuot^{*},\nuto^{*})$, tìm một ô cơ sở có tính chất hiệu dụng, được kiểm
+chứng bằng phân tích phần tử hữu hạn (FE) trên thiết kế chế tạo được, khớp
+với mục tiêu đó. Đồng nhất hóa ngược bằng tối ưu tô-pô là lời giải kinh điển
 \citep{sigmund1994materials,larsen1997design,bendsoe2003topology}, nhưng mỗi
 mục tiêu mới đòi hỏi một bài toán tối ưu lặp với hàng trăm lần giải FE. Thiết
 kế ngược dựa trên dữ liệu khấu hao chi phí này: bộ mã hóa tự động biến phân,
@@ -85,6 +91,9 @@ Mạng nơ-ron cũng đi trực tiếp vào tối ưu tô-pô, dưới dạng th
 trường mật độ \citep{hoyer2019neural,chandrasekhar2021tounn}; một tổng quan
 phản biện về các cách tiếp cận này cho thấy nhiều cải thiện được báo cáo biến
 mất khi so với tối ưu kinh điển được tinh chỉnh tốt \citep{woldseth2022use}.
+Vì vậy, mô hình sinh có phải là một bộ giải thực dụng cho thiết kế ngược
+auxetic hay không phụ thuộc vào hai câu hỏi: nó có đạt độ chính xác kiểm
+chứng của tối ưu tô-pô không, và với những mục tiêu nào?
 
 Thứ được chế tạo là phiên bản đã nhị phân hóa và lấy mẫu lại của một trường
 mật độ, nên độ chính xác phải được đánh giá bằng phân tích FE trên chính
@@ -97,30 +106,36 @@ dung sai chặt, nên các pipeline sinh nhiều ứng viên rồi chọn bằng
 này thất bại theo một cách đáng học hỏi: bộ tối ưu khai thác các mật độ trung
 gian không sống sót qua nhị phân hóa, đúng như cách nó khai thác một mô hình
 thay thế thiếu chính xác. Điều tương tự xảy ra với tối ưu tô-pô dùng phép
-chiếu Heaviside tăng dần.
+chiếu Heaviside tăng dần. Đóng được khoảng lệch này chính là điều biến
+pipeline sinh thành một bộ giải thiết kế ngược chính xác.
 
 Bài báo có các đóng góp sau.
 \begin{enumerate}
-\item \textbf{Khoảng lệch giữa hàm mục tiêu và kiểm chứng.} Chúng tôi đưa ra
-bằng chứng trực tiếp rằng tìm kiếm bằng gradient trên trường mật độ, trong
-không gian ẩn của mô hình sinh cũng như trên mật độ phần tử của tối ưu tô-pô,
-đạt hàm mục tiêu gần 0 trên những trường có sai số kiểm chứng lớn hơn nhiều
-bậc.
-\item \textbf{Tinh chỉnh không gian ẩn nhận biết nhị phân hóa.} Đưa các phiên
-bản khả vi của các phép biến đổi kiểm chứng (phép chiếu Heaviside tăng dần
-\citep{guest2004achieving,wang2011projection} và phép lấy mẫu lại chính xác)
-vào hàm mục tiêu, đồng thời chọn theo sai số kiểm chứng, đóng phần lớn khoảng
-lệch. Cải thiện này được tái lập trên hai tập mục tiêu rời nhau khác.
-\item \textbf{So sánh ngang hàng với tối ưu tô-pô chạy từ đầu.} Trên ba tập
-100 mục tiêu, cả hai phương pháp được kiểm chứng qua cùng một chuỗi và so
-sánh bằng khoảng tin cậy ghép cặp, phân tầng theo độ dị hướng của mục tiêu,
-gồm cả một phép xác nhận với tiêu chí đặt trước trên tập mới và một phương án
-lai với tiêu chí đặt trước đã thất bại.
-\item \textbf{Phạm vi trung thực.} Chúng tôi báo cáo những chỗ pipeline sinh
-thua: mục tiêu dị hướng mạnh, khả năng chế tạo, và mục tiêu có dấu hệ số
-Poisson chưa từng thấy, nơi nó thắng truy xuất từ thư viện huấn luyện nhưng
-không thắng tối ưu tô-pô. Các thí nghiệm loại bỏ có kiểm soát với đầu mạng
-Kolmogorov--Arnold (KAN) và bộ giải mã wavelet ẩn (WIRE) cho kết quả âm.
+\item \textbf{Một pipeline thiết kế ngược ô auxetic được kiểm chứng.} Chọn
+tốt nhất trong 30 mẫu từ cVAE rồi tinh chỉnh không gian ẩn có bảo vệ cho ra
+các ô có $\nuot$ kiểm chứng FE đạt $\RR=0,995$--$0,998$ trên ba tập 100
+mục tiêu giữ lại rời nhau, với khoảng 107 lần giải FE mỗi mục tiêu.
+\item \textbf{Tối ưu chính cái được kiểm chứng.} Chúng tôi đưa ra bằng chứng
+trực tiếp rằng tìm kiếm bằng gradient trên trường mật độ, trong không gian ẩn
+của mô hình sinh cũng như trên mật độ phần tử của tối ưu tô-pô, đạt hàm mục
+tiêu gần 0 trên những trường có sai số kiểm chứng lớn hơn nhiều bậc. Đưa các
+phiên bản khả vi của các phép biến đổi kiểm chứng (phép chiếu Heaviside tăng
+dần \citep{guest2004achieving,wang2011projection} và phép lấy mẫu lại chính
+xác) vào hàm mục tiêu, đồng thời chọn theo sai số kiểm chứng, đóng phần lớn
+khoảng lệch. Cải thiện này được tái lập trên hai tập mục tiêu rời nhau khác.
+\item \textbf{So sánh ngang hàng với tối ưu tô-pô chạy từ đầu.} Cả hai phương
+pháp được kiểm chứng qua cùng một chuỗi và so sánh bằng khoảng tin cậy ghép
+cặp, phân tầng theo độ dị hướng của mục tiêu, gồm cả một phép xác nhận với
+tiêu chí đặt trước trên tập mới và một phương án lai với tiêu chí đặt trước
+đã thất bại.
+\item \textbf{Khi nào dùng phương pháp nào.} Chúng tôi báo cáo những chỗ
+pipeline sinh thua: mục tiêu dị hướng mạnh, khả năng chế tạo nếu không phạt
+nó khi tinh chỉnh (khi phạt thì mất độ chính xác), và mục tiêu có
+dấu hệ số Poisson chưa từng thấy, nơi nó thắng truy xuất từ thư viện huấn
+luyện nhưng không thắng tối ưu tô-pô. Cùng với chi phí tạo dữ liệu huấn
+luyện, các kết quả này cho ra một quy tắc thực dụng để chọn giữa hai phương
+pháp (Bảng~\ref{tab:choice}). Các thí nghiệm loại bỏ có kiểm soát với đầu
+mạng Kolmogorov--Arnold (KAN) và bộ giải mã wavelet ẩn (WIRE) cho kết quả âm.
 \end{enumerate}
 
 Mọi độ chính xác được báo cáo đều kiểm chứng bằng FE trên thiết kế đã nhị
@@ -212,7 +227,11 @@ thông 8 chấp nhận tiếp xúc chỉ tại góc (bản lề một nút), ch�
 mức độ phổ biến của chúng trong dữ liệu huấn luyện: 17\% ảnh có ít nhất một
 bản lề như vậy, nhưng tỉ lệ này là 28\% ở các ô có $|\nuot|$ nhỏ và 3\% ở các
 ô có $|\nuot|$ lớn, nên các hệ số Poisson cực trị trong dữ liệu không đến từ
-bản lề.
+bản lề. Trong các thiết kế cuối, 16--26\% ô do pipeline sinh và 7--13\% ô do
+tối ưu tô-pô có tiếp xúc như vậy; việc chia nhỏ điểm ảnh khi kiểm tra hội tụ
+lưới vẫn giữ tiếp xúc góc là một nút, nên phép kiểm tra đó không phát hiện
+được chúng. Vì vậy chúng tôi báo thêm khả năng chế tạo theo liên thông 4,
+trong đó tiếp xúc chỉ tại góc không được tính là nối.
 
 Trong các ứng viên cho một mục tiêu, pipeline chọn hoặc theo sai số cặp kiểm
 chứng $|\Delta\nuot|+|\Delta\nuto|$ (Mục~\ref{sec:acc}--\ref{sec:simp}) hoặc
@@ -248,6 +267,19 @@ thông tin độ cong từ phép chiếu mềm hơn không dùng lại được.
 tục áp hàm mất mát lên $D(z,c)$ với lấy mẫu lại song tuyến trong 30 bước.
 Tinh chỉnh có kiểm soát (guarded) chỉ giữ thiết kế đã tinh chỉnh nếu sai số
 cặp kiểm chứng của nó nhỏ hơn của điểm xuất phát.
+
+\emph{Tinh chỉnh nhận biết khả năng chế tạo} (Mục~\ref{sec:multi}) cộng thêm
+$\lambda\,[P_{\mathrm{c}}(x)+P_{\mathrm{t}}(x)]$ vào $\mathcal L_\beta$,
+tính trên ảnh đã chiếu $x=H_\beta\circ D(z,c)$ ở độ phân giải $64\times64$
+là độ phân giải dùng để kiểm tra chế tạo. $P_{\mathrm{c}}$ là trung bình trên
+mọi cửa sổ $2\times2$ tuần hoàn của
+$x_{11}x_{22}(1-x_{12})(1-x_{21})+x_{12}x_{21}(1-x_{11})(1-x_{22})$, đếm các
+tiếp xúc chỉ tại góc trên ảnh nhị phân; $P_{\mathrm{t}}$ là trung bình của
+$x-\mathrm{open}(x)$, trong đó phép mở hình thái dùng phần tử chữ thập của
+phép kiểm tra kích thước nét, nên khác 0 đúng ở các nét mảnh hơn ba điểm ảnh
+(và, ở mức nhẹ, ở góc lồi). Các đảo vật liệu rời nhau không khả vi nên để
+lại cho bước kiểm chứng. Hệ số $\lambda$ được chỉnh trên 20 mục tiêu của tập
+B và cố định trước khi chạy tập A và C.
 
 \subsection{Baseline tối ưu tô-pô và phương án lai}
 \label{sec:to}
@@ -298,8 +330,11 @@ lệ trúng ít nhất 30\% và $\RR$ FE $>0$; với phương án lai, sai số 
 kém hơn quá 10\% so với tối ưu tô-pô hội tụ, ít nhất 70\% chế tạo được, tối
 đa 299 lần giải FE mỗi mục tiêu và tối đa 1\% thiết kế suy biến; và với phép
 so sánh phân tầng trên tập C, CI loại trừ 0 theo hướng có lợi cho pipeline
-sinh cho cả sai số cặp và sai số $\nuot$ khi tỉ số dị hướng $r<10$. Tập A và
-B đã được phân tích trước khi nghĩ tới việc phân tầng, nên kết quả phân tầng
+sinh cho cả sai số cặp và sai số $\nuot$ khi tỉ số dị hướng $r<10$; và với
+tinh chỉnh nhận biết khả năng chế tạo, trên tập A, ít nhất 60\% chế tạo được
+(liên thông 4), $\RR(\nuot)\ge0{,}99$, $\RR(\nuto)\ge0{,}80$, tối đa 13\%
+thiết kế có tiếp xúc chỉ tại góc và tối đa 10\% thêm lần giải FE, với hai
+tiêu chí đầu được tái lập trên tập C. Tập A và B đã được phân tích trước khi nghĩ tới việc phân tầng, nên kết quả phân tầng
 trên hai tập này là hậu kiểm. Phương pháp tinh chỉnh được xây dựng sau khi
 tinh chỉnh liên tục thất bại trên tập A; tập B và C đóng vai trò xác nhận.
 L-BFGS trên GPU không tất định từng bit, và các lần chạy lặp lệch nhau
@@ -583,10 +618,9 @@ liệu, tinh chỉnh và kiểm chứng. Giải lại 30 hình học kiểm tra 
 (3,8\%) và tối đa 0,042, theo hướng âm hơn ở 27 hình. Do đó chênh lệch
 $\nuot$ giữa hai phương pháp ($\sim\!10^{-3}$) nhỏ hơn một bậc so với sai số
 rời rạc hóa của mô hình. Trên lưới $200\times200$, thứ hạng của hai phương
-pháp trên tập A không đổi ($\RR(\nuot)$ 0,992 so với 0,985).
-% TODO(P1.10): số 200^2 và fig_stiffness tính cho biến thể có cân bằng cạnh
-% tuần hoàn (p1_6x_final_design_eval.json) - chạy lại khi cắm sạc, xem
-% main_en.tex.
+pháp trên tập A không đổi ($\RR(\nuot)$ 0,990 so với 0,985, MAE 0,014 so
+với 0,016).
+% Nguồn: p1_10_final_design_eval_nofp.json (final_design_eval.py, 2026-10-08).
 Thiết kế auxetic của cả hai phương pháp không phải cơ cấu gần như không có
 độ cứng: trung vị mô-đun trong mặt phẳng là $E_1\approx0,07$--$0,08\,E_0$ cho
 cả hai (Hình~\ref{fig:stiffness}).
@@ -595,8 +629,7 @@ cả hai (Hình~\ref{fig:stiffness}).
 \centering
 \includegraphics[width=0.6\linewidth]{figures/fig_stiffness_vi.pdf}
 \caption{$\nuot$ kiểm chứng theo $E_1/E_0$ của thiết kế cuối trên tập A, cả
-hai trên lưới $200\times200$. Giá trị tính cho biến thể pipeline có cân bằng
-cạnh tuần hoàn.}
+hai trên lưới $200\times200$.}
 \label{fig:stiffness}
 \end{figure}
 
@@ -640,6 +673,44 @@ chỉnh không làm giảm khả năng chế tạo: qua bốn lần chạy (mẫ
 trên tập A, best-of-30 trên tập B và C), tỉ lệ chế tạo được tăng 4--7 điểm
 phần trăm, với 55 thiết kế trở thành chế tạo được và 33 mất tính chất này
 (kiểm định dấu $p=0,025$; hai lần chạy dùng chung tập A).
+
+\paragraph{Tinh chỉnh nhận biết khả năng chế tạo.}
+Theo nguyên tắc tối ưu đúng thứ được kiểm chứng, chúng tôi thêm phạt tiếp xúc
+góc và nét mảnh của Mục~\ref{sec:verify} vào hàm mục tiêu tinh chỉnh
+($\lambda=0{,}1$) và đặt trước các tiêu chí nêu ở Mục~\ref{sec:stats}. Tất cả
+đều đạt. Theo liên thông 4, tỉ lệ chế tạo được của thiết kế cuối tăng từ 0,31
+lên 0,72 trên tập A (chênh lệch ghép cặp $+0{,}41$, KTC 0,31--0,51) và từ 0,31
+lên 0,76 trên tập C ($+0{,}45$, KTC 0,34--0,56), so với 0,72 và 0,80 của tối ưu
+tô-pô (liên thông 8: 0,72 và 0,77 so với 0,77 và 0,83). Tỉ lệ thiết kế có tiếp
+xúc chỉ tại góc giảm từ 16\% xuống 8\% (tập A) và từ 21\% xuống 5\% (tập C);
+số lần giải FE mỗi mục tiêu tăng từ 107 lên 112, và $\RR(\nuot)$ vẫn ở mức
+0,996--0,997. Cái lợi này không miễn phí. MAE của $\nuot$ tăng 37\% (KTC
+5--78\%) trên tập A và 40\% (KTC 0--98\%) trên tập C, còn lợi thế sai số cặp
+so với tối ưu tô-pô ở các mục tiêu có $r<10$ giảm từ 41\% xuống 15\% (KTC
+$-10$ đến 34\%) trên tập A và từ 35\% xuống 14\% (KTC $-7$ đến 32\%) trên
+tập C, tức là không còn ý nghĩa thống kê. Một lần chạy chỉnh tham số trên 20
+mục tiêu từng gợi ý rằng phạt cũng cải thiện độ chính xác; điều này không tái
+lập trên 100 mục tiêu. Vì vậy hệ số $\lambda$ chọn một điểm vận hành chứ không
+tạo ra một phương pháp tốt hơn (Hình~\ref{fig:k1}): $\lambda=0$ cho lợi thế
+độ chính xác đã báo ở trên, $\lambda=0{,}1$ cho khả năng chế tạo gần tối ưu
+tô-pô với sai số cặp không khác biệt có ý nghĩa thống kê và ít hơn khoảng tám
+lần số lần giải FE. Trên toàn bộ 100 mục tiêu của tập B, tỉ lệ chế
+tạo được tăng dốc tới $\lambda=0{,}1$ (0,33; 0,61; 0,79 với $\lambda=0$; 0,03;
+0,1) rồi bão hòa (0,81 và 0,83 với 0,3 và 1), trong khi MAE của $\nuot$ tăng từ
+0,0059 lên 0,0066--0,0068 với $0{,}03\le\lambda\le0{,}3$ (tăng 11--16\%, KTC
+chứa 0 trên tập này) và lên 0,0077 khi $\lambda=1$ (30\%, KTC 6--64\%);
+$\lambda=0{,}1$ nằm ở điểm gãy của đường cong.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.5\linewidth]{figures/fig_k1_tradeoff_vi.pdf}
+\caption{Đánh đổi độ chính xác -- khả năng chế tạo của tinh chỉnh nhận biết
+khả năng chế tạo trên tập B (100 mục tiêu, best-of-30, có kiểm soát), với hệ
+số phạt $\lambda$ từ 0 (tinh chỉnh ở Mục~\ref{sec:acc}) đến 1, và tối ưu tô-pô
+từ đầu trên cùng các mục tiêu. Chế tạo được: liên thông 4 và kích thước nét
+tối thiểu.}
+\label{fig:k1}
+\end{figure}
 
 Để đánh đổi độ chính xác với khả năng chế tạo ngay khi chọn, điểm tổng hợp ở
 Mục~\ref{sec:verify} có thể thay cho sai số kiểm chứng. Trên 300 mục tiêu
@@ -706,7 +777,9 @@ kín bằng phép tịnh tiến.}
 được phóng đại) của một ô auxetic sinh ra (mục tiêu
 $(\nuot^{*},\nuto^{*})=(-0,75;-0,38)$, $\nuot$ kiểm chứng $-0,744$) và của
 một ô sinh ra cho $\nuot^{*}=\nuto^{*}=0,5$ (kiểm chứng 0,547). Nét đứt: các
-ô $2\times2$ chưa biến dạng.}
+ô $2\times2$ chưa biến dạng. Hai vùng vật liệu của ô thứ hai chỉ chạm nhau tại
+góc điểm ảnh (bản lề một nút); ô này không chế tạo được theo liên thông 4 dù
+$E_1/E_0=0{,}016$ vượt ngưỡng suy biến.}
 \label{fig:deformation}
 \end{figure}
 
@@ -866,43 +939,89 @@ chế tạo được. Vì vậy chúng tôi đóng hướng này.
 % ---------------------------------------------------------------------------
 \section{Thảo luận}
 
-\paragraph{Tối ưu chính cái được kiểm chứng.}
-Phát hiện trung tâm là mọi phép tìm kiếm bằng gradient trên trường mật độ, dù
-trong không gian ẩn của mô hình sinh hay trên mật độ phần tử của tối ưu
-tô-pô, đều sẽ khai thác sự khác biệt giữa trường mà nó lấy đạo hàm và thiết
-kế nhị phân cuối cùng được phân tích. Bộ tối ưu đạt hàm mục tiêu $10^{-10}$
-trên những trường mà bộ kiểm chứng nhìn thấy rất khác (Hình~\ref{fig:gap}),
-và điều tương tự xảy ra với tối ưu tô-pô dùng phép chiếu Heaviside tăng dần
-tới $\beta=64$. Khoảng lệch này không thấy được trên đường cong mất mát. Từ
-đó có ba cách khắc phục, đều rẻ: đưa các phép biến đổi kiểm chứng vào hàm
-mục tiêu, chọn ứng viên theo sai số kiểm chứng thay vì sai số tối ưu, và coi
-ô suy biến là thất bại ngay trong bộ kiểm chứng. Hai thành phần đầu không mới
-trong tối ưu tô-pô theo mật độ \citep{guest2004achieving,wang2011projection};
-điều bài báo này chỉ ra là bỏ qua chúng làm thay đổi kết luận của phép so
-sánh giữa các phương pháp, và con đường sinh lẫn con đường kinh điển đều cần
-chúng như nhau. Thành phần thứ ba dễ bị bỏ sót: một ô rỗng có hệ số Poisson
-của vật liệu nền, và trong thí nghiệm đổi dấu, các ô như vậy là đáp án tốt
-nhất mà tối ưu tô-pô trả về cho ba mục tiêu.
-
-\paragraph{Mô hình sinh đóng góp gì.}
+\paragraph{Pipeline sinh như một bộ giải thiết kế ngược.}
 Khi so với tối ưu tô-pô hội tụ thay vì với bảng tra, lợi thế của pipeline
 sinh hẹp hơn mức thường được ngầm hiểu, phù hợp với tổng quan phản biện của
-\citet{woldseth2022use}. Nó đạt cùng độ chính xác kiểm chứng với số lần giải
-FE mỗi mục tiêu ít hơn khoảng tám lần, và sai số cặp thấp hơn với mục tiêu dị
-hướng vừa phải, nhưng khoản tiết kiệm chỉ được khấu hao sau hàng nghìn mục
-tiêu vì chính dữ liệu huấn luyện được tạo ra bằng tối ưu tô-pô. Khi chưa tinh
-chỉnh, truy xuất từ cùng thư viện cho độ chính xác tương đương. Vì vậy
-pipeline hấp dẫn khi cần phục vụ nhiều mục tiêu, chẳng hạn trong thiết kế
-tương tác hoặc vòng lặp trong của tối ưu đa thang, chứ không phải khi chỉ cần
-một ô. Thất bại của nó có thể dự đoán được: mục tiêu dị hướng mạnh, vốn thưa
-trong dữ liệu huấn luyện. Báo cáo thất bại theo tầng, thay vì gộp vào một
-điểm số trung bình, đã giúp chúng hiện ra trong nghiên cứu này.
+\citet{woldseth2022use}, nhưng là có thật. Nó đạt cùng độ chính xác kiểm
+chứng với số lần giải FE mỗi mục tiêu ít hơn khoảng tám lần, và sai số cặp
+thấp hơn với mục tiêu dị hướng vừa phải, nhưng khoản tiết kiệm chỉ được khấu
+hao sau hàng nghìn mục tiêu vì chính dữ liệu huấn luyện được tạo ra bằng tối
+ưu tô-pô. Khi chưa tinh chỉnh, truy xuất từ cùng thư viện cho độ chính xác
+tương đương. Vì vậy pipeline hấp dẫn khi cần phục vụ nhiều mục tiêu, chẳng
+hạn trong thiết kế tương tác hoặc vòng lặp trong của tối ưu đa thang, chứ
+không phải khi chỉ cần một ô. Thất bại của nó có thể dự đoán được: mục tiêu
+dị hướng mạnh, vốn thưa trong dữ liệu huấn luyện. Báo cáo thất bại theo tầng,
+thay vì gộp vào một điểm số trung bình, đã giúp chúng hiện ra trong nghiên
+cứu này.
+
+\paragraph{Chọn phương pháp.}
+Bảng~\ref{tab:choice} cô đọng phép so sánh thành một quy tắc cho người thiết
+kế. Mỗi dòng dựa trên một kết quả ở Mục~\ref{sec:simp} hoặc các mục sau;
+không dòng nào dựa trên một lần chạy duy nhất.
+
+\begin{table}[t]
+\centering
+\caption{Nên dùng phương pháp nào cho thiết kế ngược auxetic, dựa trên các
+phép so sánh kiểm chứng FE trong bài. ``Sinh'': cVAE chọn tốt nhất trong 30
+mẫu kèm tinh chỉnh nhận biết nhị phân hóa có bảo vệ. ``TO'': tối ưu tô-pô
+chạy từ đầu, tốt nhất trong bốn khởi tạo.}
+\label{tab:choice}
+\small
+\begin{tabular}{p{0.34\linewidth}p{0.14\linewidth}p{0.42\linewidth}}
+\toprule
+Tình huống thiết kế & Dùng & Bằng chứng\\
+\midrule
+Nhiều mục tiêu (hàng nghìn) trong dải huấn luyện, độ dị hướng $r<10$
+  & Sinh & Cùng độ chính xác $\nuot$ với số lần giải FE ít hơn
+  $\sim$8 lần; sai số cặp thấp hơn 27\% (đặt trước, KTC 8--42\%)\\
+Ít mục tiêu, hoặc chỉ một ô
+  & TO & Chi phí dữ liệu huấn luyện chỉ được khấu hao sau
+  $\sim$3\,500 mục tiêu\\
+Dị hướng mạnh, $r\ge10$
+  & TO & Pipeline sinh kém hơn nhiều ở 4/5 mục tiêu loại này
+  (ô đứt rời)\\
+Khả năng chế tạo là yêu cầu bắt buộc
+  & TO, hoặc pipeline sinh với $\lambda>0$ & Chế tạo được 0,77--0,83 so với
+  0,32--0,35 khi $\lambda=0$, 0,72--0,77 khi $\lambda=0{,}1$ (mất lợi thế sai
+  số cặp)\\
+Dấu $\nu$ chưa từng thấy, hoặc biên độ vượt dữ liệu
+  & TO & Mô hình sinh chỉ thắng truy xuất; biên độ bão hòa nơi dữ liệu
+  kết thúc\\
+Mọi phương pháp
+  & -- & Tối ưu và chọn trên thiết kế nhị phân được kiểm chứng; loại ô suy
+  biến ($\min E_i<10^{-3}E_0$)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Tối ưu chính cái được kiểm chứng.}
+Độ chính xác của pipeline dựa trên một phát hiện: mọi phép tìm kiếm bằng
+gradient trên trường mật độ, dù trong không gian ẩn của mô hình sinh hay trên
+mật độ phần tử của tối ưu tô-pô, đều sẽ khai thác sự khác biệt giữa trường mà
+nó lấy đạo hàm và thiết kế nhị phân cuối cùng được phân tích. Bộ tối ưu đạt
+hàm mục tiêu $10^{-10}$ trên những trường mà bộ kiểm chứng nhìn thấy rất khác
+(Hình~\ref{fig:gap}), và điều tương tự xảy ra với tối ưu tô-pô dùng phép
+chiếu Heaviside tăng dần tới $\beta=64$. Khoảng lệch này không thấy được trên
+đường cong mất mát. Từ đó có ba cách khắc phục, đều rẻ: đưa các phép biến đổi
+kiểm chứng vào hàm mục tiêu, chọn ứng viên theo sai số kiểm chứng thay vì sai
+số tối ưu, và coi ô suy biến là thất bại ngay trong bộ kiểm chứng. Hai thành
+phần đầu không mới trong tối ưu tô-pô theo mật độ
+\citep{guest2004achieving,wang2011projection}; điều bài báo này chỉ ra là bỏ
+qua chúng làm thay đổi kết luận của phép so sánh giữa các phương pháp, và con
+đường sinh lẫn con đường kinh điển đều cần chúng như nhau. Thành phần thứ ba
+dễ bị bỏ sót: một ô rỗng có hệ số Poisson của vật liệu nền, và trong thí
+nghiệm đổi dấu, các ô như vậy là đáp án tốt nhất mà tối ưu tô-pô trả về cho
+ba mục tiêu.
 
 \paragraph{Khả năng chế tạo và mục tiêu ngoài phân phối.}
-Tối ưu tô-pô chạy từ đầu tạo ô liên thông với kích thước nét đủ lớn thường
-xuyên gấp hơn hai lần pipeline sinh. Tinh chỉnh không gian ẩn làm tăng nhẹ tỉ
-lệ này, còn khởi tạo tối ưu tô-pô bằng thiết kế sinh ra không lấy lại được nó,
-vì một phép chiếu khởi đầu sắc giữ nguyên tô-pô được sinh. Với mục tiêu không
+Khi chỉ tối ưu hệ số Poisson, tối ưu tô-pô chạy từ đầu tạo ô liên thông với
+kích thước nét đủ lớn thường xuyên gấp hơn hai lần pipeline sinh. Khởi tạo tối
+ưu tô-pô bằng thiết kế sinh ra không lấy lại được tỉ lệ này, vì một phép chiếu
+khởi đầu sắc giữ nguyên tô-pô được sinh; phạt chính các lỗi chế tạo được kiểm
+chứng ngay trong tinh chỉnh không gian ẩn thì lấy lại được, với cái giá là
+lợi thế độ chính xác. Độ chính xác và khả năng chế tạo tranh nhau cùng một số
+ít bậc tự do ẩn, và trọng số giữa chúng là một quyết định thiết kế mà bộ kiểm
+chứng, chứ không phải đường cong hàm mất mát, phải cung cấp thông tin. Với mục tiêu không
 auxetic, cVAE đạt đúng dấu ở nơi truy xuất từ thư viện không làm được, nhưng
 tối ưu tô-pô đạt mục tiêu chính xác hơn nhiều. Theo biên độ, tinh chỉnh đẩy
 được vào những vùng chỉ có vài mẫu huấn luyện, nhưng mọi biến thể sinh đều
@@ -919,8 +1038,10 @@ vật liệu nền khác và ô ba chiều chưa được xét, và chưa thiế
 nghiệm thực tế.
 (ii) Pipeline sinh thất bại với mục tiêu dị hướng mạnh ($r\ge10$), vốn thưa
 trong dữ liệu huấn luyện; tối ưu tô-pô thì không.
-(iii) Tối ưu tô-pô tạo ô chế tạo được thường xuyên gấp hơn hai lần (0,74--0,83
-so với 0,32--0,35).
+(iii) Khi không có phạt chế tạo, tối ưu tô-pô tạo ô chế tạo được thường xuyên
+gấp hơn hai lần (0,74--0,83 so với 0,32--0,35); khi có phạt, pipeline sinh tiến
+gần (0,72--0,77) nhưng mất lợi thế sai số cặp. Khả năng chế tạo được kiểm tra
+bằng hình học, không bằng mô hình quá trình in.
 (iv) Với mục tiêu có dấu chưa thấy, tối ưu tô-pô chính xác hơn rõ rệt; lợi
 thế của mô hình sinh trong vùng này chỉ đúng khi so với truy xuất.
 (v) Lợi thế chi phí được khấu hao sau khoảng 3\,500 mục tiêu.
@@ -931,16 +1052,19 @@ lập trên tập B và C cùng phép kiểm định đặt trước trên tập
 không xóa bỏ, sự phụ thuộc này.
 
 \section{Kết luận}
-Tinh chỉnh ô vật liệu meta được sinh ra bằng vật lý chính xác chỉ đáng tin cậy
-khi hàm mục tiêu được tính trên chính thiết kế sẽ được kiểm chứng: đã nhị
-phân hóa, đã lấy mẫu lại và đã kiểm tra suy biến. Với thay đổi này, một cVAE
-kèm tinh chỉnh không gian ẩn ngang tối ưu tô-pô hội tụ về $\nuot$ với số lần
-giải FE ít hơn khoảng tám lần và đạt sai số cặp thấp hơn với mục tiêu dị
-hướng vừa phải, được tái lập trên ba tập mục tiêu rời nhau. Tối ưu tô-pô chạy
-từ đầu vẫn là lựa chọn tốt hơn cho mục tiêu dị hướng mạnh, cho khả năng chế
-tạo và cho mục tiêu ngoài dữ liệu huấn luyện. Cùng nguyên tắc đó áp dụng cho
-chính tối ưu tô-pô: thứ cần được tối ưu và so sánh là thiết kế được kiểm
-chứng, không phải trường mật độ đã chiếu.
+Với thiết kế ngược ô auxetic hai chiều, một cVAE chọn tốt nhất trong 30 mẫu
+kèm tinh chỉnh không gian ẩn ngang tối ưu tô-pô hội tụ về $\nuot$ kiểm chứng
+với số lần giải FE ít hơn khoảng tám lần và đạt sai số cặp thấp hơn với mục
+tiêu dị hướng vừa phải, được tái lập trên ba tập mục tiêu rời nhau. Thành
+phần làm nên điều này là tính hàm mục tiêu tinh chỉnh trên chính thiết kế sẽ
+được kiểm chứng: đã nhị phân hóa, đã lấy mẫu lại và đã kiểm tra suy biến.
+Pipeline sinh là lựa chọn phù hợp khi cần phục vụ nhiều mục tiêu trong dải
+huấn luyện với độ dị hướng vừa phải; tối ưu tô-pô chạy từ đầu vẫn là lựa chọn
+tốt hơn cho mục tiêu dị hướng mạnh, cho mục tiêu ngoài dữ liệu huấn luyện và
+khi chỉ cần vài ô. Khả năng chế tạo có thể lấy lại bằng cách phạt nó trong
+chính bước tinh chỉnh, với cái giá là lợi thế độ chính xác. Cùng nguyên tắc đó áp dụng cho chính
+tối ưu tô-pô: thứ cần được tối ưu và so sánh là thiết kế được kiểm chứng,
+không phải trường mật độ đã chiếu.
 
 \appendix
 \section{Cân bằng cạnh tuần hoàn}
