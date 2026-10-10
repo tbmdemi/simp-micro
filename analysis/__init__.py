@@ -21,10 +21,4 @@ from . import image
 from . import report
 from . import cli
 
-# Utility functions
-from .utils import safe_float, round_metric, resolve_phase1_dir, load_json
-
-__all__ = [
-    'dataset', 'image', 'report', 'cli',
-    'safe_float', 'round_metric', 'resolve_phase1_dir', 'load_json',
-]
+__all__ = ['__version__', 'VERSION_INFO', 'dataset', 'image', 'report', 'cli']

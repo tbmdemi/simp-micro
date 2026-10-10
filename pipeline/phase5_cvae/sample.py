@@ -15,11 +15,11 @@ hình dạng generator sinh ra, KHÔNG dùng trực tiếp kết quả cho mục
 thực tế.
 
 Quy trình CHÍNH THỨC để lấy 1 geometry đáng tin cậy là best_of_n_eval.py
-(sinh N ứng viên, chấm điểm bằng FE thật, giữ ứng viên tốt nhất -
-R2=+0.44..+0.60, hit rate 100% trên tập test, xem README §5):
+(sinh N ứng viên, chấm điểm bằng FE thật, giữ ứng viên tốt nhất - với
+cvae_v2_finetuned.pt R2(FE, n=300) = 0,995, xem docs/PIPELINE.md § 5):
 
     python3 pipeline/phase5_cvae/best_of_n_eval.py \\
-        --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30
 
 Cách chạy (chỉ để xem nhanh, không phải quy trình chính thức):
     python3 pipeline/phase5_cvae/sample.py --v12 -0.6 --v21 -0.6 --n 8

@@ -80,6 +80,37 @@ cho thiết kế cuối cVAE và SIMP trên IN100/B/C + đổi dấu: SIMP trả
 mục tiêu đổi dấu, cVAE suy biến 3/28; SIMP vẫn thắng OOD khi chỉ so mục tiêu cả hai không suy biến.
 Sinh bởi `scripts/p1_10_degenerate_check.py`.
 
+### K1 (2026-10-08, ĐÃ có trong bản thảo: Methods, Results đoạn K1 + Hình 8 `fig_k1_tradeoff`)
+
+Mọi file trong `outputs/phase5/plan_v3/k1/`. Tiêu chí ghi trước + bảng số: `docs/plan.md` mục K1.
+
+| Kết quả | File | Sinh bởi |
+|---|---|---|
+| Pilot chỉnh λ (IN100-B, 20 condition) | `pilot_B20_l{0,0.03,0.1,1}.json` | harness `--corner-weight λ --thin-weight λ --seed 456` |
+| Kết quả chính λ = 0,1 (IN100) + xác nhận (IN100-C) | `k1_in100_bo30_l0.1.json`, `k1_in100c_bo30_l0.1.json` → `k1_comparison.json` | harness; `scripts/k1_compare.py` |
+| Đường đánh đổi λ (IN100-B, 100 target) - Hình 8 | `sweep_in100b_l{0.03,0.1,0.3,1}.json` (λ = 0: `../p1_9_r5_in100b_bo30_nofp.json`) | harness; `scripts/make_figures.py` |
+
+### N1, N2 (2026-10-10, CHƯA đưa vào bản thảo - chờ tác giả chốt N3-D1/D2, `docs/plan.md` mục N3)
+
+Tiêu chí ghi trước + bảng số: `docs/plan.md` mục N1, N2, N2-E1′, N2-E3-F, N2-C6, N2-S, N2-E3-S15.
+Phương pháp, câu gợi ý, trích dẫn cần thêm: `ghi_chu_viet_bao.md`. Thước đo: e_verify (50²), e_mesh
+(200² kron), e_real (hiện thực hóa làm mượt 200², σ 0,5 / 1,0), e_shift, e_ed, chế tạo 4 hướng.
+
+| Kết quả | File (trong `outputs/phase5/plan_v3/`) | Sinh bởi |
+|---|---|---|
+| N1 hội tụ lưới 6 thiết kế (50² → 400², biên bậc thang vs bo) | `n1/mesh_convergence.json` | `n1/mesh_convergence.py` |
+| N1 pilot objective (A, K1, N1, lưới 100², N1 + 100²; IN100-B 20) | `n1/pilot_B20_*.json`, `n1/pilot_B20_scores*.json` | harness `--realization-shifts`, `--fe-upsample`; `n1/eval_pilot.py`, `n1/sigma_check.py` |
+| N2 pilot E1 robust, E2 lưới 100² mức cuối | `n2/pilot_B20_E1_robust.json`, `n2/pilot_B20_E2_last100.json`, `n2/score_pilot.log` | harness `--robust-etas`, `--fe-upsample-last-only` |
+| N2 pilot F (lọc σ = 1) và E1′ | `n2/pilot_B20_F_filter.json`, `n2/pilot_B20_E1p_robust.json`, `n2/score_e1p_pilot.{json,log}` | harness `--design-filter-sigma` |
+| **E3-F xác nhận n = 100 (IN100 + IN100-C) - ĐẠT** | `n2/e3f_in100{,c}_filter.json` → `n2/e3f_scores_in100{,c}{,_vs_simp}.json`, `n2/final_e3f.log` | `n2/run_e3f.sh`, `n2/eval_general.py` |
+| Xóa đảo rời (A, F, SIMP) | `n2/island_cleanup.{json,log}` | `n2/island_cleanup.py` |
+| Độ nhạy σ ∈ {0,5; 0,75; 1,5} (pilot) | `n2/pilot_B20_F_s*.json`, `n2/sigma_scores.json`, `n2/run_sigma.log` | `n2/run_sigma.sh` |
+| Xác nhận σ = 1,5 (n = 100 × 2) | `n2/e3s15_in100{,c}.json` → `n2/e3s15_scores_*.json`, `n2/e3s15_vs_simp_*.json` | `n2/run_e3s15.sh` |
+| Hình so sánh A / F / SIMP (5 mục tiêu, lát 2×2) | `n2/fig_designs_A_F_SIMP.png` | script tạm, **chưa lưu trong repo** - cần viết lại khi đưa vào bài (N3-3) |
+
+Nếu tác giả chọn F + xóa đảo làm pipeline chính (N3-D1), mọi số của bài phải chạy lại theo N3-2
+(giống P1.9) trước khi sửa bản thảo (N3-3).
+
 ## Việc tác giả cần bổ sung trước khi nộp
 
 - Tên tác giả, đơn vị, tác giả liên hệ, mục đóng góp tác giả/xung đột lợi ích, URL kho mã.

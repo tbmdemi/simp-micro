@@ -26,8 +26,6 @@ from pipeline.phase2_multi_batch.params import (
     BatchConfig,
     BatchMode,
     SamplingStrategy,
-    load_phase1_params,
-    prepare_output,
 )
 from pipeline.phase2_multi_batch.sampling import generate_design
 from pipeline.phase2_multi_batch.runner import run_batch_from_design
@@ -423,7 +421,7 @@ def main() -> None:
                                 any_change = True
                                 break
                     if any_change:
-                        print(f"  Updating effective param ranges for next batch.")
+                        print("  Updating effective param ranges for next batch.")
                         for pname, (lo, hi) in decision_config.param_ranges.items():
                             if pname in effective_param_ranges:
                                 olo, ohi = effective_param_ranges[pname]
@@ -627,7 +625,6 @@ def _mock_batch_summary(
     lower objective values (potentially negative) for good designs,
     correlated v12/v21 with design parameters.
     """
-    import pandas as pd
 
     n = len(design)
     np.random.seed(42 + config.batch_id)

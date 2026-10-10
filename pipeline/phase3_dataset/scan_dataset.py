@@ -18,7 +18,6 @@ Output: outputs/phase3/manifest.csv
 import os
 import glob
 import re
-import json
 import pandas as pd
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))

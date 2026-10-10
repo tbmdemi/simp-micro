@@ -79,7 +79,7 @@ class Encoder(nn.Module):
         latent_dim=32,
         channels=(32, 64, 128, 256),
         resolution=64,
-        use_kan=True,
+        use_kan=False,
     ):
         super().__init__()
         blocks = []
@@ -117,8 +117,8 @@ class Decoder(nn.Module):
         latent_dim=32,
         channels=(256, 128, 64, 32),
         resolution=64,
-        use_kan=True,
-        enforce_symmetry=True,
+        use_kan=False,
+        enforce_symmetry=False,
     ):
         super().__init__()
         n_ups = len(channels)
@@ -206,7 +206,7 @@ class WireContinuousDecoder(nn.Module):
         resolution=64,
         omega0=10.0,
         s0=10.0,
-        enforce_symmetry=True,
+        enforce_symmetry=False,
     ):
         """Args:
         latent_dim: số chiều latent z.
@@ -291,8 +291,8 @@ class CVAE(nn.Module):
         wire_hidden_dim=128,
         wire_omega0=10.0,
         wire_s0=10.0,
-        use_kan=True,
-        enforce_symmetry=True,
+        use_kan=False,
+        enforce_symmetry=False,
     ):
         """channels: kênh encoder tăng dần (VD (32,64,128,256)); decoder tự
         dùng đảo ngược. train.py lưu channels vào checkpoint (sample.py đọc
@@ -303,7 +303,13 @@ class CVAE(nn.Module):
         "wire" (WireContinuousDecoder, Task 2 - WIRE INR, resolution-
         agnostic). wire_hidden_dim/wire_omega0/wire_s0 chỉ dùng khi
         decoder_type="wire". train.py lưu decoder_type vào checkpoint để
-        sample.py/evaluate.py dựng đúng model khi load."""
+        sample.py/evaluate.py dựng đúng model khi load.
+
+        use_kan / enforce_symmetry: mặc định False từ 2026-10-10 (head
+        nn.Linear, không ép đối xứng) - đúng cấu hình production: ablation
+        P1.2 cho thấy KAN không thắng Linear, và chỉ 2,5% ảnh train đối
+        xứng qua đường chéo nên ép đối xứng buộc v12 = v21 sai với đa số
+        target. Load checkpoint luôn qua cvae_kwargs_from_checkpoint()."""
         super().__init__()
         self.latent_dim = latent_dim
         self.decoder_type = decoder_type
@@ -389,7 +395,7 @@ def cvae_kwargs_from_checkpoint(ckpt: dict) -> dict:
       - use_kan: suy từ state_dict (khóa `spline_weight` chỉ có ở
         EfficientKANLinear).
       - enforce_symmetry: False - checkpoint trước 2026-09-11 train không có
-        ràng buộc này; mặc định True của CVAE.__init__ chỉ dành cho train mới.
+        ràng buộc này (cũng là mặc định của CVAE.__init__ từ 2026-10-10).
 
     Args:
         ckpt: dict đã torch.load, có ít nhất `latent_dim` và

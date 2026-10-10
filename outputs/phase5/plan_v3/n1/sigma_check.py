@@ -1,6 +1,6 @@
 """Kiểm tính vòng lặp của N1: chấm lại bằng hiện thực hóa có σ khác σ tối ưu
 (0,5) và lưới 200² - nếu N1 chỉ thắng ở đúng σ=0,5 thì là overfit thước đo."""
-import json, sys
+import sys
 from multiprocessing import Pool
 import numpy as np
 from eval_pilot import realize, jobs_for

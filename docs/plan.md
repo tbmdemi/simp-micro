@@ -61,8 +61,8 @@ lúc đánh giá, checkpoint Linear crash. Benchmark refinement 2026-09-23 (KAN 
 R²(v12) baseline **0,058** (không phải −16,00), refined **0,92** (không phải −7,60), MAE giảm 68%
 [CI95 57-76%]. Mọi số đo qua `load_cvae` trên checkpoint cũ trong khoảng 2026-09-11 → 2026-09-25
 cần đo lại trước khi trích dẫn. Ngoài ra: chỉ 2,5% ảnh train đối xứng qua đường chéo, nên decoder
-`enforce_symmetry=True` (mặc định train mới) không biểu diễn được dữ liệu dị hướng - P1.2 phải chạy
-`--disable-symmetry`.
+`enforce_symmetry=True` (mặc định train mới tới 2026-10-10; nay mặc định False) không biểu diễn được
+dữ liệu dị hướng - P1.2 phải chạy `--disable-symmetry`.
 
 ---
 

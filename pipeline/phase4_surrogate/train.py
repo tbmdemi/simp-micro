@@ -19,7 +19,6 @@ import time
 import argparse
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.dirname(__file__))

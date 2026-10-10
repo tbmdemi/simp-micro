@@ -10,8 +10,7 @@ con này để loại bỏ các bậc tự do dư thừa.
 """
 
 import numpy as np
-from scipy.sparse import coo_matrix, csr_matrix, eye
-from scipy.sparse.linalg import spsolve
+from scipy.sparse import coo_matrix
 
 
 def build_pbc(nelx: int, nely: int, nodenrs: np.ndarray):

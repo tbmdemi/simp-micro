@@ -49,7 +49,7 @@ v3 mục 2.4.
 
 Cách chạy:
     python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \\
-        --cvae-ckpt outputs/phase5/cvae_kan_realphysics_v2.pt \\
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt \\
         --n-conditions 24 --steps 30
 
     # quét OOD, best-of-30, force_periodic
@@ -713,7 +713,9 @@ def main():
     )
     parser.add_argument(
         "--cvae-ckpt",
-        default=os.path.join(PHASE5_DIR, "cvae_kan_realphysics_v2.pt"),
+        # Checkpoint production (mọi số Bài #1); dòng KAN đã đóng (P1.2) và
+        # checkpoint KAN cũ đã xóa khi dọn outputs/ 2026-10-10.
+        default=os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt"),
     )
     parser.add_argument("--n-conditions", type=int, default=24)
     parser.add_argument("--steps", type=int, default=30)

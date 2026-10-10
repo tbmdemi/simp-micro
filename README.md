@@ -63,7 +63,7 @@ Lộ trình thiết kế ngược gồm 8 giai đoạn (phase). Phase 1-4 đã h
 | 5 | Conditional VAE | ✅✅ Đã sửa surrogate-exploitation bằng differentiable-physics; đã retrain và mở rộng condition | `cvae_v2_finetuned.pt` là checkpoint production khuyến nghị: R²(FE,n=300)=**0,9953** (oracle), hit rate single-shot=**99,7%**, frac manufacturable=0,247. `cvae_realphysics.pt` trên dataset v1 đạt R²=0,9984/hit-rate 98,3%/manuf=0,280 ở phép đo tương ứng. Condition optional gồm `volfrac`/`void_size_frac` (`--extended-condition`) và ν₀ (`--include-nu0`); A/B trên cùng dataset cho ν₀ tăng R² 0,9776→0,9843 và manufacturability 0,312→0,365. Composite score dùng trọng số accuracy/manufacturability/aesthetic `0,6/0,3/0,1`. Xem [docs/PIPELINE.md § 5](docs/PIPELINE.md#5-conditional-vae-phase-5---đã-sửa-tận-gốc-bằng-differentiable-physics-2026-07-24) và [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md). **2026-09-25 (nhánh `substrate-material`, [docs/plan.md](docs/plan.md) v3):** tinh chỉnh latent bằng gradient FE khả vi *nhận thức nhị phân hóa* (`--projection-betas`) đưa R²(FE,v12) single-shot 0,874→**0,998** và best-of-30 0,986→0,997 trên `cvae_v2_finetuned.pt`; ablation có kiểm soát KAN vs Linear (2 seed, FE thật) - **KAN không thắng**, giữ Linear; WIRE decoder đã đóng (không đạt tiêu chí dừng). Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-09-25. |
 | 6 | Hậu xử lý & kiểm định FEA | ✅ Hoàn thành | Nhị phân hoá + connectivity/min-feature/periodicity (`manufacturability.py`) + lọc/verify bằng FE thật (`best_of_n_eval.py`) - đã có sẵn trong pipeline Phase 5 |
 | 7 | Active-learning loop | ✅ Kết luận (2026-07-31) | Implement + chạy production (`pipeline/phase5_cvae/active_learning.py`) - **không cải thiện** checkpoint đã tối ưu (`cvae_realphysics.pt` gần mức trần, mean_abs_error tệ đi 0,0246→0,0686 sau 1 vòng) - giữ nguyên checkpoint production. Chi tiết: [EXPERIMENT_LOG.md](EXPERIMENT_LOG.md) mục 2026-07-31 |
-| 8 | Xác thực cuối & đóng gói | 🟨 Hầu hết hoàn thành | **8.1** đối chiếu FE độc lập: ✅ `scikit-fem` khớp tới 1e-9 (R²=1,000000, n=24). **8.3** thư viện thiết kế: ✅ 24 thiết kế, hit-rate 100%, 87,5% manufacturable. **8.4** báo cáo: ✅. **8.2** biến dạng lớn và **8.5** STL: ⬜ tùy chọn, chưa làm. |
+| 8 | Xác thực cuối & đóng gói | 🟨 Hầu hết hoàn thành | **8.1** đối chiếu FE độc lập: ✅ `scikit-fem` khớp tới 1e-9 (R²=1,000000, n=24). **8.3** thư viện thiết kế: ✅ 24 thiết kế, hit-rate 100%, 87,5% manufacturable (ảnh đã xóa khỏi `outputs/` khi dọn repo 2026-10-10 - tạo lại bằng `analysis/scripts/build_design_library.py`). **8.4** báo cáo: ✅. **8.2** biến dạng lớn và **8.5** STL: ⬜ tùy chọn, chưa làm. |
 
 **Cập nhật 2026-09-25 (plan v3, nhánh `substrate-material`):** so sánh "KAN vượt Linear ~2×"
 và Exp 3 (2026-09-11) trước đây dựa trên `property_accuracy()` (chấm qua surrogate - xếp hạng ngược
@@ -86,9 +86,24 @@ SIMP**. Bỏ `force_periodic` (C5) và chạy lại mọi số (P1.9): độ ch�
 và OOD đổi dấu. Bài #1: Khung A, tên "Optimizing What Is Verified…", nộp SMO. Xem `docs/plan.md`
 mục 4 và `docs/LIMITATIONS.md` #36-38.
 
+**Cập nhật 2026-10-08 (plan v3 P1.10, K1):** số trên lưới 200² không fp: R²(ν₁₂) cVAE 0,990 vs SIMP
+0,985 (xếp hạng giữ). K1 refine nhận thức chế tạo (phạt chạm góc + nét mảnh, λ = 0,1, tiêu chí ghi
+trước): chế tạo 0,31 → 0,72-0,76 nhưng MAE ν₁₂ tệ hơn 37-40% → tác giả chọn phương án A: pipeline
+chính giữ λ = 0, K1 là điểm vận hành thứ hai trong bài. Xem `docs/plan.md` mục K1.
+
+**Cập nhật 2026-10-10 (N1, N2 - chưa đưa vào bản thảo):** (1) refine phần lớn là khớp lưới verify
+50² (MAE ν₁₂ −68% trên 50², chỉ −26% trên lưới 128²) và ν của thiết kế pixel chỉ xác định tới ~0,02
+tùy biểu diễn biên. (2) **Thiết kế qua bộ lọc** (F, `--design-filter-sigma 1.0`: thiết kế = ảnh
+decoder lọc Gauss σ = 1 rồi chiếu, verify/chọn/kiểm chế tạo trên cùng thiết kế đó) **đạt xác nhận
+đặt trước** n = 100 trên IN100 và IN100-C: sai số ν₁₂ trên biên thực tế −43…−47% so với pipeline cũ,
+−53% so với SIMP, chế tạo 0,37-0,39 → 0,78-0,81, cùng ~107 FE/mục tiêu. (3) Thước đo chế tạo cũ chủ
+yếu đếm đảo rời: xóa đảo (ν không đổi) cho A 0,84 / F 0,92-0,94 / SIMP 1,00. Robust formulation co/giãn
+chuẩn không đạt; F không bền hơn với co/giãn đều. Chờ tác giả chốt đổi pipeline chính (`docs/plan.md`
+mục N2, N3; `docs/LIMITATIONS.md` #39-42; ghi chú viết báo `docs/paper1/ghi_chu_viet_bao.md`).
+
 > Chi tiết từng phase con: xem [docs/PIPELINE.md](docs/PIPELINE.md), [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) và [docs/ARCHITECT.md](docs/ARCHITECT.md).
 > 
-> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative so với retrieval rõ nhất ở sign-flip OOD (ν₁₂ dương 6/6 mục tiêu, MAE 0,19 so với 0,40), nhưng ở OOD SIMP chạy từ đầu vẫn tốt hơn cVAE (LIMITATIONS #32); không ngoại suy được biên độ ra ngoài dải train. Refine nhận thức nhị phân hóa nâng R²(FE) trong phân phối lên ~0,998 (LIMITATIONS #29). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
+> **Khoảng trống đã biết** (tóm tắt - xem đầy đủ tại [docs/LIMITATIONS.md](docs/LIMITATIONS.md)): `mu` vẫn tắt; `f1/f2` mới được backfill tới Phase 4, chưa nối vào cVAE; toàn bộ pipeline vẫn là FEM tuyến tính. Ở 8D in-distribution, cVAE chưa thắng retrieval về accuracy, manufacturability hoặc aesthetic; bằng chứng lợi thế generative so với retrieval rõ nhất ở sign-flip OOD (ν₁₂ dương 6/6 mục tiêu, MAE 0,19 so với 0,40), nhưng ở OOD SIMP chạy từ đầu vẫn tốt hơn cVAE (LIMITATIONS #32); không ngoại suy được biên độ ra ngoài dải train. Refine nhận thức nhị phân hóa nâng R²(FE) trong phân phối lên ~0,998 (LIMITATIONS #29), nhưng phần lớn lợi ích là khớp lưới verify 50² (#39) và ν của thiết kế pixel chỉ xác định tới ~0,02 (#40). Không dùng hit-rate một mình làm bằng chứng vì base rate auxetic của dataset cao.
 
 ### Phạm vi Claim Khoa học (đọc trước khi trích dẫn)
 
@@ -160,7 +175,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64
 │                               #   adversarial_dataset, self_play, best_of_n_eval (inference chính thức),
 │                               #   manufacturability, coverage_eval, bootstrap_ci (CI cho R²/hit_rate)
 │
-├── analysis/                 # Phân tích độ nhạy (ANOVA, Sobol, regression), Pareto front, dataset QC
+├── analysis/                 # CLI `simp-analysis` (dataset QC, chỉ số ảnh, báo cáo HTML), lọc Pareto, scripts/ sinh/kiểm dữ liệu
 ├── notebooks/                # Jupyter notebook phân tích và xác thực
 ├── tests/                     # Bộ kiểm thử PyTest (số lượng phụ thuộc phiên bản/dependency)
 ├── outputs/                   # Dữ liệu sinh ra - phần lớn (metadata/CSV/figures nhỏ, outputs/multi_batch/, outputs/pipeline/) ĐÃ commit; chỉ *.npz/*.npy/*.pt và outputs/phase3/*.npz bị gitignore (quá lớn)
@@ -309,12 +324,12 @@ Trạng thái kiểm thử: chạy `pytest tests/ -q` sau khi cài đủ depende
 | Nạp dataset & phân loại auxetic | ✅ |
 | Định dạng CSV của logger | ✅ |
 | `pipeline/phase4_surrogate/` (model, dataset, evaluate, export, train, **bootstrap_ci**) | ✅ |
-| `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**, **manufacturability**, **coverage_eval**, **bootstrap_ci**) | ✅ |
+| `pipeline/phase5_cvae/` (model, dataset, losses, verify_fe, sample, adversarial_dataset, self_play, train, **best_of_n_eval**, **manufacturability**, **coverage_eval**, **bootstrap_ci**, tandem_lbfgs, heaviside, manuf_penalty, realization, benchmark refinement / SIMP baseline / hybrid) | ✅ |
 | `pipeline/phase1_screening/` (refine_params: quyết định ACTIVE/FIXED; analyst: Spearman, top3, đếm success/converged) | ✅ |
 | `pipeline/phase2_multi_batch/` (params, sampling: Sobol/LHS/random, coverage: sparse-region + coverage_report, adaptive: stop/refine/expand) | ✅ |
 | `pipeline/phase3_dataset/` (augment_symmetry: swap ν₁₂↔ν₂₁ khi xoay 90/270°, finalize_dataset: stratify chống rò rỉ dữ liệu, scan_dataset, build_npz) | ✅ |
 
-> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~4s) ở mọi nơi. `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O (`screening_parallel.py`'s main loop, `multi_batch/main.py`, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`) vẫn chưa có test - coverage mới thêm cho phase1/2/3 tập trung vào logic thuần (quyết định ACTIVE/FIXED, sampling, coverage/adaptive, augment/stratify), không phải toàn bộ pipeline end-to-end.
+> Test dùng fixture `.npz` tổng hợp nhỏ (không phụ thuộc `outputs/phase3/*.npz` thực, bị gitignore) nên chạy nhanh (~15 s cho toàn bộ) ở mọi nơi; test chỉ ghi vào thư mục tạm (`tmp_path`), không đụng `outputs/` (từ 2026-10-10 - trước đó các smoke test `run_simp()` xóa và ghi đè `outputs/simp_results_<seed>/`). `pipeline/seeds/*.py` và các hàm CLI/orchestration nặng I/O (`screening_parallel.py`'s main loop, `multi_batch/main.py`, `multi_batch/runner.py`'s `evaluate_single`, `visualize.py`) vẫn chưa có test - coverage mới thêm cho phase1/2/3 tập trung vào logic thuần (quyết định ACTIVE/FIXED, sampling, coverage/adaptive, augment/stratify), không phải toàn bộ pipeline end-to-end.
 >
 > **Lưu ý khi thêm test:** `phase4_surrogate/` và `phase5_cvae/` định nghĩa module con trùng tên (`dataset.py`, `model.py`...) qua import trần (`sys.path.insert` + `from dataset import X`) - import 2 module cùng tên từ *phase khác nhau* trong 1 tiến trình sẽ đè cache `sys.modules`. Fixture `_isolate_pipeline_bare_imports` (`tests/conftest.py`) reset cache này, nhưng chỉ hoạt động nếu import nằm **bên trong** hàm test (không phải top-level file) - luôn import trễ (lazy).
 
@@ -322,10 +337,11 @@ Trạng thái kiểm thử: chạy `pytest tests/ -q` sau khi cài đủ depende
 
 ## Giới hạn Đã biết / Known Limitations
 
-Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
+Danh sách đầy đủ (song ngữ Việt/English, đánh số tới #42) đã được tách sang **[docs/LIMITATIONS.md](docs/LIMITATIONS.md)** cùng với mục "Phạm vi Claim Khoa học". Các điểm đáng chú ý nhất:
 
 - R²/hit-rate của Phase 5 chỉ đáng tin ở cỡ mẫu lớn (n≈300-789); ở n=24 CI rất rộng.
-- Manufacturability của đầu ra gốc (không lọc) rất thấp; cần `force_periodic()`/`--require-manufacturable`.
+- Manufacturability của đầu ra gốc thấp (cVAE 0,22-0,35 theo thước đo cũ); `force_periodic` đã bỏ (C5, #34). Thước đo cũ chủ yếu đếm đảo rời - xóa đảo (ν không đổi) cho 0,84-1,00 (#42); thiết kế qua bộ lọc nâng lên 0,78-0,81 trước xóa đảo (#41).
+- Độ chính xác báo cáo là so với lưới FE 50²; lợi ích refine phần lớn là khớp lưới này, ν pixel chỉ xác định tới ~0,02 (#33, #39, #40).
 - Phạt `mu` trong mục tiêu auxetic đang tắt (`mu=0.0`).
 - `f1, f2` (Pha B) chưa nối làm condition cho cVAE - xem `docs/archive/PROJECT_PLAN.md` Nhóm 2.
 - Test tự động chưa phủ hết đường I/O nặng (screening loop, seeds, visualize và FE call thật trong `multi_batch/runner.py::evaluate_single`).
@@ -337,11 +353,14 @@ Danh sách đầy đủ 21 mục (song ngữ Việt/English) đã được tách
 ---
 
 ## Tài liệu
-- [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.1): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
+- [`docs/plan.md`](docs/plan.md) - **kế hoạch sống (v3)**: mọi thí nghiệm P1.x, K1, N1, N2 kèm tiêu chí ghi trước khi chạy, kết quả và việc còn lại (mục N3)
+- [`docs/paper1/`](docs/paper1/README.md) - Bài #1 (bản thảo LaTeX EN + VI, hình, script tái lập số liệu, bảng nguồn gốc số liệu); [`ghi_chu_viet_bao.md`](docs/paper1/ghi_chu_viet_bao.md) - ghi chú phương pháp/số/trích dẫn cho N1, N2
+- [`docs/de_xuat_cai_thien_ket_qua.md`](docs/de_xuat_cai_thien_ket_qua.md) - tra cứu tài liệu + đề xuất cải thiện kết quả (cơ sở của N2)
+- [`docs/PIPELINE.md`](docs/PIPELINE.md) - chi tiết từng bước pipeline (Phase 1-5.2): lệnh chạy, số liệu R²/hit-rate, lịch sử phát hiện+sửa bug
 - [`docs/CLI_GUIDE.md`](docs/CLI_GUIDE.md) - tổng hợp mọi lệnh dòng lệnh (test suite, `simp`, `simp-analysis`, từng phase 1-5, sự cố thường gặp)
-- [`docs/archive/PROJECT_PLAN.md`](docs/archive/PROJECT_PLAN.md) - roadmap ưu tiên theo effort/phụ thuộc thật (Giai đoạn A vật liệu nền, B xếp hạng đa mục tiêu, F nhiệt/CTE, v.v.)
+- [`docs/archive/PROJECT_PLAN.md`](docs/archive/PROJECT_PLAN.md) - roadmap cũ (đã lưu trữ, thay bằng `docs/plan.md` v3)
 - [`docs/ARCHITECT.md`](docs/ARCHITECT.md) - kiến trúc hệ thống: bản đồ module, luồng dữ liệu 8-phase, điểm mở rộng cho roadmap, kiến trúc đích giả định
-- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + 38 mục giới hạn đã biết (song ngữ)
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) - phạm vi claim khoa học + giới hạn đã biết đánh số tới #42 (song ngữ)
 - [`docs/PHYSICS_AND_ML.md`](docs/PHYSICS_AND_ML.md) - bản chất toán học/cơ học/vật lý của SIMP + đồng nhất hóa, và vai trò cụ thể của ML/DL (surrogate, cVAE, differentiable-physics) trong pipeline
 - [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) - nhật ký các phát hiện/sửa lỗi và đột phá chính thay đổi kết quả dự án
 - `outputs/figures/` - năm figure đã dựng cho bài báo (kiến trúc, data hygiene, OOD, Pareto và uốn tấm)

@@ -30,7 +30,7 @@ sánh với hành vi gốc trước khi có cải tiến này).
 
 Cách chạy:
     python3 pipeline/phase5_cvae/best_of_n_eval.py \\
-        --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30
 """
 import os
 import sys

@@ -133,6 +133,7 @@ class TestKANRegressionHead:
             latent_dim=8,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=True,
         )
         assert isinstance(model.encoder.fc_mu, EfficientKANLinear)
         assert isinstance(model.encoder.fc_logvar, EfficientKANLinear)
@@ -144,6 +145,7 @@ class TestKANRegressionHead:
             latent_dim=8,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=True,
         )
         # spline_weight [out, in, grid_size + spline_order] = [*, *, 8]
         assert model.decoder.fc.spline_weight.dim() == 3
@@ -155,6 +157,7 @@ class TestKANRegressionHead:
             latent_dim=8,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=True,
         )
         z = torch.randn(2, 8)
         cond = torch.zeros(2, 2)
@@ -165,8 +168,9 @@ class TestKANRegressionHead:
         assert model.decoder.fc.spline_weight.grad is not None
         assert torch.isfinite(model.decoder.fc.spline_weight.grad).all()
 
-    def test_mlp_ablation_head_uses_linear_layers(self):
-        """The MLP ablation must keep the same CVAE tensor contract."""
+    def test_default_head_uses_linear_layers(self):
+        """Mặc định (production, P1.2) là head nn.Linear, cùng hợp đồng
+        tensor với head KAN."""
         from torch import nn
 
         model = CVAE(
@@ -174,19 +178,20 @@ class TestKANRegressionHead:
             latent_dim=8,
             resolution=64,
             channels=(4, 8, 16, 32),
-            use_kan=False,
         )
+        assert model.use_kan is False and model.enforce_symmetry is False
         assert isinstance(model.encoder.fc_mu, nn.Linear)
         assert isinstance(model.encoder.fc_logvar, nn.Linear)
         assert isinstance(model.decoder.fc, nn.Linear)
 
     def test_decoder_output_is_transpose_symmetric(self):
-        """The default decoder removes orthotropic transpose asymmetry."""
+        """enforce_symmetry=True loại bỏ bất đối xứng transpose."""
         model = CVAE(
             condition_dim=2,
             latent_dim=8,
             resolution=64,
             channels=(4, 8, 16, 32),
+            enforce_symmetry=True,
         )
         output = model.decoder(torch.randn(2, 8), torch.zeros(2, 2))
         assert torch.allclose(output, output.transpose(-1, -2), atol=1e-6)

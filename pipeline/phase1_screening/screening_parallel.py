@@ -19,7 +19,6 @@ import time
 from datetime import datetime
 from multiprocessing import Pool, cpu_count
 from typing import Dict, List, Optional, Tuple
-import glob
 
 import numpy as np
 from scipy.stats.qmc import LatinHypercube
@@ -29,8 +28,10 @@ from scipy.stats import spearmanr
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pipeline.params import (
-    PARAM_SPACE, FIXED_PARAMS, get_active_params,
-    get_param_bounds, SEEDS,
+    FIXED_PARAMS,
+    get_active_params,
+    get_param_bounds,
+    SEEDS,
 )
 from simp.runner import run_simp
 
@@ -282,9 +283,9 @@ def run_phase1_parallel_map(
     print(f'Phase 1: LHS Screening (PARALLEL) - {seed_name} / {objective}')
     print(f'  Samples: {n_samples}')
     print(f'  Workers: {n_workers}')
-    print(f'  Strategy: map (sync)')
+    print('  Strategy: map (sync)')
     print(f'  Output:  {run_dir}')
-    print(f'='*60)
+    print('='*60)
 
     # 1. Sinh mẫu LHS
     param_names = get_active_params(objective)
@@ -312,7 +313,7 @@ def run_phase1_parallel_map(
             results = pool.map(evaluate_sample, tasks, chunksize=1)
     except Exception as e:
         print(f'  ⚠️  Pool.map failed: {e}')
-        print(f'  Fallback to sequential evaluation...')
+        print('  Fallback to sequential evaluation...')
         results = [evaluate_sample(task) for task in tasks]
 
     elapsed_total = time.time() - t_start
@@ -373,7 +374,7 @@ def run_phase1_parallel_map(
         print(f'  Best sample #{best_idx}: obj={best_obj:.4e}')
         for k, v in summary['best_params'].items():
             print(f'    {k} = {v:.4f}')
-    print(f'  Top-3 influential params:')
+    print('  Top-3 influential params:')
     for t in analysis['top_3']:
         print(f'    {t[0]}: r={t[1]:+.3f}  p={t[2]:.3e}')
     print(f'  Total time: {elapsed_total:.1f}s')
@@ -397,9 +398,9 @@ def run_phase1_parallel_async(
     print(f'Phase 1: LHS Screening (PARALLEL) - {seed_name} / {objective}')
     print(f'  Samples: {n_samples}')
     print(f'  Workers: {n_workers}')
-    print(f'  Strategy: imap_unordered (async + progress)')
+    print('  Strategy: imap_unordered (async + progress)')
     print(f'  Output:  {run_dir}')
-    print(f'='*60)
+    print('='*60)
 
     # 1. Sinh mẫu LHS
     param_names = get_active_params(objective)
@@ -447,7 +448,7 @@ def run_phase1_parallel_async(
                       f"obj={obj_str} ({elapsed_str})")
     except Exception as e:
         print(f'\n  ⚠️  Pool.imap_unordered failed: {e}')
-        print(f'  Fallback to sequential evaluation...')
+        print('  Fallback to sequential evaluation...')
         results = [evaluate_sample(task) for task in tasks]
 
     elapsed_total = time.time() - t_start
@@ -504,7 +505,7 @@ def run_phase1_parallel_async(
         print(f'  Best sample #{best_idx}: obj={best_obj:.4e}')
         for k, v in summary['best_params'].items():
             print(f'    {k} = {v:.4f}')
-    print(f'  Top-3 influential params:')
+    print('  Top-3 influential params:')
     for t in analysis['top_3']:
         print(f'    {t[0]}: r={t[1]:+.3f}  p={t[2]:.3e}')
     print(f'  Total time: {elapsed_total:.1f}s')
@@ -564,7 +565,7 @@ def main() -> None:
             print(f'Error: --workers must be "auto" or integer, got {args.workers}')
             sys.exit(1)
     
-    print(f'\n[System Info]')
+    print('\n[System Info]')
     print(f'  CPU count: {cpu_count()}')
     print(f'  Workers: {n_workers}')
     print(f'  Strategy: {args.strategy}')

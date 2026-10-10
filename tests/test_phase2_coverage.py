@@ -53,7 +53,6 @@ class TestFindSparseRegions:
         assert find_sparse_regions(results) == []
 
     def test_uniform_coverage_has_few_or_no_sparse_bins(self):
-        rng = np.random.default_rng(0)
         results = [
             {"v12": float(v12), "v21": float(v21)}
             for v12 in np.linspace(-0.8, -0.1, 8)

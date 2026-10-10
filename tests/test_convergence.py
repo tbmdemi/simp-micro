@@ -2,7 +2,6 @@
 Tests for the new ConvergenceChecker (cửa sổ trượt + min_iter).
 """
 
-import pytest
 from simp.core.convergence import ConvergenceChecker
 
 

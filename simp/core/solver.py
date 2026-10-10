@@ -5,14 +5,12 @@ Giải hệ phương trình FE với ma trận độ cứng thưa và
 điều kiện biên tuần hoàn (PBC) cho phân tích ô cơ sở.
 """
 
-import logging
-
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix
-from scipy.sparse.linalg import spsolve, splu, cg, LinearOperator
+from scipy.sparse.linalg import splu
 
-# Hằng số local cho eps (tránh magic number)
-_EPS_SOLVER = 1e-9
+# Ngưỡng chuẩn chuyển vị coi là hệ gần suy biến (thiết kế rời/rỗng).
+_MAX_DISPLACEMENT_NORM = 1e6
 
 
 def solve_fe(
@@ -47,7 +45,6 @@ def solve_fe(
             U0: Ma trận chuyển vị biến dạng đơn vị (ndof, 3).
     """
     nelx, nely = xPhys.shape[1], xPhys.shape[0]
-    nele = nelx * nely
     ndof = pbc.shape[0]
 
     # Lắp ráp ma trận độ cứng toàn cục. E_penal = Emin + (rho0*x^penal)*(E0-Emin)
@@ -117,23 +114,17 @@ def solve_fe(
     # Giải cho mỗi trường hợp tải - factorize LU MỘT LẦN (K_pbc_free giống
     # nhau cho cả 3 case, chỉ RHS khác) thay vì spsolve() riêng lẻ 3 lần
     # (mỗi lần tự phân rã LU lại từ đầu → lãng phí ~3x chi phí factorization).
-    U_reduced_free = np.zeros((len(free_dofs), n_cases))
-    try:
-        lu = splu(K_pbc_free.tocsc())
-        U_reduced_free = lu.solve(F_free)
-
-        if np.any(np.linalg.norm(U_reduced_free, axis=0) > 1e6):
-            raise np.linalg.LinAlgError("Matrix is nearly singular (large displacement detected)")
-
-    except Exception:
-        diag_K = K_pbc_free.diagonal()
-        diag_K[diag_K == 0] = _EPS_SOLVER
-        M_inv = LinearOperator((K_pbc_free.shape), matvec=lambda x: x / diag_K)
-
-        for i in range(n_cases):
-            U_reduced_free[:, i], info = cg(K_pbc_free, F_free[:, i], tol=1e-6, maxiter=10000, M=M_inv)
-            if info > 0:
-                logging.getLogger(__name__).warning("CG failed to converge for case %d after %d iterations", i, info)
+    # Hệ suy biến -> báo lỗi rõ ràng; nơi gọi coi là FE thất bại (NaN /
+    # đếm lỗi). Nhánh dự phòng CG cũ đã xóa 2026-10-10: gọi cg(tol=) mà SciPy
+    # >= 1.14 không còn tham số này nên luôn ném TypeError (kích hoạt 0/700
+    # thiết kế thật đã đo) - hành vi thực tế vẫn là "thất bại", nay tường minh.
+    lu = splu(K_pbc_free.tocsc())
+    U_reduced_free = lu.solve(F_free)
+    if np.any(np.linalg.norm(U_reduced_free, axis=0) > _MAX_DISPLACEMENT_NORM):
+        raise np.linalg.LinAlgError(
+            "Ma trận độ cứng gần suy biến (chuyển vị > "
+            f"{_MAX_DISPLACEMENT_NORM:g}) - thiết kế rời hoặc rỗng"
+        )
 
     # Khôi phục vector đầy đủ
     U_reduced = np.zeros((ndof_reduced, n_cases))

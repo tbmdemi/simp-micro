@@ -61,7 +61,6 @@ def run(n_samples: int, out_path: str, seed: int = 123):
     raw = np.load(test_path, allow_pickle=True)
     images = raw["images"]
     v12_all = raw["v12"]
-    v21_all = raw["v21"]
     param_names = list(raw["param_names"])
     penal_idx = param_names.index("penal")
     penal_all = raw["params"][:, penal_idx]

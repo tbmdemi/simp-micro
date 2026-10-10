@@ -61,7 +61,7 @@ python3 pipeline/phase3_dataset/finalize_dataset.py --resolution 64  # -> train/
 
 **2026-09-30 - Tính chất suy từ Q cho dataset A4:** `analysis/scripts/backfill_elastic_props_npz.py` FE lại toàn bộ `outputs/phase3_a4/{train,val,test}.npz` (penal và ν0 thật từng mẫu, cùng phương pháp resize 64→50 như backfill f1/f2) và ghi `{split}_props.npz`: Q thô (n,3,3) cùng E_x, E_y, G_xy, B_eff, M_x = Q11/E0 (= f1), M_y = Q22/E0 (= f2), tốc độ sóng quasi-static c_qL/c_qT theo x, y, `rel_density` và v12/v21 tính lại (sanity). Mọi mô-đun đã chia E0. Ghép với npz gốc theo chỉ số hàng. Kết quả phân tích: [`notebooks/03_cheap_physical_properties.ipynb`](../notebooks/03_cheap_physical_properties.ipynb) và [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md) mục 2026-09-30. Tóm tắt: E/B/M dự đoán được 92–97% từ 5 điều kiện hiện có; **G_xy** (R² 0,84) mang nhiều thông tin mới nhất.
 
-**2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
+**2026-07-24 - dọn dữ liệu tận gốc:** manifest hiện tại đã lọc bỏ 2.662/7.920 mẫu (33,6%, nhãn dao động/rời rạc/ngoài khoảng vật lý - xem [Giới hạn #13](LIMITATIONS.md#giới-hạn-đã-biết--known-limitations)). Pipeline cho ra `train.npz`=**22.080** mẫu, `val.npz`/`test.npz`=**789** mẫu mỗi tập (khác số liệu lịch sử 33.120/33.246 ở trên). `cvae_gamma20.pt` cũ (đã xóa khỏi `outputs/` 2026-10-10) vẫn train trên bản CŨ và được giữ nguyên làm baseline lịch sử; checkpoint mới train trên bản sạch - xem `surrogate_clean.pt`/`cvae_clean_v2.pt` ở mục 4-5 ngay dưới.
 
 **2026-07-25 - Rebuild v2 (mở rộng quy mô):** sinh thêm raw sample bằng `analysis/scripts/generate_production_batch.py` (song song, độc lập với `pipeline/phase2_multi_batch/`), gộp với pool sạch cũ qua `analysis/scripts/assemble_phase3_v2.py`. Quá trình phát hiện + sửa 2 bug trong chính script sinh dữ liệu mới (range tham số quá rộng cho seed nhạy cảm; `beta=0,8` thay vì mặc định production `1,0`) - chi tiết đầy đủ (mục "2026-07-25"): [EXPERIMENT_LOG.md](../EXPERIMENT_LOG.md). **Kết quả: train=57.216 (đạt mục tiêu 40-50k), val=2.044, test=2.044.** Đã thay thế `outputs/phase3/{train,val,test,dataset_64}.npz` (bộ cũ backup nguyên vẹn tại `outputs/phase3_backup/`).
 
@@ -95,7 +95,7 @@ MAE theo seed dao động 0,021–0,048, không seed nào kém nghiêm trọng. 
 
 ## 5. Conditional VAE (Phase 5) - ✅✅ đã sửa tận gốc bằng differentiable-physics (2026-07-24)
 
-> **Checkpoint khuyến nghị hiện tại: `outputs/phase5/cvae_v2_finetuned.pt`** (train đúng recipe 2-stage trên dataset v2, xem mục "retrain trên dataset v2" bên dưới) - dùng để nhất quán với dataset production hiện tại (57.216 mẫu). `cvae_realphysics.pt` (fine-tune trên dataset v1) vẫn được giữ nguyên làm tham chiếu lịch sử/không bị ghi đè, hiệu năng ngang ngửa (xem bảng so sánh bên dưới) nên vẫn dùng được nếu cần tái lập kết quả cũ. Không dùng `cvae_gamma20.pt` (baseline lịch sử tiền differentiable-physics) hay `cvae_clean_weighted.pt` (tốt nhất TRƯỚC differentiable-physics) cho công việc mới.
+> **Checkpoint khuyến nghị hiện tại: `outputs/phase5/cvae_v2_finetuned.pt`** (train đúng recipe 2-stage trên dataset v2, xem mục "retrain trên dataset v2" bên dưới) - dùng để nhất quán với dataset production hiện tại (57.216 mẫu). `cvae_realphysics.pt` (fine-tune trên dataset v1) vẫn được giữ nguyên làm tham chiếu lịch sử/không bị ghi đè, hiệu năng ngang ngửa (xem bảng so sánh bên dưới) nên vẫn dùng được nếu cần tái lập kết quả cũ. Không dùng `cvae_gamma20.pt` (baseline lịch sử tiền differentiable-physics, đã xóa 2026-10-10) hay `cvae_clean_weighted.pt` (tốt nhất TRƯỚC differentiable-physics) cho công việc mới.
 
 ```bash
 # Fine-tune từ checkpoint có sẵn với differentiable-physics (khuyến nghị - cách đã tạo ra cvae_realphysics.pt):
@@ -179,6 +179,41 @@ volfrac loss, kết quả này là ablation định hướng, chưa phải so s�
 - **WIRE đóng:** lần thử cuối (Heaviside trong loss train `--rp-projection-beta-max 64
   --rp-periodic`) đạt hit-rate single-shot 12,5%, R²(FE) −7,19 - không đạt tiêu chí dừng đặt trước.
 
+**2026-10-10 - N1/N2 (`docs/plan.md` mục N1-N3): khe lưới verify ↔ hiện thực hóa, thiết kế qua bộ lọc:**
+- **Hiện thực hóa** (`pipeline/phase5_cvae/realization.py`, khả vi): `realize_shifted` = làm mượt Gauss
+  tuần hoàn σ → lấy mẫu song tuyến lưới n×n dịch s → ngưỡng η; `filtered_design` = thiết kế vật lý
+  Heaviside(lấy mẫu lưới FE của ảnh decoder đã lọc Gauss σ). Thước đo dùng trong N2 (chấm offline bằng
+  `outputs/phase5/plan_v3/n2/eval_general.py`): e_verify (lưới 50²), e_mesh (cùng hình học, lưới
+  200² kron), **e_real** (hiện thực hóa làm mượt 200², σ = 0,5 / 1,0 - thước đo chính tác giả chốt),
+  e_shift (8 phép dịch lệch lưới), e_ed (co/giãn đều), chế tạo 4 hướng.
+- **N1:** refine giảm MAE ν₁₂ 68% trên lưới verify nhưng chỉ 26% trên lưới 128²; ν của thiết kế pixel
+  chỉ xác định tới ~0,02 tùy biểu diễn biên (`LIMITATIONS.md` #39, #40).
+- **N2 - thiết kế qua bộ lọc (F) đạt xác nhận đặt trước** (n = 100, IN100 + IN100-C): so với pipeline
+  A (λ = 0) e_real σ=0,5 −43…−47%, chế tạo 0,37-0,39 → 0,78-0,81, e_verify/e_mesh không khác có ý
+  nghĩa, cùng 107 FE/mục tiêu; so với SIMP e_real −53%, e_mesh −21…−28%. Robust formulation co/giãn
+  (E1, E1′) và FE lưới mịn ở mức β cuối (E2) không đạt. Xóa đảo rời (ν không đổi) cho chế tạo A 0,84 /
+  F 0,92-0,94 / SIMP 1,00 - thước đo cũ chủ yếu đếm đảo (`LIMITATIONS.md` #41, #42). Pipeline chính
+  chưa đổi - chờ tác giả (N3-D1).
+
+```bash
+# Cấu hình E3-F (= outputs/phase5/plan_v3/n2/run_e3f.sh; thêm --seed 789 cho IN100-C)
+python3 -u pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
+  --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 --n-samples 30 --steps 32 \
+  --projection-betas 1 4 16 64 --n-boot 10000 --save-images --design-filter-sigma 1.0 \
+  --out outputs/phase5/plan_v3/n2/e3f_in100_filter.json
+```
+
+Cờ thăm dò khác của harness (mặc định tắt): `--realization-shifts/--realization-sigma` (objective N1
+qua nhiều phép dịch), `--fe-upsample k [--fe-upsample-last-only]` (refine với FE lưới mịn hơn k lần,
+E2), `--robust-etas/--robust-sigma` (robust formulation co/giãn, E1/E1′).
+
+**2026-10-08 - K1 (`docs/plan.md` mục K1): refine nhận thức chế tạo:** objective refine thêm
+λ·(P_góc + P_mảnh) trên ảnh 64² sau Heaviside (`pipeline/phase5_cvae/manuf_penalty.py`, cờ
+`--corner-weight/--thin-weight`); chế tạo đo bằng liên thông **4 hướng** + nét tối thiểu
+(`check_connectivity(connectivity=4)`, `count_corner_contacts`). λ = 0,1: chế tạo 0,31 → 0,72-0,76,
+đạt 5 tiêu chí ghi trước, nhưng MAE ν₁₂ tệ hơn 37-40% → giữ λ = 0 làm pipeline chính, K1 là điểm
+vận hành thứ hai (đường đánh đổi `plan_v3/k1/sweep_in100b_l*.json`).
+
 **2026-10-07 - P1.7-P1.9 (`docs/plan.md`): lai, xác nhận phân tầng, bỏ `force_periodic`:**
 - **P1.7** lai cVAE → SIMP (`benchmark_hybrid.py`) không đạt 2/4 tiêu chí đăng ký trước (sai số cặp
   CI dưới −96% do 1 ô đứt; chế tạo 0,33 < 0,70) → bài viết theo Khung A.
@@ -201,7 +236,8 @@ volfrac loss, kết quả này là ablation định hướng, chưa phải so s�
   `force_periodic` có thể sai khái niệm (LIMITATIONS #34, chờ quyết định).
 - Refine giảm chế tạo được 30% → 24% (**đính chính 2026-10-07:** không vững - 5 lần chạy −6 đến +9 điểm %, gộp 61 thêm / 44 mất, p=0,12). Chi phí dataset ≈2,7-3,0M FE-solve.
 - **Lưu ý huấn luyện:** chỉ 2,5% ảnh train đối xứng qua đường chéo - decoder `enforce_symmetry=True`
-  (mặc định mới của `CVAE`) buộc v12=v21, nên train mới dùng `--disable-symmetry`.
+  buộc v12=v21, nên train mới không ép đối xứng (mặc định của `CVAE`/`train.py` từ 2026-10-10, cùng head
+  Linear; trước đó phải truyền `--disable-symmetry --use-mlp-head`).
 
 **2026-08-24 - các module roadmap bổ sung:**
 

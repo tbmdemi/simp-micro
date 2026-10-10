@@ -191,7 +191,7 @@ python3 pipeline/phase5_cvae/best_of_n_eval.py \
 Full benchmark (24 condition mặc định từ `test.npz`):
 
 ```bash
-python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 30
+python3 pipeline/phase5_cvae/best_of_n_eval.py --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-samples 30
 ```
 
 Với checkpoint A4/nu0:
@@ -234,15 +234,15 @@ python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
     --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 \
     --steps 32 --projection-betas 1 4 16 64 --out outputs/phase5/plan_v3/refine.json
 
-# best-of-30 + force_periodic rồi refine (đúng pipeline production)
+# best-of-30 rồi refine (pipeline của bài; KHÔNG --force-periodic từ C5 2026-10-07)
 python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
     --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 --n-samples 30 \
-    --force-periodic --steps 32 --projection-betas 1 4 16 64
+    --steps 32 --projection-betas 1 4 16 64
 
 # target OOD dị hướng (ν12·ν21 < 1 - target đối xứng ν*≤-1 không tồn tại)
 python3 pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
     --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --targets -1.5 -2.0 --target-v21 -0.05 \
-    --n-samples 30 --force-periodic --steps 32 --projection-betas 1 4 16 64
+    --n-samples 30 --steps 32 --projection-betas 1 4 16 64
 ```
 
 Summary in ra cả chế độ **guarded** (chỉ nhận refine khi FE verify tốt hơn, không tốn thêm FE).
@@ -287,8 +287,35 @@ python3 pipeline/phase5_cvae/benchmark_hybrid.py \
 thiểu). Số R² best-of-N phụ thuộc quy tắc chọn: `--w-accuracy 1 --w-manuf 0 --w-aesthetic 0` (thuần
 độ chính xác) khác mặc định composite 0,6/0,3/0,1 (`LIMITATIONS.md` #38).
 
-Train mới: head mặc định của `CVAE` là KAN - thêm `--use-mlp-head` cho Linear (khuyến nghị,
-ablation 2026-09-25), luôn `--disable-symmetry` (dữ liệu 97,5% không đối xứng chéo). Tùy chọn
+### 8.3e. Refine nhận thức chế tạo (K1) và thiết kế qua bộ lọc (N1/N2, 2026-10-08 → 10-10)
+
+Cùng harness `benchmark_physics_guided_refinement.py`, các cờ mặc định tắt. Tiêu chí + kết quả:
+`docs/plan.md` mục K1, N1, N2; ghi chú viết báo `docs/paper1/ghi_chu_viet_bao.md`.
+
+| Cờ | Thí nghiệm | Ý nghĩa |
+|---|---|---|
+| `--corner-weight λ --thin-weight λ` | K1 | Phạt chạm góc pixel + nét mảnh trên ảnh 64² sau Heaviside (λ = 0,1 là điểm vận hành thứ hai) |
+| `--design-filter-sigma σ` | N2 F / E3-F | Thiết kế = Heaviside(lấy mẫu lưới FE của ảnh decoder lọc Gauss σ phần tử); verify, chọn, kiểm chế tạo, lưu ảnh trên cùng thiết kế (σ = 1,0 đạt xác nhận đặt trước) |
+| `--realization-shifts dy dx ... --realization-sigma σ` | N1 | Objective = trung bình MSE(ν) qua các phép dịch lệch lưới của hiện thực hóa làm mượt |
+| `--fe-upsample k [--fe-upsample-last-only]` | N1 C / N2 E2 | Refine với FE trên lưới mịn hơn k lần (mọi mức β hoặc chỉ mức cuối) |
+| `--robust-etas η_giãn η_co --robust-sigma σ` | N2 E1 / E1′ | Robust formulation co/giãn (không đạt tiêu chí) |
+
+```bash
+# E3-F: thiết kế qua bộ lọc σ = 1 (= outputs/phase5/plan_v3/n2/run_e3f.sh; --seed 789 cho IN100-C)
+python3 -u pipeline/phase5_cvae/benchmark_physics_guided_refinement.py \
+    --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt --n-conditions 100 --n-samples 30 --steps 32 \
+    --projection-betas 1 4 16 64 --n-boot 10000 --save-images --design-filter-sigma 1.0 \
+    --out outputs/phase5/plan_v3/n2/e3f_in100_filter.json
+```
+
+Chấm điểm offline (e_verify / e_mesh / e_real / e_shift / e_ed / chế tạo, có cache) và xóa đảo rời:
+`outputs/phase5/plan_v3/n2/eval_general.py`, `island_cleanup.py` (chạy bên trong thư mục `n2/`, đường
+dẫn kết quả truyền dạng `NHÃN=file.json` - xem các `run_*.sh` cùng thư mục). So ghép cặp K1: `docs/paper1/scripts/k1_compare.py`.
+
+Train mới (từ 2026-10-10): mặc định head Linear + KHÔNG ép đối xứng (ablation P1.2; dữ liệu 97,5%
+không đối xứng chéo) - `--use-kan-head` / `--enforce-symmetry` chỉ để tái lập ablation; các cờ cũ
+`--use-mlp-head` / `--disable-symmetry` vẫn nhận (trùng mặc định). Khi `--resume-from`, kiến trúc lấy
+từ checkpoint (`resolve_architecture`) - không cần truyền cờ head/đối xứng. Tùy chọn
 `--rp-projection-beta-max B --rp-periodic`: real-physics loss trên ảnh đã chiếu Heaviside (β tăng
 hình học 1→B qua các epoch).
 

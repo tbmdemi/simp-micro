@@ -52,7 +52,7 @@ from losses import (  # noqa: E402
     real_physics_prior_loss,
     volfrac_consistency_loss,
 )
-from model import CVAE  # noqa: E402
+from model import CVAE, cvae_kwargs_from_checkpoint  # noqa: E402
 from verify_fe import (  # noqa: E402
     FE_PARAMS,
     evaluate_density_field,
@@ -91,54 +91,59 @@ def resize_condition_dim_weights(
     pretrained CNN encoder/decoder (chiếm hầu hết tham số) thay vì train
     lại từ đầu.
 
-    KAN-hóa (Task 1): 3 layer này giờ là EfficientKANLinear, mỗi layer gồm
-    base_weight [out, in], spline_weight [out, in, k] và buffer grid
-    [in, G] - cả 3 đều phụ thuộc in = base_dim + condition_dim nên phải
-    resize. Grid là buffer phi tham số (mọi hàng giống nhau), rebuild bằng
-    rebuild_kan_grid() thay vì copy cột như weight."""
+    Hỗ trợ cả 2 loại head: nn.Linear (production) có weight [out, in] +
+    bias [out]; EfficientKANLinear (Task 1) có base_weight [out, in],
+    spline_weight [out, in, k] và buffer grid [in, G] - grid phi tham số
+    (mọi hàng giống nhau) nên rebuild bằng rebuild_kan_grid() thay vì copy
+    cột. Bug đã sửa 2026-10-10: trước đây chỉ hiểu KAN, checkpoint Linear
+    (vd cvae_v2_finetuned.pt) crash KeyError 'encoder.fc_mu.base_weight'.
+
+    Args:
+        state_dict: state_dict của checkpoint resume.
+        old_condition_dim: condition_dim của checkpoint.
+        new_condition_dim: condition_dim của model hiện tại.
+
+    Returns:
+        state_dict mới (dict mới, không sửa đầu vào) nạp được với
+        strict=True vào model condition_dim mới.
+    """
     if old_condition_dim == new_condition_dim:
         return state_dict
     new_state = dict(state_dict)
     n_keep_cond = min(old_condition_dim, new_condition_dim)
+
+    def widen(old, base_dim, new_in):
+        """Copy cột base + v12/v21 sang tensor in_features mới, phần còn lại
+        random-init (cùng kiểu init mặc định của nn.Linear)."""
+        new_t = torch.empty(
+            (old.shape[0], new_in) + tuple(old.shape[2:]),
+            dtype=old.dtype,
+            device=old.device,
+        )
+        torch.nn.init.kaiming_uniform_(new_t, a=5**0.5)
+        new_t[:, :base_dim] = old[:, :base_dim]
+        keep = slice(base_dim, base_dim + n_keep_cond)
+        new_t[:, keep] = old[:, keep]
+        return new_t
+
     for layer in _CONDITION_DEPENDENT_LAYERS:
-        base_key = f"{layer}.base_weight"
-        old_base = state_dict[base_key]
-        out_features, old_in = old_base.shape
+        is_kan = f"{layer}.base_weight" in state_dict
+        weight_key = f"{layer}.base_weight" if is_kan else f"{layer}.weight"
+        old_in = state_dict[weight_key].shape[1]
         base_dim = old_in - old_condition_dim
         new_in = base_dim + new_condition_dim
-
-        # base_weight [out, in]: giữ cột base + v12/v21, random-init cột mới.
-        new_base = torch.empty(
-            out_features, new_in, dtype=old_base.dtype, device=old_base.device
+        new_state[weight_key] = widen(
+            state_dict[weight_key], base_dim, new_in
         )
-        torch.nn.init.kaiming_uniform_(new_base, a=5**0.5)
-        new_base[:, :base_dim] = old_base[:, :base_dim]
-        new_base[:, base_dim : base_dim + n_keep_cond] = old_base[
-            :, base_dim : base_dim + n_keep_cond
-        ]
-        new_state[base_key] = new_base
-
-        # spline_weight [out, in, k]: giữ nguyên k, mở rộng chiều giữa.
-        spline_key = f"{layer}.spline_weight"
-        old_spline = state_dict[spline_key]
-        k = old_spline.shape[2]
-        new_spline = torch.empty(
-            out_features,
-            new_in,
-            k,
-            dtype=old_spline.dtype,
-            device=old_spline.device,
-        )
-        torch.nn.init.kaiming_uniform_(new_spline, a=5**0.5)
-        new_spline[:, :base_dim] = old_spline[:, :base_dim]
-        new_spline[:, base_dim : base_dim + n_keep_cond] = old_spline[
-            :, base_dim : base_dim + n_keep_cond
-        ]
-        new_state[spline_key] = new_spline
-
-        # grid [in, G]: buffer phi tham số, rebuild cho in_features mới.
-        grid_key = f"{layer}.grid"
-        new_state[grid_key] = rebuild_kan_grid(state_dict[grid_key], new_in)
+        if is_kan:
+            spline_key = f"{layer}.spline_weight"
+            new_state[spline_key] = widen(
+                state_dict[spline_key], base_dim, new_in
+            )
+            grid_key = f"{layer}.grid"
+            new_state[grid_key] = rebuild_kan_grid(
+                state_dict[grid_key], new_in
+            )
 
     return new_state
 
@@ -435,28 +440,105 @@ def run_epoch(
     return result
 
 
+def resolve_architecture(args, resume_ckpt, condition_dim):
+    """Kiến trúc CVAE cho lần train này.
+
+    Train mới: lấy từ cờ CLI - mặc định head Linear, không ép đối xứng,
+    decoder conv. Resume: lấy từ checkpoint qua `cvae_kwargs_from_checkpoint`
+    (cùng nguồn với mọi loader). Bug đã sửa 2026-10-10: trước đây train.py
+    luôn dựng từ cờ CLI với mặc định KAN + đối xứng, nên `--resume-from` một
+    checkpoint Linear (mọi checkpoint production, và lệnh self_play) mà thiếu
+    `--use-mlp-head` thì crash lúc load, còn thiếu `--disable-symmetry` thì
+    load im lặng nhưng ép v12 = v21 suốt quá trình fine-tune.
+
+    Args:
+        args: Namespace của argparse trong main().
+        resume_ckpt: dict checkpoint đã torch.load, hoặc None khi train mới.
+        condition_dim: số chiều condition của dataset hiện tại; có thể khác
+            checkpoint (trọng số được resize sau, xem
+            resize_condition_dim_weights).
+
+    Returns:
+        dict kwargs truyền thẳng vào CVAE(**kwargs).
+
+    Raises:
+        ValueError: cờ head/decoder tường minh mâu thuẫn với checkpoint
+            (shape trọng số khác nhau, không nạp được).
+    """
+    if resume_ckpt is None:
+        return {
+            "condition_dim": condition_dim,
+            "latent_dim": args.latent_dim,
+            "resolution": args.resolution,
+            "decoder_type": args.decoder_type or "conv",
+            "wire_hidden_dim": args.wire_hidden_dim,
+            "wire_omega0": args.wire_omega0,
+            "wire_s0": args.wire_s0,
+            "use_kan": args.use_kan_head,
+            "enforce_symmetry": args.enforce_symmetry,
+        }
+
+    arch = cvae_kwargs_from_checkpoint(resume_ckpt)
+    arch["condition_dim"] = condition_dim
+    if args.use_kan_head and not arch["use_kan"]:
+        raise ValueError(
+            "--use-kan-head nhưng checkpoint resume là head Linear"
+        )
+    if args.use_mlp_head and arch["use_kan"]:
+        raise ValueError("--use-mlp-head nhưng checkpoint resume là head KAN")
+    if args.decoder_type and args.decoder_type != arch["decoder_type"]:
+        raise ValueError(
+            f"--decoder-type {args.decoder_type} nhưng checkpoint resume là "
+            f"{arch['decoder_type']}"
+        )
+    # Đối xứng là phép biến đổi output, không đổi shape trọng số -> cho
+    # phép đổi tường minh khi fine-tune.
+    if args.enforce_symmetry:
+        arch["enforce_symmetry"] = True
+    elif args.disable_symmetry:
+        arch["enforce_symmetry"] = False
+    return arch
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--latent-dim", type=int, default=32)
-    parser.add_argument(
+    # Mặc định train mới = head Linear + KHÔNG ép đối xứng: ablation P1.2
+    # (Linear thắng KAN ở best-of-30, docs/plan.md) và chỉ 2,5% ảnh train
+    # đối xứng qua đường chéo. Khi --resume-from, kiến trúc lấy từ checkpoint
+    # (xem resolve_architecture) - các cờ dưới chỉ để chọn tường minh.
+    head = parser.add_mutually_exclusive_group()
+    head.add_argument(
+        "--use-kan-head",
+        action="store_true",
+        help="Head hồi quy EfficientKANLinear (chỉ để tái lập ablation P1.2).",
+    )
+    head.add_argument(
         "--use-mlp-head",
         action="store_true",
-        help="Dùng nn.Linear thay EfficientKANLinear cho ablation MLP.",
+        help="Head nn.Linear (mặc định; giữ cờ để lệnh cũ chạy được).",
     )
-    parser.add_argument(
+    symmetry = parser.add_mutually_exclusive_group()
+    symmetry.add_argument(
+        "--enforce-symmetry",
+        action="store_true",
+        help="Ép ảnh decoder đối xứng qua đường chéo (buộc v12 = v21).",
+    )
+    symmetry.add_argument(
         "--disable-symmetry",
         action="store_true",
-        help="Tắt phép đối xứng transpose ở output decoder.",
+        help="Không ép đối xứng (mặc định; giữ cờ để lệnh cũ chạy được).",
     )
     parser.add_argument(
         "--decoder-type",
         type=str,
-        default="conv",
+        default=None,
         choices=["conv", "wire"],
-        help="Task 2: 'conv' (mặc định, tương thích checkpoint cũ) hay 'wire' "
+        help="Task 2: 'conv' (mặc định khi train mới) hay 'wire' "
         "(WireContinuousDecoder - INR kích hoạt Gabor Wavelet phức, "
-        "resolution-agnostic khi generate/resolution).",
+        "resolution-agnostic khi generate/resolution). Khi --resume-from: "
+        "lấy theo checkpoint.",
     )
     parser.add_argument(
         "--wire-hidden-dim",
@@ -808,21 +890,22 @@ def main():
     )
     print(f"Train: {len(train_ds)} mẫu | Val: {len(val_ds)} mẫu")
 
-    model = CVAE(
-        condition_dim=condition_dim,
-        latent_dim=args.latent_dim,
-        resolution=args.resolution,
-        decoder_type=args.decoder_type,
-        wire_hidden_dim=args.wire_hidden_dim,
-        wire_omega0=args.wire_omega0,
-        wire_s0=args.wire_s0,
-        use_kan=not args.use_mlp_head,
-        enforce_symmetry=not args.disable_symmetry,
-    ).to(device)
+    resume_ckpt = None
     if args.resume_from:
         resume_ckpt = torch.load(
             args.resume_from, map_location=device, weights_only=False
         )
+    try:
+        arch = resolve_architecture(args, resume_ckpt, condition_dim)
+    except ValueError as exc:
+        parser.error(str(exc))
+    print(
+        f"Kiến trúc: head={'KAN' if arch['use_kan'] else 'Linear'}, "
+        f"enforce_symmetry={arch['enforce_symmetry']}, "
+        f"decoder={arch['decoder_type']}, latent_dim={arch['latent_dim']}"
+    )
+    model = CVAE(**arch).to(device)
+    if resume_ckpt is not None:
         resume_state_dict = resume_ckpt["model_state_dict"]
         resume_condition_dim = resume_ckpt.get("condition_dim", 2)
         if resume_condition_dim != condition_dim:
@@ -890,7 +973,7 @@ def main():
         )
 
     history = []
-    best_val = float("-inf") if args.select_by == "fe_r2" else float("inf")
+    best_val = float("-inf")
     epochs_no_improve = 0
 
     for epoch in range(1, args.epochs + 1):
@@ -988,78 +1071,47 @@ def main():
         )
 
         ckpt_path = os.path.join(PHASE5_DIR, args.output_name)
-        if args.select_by == "fe_r2":
-            if fe_r2 is not None and not np.isnan(fe_r2) and fe_r2 > best_val:
-                best_val = fe_r2
-                epochs_no_improve = 0
-                torch.save(
-                    {
-                        "model_state_dict": model.state_dict(),
-                        "latent_dim": args.latent_dim,
-                        "seed": args.seed,
-                        "condition_dim": condition_dim,
-                        "extended_condition": args.extended_condition,
-                        "resolution": args.resolution,
-                        "epoch": epoch,
-                        "val_loss": val_stats["total"],
-                        "fe_r2": best_val,
-                        "gamma": args.gamma,
-                        "lambda_tv": args.lambda_tv,
-                        "lambda_bin": args.lambda_bin,
-                        "lambda_periodic": args.lambda_periodic,
-                        "decoder_type": args.decoder_type,
-                        "use_kan": not args.use_mlp_head,
-                        "enforce_symmetry": not args.disable_symmetry,
-                        "wire_hidden_dim": args.wire_hidden_dim,
-                        "wire_omega0": args.wire_omega0,
-                        "wire_s0": args.wire_s0,
-                        "rp_projection_beta_max": args.rp_projection_beta_max,
-                    },
-                    ckpt_path,
+        # Chỉ chọn theo R2(FE thật) (--select-by chỉ có "fe_r2"): val_loss bị
+        # KL-warmup đánh lừa (LIMITATIONS #12) nên nhánh val_loss cũ đã xóa.
+        if fe_r2 is not None and not np.isnan(fe_r2) and fe_r2 > best_val:
+            best_val = fe_r2
+            epochs_no_improve = 0
+            torch.save(
+                {
+                    "model_state_dict": model.state_dict(),
+                    # Ghi đúng kiến trúc đã dựng (arch), không suy lại từ cờ
+                    # CLI - loader dựng lại model từ các field này.
+                    "latent_dim": arch["latent_dim"],
+                    "seed": args.seed,
+                    "condition_dim": condition_dim,
+                    "extended_condition": args.extended_condition,
+                    "resolution": arch["resolution"],
+                    "epoch": epoch,
+                    "val_loss": val_stats["total"],
+                    "fe_r2": best_val,
+                    "gamma": args.gamma,
+                    "lambda_tv": args.lambda_tv,
+                    "lambda_bin": args.lambda_bin,
+                    "lambda_periodic": args.lambda_periodic,
+                    "decoder_type": arch["decoder_type"],
+                    "use_kan": arch["use_kan"],
+                    "enforce_symmetry": arch["enforce_symmetry"],
+                    "wire_hidden_dim": arch["wire_hidden_dim"],
+                    "wire_omega0": arch["wire_omega0"],
+                    "wire_s0": arch["wire_s0"],
+                    "rp_projection_beta_max": args.rp_projection_beta_max,
+                },
+                ckpt_path,
+            )
+        elif fe_r2 is not None:
+            epochs_no_improve += 1
+            if epochs_no_improve >= args.patience:
+                print(
+                    f"Early stopping tại epoch {epoch} "
+                    f"(R2(FE thật) không tăng trong {args.patience} "
+                    "lần FE-eval)"
                 )
-            elif fe_r2 is not None:
-                epochs_no_improve += 1
-                if epochs_no_improve >= args.patience:
-                    print(
-                        f"Early stopping tại epoch {epoch} "
-                        f"(R2(FE thật) không tăng trong {args.patience} lần FE-eval)"
-                    )
-                    break
-        else:
-            if val_stats["total"] < best_val:
-                best_val = val_stats["total"]
-                epochs_no_improve = 0
-                torch.save(
-                    {
-                        "model_state_dict": model.state_dict(),
-                        "latent_dim": args.latent_dim,
-                        "seed": args.seed,
-                        "condition_dim": condition_dim,
-                        "extended_condition": args.extended_condition,
-                        "resolution": args.resolution,
-                        "epoch": epoch,
-                        "val_loss": best_val,
-                        "fe_r2": fe_r2,
-                        "gamma": args.gamma,
-                        "lambda_tv": args.lambda_tv,
-                        "lambda_bin": args.lambda_bin,
-                        "lambda_periodic": args.lambda_periodic,
-                        "decoder_type": args.decoder_type,
-                        "wire_hidden_dim": args.wire_hidden_dim,
-                        "wire_omega0": args.wire_omega0,
-                        "wire_s0": args.wire_s0,
-                        "rp_projection_beta_max": args.rp_projection_beta_max,
-                    },
-                    ckpt_path,
-                )
-            else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= args.patience:
-                    print(
-                        f"Early stopping tại epoch {epoch} "
-                        f"(val loss không giảm trong {args.patience} epoch)"
-                    )
-                    break
+                break
 
     history_name = (
         "train_history.json"
@@ -1069,11 +1121,19 @@ def main():
     with open(os.path.join(PHASE5_DIR, history_name), "w") as f:
         json.dump(history, f, indent=2)
 
-    metric_name = "R2(FE)" if args.select_by == "fe_r2" else "val_loss"
-    print(
-        f"Đã lưu checkpoint tốt nhất: outputs/phase5/{args.output_name} "
-        f"({metric_name}={best_val:.4f})"
-    )
+    if best_val == float("-inf"):
+        # Không lần FE-eval nào cho R2 hữu hạn (vd --epochs < --fe-eval-every)
+        # -> không có checkpoint nào được ghi; báo rõ thay vì in "đã lưu".
+        print(
+            f"CẢNH BÁO: KHÔNG lưu checkpoint nào vào outputs/phase5/"
+            f"{args.output_name} - không có R2(FE) hữu hạn sau "
+            f"{args.epochs} epoch (--fe-eval-every {args.fe_eval_every})."
+        )
+    else:
+        print(
+            f"Đã lưu checkpoint tốt nhất: outputs/phase5/{args.output_name} "
+            f"(R2(FE)={best_val:.4f})"
+        )
 
     if args.real_physics_workers > 0:
         from real_physics import shutdown_pool

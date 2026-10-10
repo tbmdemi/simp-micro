@@ -89,8 +89,12 @@ def run(split: str, workers: int, limit: int = None):
 
     ok = ~np.isnan(v12_re_arr[:n])
     dv12 = np.abs(v12_stored[:n][ok] - v12_re_arr[:n][ok])
+    # v21 cũng phải khớp: tráo v12<->v21 (augment xoay 90/270) chỉ lộ ở v21.
+    dv21 = np.abs(v21_stored[:n][ok] - v21_re_arr[:n][ok])
     print(f"[{split}] loi FE: {errors}/{n}. Sanity |v12_goc-v12_recheck|: "
-          f"mean={dv12.mean():.6f}, max={dv12.max():.6f}")
+          f"mean={dv12.mean():.6f}, max={dv12.max():.6f}; "
+          f"|v21_goc-v21_recheck|: mean={dv21.mean():.6f}, "
+          f"max={dv21.max():.6f}")
 
     out_path = os.path.join(PHASE3_DIR, f"{split}_f1f2.npz")
     np.savez_compressed(out_path, f1=f1, f2=f2, v12_recheck=v12_re_arr, v21_recheck=v21_re_arr)

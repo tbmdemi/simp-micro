@@ -263,9 +263,6 @@ def load_data_from_samples(sample_dirs: List[str]) -> Tuple[pd.DataFrame, List[s
         if not params:
             continue
 
-        # Lấy objective
-        objective = params.get('objective', meta.get('objective', 'auxetic'))
-
         # Đọc iteration_data.csv → lấy dòng cuối, cột Objective
         iter_path = os.path.join(sample_path, 'iteration_data.csv')
         if not os.path.isfile(iter_path):

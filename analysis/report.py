@@ -5,12 +5,9 @@ Tạo một báo cáo HTML tự chứa với các biểu đồ hội tụ,
 chỉ số chất lượng hình ảnh và bảng phân loại.
 """
 
-import os
 import logging
 from pathlib import Path
-from typing import Dict, List, Optional
 
-import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)

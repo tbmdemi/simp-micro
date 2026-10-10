@@ -18,7 +18,7 @@ chỉ dùng nội bộ để tính v12/v21/volfrac THẬT làm nhãn train cho s
 
 Cách chạy độc lập (debug):
     python3 pipeline/phase5_cvae/adversarial_dataset.py \\
-        --cvae-ckpt outputs/phase5/gamma_sweep_results/cvae_best_gamma20.pt \\
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt \\
         --out outputs/phase5/self_play/round1/adversarial.npz \\
         --n-conditions 8 --seeds-per-condition 2
 """

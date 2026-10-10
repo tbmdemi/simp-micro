@@ -32,7 +32,6 @@ import argparse
 import json
 import multiprocessing as mp
 import os
-import shutil
 import sys
 from unittest.mock import patch
 

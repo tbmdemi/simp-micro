@@ -202,7 +202,7 @@ def main():
                          help="'auto' (mặc định) dùng SEED_OPTIMIZER (mma cho hourglass/hexagonal, "
                               "gate cho reentrant_bowtie, xem EXPERIMENT_LOG.md 2026-07-30). "
                               "'gate'/'mma' ép TOÀN BỘ batch dùng 1 optimizer - CẨN THẬN: 'mma' "
-                              "toàn cục phá hỏng reentrant_bowtie (đã đo: 90,0%->0,0%).")
+                              "toàn cục phá hỏng reentrant_bowtie (đã đo: 90,0%%->0,0%%).")
     parser.add_argument("--vary-nu", action="store_true",
                          help="Giai đoạn A "
                               "(docs/archive/PROJECT_PLAN.md Nhóm 1 A3): "

@@ -300,7 +300,6 @@ class TestDecideNextAction:
         config = PipelineConfig()
         # Same best v12 across several batches -> stagnant; low sparsity via
         # a dense, well-spread grid of points.
-        rng = np.random.default_rng(0)
         dense_values = list(np.linspace(-0.8, -0.1, 200))
         summaries = [
             _write_batch(tmp_path, i, dense_values, mode="refine")

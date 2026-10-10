@@ -5,6 +5,7 @@ Imports are lazy inside each test - see tests/conftest.py docstring.
 """
 
 import numpy as np
+import pytest
 import torch
 from torch.utils.data import DataLoader
 
@@ -771,6 +772,7 @@ class TestResizeConditionDimWeights:
             latent_dim=4,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=True,
         )
         old_sd = small.state_dict()
         new_sd = resize_condition_dim_weights(old_sd, 2, 6)
@@ -824,10 +826,9 @@ class TestResizeConditionDimWeights:
                 continue
             assert torch.equal(old_sd[key], new_sd[key])
 
-    def test_widened_state_dict_loads_into_new_model_without_crash(self):
-        """End-to-end: đúng lệnh README --extended-condition --resume-from -
-        model.load_state_dict(strict=True) trên state_dict đã resize phải
-        THÀNH CÔNG (trước fix: RuntimeError size mismatch ngay tại đây)."""
+    def test_widen_linear_head_preserves_columns(self):
+        """Bug 2026-10-10: head nn.Linear (mọi checkpoint production) từng
+        crash KeyError 'encoder.fc_mu.base_weight' vì hàm chỉ hiểu KAN."""
         from pipeline.phase5_cvae.model import CVAE
         from pipeline.phase5_cvae.train import resize_condition_dim_weights
 
@@ -836,15 +837,130 @@ class TestResizeConditionDimWeights:
             latent_dim=4,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=False,
+        )
+        old_sd = small.state_dict()
+        new_sd = resize_condition_dim_weights(old_sd, 2, 6)
+        for layer in ["encoder.fc_mu", "encoder.fc_logvar", "decoder.fc"]:
+            old_w = old_sd[f"{layer}.weight"]
+            new_w = new_sd[f"{layer}.weight"]
+            base_dim = old_w.shape[1] - 2
+            assert new_w.shape == (old_w.shape[0], base_dim + 6)
+            assert torch.equal(new_w[:, : base_dim + 2], old_w)
+            assert new_w[:, base_dim + 2 :].std().item() > 0
+            assert torch.equal(
+                new_sd[f"{layer}.bias"], old_sd[f"{layer}.bias"]
+            )
+
+    @pytest.mark.parametrize("use_kan", [False, True])
+    def test_widened_state_dict_loads_into_new_model_without_crash(
+        self, use_kan
+    ):
+        """End-to-end: đúng lệnh README --extended-condition --resume-from -
+        model.load_state_dict(strict=True) trên state_dict đã resize phải
+        THÀNH CÔNG (trước fix: RuntimeError size mismatch ngay tại đây), với
+        cả head Linear lẫn KAN."""
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import resize_condition_dim_weights
+
+        small = CVAE(
+            condition_dim=2,
+            latent_dim=4,
+            resolution=64,
+            channels=(4, 8, 16, 32),
+            use_kan=use_kan,
         )
         big = CVAE(
             condition_dim=6,
             latent_dim=4,
             resolution=64,
             channels=(4, 8, 16, 32),
+            use_kan=use_kan,
         )
         resized = resize_condition_dim_weights(small.state_dict(), 2, 6)
         big.load_state_dict(resized)  # must not raise
+
+
+class TestResolveArchitecture:
+    """resolve_architecture() - bug 2026-10-10: train.py dựng kiến trúc từ
+    cờ CLI (mặc định KAN + đối xứng) kể cả khi --resume-from, nên resume
+    checkpoint Linear crash, hoặc load im lặng nhưng ép v12 = v21."""
+
+    @staticmethod
+    def _args(**overrides):
+        import argparse
+
+        base = dict(
+            latent_dim=4,
+            resolution=64,
+            decoder_type=None,
+            wire_hidden_dim=128,
+            wire_omega0=10.0,
+            wire_s0=10.0,
+            use_kan_head=False,
+            use_mlp_head=False,
+            enforce_symmetry=False,
+            disable_symmetry=False,
+        )
+        base.update(overrides)
+        return argparse.Namespace(**base)
+
+    @staticmethod
+    def _ckpt(**cvae_kwargs):
+        from pipeline.phase5_cvae.model import CVAE
+
+        model = CVAE(
+            condition_dim=2,
+            latent_dim=4,
+            channels=(4, 8, 16, 32),
+            **cvae_kwargs,
+        )
+        # Checkpoint cũ: không lưu use_kan/enforce_symmetry/channels.
+        return {"model_state_dict": model.state_dict(), "latent_dim": 4}
+
+    def test_fresh_training_defaults_to_linear_without_symmetry(self):
+        from pipeline.phase5_cvae.train import resolve_architecture
+
+        arch = resolve_architecture(self._args(), None, condition_dim=2)
+        assert arch["use_kan"] is False
+        assert arch["enforce_symmetry"] is False
+        assert arch["decoder_type"] == "conv"
+
+    def test_fresh_training_explicit_kan_and_symmetry(self):
+        from pipeline.phase5_cvae.train import resolve_architecture
+
+        arch = resolve_architecture(
+            self._args(use_kan_head=True, enforce_symmetry=True), None, 2
+        )
+        assert arch["use_kan"] is True and arch["enforce_symmetry"] is True
+
+    @pytest.mark.parametrize("use_kan", [False, True])
+    def test_resume_takes_head_from_checkpoint_and_loads(self, use_kan):
+        from pipeline.phase5_cvae.model import CVAE
+        from pipeline.phase5_cvae.train import resolve_architecture
+
+        ckpt = self._ckpt(use_kan=use_kan)
+        arch = resolve_architecture(self._args(), ckpt, condition_dim=2)
+        assert arch["use_kan"] is use_kan
+        assert arch["enforce_symmetry"] is False
+        arch["channels"] = (4, 8, 16, 32)
+        CVAE(**arch).load_state_dict(ckpt["model_state_dict"])
+
+    def test_resume_conflicting_head_flag_raises(self):
+        from pipeline.phase5_cvae.train import resolve_architecture
+
+        with pytest.raises(ValueError, match="Linear"):
+            resolve_architecture(
+                self._args(use_kan_head=True), self._ckpt(use_kan=False), 2
+            )
+
+    def test_resume_symmetry_flag_is_honoured(self):
+        from pipeline.phase5_cvae.train import resolve_architecture
+
+        arch = resolve_architecture(
+            self._args(enforce_symmetry=True), self._ckpt(), 2
+        )
+        assert arch["enforce_symmetry"] is True
 
 
 class TestRealFeR2:

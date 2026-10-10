@@ -322,37 +322,3 @@ def generate_design(
                 rows.append(row)
 
     return pd.DataFrame(rows)
-
-
-def append_samples_to_csv(
-    n: int,
-    active_params: Dict[str, Dict[str, List[float]]],
-    csv_path: str,
-    strategy: str = "sobol",
-    seed: Optional[int] = None,
-    **kwargs,
-) -> None:
-    """Generate samples and append to an existing CSV file.
-
-    If the file does not exist, it will be created with a header.
-
-    Args:
-        n: Number of samples.
-        active_params: Dict mapping param name -> {'range': [low, high]}.
-        csv_path: Path to the CSV file.
-        strategy: Sampling strategy.
-        seed: Random seed.
-        **kwargs: Additional arguments passed to the sampler.
-    """
-    import pandas as pd
-
-    df = generate_samples_dataframe(n, active_params, strategy, seed, **kwargs)
-    header = not pd.io.common.file_exists(csv_path) if hasattr(pd.io.common, 'file_exists') else True
-    try:
-        existing = pd.read_csv(csv_path)
-        df = pd.concat([existing, df], ignore_index=True)
-        header = False
-    except (FileNotFoundError, pd.errors.EmptyDataError):
-        pass
-
-    df.to_csv(csv_path, index=False)

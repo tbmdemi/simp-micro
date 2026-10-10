@@ -31,7 +31,6 @@ import numpy as np
 
 from pipeline.phase2_multi_batch.coverage import (
     coverage_report,
-    find_sparse_regions,
     recommend_new_samples,
     seed_manufacturability_report,
 )

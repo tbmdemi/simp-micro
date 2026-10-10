@@ -34,7 +34,6 @@ from torch.utils.data import DataLoader
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
-from model import CVAE  # noqa: E402
 from dataset import (
     CVAEDataset,
     build_condition_vector,
@@ -216,8 +215,8 @@ def main():
     os.makedirs(PHASE5_DIR, exist_ok=True)
     with open(os.path.join(PHASE5_DIR, "evaluation_report.json"), "w") as f:
         json.dump(report, f, indent=2)
-    print(f"\nĐã lưu báo cáo: outputs/phase5/evaluation_report.json")
-    print(f"Ảnh chẩn đoán: outputs/phase5/diagnostics/")
+    print("\nĐã lưu báo cáo: outputs/phase5/evaluation_report.json")
+    print("Ảnh chẩn đoán: outputs/phase5/diagnostics/")
 
 
 if __name__ == "__main__":

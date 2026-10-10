@@ -109,7 +109,6 @@ def draw_barplot(data: dict, out_dir: Path) -> None:
     params = data["param_names"]
     configs = data["configs"]
     objectives = sorted(set(c["objective"] for c in configs))
-    seeds = sorted(set(c["seed"] for c in configs))
     n_p = len(params)
 
     param_short = [PARAM_LABELS.get(p, p) for p in params]

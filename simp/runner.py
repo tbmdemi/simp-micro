@@ -307,7 +307,6 @@ def run_simp(params: dict) -> dict:
     tol_obj = params.get('tol_obj', 0.05)
     window_size = params.get('window_size', 20)
     seed_name = params.get('seed', 'circle')
-    obj_type = params.get('objective', 'auxetic')
     verbose = params.get('verbose', True)
     void_size_frac = params.get('void_size_frac', 0.4)
     rotation_deg = params.get('rotation_deg', 0.0)

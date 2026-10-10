@@ -21,7 +21,8 @@ không tính hit/miss, chỉ báo cáo abs_error để tham khảo.
 
 Cách chạy:
     python3 pipeline/phase5_cvae/coverage_eval.py \\
-        --cvae-ckpt outputs/phase5/cvae_gamma20.pt --n-samples 15 --grid-size 8
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt \\
+        --n-samples 15 --grid-size 8
 
 FIX 2026-07-30: script này CHƯA BAO GIỜ áp force_periodic() trước khi chấm
 manufacturability - khác best_of_n_eval.py/sample.py (force_periodic mặc

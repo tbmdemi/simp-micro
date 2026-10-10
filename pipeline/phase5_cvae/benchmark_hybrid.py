@@ -45,7 +45,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import benchmark_simp_baseline as sb  # noqa: E402
 from bootstrap_ci import bootstrap_paired_mae_reduction  # noqa: E402
-from manufacturability import check_manufacturability  # noqa: E402
 from verify_fe import (  # noqa: E402
     FE_PARAMS,
     evaluate_density_field,

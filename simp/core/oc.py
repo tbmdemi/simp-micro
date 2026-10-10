@@ -6,7 +6,6 @@ Thực hiện thuật toán cập nhật OC (Optimality Criteria) cổ điển
 """
 
 import numpy as np
-from scipy.sparse import csr_matrix
 
 from .filter import apply_heaviside_projection
 

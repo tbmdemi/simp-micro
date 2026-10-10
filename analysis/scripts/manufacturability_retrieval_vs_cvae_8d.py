@@ -49,7 +49,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from manufacturability import check_manufacturability, force_periodic  # noqa: E402
 from aesthetics import aesthetic_score as compute_aesthetic_score  # noqa: E402
-from curse_of_dimensionality_comparison import _select_targets  # noqa: E402
 
 PHASE3_A4_DIR = os.path.join(REPO_ROOT, "outputs", "phase3_a4")
 PHASE5_DIR = os.path.join(REPO_ROOT, "outputs", "phase5")

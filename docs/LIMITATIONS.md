@@ -1,6 +1,8 @@
 # Phạm vi Claim Khoa học & Giới hạn Đã biết
 
-> Trạng thái tại **2026-10-07** (sau P1.9, pipeline cuối KHÔNG `force_periodic`). Số mục (#N) giữ
+> Trạng thái tại **2026-10-10** (sau P1.9 - pipeline cuối KHÔNG `force_periodic` - và K1, N1, N2;
+> pipeline chính của Bài #1 vẫn là A (λ = 0), chờ tác giả chốt có đổi sang thiết kế qua bộ lọc F
+> + xóa đảo hay không - `plan.md` mục N3). Số mục (#N) giữ
 > nguyên làm ID để các tài liệu khác trỏ tới; mục đã giải quyết nằm ở bảng cuối. Chi tiết từng thí
 > nghiệm: [`plan.md`](plan.md) mục 3-4, [`EXPERIMENT_LOG.md`](../EXPERIMENT_LOG.md). Mọi số liệu
 > dưới đây truy được về `outputs/phase5/plan_v3/` (bảng nguồn: [`paper1/README.md`](paper1/README.md)).
@@ -22,12 +24,20 @@
 5. Trên trục đổi dấu ngoài phân phối (train chỉ có ν₁₂ < 0), cVAE sinh được ν₁₂ > 0, điều retrieval
    từ thư viện không thể làm (#19).
 6. Thiết kế sinh ra không phải bản sao gần của dữ liệu train (0/480, #18).
+7. **Thiết kế qua bộ lọc (F, N2-E3-F, tiêu chí đặt trước, n = 100 × 2 tập):** định nghĩa thiết kế
+   bằng ánh xạ lọc Gauss σ = 1 + chiếu, và verify/chọn/kiểm chế tạo trên đúng ánh xạ đó, giảm sai số
+   ν₁₂ trên biên thực tế (hiện thực hóa làm mượt 200²) 43-47% so với pipeline A và 53% so với SIMP,
+   nâng chế tạo 0,37-0,39 → 0,78-0,81 (ngang SIMP trước xóa đảo), cùng chi phí FE (#41, #42). Chưa
+   phải pipeline chính của bản thảo (chờ tác giả).
 
 **CHƯA được ủng hộ (không claim):**
 - ν₁₂ chính xác hơn SIMP (tiêu chí đăng ký trước không đạt; chênh ~0,001 nhỏ hơn sai số lưới) (#32, #33, #37).
 - Vượt SIMP về khả năng chế tạo, OOD đổi dấu, dị hướng cực đoan, hoặc chi phí cho 1 mục tiêu (#2, #19, #32, #37).
 - Ngoại suy biên độ auxetic vượt biên train (bão hòa từ ν₁₂* ≈ −2,25) (#29).
-- Độ chính xác tốt hơn sai số rời rạc hóa của lưới 50² (#33).
+- Độ chính xác tốt hơn sai số rời rạc hóa của lưới 50² (#33), hoặc tốt hơn ~0,02 tuyệt đối - ν của
+  thiết kế pixel chỉ xác định tới mức đó tùy biểu diễn biên (#40).
+- Lợi ích của refine trên lưới verify chuyển nguyên sang lưới mịn / biên thực tế (#39).
+- F bền hơn với co/giãn đều (over/under-etch) - không đúng, F tệ hơn A 11-12% (#41).
 - KAN head / WIRE decoder tốt hơn baseline tích chập + đầu tuyến tính (#30).
 - Lợi thế của cVAE so với retrieval trong phân phối khi số chiều điều kiện tăng (8D) (#23).
 - `hit_rate` như bằng chứng độc lập (#17); proxy Q₁₂ tương đương mục tiêu auxetic dưới mọi phép xoay.
@@ -47,7 +57,12 @@ mọi trường hợp", "surrogate thay được FE ở vùng chưa kiểm chứ
     (mean |Δν₁₂| 3,7e-9, 24 mẫu) nên engine đúng vật lý, nhưng skfem ít được dùng làm chuẩn tham chiếu.
 33. **Độ chính xác là so với mô hình FE 50×50**, không phải ν hội tụ lưới. Cùng hình học, 50² lệch
     200² trung vị 0,015 (3,8%), tối đa 0,042, lưới mịn âm hơn ở 27/30 thiết kế - lớn hơn MAE ~0,005
-    đang báo. Xếp hạng cVAE/SIMP giữ nguyên trên 200² (R²(ν₁₂) 0,992 vs 0,985).
+    đang báo. Xếp hạng cVAE/SIMP giữ nguyên trên 200² (R²(ν₁₂) 0,992 vs 0,985). Khe này là hiệu ứng
+    biên bậc thang, không do bản lề 1 nút (khe như nhau khi không có điểm chạm góc, p = 0,13; N1).
+40. **ν của thiết kế pixel chỉ xác định tới ~0,02 tùy biểu diễn biên** (N1, 6 thiết kế IN100,
+    `plan_v3/n1/mesh_convergence.json`): biên bậc thang (kron) hội tụ đều 50 → 400² và lệch verify
+    ~0,022 cùng chiều; biên bo nhẹ σ = 0,25 ở 400² quay về sát giá trị 50² (±0,002) nhưng chưa hội tụ
+    (800² vượt RAM). Mức này ~4× MAE đang báo. Chưa có FE biên trơn (body-fitted) để chốt (N3-7).
 31. **Tính chất suy từ Q chỉ là đàn hồi tĩnh.** E/B/M/tốc độ sóng dọc dự đoán được 92-97% từ 5 điều
     kiện hiện có (f1/f2 vì vậy ít giá trị làm condition); chỉ G_xy mang thông tin mới đáng kể (R² 0,84).
     Tốc độ sóng chỉ đúng ở bước sóng dài; ấn lõm chỉ là proxy Hertz 2D; nhiệt/thấm/band gap cần solver mới.
@@ -76,7 +91,9 @@ mọi trường hợp", "surrogate thay được FE ở vùng chưa kiểm chứ
     suy; (b) R²(ν₂₁) thấp hơn nhiều R²(ν₁₂) ở IN100/IN100-B (0,75-0,88); (c) ~77 FE/mục tiêu; (d) refine
     liên tục (không nhận thức nhị phân hóa) làm TỆ best-of-30 (MAE +62 đến +74%).
 32. **So với SIMP chạy từ đầu** (MMA, Heaviside β→64, 4 khởi tạo, cùng đường verify): ngang về độ chính
-    xác, thua về chế tạo (SIMP 0,74-0,83 vs cVAE 0,32-0,35), OOD đổi dấu, dị hướng cực đoan. Tiêu chí
+    xác, thua về chế tạo (SIMP 0,74-0,83 vs cVAE 0,32-0,35 theo thước đo cũ; sau xóa đảo SIMP 1,00 vs
+    A 0,84-0,85 / F 0,92-0,94, #42), OOD đổi dấu, dị hướng cực đoan. Với F (N2), cVAE chính xác hơn SIMP
+    trên biên thực tế (−53%) và lưới 200² (−21…−28%), ngang ở lưới verify 50² (#41). Tiêu chí
     đăng ký trước (IN100-C, pipeline có fp, r < 10): sai số cặp đạt, ν₁₂ không đạt (+19% [−10; 40]).
     Pipeline không fp cho ν₁₂ +37-39% ở cả 3 tập - chỉ là phân tích độ nhạy. Chi phí sinh dataset
     ≈ 2,7-3,0M FE → hòa vốn với SIMP sau ~3 500 mục tiêu.
@@ -91,11 +108,30 @@ mọi trường hợp", "surrogate thay được FE ở vùng chưa kiểm chứ
 23. **8D trong phân phối (+ν₀, volfrac, void_size_frac): cVAE không thắng retrieval ở trục nào**
     (accuracy 0,997 vs 0,998; chế tạo 0,67 vs 0,89; retrieval vẫn R² 0,984 khi chỉ còn 500 mẫu). Chỉ có
     bằng chứng mật độ dữ liệu loãng (+992% khoảng cách láng giềng).
+39. **Lợi ích refine phần lớn là khớp lưới verify 50²** (N1, IN100): MAE ν₁₂ sau refine −68% trên
+    lưới 50² nhưng chỉ −26% khi cùng hình học giải trên kron 128² (0,0202 → 0,0149); lợi thế ν₁₂ của
+    cVAE so với SIMP co lại và mất ý nghĩa trên hiện thực hóa mịn R(200), σ = 0,5 (+53% → +14%, CI chứa
+    0). Đây vẫn là khe "tối ưu ↔ kiểm chứng" của luận điểm Bài #1, ở tầng rời rạc hóa.
+41. **Thiết kế qua bộ lọc (F) và các biến thể robust** (N2): (a) F không bền hơn với co/giãn đều
+    (η 0,35/0,65): tệ hơn A 11-12% (CI > 0), ngang SIMP; σ = 1,5 tệ hơn SIMP 9-11%; (b) thước đo biên
+    thực tế (e_real) và dịch lệch lưới (e_shift) dùng làm mượt Gauss cùng họ với bộ lọc → một phần vòng
+    lặp; trên thước đo không làm mượt (verify 50², lưới 200²) F không tệ hơn A, tốt hơn SIMP ở 200²;
+    (c) r ≥ 10 vẫn ra ô đứt như A (IN100 #46); (d) robust formulation co/giãn chuẩn (E1, E1′) không
+    đạt tiêu chí đặt trước - co/giãn ±0,67 phần tử quá mạnh, refine sinh đốm vật liệu ở hàng/cột bị
+    resize 64→50 bỏ đi; (e) tối ưu trên lưới mịn của biên bậc thang (E2, nhánh C) đánh đổi với độ bền
+    biên thực tế (e_real σ=0,5 tệ hơn 37%).
 
 ### D. Đánh giá và báo cáo
 
 2. **Khả năng chế tạo thấp** (liên thông + nét tối thiểu 2 pixel): cVAE 0,22-0,35 qua các lần chạy,
     SIMP 0,74-0,83. Refine không thay đổi có hệ thống (−6 đến +9 điểm %, gộp 61 thêm / 44 mất, p = 0,12).
+    K1 (phạt chạm góc + nét mảnh, λ = 0,1, 4 hướng) nâng lên 0,72-0,76 nhưng MAE ν₁₂ tệ hơn 37-40%
+    (CI không chứa 0) → chỉ là điểm vận hành thứ hai. Phần lớn khoảng cách là đảo rời (#42).
+42. **Thước đo chế tạo cũ chủ yếu đếm đảo rời** (N2-C6): xóa mọi vật liệu không nối khung chính
+    (liên thông 4 hướng tuần hoàn) không đổi ν (|Δν₁₂| = 0) và đưa chế tạo IN100 / IN100-C: A 0,39 →
+    0,84 / 0,37 → 0,85, F 0,78 → 0,92 / 0,81 → 0,94, SIMP 0,72 → 1,00 / 0,80 → 1,00. Mọi số chế tạo
+    trong bản thảo hiện tại (#2, #32) là **trước** xóa đảo; xóa đảo chưa có trong code
+    `manufacturability.py` (N3-1).
 34. **`force_periodic` đã bỏ (quyết định C5, 2026-10-07):** lưới FE dựa trên phần tử + PBC nên mọi ảnh
     pixel đều lát được; kiểm tra "cạnh khớp" chỉ đạt vì fp ép nó. Bài báo cả 2 phiên bản số liệu;
     kết quả đăng ký trước (P1.8) giữ nguyên phiên bản có fp.
@@ -112,6 +148,8 @@ mọi trường hợp", "surrogate thay được FE ở vùng chưa kiểm chứ
     lời gọi FE thật trong `multi_batch/runner.py::evaluate_single` (đang mock).
 22. **Self-play round-trip đầy đủ chưa chạy được với checkpoint điều kiện mở rộng** (bước train lại qua
     subprocess chưa truyền `--data-dir`/`--extended-condition`/`--include-nu0`; verify 1 checkpoint thì đã sửa).
+    Từ 2026-10-10 bước train lại không còn crash với checkpoint Linear (kiến trúc lấy từ checkpoint),
+    nhưng checkpoint điều kiện mở rộng vẫn bị thu gọn condition về 2 chiều - phải truyền cờ tay.
 8. **Tài liệu chủ yếu tiếng Việt**; chỉ file này có bản tiếng Anh (rút gọn, bên dưới).
 
 ---
@@ -144,11 +182,16 @@ refinement and SIMP with Heaviside β=64 exploit the objective-verification gap 
 pipeline matches converged multi-start SIMP accuracy with ~8× fewer FE solves, and has a lower joint
 error for moderate anisotropy (r < 10; pre-registered IN100-C: 27% lower [8; 42]) (#32, #37). (5) It reaches
 the unseen positive sign of ν₁₂, which retrieval cannot (#19). (6) Generated cells are not near-copies
-of training data (#18).
+of training data (#18). (7) Defining the design through a Gaussian filter-and-project map (σ = 1) and
+verifying that same map (pre-registered, n = 100 on two target sets) lowers the ν₁₂ error under
+realistic smoothed boundaries by 43-47% vs pipeline A and 53% vs SIMP, and raises manufacturability
+from 0.37-0.39 to 0.78-0.81, at the same FE cost; not yet the manuscript's main pipeline (#41, #42).
 
 **Not supported:** ν₁₂ more accurate than SIMP; better than SIMP in manufacturability, sign-flip OOD,
 extreme anisotropy or single-target cost; magnitude extrapolation beyond ν₁₂* ≈ −2.25; accuracy beyond
-the 50² mesh error; KAN/WIRE gains; an 8D in-distribution advantage over retrieval; `hit_rate` alone.
+the 50² mesh error or below ~0.02 absolute (#40); refinement gains transferring unchanged to finer
+meshes (#39); robustness of the filtered design to uniform erosion/dilation (#41); KAN/WIRE gains; an
+8D in-distribution advantage over retrieval; `hit_rate` alone.
 
 **Active limitations:** linear-elastic small-strain 2D cells with ν₀ = 0.3, no experiments, no commercial
 FE check (#14, #15); accuracy is relative to the 50×50 FE model whose discretization error (median 0.015)
@@ -158,4 +201,11 @@ disconnected cells (#37); OOD magnitude saturates and is bimodal at −2.0 (#29)
 manufacturability (0.74-0.83 vs 0.22-0.35) and sign-flip OOD (#2, #19, #32); the hybrid cVAE→SIMP failed
 its pre-registered criteria (#36); KAN/WIRE gave no gain (#30); best-of-N R² depends on the selection
 rule (#38); composite score agrees only moderately with Pareto ranking (#25); `force_periodic` was
-dropped and both versions of the numbers are reported (#34).
+dropped and both versions of the numbers are reported (#34). Most of the refinement gain is fitting the
+50² verification mesh (−68% there, −26% on a 128² mesh) and the cVAE accuracy edge over SIMP loses
+significance on fine smoothed realizations (#39); the ν of a pixel design is only defined to ~0.02
+depending on the boundary representation (#40); the filtered design is not more robust to uniform
+erosion/dilation, its robustness metric shares the Gaussian smoothing family with the filter, and
+standard robust formulations failed their criteria (#41); the old manufacturability metric mostly
+counted disconnected islands - removing them leaves ν unchanged and gives A 0.84, F 0.92-0.94,
+SIMP 1.00 (#42); manufacturability-aware refinement (K1) costs 37-40% ν₁₂ accuracy (#2).

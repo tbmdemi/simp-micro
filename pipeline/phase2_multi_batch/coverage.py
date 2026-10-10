@@ -472,7 +472,6 @@ def recommend_new_samples(
 
         if not near:
             # No nearby points; sample middle of region with random params
-            from copy import deepcopy
             for _ in range(min(n_recommend // 3, 5)):
                 rec = {}
                 for pname, (pmin, pmax) in param_space.items():

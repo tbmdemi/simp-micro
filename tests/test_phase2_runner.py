@@ -9,7 +9,6 @@ suite covers the new manufacturability wiring, not the SIMP solve itself
 """
 import os
 import numpy as np
-import pytest
 from PIL import Image
 
 from pipeline.phase2_multi_batch.runner import (

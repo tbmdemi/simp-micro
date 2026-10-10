@@ -40,11 +40,19 @@ pipeline/                       # Orchestration 8-phase, PHỤ THUỘC simp/ (kh
 ├── phase4_surrogate/            #   CNN surrogate (PyTorch), đóng băng khi dùng làm loss cho Phase 5
 │   ├── dataset.py, model.py, train.py, evaluate.py, export_for_phase5.py
 ├── phase5_cvae/                 #   Conditional VAE + differentiable-physics fine-tune
-│   ├── dataset.py, model.py, train.py       #   KAN regression head (fc = EfficientKANLinear), decoder_type="conv"|"wire" (WIRE INR, Task 2), condition_dim, extended_condition, condition-dropout
+│   ├── dataset.py, model.py, train.py       #   head hồi quy Linear (mặc định) hoặc KAN (EfficientKANLinear, ablation P1.2), decoder_type="conv"|"wire" (WIRE INR, Task 2), condition_dim, extended_condition, condition-dropout
 │   ├── real_physics.py                       #   RealPhysicsNu (torch.autograd.Function, FE thật) + solve_elastic_with_grad (E/G/B + gradient)
 │   ├── losses.py                             #   recon + beta*kl + gamma*prop_loss (+volfrac_consistency)
 │   ├── best_of_n_eval.py                     #   composite_score (0.6/0.3/0.1), oracle FE selection
-│   └── sample.py                             #   inference, force_periodic() mặc định bật, --resolution (chỉ wire)
+│   ├── manufacturability.py                  #   liên thông (8/4 hướng) + nét tối thiểu, count_corner_contacts, force_periodic
+│   ├── tandem_lbfgs.py                       #   refine latent z bằng gradient FE thật (L-BFGS), chuỗi β Heaviside, guard
+│   ├── heaviside.py                          #   chiếu nhị phân khả vi khớp đường verify (P1.1e)
+│   ├── manuf_penalty.py                      #   phạt chạm góc + nét mảnh cho refine nhận thức chế tạo (K1)
+│   ├── realization.py                        #   realize_shifted (hiện thực hóa làm mượt/dịch lệch lưới, N1) + filtered_design (thiết kế qua bộ lọc, N2)
+│   ├── benchmark_physics_guided_refinement.py #  harness refine của Bài #1 (best-of-N, guarded, CI bootstrap, cờ K1/N1/N2)
+│   ├── benchmark_simp_baseline.py            #   SIMP chạy từ đầu (MMA, đa khởi tạo) cùng đường verify (P1.6)
+│   ├── benchmark_hybrid.py                   #   lai cVAE → SIMP (P1.7, không đạt)
+│   └── sample.py                             #   inference, force_periodic() mặc định bật (pipeline Bài #1 tắt từ C5), --resolution (chỉ wire)
 
 analysis/scripts/                # Script sinh dữ liệu ĐỘC LẬP với pipeline/phase2_multi_batch/
 └── generate_production_batch.py #   nguồn thật của outputs/phase3/*.npz hiện tại (xem PIPELINE.md)

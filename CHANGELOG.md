@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 2026-10-10 (khuya) - Rà soát code: lỗi train/resume, solver dự phòng hỏng, xóa code chết (nhánh `test_algo_1`)
+
+#### Fixed
+- `pipeline/phase5_cvae/train.py`: `--resume-from` dựng kiến trúc từ cờ CLI (mặc định KAN + ép đối xứng) thay vì từ checkpoint → resume mọi checkpoint Linear (production, và bước train lại của `self_play.py`) crash khi load; nếu chỉ truyền `--use-mlp-head` thì load im lặng nhưng ép ảnh đối xứng (v12 = v21) suốt fine-tune (đo trên `cvae_v2_finetuned.pt`: lệch 0,126/pixel, bất đối xứng 0,253 → 0). Nay `resolve_architecture()` lấy kiến trúc từ checkpoint qua `cvae_kwargs_from_checkpoint()`; cờ head/decoder mâu thuẫn → báo lỗi. Đã kiểm: không checkpoint nào đang có bị ảnh hưởng (đều lưu hoặc suy ra `enforce_symmetry=False`).
+- `train.py::resize_condition_dim_weights`: chỉ hiểu head KAN → `--extended-condition --resume-from cvae_v2_finetuned.pt` (lệnh trong `PIPELINE.md`) crash `KeyError 'encoder.fc_mu.base_weight'`; nay hỗ trợ cả `nn.Linear`. Đã chạy thật cả 2 lệnh resume (thường + mở rộng condition) trên tập con.
+- `train.py`: in "Đã lưu checkpoint (R2=-inf)" khi không có lần FE-eval hữu hạn nào → nay cảnh báo rõ là KHÔNG lưu checkpoint.
+- `simp/core/solver.py`: nhánh dự phòng CG gọi `cg(tol=)` mà SciPy 1.15 không còn tham số này → luôn `TypeError` (kích hoạt 0/700 thiết kế thật đã đo). Thay bằng `LinAlgError` rõ ràng - hành vi thực tế không đổi; ν của 100 thiết kế IN100 tính lại khớp JSON đã lưu tới 1e-13.
+- `analysis/scripts/generate_production_batch.py --help` crash (`%` chưa escape trong help argparse).
+- `analysis/scripts/backfill_f1_f2_npz.py`: sanity check chỉ so v12 dù docstring hứa cả v21; thêm v21 (kiểm trên kết quả đã lưu: |Δv21| TB 0,021 ≈ |Δv12| 0,019, không có tráo v12↔v21).
+
+#### Changed
+- Mặc định `CVAE` / `Encoder` / `Decoder` / `WireContinuousDecoder` và `train.py`: head Linear, không ép đối xứng (quyết định P1.2; trước đây phải nhớ `--use-mlp-head --disable-symmetry`). Cờ mới `--use-kan-head`, `--enforce-symmetry`; cờ cũ vẫn nhận.
+- Ví dụ lệnh trong docstring trỏ checkpoint đã xóa (`cvae_gamma20.pt`, `gamma_sweep_results/…`) → `cvae_v2_finetuned.pt`; nhánh chọn checkpoint theo `val_loss` (không truy cập được, `--select-by` chỉ có `fe_r2`) đã xóa.
+
+#### Removed
+- Code chết (không entry point, không nơi gọi): `analysis/sensitivity/` (cả package), `analysis/pareto/runner.py`, `analysis/pareto/visualize.py`, `compute_pareto_front`/`compute_hypervolume`, `analysis/utils.py`, `analysis/conftest.py`, `simp/io/logger.py::SimpLogger` (test thay bằng test cho `save_csv` - bộ ghi CSV thật), `sampling.append_samples_to_csv`.
+- 34 import thừa, 7 biến gán không dùng, 12 f-string không có biến (pyflakes nay sạch, trừ 9 chú thích kiểu dạng chuỗi).
+
+#### Tests
+- 732 → 735: +8 (`TestResolveArchitecture`, resize head Linear, load sau resize cho cả 2 head), +3 `save_csv`, −8 `SimpLogger`; 5 test KAN/đối xứng truyền tường minh `use_kan=True`/`enforce_symmetry=True`.
+
+### 2026-10-10 (tối) - Dọn `outputs/`, sửa test ghi vào `outputs/`, đồng bộ tài liệu (nhánh `test_algo_1`)
+
+#### Removed
+- `outputs/` (~286 MB): artifact của các nhánh thí nghiệm đã đóng/bị thay thế, kết quả đã ghi trong docs - checkpoint gamma sweep (`cvae_gamma*`, `gamma_sweep_results/`), dòng clean/ablation cũ (`cvae_clean`, `cvae_clean_v2`, `cvae_ablation_v2`), `cvae_best`, `cvae_manuf_prior`, active learning (`cvae_al_round1`, `active_learning/`), KAN cũ (`cvae_kan_*` + latents), WIRE (`cvae_wire_*`), `exp3_mlp_physics_150`, smoke test (`task1_kan_smoke20`, `*_smoke*.pt`), `cvae_a4_full8d_finetuned` v1 (đã có v2); surrogate ablation / ConvKAN / `al_round1`; history, bootstrap report và kết quả `self_play` của các checkpoint đó (chỉ file không được tài liệu nào trích dẫn); `design_library/`, `samples/`, `diagnostics/`, `pilot_nu_convergence/`, `logs_a4/`, `simp_results_hexagonal/`, `manifest_pre_qualityfilter_backup.csv`, `phase2_manuf_analysis.csv`. File git theo dõi: `git rm` (commit `d327e5214`, khôi phục được từ lịch sử); file gitignored: chuyển vào Thùng rác.
+- Giữ nguyên: `phase5/plan_v3/`, `phase5/reports/`, dataset `phase3`, `phase3_a4`, `phase3_a4_nu_raw`, `multi_batch`, `figures/`, `_backup/`, mọi checkpoint Bài #1 dùng cùng base/surrogate của chúng (vd `cvae_clean_weighted.pt` + `surrogate_clean.pt` là nguồn fine-tune của `cvae_realphysics.pt`).
+- Nhánh local `substrate-material` (đã merge PR #15).
+
+#### Fixed
+- `tests/test_core_smoke.py`: 7 smoke test gọi `run_simp()` không truyền `output_dir` nên ghi vào `outputs/simp_results_<seed>/`, và `run_simp()` `rmtree` thư mục đó trước khi ghi → mỗi lần `pytest` xóa kết quả SIMP chạy tay cho `circle`/`hourglass`/`reentrant_bowtie`. Nay ghi vào `tmp_path`.
+- `benchmark_physics_guided_refinement.py`, `build_latent_dataset.py`: mặc định `--cvae-ckpt` trỏ `cvae_kan_realphysics_v2.pt` (dòng KAN đã đóng ở P1.2, checkpoint đã xóa) → `cvae_v2_finetuned.pt` (checkpoint production; mọi run Bài #1 đều truyền rõ checkpoint này).
+
+#### Changed (tài liệu)
+- `EXPERIMENT_LOG.md`: mục 2026-10-10 (N1, N2); chân trang chuyển về cuối file.
+- `docs/LIMITATIONS.md`: mục mới #39-42 (refine khớp lưới 50², ν pixel chỉ xác định tới ~0,02, giới hạn của F và robust formulation, thước đo chế tạo cũ đếm đảo rời); cập nhật #2, #32, #33, phạm vi claim (claim 7) và bản tiếng Anh.
+- `README.md`: trạng thái 2026-10-08 (K1) và 2026-10-10 (N1/N2), giới hạn, danh sách tài liệu (`docs/plan.md`, `docs/paper1/`), bảng test Phase 5.
+- `docs/PIPELINE.md` § 5: K1, N1/N2 + lệnh E3-F; ghi chú checkpoint đã xóa. `docs/CLI_GUIDE.md`: 8.3b bỏ `--force-periodic` khỏi ví dụ pipeline bài (C5), mục mới 8.3e cờ K1/N1/N2. `docs/ARCHITECT.md`: cây module Phase 5. `docs/paper1/README.md`: bảng nguồn gốc số liệu K1, N1, N2.
+
 ### 2026-10-10 - N1/N2: hiện thực hóa lệch lưới, robust formulation, thiết kế qua bộ lọc (nhánh `substrate-material`)
 
 #### Added

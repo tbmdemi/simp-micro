@@ -17,7 +17,7 @@ lưu lại (không dùng ngay) để tham khảo độ "chắc chắn" của enc
 
 Cách chạy:
     python3 pipeline/phase5_cvae/build_latent_dataset.py \\
-        --cvae-ckpt outputs/phase5/cvae_kan_realphysics_v2.pt \\
+        --cvae-ckpt outputs/phase5/cvae_v2_finetuned.pt \\
         --data-dir outputs/phase3 --split train
 """
 
@@ -101,7 +101,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--cvae-ckpt",
-        default=os.path.join(PHASE5_DIR, "cvae_kan_realphysics_v2.pt"),
+        # Checkpoint production; checkpoint KAN cũ đã xóa 2026-10-10 (P1.2).
+        default=os.path.join(PHASE5_DIR, "cvae_v2_finetuned.pt"),
     )
     parser.add_argument("--data-dir", default=PHASE3_DIR)
     parser.add_argument(
